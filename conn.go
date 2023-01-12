@@ -89,7 +89,7 @@ func Open(name string, flags uint64, vfs string) (*Conn, error) {
 	namePtr := c.newString(name)
 	defer c.free(namePtr)
 
-	handlePtr := c.newPtr()
+	handlePtr := c.newBytes(4)
 	defer c.free(handlePtr)
 
 	var vfsPtr uint32
@@ -119,7 +119,7 @@ func (c *Conn) Errmsg() error {
 	if err != nil {
 		return err
 	}
-	return errors.New(c.getString(r[0]))
+	return errors.New(c.getString(uint32(r[0]), 64))
 }
 
 func (c *Conn) Close() error {
@@ -141,37 +141,43 @@ func (c *Conn) free(ptr uint32) {
 	}
 }
 
-func (c *Conn) newPtr() uint32 {
-	r, err := c.api.malloc.Call(context.TODO(), 4)
+func (c *Conn) newBytes(len uint32) uint32 {
+	r, err := c.api.malloc.Call(context.TODO(), uint64(len))
 	if err != nil {
 		panic(err)
+	}
+	if r[0] == 0 {
+		panic("sqlite3: out of memory")
 	}
 	return uint32(r[0])
 }
 
 func (c *Conn) newString(str string) uint32 {
-	r, err := c.api.malloc.Call(context.TODO(), uint64(len(str)+1))
-	if err != nil {
-		panic(err)
+	ptr := c.newBytes(uint32(len(str) + 1))
+
+	buf, ok := c.memory.Read(ptr, uint32(len(str)+1))
+	if !ok {
+		c.api.free.Call(context.TODO(), uint64(ptr))
+		panic("sqlite3: failed to init string")
 	}
 
-	ptr := uint32(r[0])
-	if ok := c.memory.Write(ptr, []byte(str)); !ok {
-		panic("failed init string")
-	}
-	if ok := c.memory.WriteByte(ptr+uint32(len(str)), 0); !ok {
-		panic("failed init string")
-	}
+	buf[len(str)] = 0
+	copy(buf, str)
 	return ptr
 }
 
-func (c *Conn) getString(ptr uint64) string {
-	buf, ok := c.memory.Read(uint32(ptr), 64)
+func (c *Conn) getString(ptr, maxlen uint32) string {
+	buf, ok := c.memory.Read(ptr, maxlen)
 	if !ok {
-		panic("failed read string")
+		if size := c.memory.Size(); ptr < size {
+			buf, ok = c.memory.Read(ptr, size-ptr)
+		}
+		if !ok {
+			panic("sqlite3: invalid pointer")
+		}
 	}
 	if i := bytes.IndexByte(buf, 0); i < 0 {
-		panic("failed read string")
+		panic("sqlite3: missing NUL terminator")
 	} else {
 		return string(buf[:i])
 	}

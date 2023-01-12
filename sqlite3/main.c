@@ -1,6 +1,6 @@
 #include "sqlite3.h"
 
-int main(int argc, char *argv[]) {
+int main() {
 	int rc = sqlite3_initialize();
 	if (rc != SQLITE_OK) return -1;
 }
