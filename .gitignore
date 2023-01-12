@@ -15,4 +15,6 @@
 # vendor/
 tools
 
+# Project
+sqlite3/sqlite3*
 embed/sqlite3.wasm

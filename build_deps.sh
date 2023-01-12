@@ -1,6 +1,19 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -eo pipefail
 
-zig cc --target=wasm32-wasi -O2 -o embed/sqlite3.wasm sqlite3/*.c \
+cd -P -- "$(dirname -- "$0")"
+
+# download SQLite
+url="https://www.sqlite.org/2022/sqlite-amalgamation-3400100.zip"
+
+curl "$url" > sqlite3/sqlite.zip
+unzip -d sqlite3/ sqlite3/sqlite.zip
+mv sqlite3/sqlite-amalgamation-*/sqlite3* sqlite3/
+rm -rf sqlite3/sqlite-amalgamation-*
+rm sqlite3/sqlite.zip
+
+# build SQLite
+zig cc --target=wasm32-wasi -flto -g0 -O2 -o embed/sqlite3.wasm sqlite3/*.c \
 	-DSQLITE_OS_OTHER=1 -DSQLITE_BYTEORDER=1234 \
 	-DHAVE_ISNAN -DHAVE_MALLOC_USABLE_SIZE \
 	-DSQLITE_DQS=0 \
