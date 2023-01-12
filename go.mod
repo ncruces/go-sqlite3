@@ -1,4 +1,4 @@
-module sqlite3
+module github.com/ncruces/go-sqlite3
 
 go 1.19
 

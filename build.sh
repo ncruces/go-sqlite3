@@ -1,6 +1,6 @@
 #!/bin/sh
 
-zig cc --target=wasm32-wasi -O2 -o sqlite3.wasm sqlite3/*.c \
+zig cc --target=wasm32-wasi -O2 -o embed/sqlite3.wasm sqlite3/*.c \
 	-DSQLITE_OS_OTHER=1 -DSQLITE_BYTEORDER=1234 \
 	-DHAVE_ISNAN -DHAVE_MALLOC_USABLE_SIZE \
 	-DSQLITE_DQS=0 \
