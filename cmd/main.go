@@ -23,6 +23,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	stmt, _, err := db.Prepare(`SELECT id, name FROM users`, 0)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	err = db.Close()
 	if err != nil {
 		log.Fatal(err)

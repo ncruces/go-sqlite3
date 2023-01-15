@@ -56,7 +56,8 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 			errext:      module.ExportedFunction("sqlite3_extended_errcode"),
 			open:        module.ExportedFunction("sqlite3_open_v2"),
 			close:       module.ExportedFunction("sqlite3_close"),
-			prepare:     module.ExportedFunction("sqlite3_prepare_v2"),
+			prepare:     module.ExportedFunction("sqlite3_prepare_v3"),
+			finalize:    module.ExportedFunction("sqlite3_finalize"),
 			exec:        module.ExportedFunction("sqlite3_exec"),
 			step:        module.ExportedFunction("sqlite3_step"),
 			columnText:  module.ExportedFunction("sqlite3_column_text"),
@@ -72,7 +73,7 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 	}()
 
 	namePtr := c.newString(name)
-	handlePtr := c.newBytes(4)
+	connPtr := c.newBytes(ptrSize)
 
 	if flags == 0 {
 		flags = OPEN_READWRITE | OPEN_CREATE
@@ -83,13 +84,13 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 		vfsPtr = c.newString(vfs)
 	}
 
-	r, err := c.api.open.Call(ctx, uint64(namePtr), uint64(handlePtr), flags, uint64(vfsPtr))
+	r, err := c.api.open.Call(ctx, uint64(namePtr), uint64(connPtr), flags, uint64(vfsPtr))
 	if err != nil {
 		return nil, err
 	}
 
-	c.handle, _ = c.memory.ReadUint32Le(handlePtr)
-	c.free(handlePtr)
+	c.handle, _ = c.memory.ReadUint32Le(connPtr)
+	c.free(connPtr)
 	c.free(namePtr)
 	c.free(vfsPtr)
 
@@ -125,6 +126,36 @@ func (c *Conn) Exec(sql string) error {
 		return c.error(r[0])
 	}
 	return nil
+}
+
+func (c *Conn) Prepare(sql string, flags uint64, args ...any) (stmt *Stmt, tail string, err error) {
+	sqlPtr := c.newString(sql)
+	stmtPtr := c.newBytes(ptrSize)
+	tailPtr := c.newBytes(ptrSize)
+
+	r, err := c.api.prepare.Call(context.TODO(), uint64(c.handle),
+		uint64(sqlPtr), uint64(len(sql)+1), flags,
+		uint64(stmtPtr), uint64(tailPtr))
+	if err != nil {
+		return nil, "", err
+	}
+
+	stmt = &Stmt{c: c}
+	stmt.handle, _ = c.memory.ReadUint32Le(stmtPtr)
+	i, _ := c.memory.ReadUint32Le(tailPtr)
+	tail = sql[i-sqlPtr:]
+
+	c.free(tailPtr)
+	c.free(stmtPtr)
+	c.free(sqlPtr)
+
+	if r[0] != OK {
+		return nil, "", c.error(r[0])
+	}
+	if stmt.handle == 0 {
+		return nil, "", nil
+	}
+	return
 }
 
 func (c *Conn) error(rc uint64) *Error {
@@ -209,6 +240,8 @@ func (c *Conn) getString(ptr, maxlen uint32) string {
 	}
 }
 
+const ptrSize = 4
+
 type sqliteAPI struct {
 	malloc      api.Function
 	free        api.Function
@@ -219,6 +252,7 @@ type sqliteAPI struct {
 	open        api.Function
 	close       api.Function
 	prepare     api.Function
+	finalize    api.Function
 	exec        api.Function
 	step        api.Function
 	columnInt   api.Function

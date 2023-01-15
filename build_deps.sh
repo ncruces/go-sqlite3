@@ -34,7 +34,8 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-DSQLITE_OMIT_UTF16 \
 	-Wl,--export=sqlite3_open_v2 \
 	-Wl,--export=sqlite3_close \
-	-Wl,--export=sqlite3_prepare_v2 \
+	-Wl,--export=sqlite3_prepare_v3 \
+	-Wl,--export=sqlite3_finalize \
 	-Wl,--export=sqlite3_exec \
 	-Wl,--export=sqlite3_step \
 	-Wl,--export=sqlite3_column_text \
