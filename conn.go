@@ -19,7 +19,11 @@ type Conn struct {
 	api    sqliteAPI
 }
 
-func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
+func Open(name string) (conn *Conn, err error) {
+	return OpenFlags(name, OPEN_READWRITE|OPEN_CREATE)
+}
+
+func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
 	once.Do(compile)
 
 	var fs fs.FS
@@ -53,7 +57,6 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 			errstr:      module.ExportedFunction("sqlite3_errstr"),
 			errmsg:      module.ExportedFunction("sqlite3_errmsg"),
 			erroff:      module.ExportedFunction("sqlite3_error_offset"),
-			errext:      module.ExportedFunction("sqlite3_extended_errcode"),
 			open:        module.ExportedFunction("sqlite3_open_v2"),
 			close:       module.ExportedFunction("sqlite3_close"),
 			prepare:     module.ExportedFunction("sqlite3_prepare_v3"),
@@ -75,16 +78,7 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 	namePtr := c.newString(name)
 	connPtr := c.newBytes(ptrSize)
 
-	if flags == 0 {
-		flags = OPEN_READWRITE | OPEN_CREATE
-	}
-
-	var vfsPtr uint32
-	if vfs != "" {
-		vfsPtr = c.newString(vfs)
-	}
-
-	r, err := c.api.open.Call(ctx, uint64(namePtr), uint64(connPtr), flags, uint64(vfsPtr))
+	r, err := c.api.open.Call(ctx, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +86,8 @@ func Open(name string, flags uint64, vfs string) (conn *Conn, err error) {
 	c.handle, _ = c.memory.ReadUint32Le(connPtr)
 	c.free(connPtr)
 	c.free(namePtr)
-	c.free(vfsPtr)
 
-	if r[0] != OK {
+	if r[0] != _OK {
 		return nil, c.error(r[0])
 	}
 	return &c, nil
@@ -106,7 +99,7 @@ func (c *Conn) Close() error {
 		return err
 	}
 
-	if r[0] != OK {
+	if r[0] != _OK {
 		return c.error(r[0])
 	}
 	return c.module.Close(context.TODO())
@@ -122,19 +115,23 @@ func (c *Conn) Exec(sql string) error {
 
 	c.free(sqlPtr)
 
-	if r[0] != OK {
+	if r[0] != _OK {
 		return c.error(r[0])
 	}
 	return nil
 }
 
-func (c *Conn) Prepare(sql string, flags uint64, args ...any) (stmt *Stmt, tail string, err error) {
+func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
+	return c.PrepareFlags(sql, 0)
+}
+
+func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	sqlPtr := c.newString(sql)
 	stmtPtr := c.newBytes(ptrSize)
 	tailPtr := c.newBytes(ptrSize)
 
 	r, err := c.api.prepare.Call(context.TODO(), uint64(c.handle),
-		uint64(sqlPtr), uint64(len(sql)+1), flags,
+		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
 	if err != nil {
 		return nil, "", err
@@ -149,7 +146,7 @@ func (c *Conn) Prepare(sql string, flags uint64, args ...any) (stmt *Stmt, tail 
 	c.free(stmtPtr)
 	c.free(sqlPtr)
 
-	if r[0] != OK {
+	if r[0] != _OK {
 		return nil, "", c.error(r[0])
 	}
 	if stmt.handle == 0 {
@@ -159,12 +156,15 @@ func (c *Conn) Prepare(sql string, flags uint64, args ...any) (stmt *Stmt, tail 
 }
 
 func (c *Conn) error(rc uint64) *Error {
-	serr := Error{Code: int(rc)}
+	serr := Error{
+		Code:         ErrorCode(rc & 0xFF),
+		ExtendedCode: ExtendedErrorCode(rc),
+	}
 
 	var r []uint64
 
 	// string
-	r, _ = c.api.errstr.Call(context.TODO(), uint64(rc))
+	r, _ = c.api.errstr.Call(context.TODO(), rc)
 	if r != nil {
 		serr.str = c.getString(uint32(r[0]), 512)
 	}
@@ -173,12 +173,6 @@ func (c *Conn) error(rc uint64) *Error {
 	r, _ = c.api.errmsg.Call(context.TODO(), uint64(c.handle))
 	if r != nil {
 		serr.msg = c.getString(uint32(r[0]), 512)
-	}
-
-	// extended code
-	r, _ = c.api.errext.Call(context.TODO(), uint64(c.handle))
-	if r != nil {
-		serr.ExtendedCode = int(r[0])
 	}
 
 	if serr.str == serr.msg {
@@ -247,7 +241,6 @@ type sqliteAPI struct {
 	free        api.Function
 	errstr      api.Function
 	errmsg      api.Function
-	errext      api.Function
 	erroff      api.Function
 	open        api.Function
 	close       api.Function

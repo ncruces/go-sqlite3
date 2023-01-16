@@ -14,7 +14,7 @@ func (s *Stmt) Close() error {
 	}
 
 	s.handle = 0
-	if r[0] != OK {
+	if r[0] != _OK {
 		return s.c.error(r[0])
 	}
 	return nil

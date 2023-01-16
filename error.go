@@ -6,8 +6,8 @@ import (
 )
 
 type Error struct {
-	Code         int
-	ExtendedCode int
+	Code         ErrorCode
+	ExtendedCode ExtendedErrorCode
 	str          string
 	msg          string
 }
@@ -19,7 +19,7 @@ func (e Error) Error() string {
 	if e.str != "" {
 		b.WriteString(e.str)
 	} else {
-		b.WriteString(strconv.Itoa(e.Code))
+		b.WriteString(strconv.Itoa(int(e.Code)))
 	}
 
 	if e.msg != "" {

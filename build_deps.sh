@@ -44,6 +44,5 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-Wl,--export=sqlite3_errstr \
 	-Wl,--export=sqlite3_errmsg \
 	-Wl,--export=sqlite3_error_offset \
-	-Wl,--export=sqlite3_extended_errcode \
 	-Wl,--export=malloc \
 	-Wl,--export=free

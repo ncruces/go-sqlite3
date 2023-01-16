@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	db, err := sqlite3.Open(":memory:", 0, "")
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT id, name FROM users`, 0)
+	stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
 	if err != nil {
 		log.Fatal(err)
 	}
