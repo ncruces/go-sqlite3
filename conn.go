@@ -182,46 +182,50 @@ func (c *Conn) new(len uint32) uint32 {
 }
 
 func (c *Conn) newBytes(s []byte) uint32 {
-	ptr := c.new(uint32(len(s)))
-
-	buf, ok := c.memory.Read(ptr, uint32(len(s)))
-	if !ok {
-		c.api.free.Call(context.TODO(), uint64(ptr))
-		panic("sqlite3: failed to init bytes")
+	if s == nil {
+		return 0
 	}
 
-	copy(buf, s)
+	siz := uint32(len(s))
+	ptr := c.new(siz)
+	mem, ok := c.memory.Read(ptr, siz)
+	if !ok {
+		c.api.free.Call(context.TODO(), uint64(ptr))
+		panic("sqlite3: out of range")
+	}
+
+	copy(mem, s)
 	return ptr
 }
 
 func (c *Conn) newString(s string) uint32 {
-	ptr := c.new(uint32(len(s) + 1))
-
-	buf, ok := c.memory.Read(ptr, uint32(len(s)+1))
+	siz := uint32(len(s) + 1)
+	ptr := c.new(siz)
+	mem, ok := c.memory.Read(ptr, siz)
 	if !ok {
 		c.api.free.Call(context.TODO(), uint64(ptr))
-		panic("sqlite3: failed to init string")
+		panic("sqlite3: out of range")
 	}
 
-	buf[len(s)] = 0
-	copy(buf, s)
+	mem[len(s)] = 0
+	copy(mem, s)
 	return ptr
 }
 
 func (c *Conn) getString(ptr, maxlen uint32) string {
-	buf, ok := c.memory.Read(ptr, maxlen)
+	mem, ok := c.memory.Read(ptr, maxlen)
 	if !ok {
 		if size := c.memory.Size(); ptr < size {
-			buf, ok = c.memory.Read(ptr, size-ptr)
+			mem, ok = c.memory.Read(ptr, size-ptr)
 		}
 		if !ok {
-			panic("sqlite3: invalid pointer")
+			panic("sqlite3: out of range")
 		}
 	}
-	if i := bytes.IndexByte(buf, 0); i < 0 {
+	if i := bytes.IndexByte(mem, 0); i < 0 {
 		panic("sqlite3: missing NUL terminator")
 	} else {
-		return string(buf[:i])
+		return string(mem[:i])
 	}
 }
 

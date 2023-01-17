@@ -103,3 +103,84 @@ func (s *Stmt) BindNull(param int) error {
 	}
 	return s.c.error(r[0])
 }
+
+func (s *Stmt) ColumnBool(col int) bool {
+	if i := s.ColumnInt64(col); i != 0 {
+		return true
+	}
+	return false
+}
+
+func (s *Stmt) ColumnInt(col int) int {
+	return int(s.ColumnInt64(col))
+}
+
+func (s *Stmt) ColumnInt64(col int) int64 {
+	r, err := s.c.api.columnInteger.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+	return int64(r[0])
+}
+
+func (s *Stmt) ColumnFloat(col int) float64 {
+	r, err := s.c.api.columnInteger.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+	return math.Float64frombits(r[0])
+}
+
+func (s *Stmt) ColumnText(col int) string {
+	r, err := s.c.api.columnText.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+
+	ptr := uint32(r[0])
+	if ptr == 0 {
+		// handle error
+		return ""
+	}
+
+	r, err = s.c.api.columnBytes.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+
+	mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
+	if !ok {
+		panic("sqlite3: out of range")
+	}
+	return string(mem)
+}
+
+func (s *Stmt) ColumnBlob(col int, buf []byte) int {
+	r, err := s.c.api.columnBlob.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+
+	ptr := uint32(r[0])
+	if ptr == 0 {
+		// handle error
+		return 0
+	}
+
+	r, err = s.c.api.columnBytes.Call(context.TODO(),
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+
+	mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
+	if !ok {
+		panic("sqlite3: out of range")
+	}
+	return copy(mem, buf)
+}

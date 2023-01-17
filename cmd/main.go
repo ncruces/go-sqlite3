@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/ncruces/go-sqlite3"
@@ -26,6 +27,15 @@ func main() {
 	stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	for {
+		if row, err := stmt.Step(); err != nil {
+			log.Fatal(err)
+		} else if !row {
+			break
+		}
+		fmt.Println(stmt.ColumnInt(0), stmt.ColumnText(1))
 	}
 
 	err = stmt.Close()

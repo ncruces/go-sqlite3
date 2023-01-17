@@ -28,7 +28,6 @@ Roadmap:
   - [`modernc.org/sqlite`](https://modernc.org/sqlite)
 
 Random TODO list:
-- wrap more of the SQLite API, enough to run useful queries;
 - create a Go VFS that's enough to use `:memory:` databases without WASI;
 - expand that VFS to wrap an `io.ReaderAt`;
 - optimize small allocations that last a single function call;
