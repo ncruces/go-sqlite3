@@ -20,6 +20,28 @@ func (s *Stmt) Close() error {
 	return s.c.error(r[0])
 }
 
+func (s *Stmt) Reset() error {
+	r, err := s.c.api.reset.Call(context.TODO(), uint64(s.handle))
+	if err != nil {
+		return err
+	}
+	return s.c.error(r[0])
+}
+
+func (s *Stmt) Step() (row bool, err error) {
+	r, err := s.c.api.step.Call(context.TODO(), uint64(s.handle))
+	if err != nil {
+		return false, err
+	}
+	if r[0] == _ROW {
+		return true, nil
+	}
+	if r[0] == _DONE {
+		return false, nil
+	}
+	return false, s.c.error(r[0])
+}
+
 func (s *Stmt) BindBool(param int, value bool) error {
 	if value {
 		return s.BindInt64(param, 1)

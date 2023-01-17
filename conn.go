@@ -152,7 +152,8 @@ func (c *Conn) error(rc uint64) error {
 		serr.msg = c.getString(uint32(r[0]), 512)
 	}
 
-	if serr.str == serr.msg {
+	switch serr.msg {
+	case "not an error", serr.str:
 		serr.msg = ""
 	}
 

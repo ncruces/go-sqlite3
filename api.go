@@ -35,8 +35,10 @@ func newConn(module api.Module) *Conn {
 			close:         getFun("sqlite3_close"),
 			prepare:       getFun("sqlite3_prepare_v3"),
 			finalize:      getFun("sqlite3_finalize"),
-			exec:          getFun("sqlite3_exec"),
+			reset:         getFun("sqlite3_reset"),
 			step:          getFun("sqlite3_step"),
+			exec:          getFun("sqlite3_exec"),
+			clearBindings: getFun("sqlite3_clear_bindings"),
 			bindInteger:   getFun("sqlite3_bind_int64"),
 			bindFloat:     getFun("sqlite3_bind_double"),
 			bindText:      getFun("sqlite3_bind_text64"),
@@ -64,8 +66,10 @@ type sqliteAPI struct {
 	close         api.Function
 	prepare       api.Function
 	finalize      api.Function
-	exec          api.Function
+	reset         api.Function
 	step          api.Function
+	exec          api.Function
+	clearBindings api.Function
 	bindInteger   api.Function
 	bindFloat     api.Function
 	bindText      api.Function
