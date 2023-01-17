@@ -32,17 +32,27 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-DSQLITE_OMIT_SHARED_CACHE \
 	-DSQLITE_OMIT_AUTOINIT \
 	-DSQLITE_OMIT_UTF16 \
+	-Wl,--export=malloc \
+	-Wl,--export=free \
+	-Wl,--export=malloc_destructor \
+	-Wl,--export=sqlite3_errstr \
+	-Wl,--export=sqlite3_errmsg \
+	-Wl,--export=sqlite3_error_offset \
 	-Wl,--export=sqlite3_open_v2 \
 	-Wl,--export=sqlite3_close \
 	-Wl,--export=sqlite3_prepare_v3 \
 	-Wl,--export=sqlite3_finalize \
 	-Wl,--export=sqlite3_exec \
 	-Wl,--export=sqlite3_step \
-	-Wl,--export=sqlite3_column_text \
+	-Wl,--export=sqlite3_bind_int64 \
+	-Wl,--export=sqlite3_bind_double \
+	-Wl,--export=sqlite3_bind_text64 \
+	-Wl,--export=sqlite3_bind_blob64 \
+	-Wl,--export=sqlite3_bind_zeroblob64 \
+	-Wl,--export=sqlite3_bind_null \
 	-Wl,--export=sqlite3_column_int64 \
 	-Wl,--export=sqlite3_column_double \
-	-Wl,--export=sqlite3_errstr \
-	-Wl,--export=sqlite3_errmsg \
-	-Wl,--export=sqlite3_error_offset \
-	-Wl,--export=malloc \
-	-Wl,--export=free
+	-Wl,--export=sqlite3_column_text \
+	-Wl,--export=sqlite3_column_blob \
+	-Wl,--export=sqlite3_column_bytes \
+	-Wl,--export=sqlite3_column_type \

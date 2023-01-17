@@ -1,0 +1,81 @@
+package sqlite3
+
+import "github.com/tetratelabs/wazero/api"
+
+func newConn(module api.Module) *Conn {
+	getFun := func(name string) api.Function {
+		f := module.ExportedFunction(name)
+		if f == nil {
+			panic("sqlite3: could not find " + name + " function")
+		}
+		return f
+	}
+
+	global := module.ExportedGlobal("malloc_destructor")
+	if global == nil {
+		panic("sqlite3: could not find malloc_destructor global")
+	}
+	destructor := uint32(global.Get())
+	destructor, ok := module.Memory().ReadUint32Le(destructor)
+	if !ok {
+		panic("sqlite3: could not read malloc_destructor global")
+	}
+
+	return &Conn{
+		module: module,
+		memory: module.Memory(),
+		api: sqliteAPI{
+			malloc:        getFun("malloc"),
+			free:          getFun("free"),
+			destructor:    uint64(destructor),
+			errstr:        getFun("sqlite3_errstr"),
+			errmsg:        getFun("sqlite3_errmsg"),
+			erroff:        getFun("sqlite3_error_offset"),
+			open:          getFun("sqlite3_open_v2"),
+			close:         getFun("sqlite3_close"),
+			prepare:       getFun("sqlite3_prepare_v3"),
+			finalize:      getFun("sqlite3_finalize"),
+			exec:          getFun("sqlite3_exec"),
+			step:          getFun("sqlite3_step"),
+			bindInteger:   getFun("sqlite3_bind_int64"),
+			bindFloat:     getFun("sqlite3_bind_double"),
+			bindText:      getFun("sqlite3_bind_text64"),
+			bindBlob:      getFun("sqlite3_bind_blob64"),
+			bindZeroBlob:  getFun("sqlite3_bind_zeroblob64"),
+			bindNull:      getFun("sqlite3_bind_null"),
+			columnInteger: getFun("sqlite3_column_int64"),
+			columnFloat:   getFun("sqlite3_column_double"),
+			columnText:    getFun("sqlite3_column_text"),
+			columnBlob:    getFun("sqlite3_column_blob"),
+			columnBytes:   getFun("sqlite3_column_bytes"),
+			columnType:    getFun("sqlite3_column_type"),
+		},
+	}
+}
+
+type sqliteAPI struct {
+	malloc        api.Function
+	free          api.Function
+	destructor    uint64
+	errstr        api.Function
+	errmsg        api.Function
+	erroff        api.Function
+	open          api.Function
+	close         api.Function
+	prepare       api.Function
+	finalize      api.Function
+	exec          api.Function
+	step          api.Function
+	bindInteger   api.Function
+	bindFloat     api.Function
+	bindText      api.Function
+	bindBlob      api.Function
+	bindZeroBlob  api.Function
+	bindNull      api.Function
+	columnInteger api.Function
+	columnFloat   api.Function
+	columnText    api.Function
+	columnBlob    api.Function
+	columnBytes   api.Function
+	columnType    api.Function
+}

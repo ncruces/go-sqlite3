@@ -4,6 +4,8 @@ const (
 	_OK   = 0   /* Successful result */
 	_ROW  = 100 /* sqlite3_step() has another row ready */
 	_DONE = 101 /* sqlite3_step() has finished executing */
+
+	_UTF8 = 1
 )
 
 type ErrorCode int
@@ -150,4 +152,14 @@ const (
 	PREPARE_PERSISTENT PrepareFlag = 0x01
 	PREPARE_NORMALIZE  PrepareFlag = 0x02
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
+)
+
+type Datatype uint
+
+const (
+	INTEGER Datatype = 1
+	FLOAT   Datatype = 2
+	TEXT    Datatype = 3
+	BLOB    Datatype = 4
+	NULL    Datatype = 5
 )
