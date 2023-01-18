@@ -2,8 +2,8 @@ package sqlite3
 
 import (
 	"context"
-	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -22,12 +22,20 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) (err error) {
 	}
 
 	env := r.NewHostModuleBuilder("env")
-	env.NewFunctionBuilder().WithFunc(vfsOpen).Export("go_open")
-	env.NewFunctionBuilder().WithFunc(vfsFullPathname).Export("go_full_pathname")
 	env.NewFunctionBuilder().WithFunc(vfsRandomness).Export("go_randomness")
 	env.NewFunctionBuilder().WithFunc(vfsSleep).Export("go_sleep")
 	env.NewFunctionBuilder().WithFunc(vfsCurrentTime).Export("go_current_time")
 	env.NewFunctionBuilder().WithFunc(vfsCurrentTime64).Export("go_current_time_64")
+	env.NewFunctionBuilder().WithFunc(vfsFullPathname).Export("go_full_pathname")
+	env.NewFunctionBuilder().WithFunc(vfsDelete).Export("go_delete")
+	env.NewFunctionBuilder().WithFunc(vfsAccess).Export("go_access")
+	env.NewFunctionBuilder().WithFunc(vfsOpen).Export("go_open")
+	env.NewFunctionBuilder().WithFunc(vfsClose).Export("go_close")
+	env.NewFunctionBuilder().WithFunc(vfsRead).Export("go_read")
+	env.NewFunctionBuilder().WithFunc(vfsWrite).Export("go_write")
+	env.NewFunctionBuilder().WithFunc(vfsTruncate).Export("go_truncate")
+	env.NewFunctionBuilder().WithFunc(vfsSync).Export("go_sync")
+	env.NewFunctionBuilder().WithFunc(vfsFileSize).Export("go_file_size")
 	_, err = env.Instantiate(ctx)
 	return err
 }
@@ -72,15 +80,6 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, vfs, out uint32) uint
 	return _OK
 }
 
-func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
-	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
-	c, ok := ctx.Value(connContext{}).(*Conn)
-	if ok && mod == c.module {
-		log.Println("vfsOpen", name)
-	}
-	return uint32(IOERR)
-}
-
 func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut uint32) uint32 {
 	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
 	s, err := filepath.Abs(name)
@@ -101,3 +100,72 @@ func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut
 	copy(mem, s)
 	return _OK
 }
+
+func vfsDelete(vfs, zName, syncDir uint32) uint32 { panic("vfsDelete") }
+
+func vfsAccess(vfs, zName, flags, pResOut uint32) uint32 { panic("vfsAccess") }
+
+func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
+	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+	c := ctx.Value(connContext{}).(*Conn)
+
+	var oflags int
+	if OpenFlag(flags)&OPEN_EXCLUSIVE != 0 {
+		oflags |= os.O_EXCL
+	}
+	if OpenFlag(flags)&OPEN_CREATE != 0 {
+		oflags |= os.O_CREATE
+	}
+	if OpenFlag(flags)&OPEN_READONLY != 0 {
+		oflags |= os.O_RDONLY
+	}
+	if OpenFlag(flags)&OPEN_READWRITE != 0 {
+		oflags |= os.O_RDWR
+	}
+	f, err := os.OpenFile(name, oflags, 0600)
+	if err != nil {
+		return uint32(CANTOPEN)
+	}
+
+	var id int
+	for i := range c.files {
+		if c.files[i] == nil {
+			id = i
+			c.files[i] = f
+			goto found
+		}
+	}
+	id = len(c.files)
+	c.files = append(c.files, f)
+found:
+
+	mod.Memory().WriteUint32Le(file+ptrSize, uint32(id))
+	return _OK
+}
+
+func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
+	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+
+	c := ctx.Value(connContext{}).(*Conn)
+	err := c.files[id].Close()
+	c.files[id] = nil
+	if err != nil {
+		return uint32(IOERR)
+	}
+	return _OK
+}
+
+func vfsRead(file, buf, iAmt uint32, iOfst uint64) uint32 {
+	return uint32(IOERR)
+}
+
+func vfsWrite(file, buf, iAmt uint32, iOfst uint64) uint32 { panic("vfsWrite") }
+
+func vfsTruncate(file uint32, size uint64) uint32 { panic("vfsTruncate") }
+
+func vfsSync(file, flags uint32) uint32 { panic("vfsSync") }
+
+func vfsFileSize(file, pSize uint32) uint32 { panic("vfsFileSize") }

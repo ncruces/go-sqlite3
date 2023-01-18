@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -18,6 +19,7 @@ type Conn struct {
 	module api.Module
 	memory api.Memory
 	api    sqliteAPI
+	files  []*os.File
 }
 
 func Open(name string) (conn *Conn, err error) {
@@ -81,6 +83,11 @@ func (c *Conn) Close() error {
 
 	if err := c.error(r[0]); err != nil {
 		return err
+	}
+	for _, f := range c.files {
+		if f != nil {
+			f.Close()
+		}
 	}
 	return c.module.Close(c.ctx)
 }
