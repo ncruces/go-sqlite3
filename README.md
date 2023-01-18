@@ -21,7 +21,7 @@ Roadmap:
     - concurrency is achieved by instantiating the module repeatedly
     - file access needs to be synchronized, both in-process and out-of-process
     - out-of-process should be compatible with SQLite on Windows/Unix
-- [ ] benchmark to see if this is usefull at all:
+- [ ] benchmark to see if this is useful at all:
   - [`github.com/cvilsmeier/sqinn-go`](https://github.com/cvilsmeier/sqinn-go-bench)
   - [`github.com/bvinc/go-sqlite-lite`](https://github.com/bvinc/go-sqlite-lite)
   - [`github.com/mattn/go-sqlite3`](https://github.com/mattn/go-sqlite3)
