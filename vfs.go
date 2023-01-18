@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -158,8 +159,29 @@ func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 	return _OK
 }
 
-func vfsRead(file, buf, iAmt uint32, iOfst uint64) uint32 {
-	return uint32(IOERR)
+func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
+	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+
+	mem, ok := mod.Memory().Read(buf, iAmt)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+
+	c := ctx.Value(connContext{}).(*Conn)
+	n, err := c.files[id].ReadAt(mem, int64(iOfst))
+	if n == int(iAmt) {
+		return _OK
+	}
+	if n == 0 && err != io.EOF {
+		return uint32(IOERR_READ)
+	}
+	for i := range mem[n:] {
+		mem[i] = 0
+	}
+	return uint32(IOERR_SHORT_READ)
 }
 
 func vfsWrite(file, buf, iAmt uint32, iOfst uint64) uint32 { panic("vfsWrite") }
