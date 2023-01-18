@@ -13,6 +13,7 @@ import (
 )
 
 type Conn struct {
+	ctx    context.Context
 	handle uint32
 	module api.Module
 	memory api.Memory
@@ -36,8 +37,7 @@ func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
 		}
 	}
 
-	ctx := context.TODO()
-
+	ctx := context.Background()
 	cfg := wazero.NewModuleConfig().
 		WithName("sqlite3-" + strconv.FormatUint(counter.Add(1), 10))
 	if fs != nil {
@@ -54,12 +54,13 @@ func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
 	}()
 
 	c := newConn(module)
+	c.ctx = context.WithValue(ctx, connContext{}, c)
 	namePtr := c.newString(name)
 	connPtr := c.new(ptrSize)
 	defer c.free(namePtr)
 	defer c.free(connPtr)
 
-	r, err := c.api.open.Call(ctx, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
+	r, err := c.api.open.Call(c.ctx, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
 }
 
 func (c *Conn) Close() error {
-	r, err := c.api.close.Call(context.TODO(), uint64(c.handle))
+	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
 		return err
 	}
@@ -81,14 +82,14 @@ func (c *Conn) Close() error {
 	if err := c.error(r[0]); err != nil {
 		return err
 	}
-	return c.module.Close(context.TODO())
+	return c.module.Close(c.ctx)
 }
 
 func (c *Conn) Exec(sql string) error {
 	sqlPtr := c.newString(sql)
 	defer c.free(sqlPtr)
 
-	r, err := c.api.exec.Call(context.TODO(), uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
+	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	defer c.free(stmtPtr)
 	defer c.free(tailPtr)
 
-	r, err := c.api.prepare.Call(context.TODO(), uint64(c.handle),
+	r, err := c.api.prepare.Call(c.ctx, uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
 	if err != nil {
@@ -141,13 +142,13 @@ func (c *Conn) error(rc uint64) error {
 	var r []uint64
 
 	// string
-	r, _ = c.api.errstr.Call(context.TODO(), rc)
+	r, _ = c.api.errstr.Call(c.ctx, rc)
 	if r != nil {
 		serr.str = c.getString(uint32(r[0]), 512)
 	}
 
 	// message
-	r, _ = c.api.errmsg.Call(context.TODO(), uint64(c.handle))
+	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
 		serr.msg = c.getString(uint32(r[0]), 512)
 	}
@@ -164,14 +165,14 @@ func (c *Conn) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	_, err := c.api.free.Call(context.TODO(), uint64(ptr))
+	_, err := c.api.free.Call(c.ctx, uint64(ptr))
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (c *Conn) new(len uint32) uint32 {
-	r, err := c.api.malloc.Call(context.TODO(), uint64(len))
+	r, err := c.api.malloc.Call(c.ctx, uint64(len))
 	if err != nil {
 		panic(err)
 	}
@@ -190,7 +191,7 @@ func (c *Conn) newBytes(s []byte) uint32 {
 	ptr := c.new(siz)
 	mem, ok := c.memory.Read(ptr, siz)
 	if !ok {
-		c.api.free.Call(context.TODO(), uint64(ptr))
+		c.api.free.Call(c.ctx, uint64(ptr))
 		panic("sqlite3: out of range")
 	}
 
@@ -203,7 +204,7 @@ func (c *Conn) newString(s string) uint32 {
 	ptr := c.new(siz)
 	mem, ok := c.memory.Read(ptr, siz)
 	if !ok {
-		c.api.free.Call(context.TODO(), uint64(ptr))
+		c.api.free.Call(c.ctx, uint64(ptr))
 		panic("sqlite3: out of range")
 	}
 
@@ -232,5 +233,7 @@ func getString(memory api.Memory, ptr, maxlen uint32) string {
 		return string(mem[:i])
 	}
 }
+
+type connContext struct{}
 
 const ptrSize = 4

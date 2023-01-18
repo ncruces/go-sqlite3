@@ -1,7 +1,6 @@
 package sqlite3
 
 import (
-	"context"
 	"math"
 )
 
@@ -11,7 +10,7 @@ type Stmt struct {
 }
 
 func (s *Stmt) Close() error {
-	r, err := s.c.api.finalize.Call(context.TODO(), uint64(s.handle))
+	r, err := s.c.api.finalize.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
 		return err
 	}
@@ -21,7 +20,7 @@ func (s *Stmt) Close() error {
 }
 
 func (s *Stmt) Reset() error {
-	r, err := s.c.api.reset.Call(context.TODO(), uint64(s.handle))
+	r, err := s.c.api.reset.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
 		return err
 	}
@@ -29,7 +28,7 @@ func (s *Stmt) Reset() error {
 }
 
 func (s *Stmt) Step() (row bool, err error) {
-	r, err := s.c.api.step.Call(context.TODO(), uint64(s.handle))
+	r, err := s.c.api.step.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
 		return false, err
 	}
@@ -54,7 +53,7 @@ func (s *Stmt) BindInt(param int, value int) error {
 }
 
 func (s *Stmt) BindInt64(param int, value int64) error {
-	r, err := s.c.api.bindInteger.Call(context.TODO(),
+	r, err := s.c.api.bindInteger.Call(s.c.ctx,
 		uint64(s.handle), uint64(param), uint64(value))
 	if err != nil {
 		return err
@@ -63,7 +62,7 @@ func (s *Stmt) BindInt64(param int, value int64) error {
 }
 
 func (s *Stmt) BindFloat(param int, value float64) error {
-	r, err := s.c.api.bindFloat.Call(context.TODO(),
+	r, err := s.c.api.bindFloat.Call(s.c.ctx,
 		uint64(s.handle), uint64(param), math.Float64bits(value))
 	if err != nil {
 		return err
@@ -73,7 +72,7 @@ func (s *Stmt) BindFloat(param int, value float64) error {
 
 func (s *Stmt) BindText(param int, value string) error {
 	ptr := s.c.newString(value)
-	r, err := s.c.api.bindText.Call(context.TODO(),
+	r, err := s.c.api.bindText.Call(s.c.ctx,
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
 		s.c.api.destructor, _UTF8)
@@ -85,7 +84,7 @@ func (s *Stmt) BindText(param int, value string) error {
 
 func (s *Stmt) BindBlob(param int, value []byte) error {
 	ptr := s.c.newBytes(value)
-	r, err := s.c.api.bindBlob.Call(context.TODO(),
+	r, err := s.c.api.bindBlob.Call(s.c.ctx,
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
 		s.c.api.destructor)
@@ -96,7 +95,7 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 }
 
 func (s *Stmt) BindNull(param int) error {
-	r, err := s.c.api.bindNull.Call(context.TODO(),
+	r, err := s.c.api.bindNull.Call(s.c.ctx,
 		uint64(s.handle), uint64(param))
 	if err != nil {
 		return err
@@ -116,7 +115,7 @@ func (s *Stmt) ColumnInt(col int) int {
 }
 
 func (s *Stmt) ColumnInt64(col int) int64 {
-	r, err := s.c.api.columnInteger.Call(context.TODO(),
+	r, err := s.c.api.columnInteger.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -125,7 +124,7 @@ func (s *Stmt) ColumnInt64(col int) int64 {
 }
 
 func (s *Stmt) ColumnFloat(col int) float64 {
-	r, err := s.c.api.columnInteger.Call(context.TODO(),
+	r, err := s.c.api.columnInteger.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -134,7 +133,7 @@ func (s *Stmt) ColumnFloat(col int) float64 {
 }
 
 func (s *Stmt) ColumnText(col int) string {
-	r, err := s.c.api.columnText.Call(context.TODO(),
+	r, err := s.c.api.columnText.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -146,7 +145,7 @@ func (s *Stmt) ColumnText(col int) string {
 		return ""
 	}
 
-	r, err = s.c.api.columnBytes.Call(context.TODO(),
+	r, err = s.c.api.columnBytes.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -160,7 +159,7 @@ func (s *Stmt) ColumnText(col int) string {
 }
 
 func (s *Stmt) ColumnBlob(col int, buf []byte) int {
-	r, err := s.c.api.columnBlob.Call(context.TODO(),
+	r, err := s.c.api.columnBlob.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -172,7 +171,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) int {
 		return 0
 	}
 
-	r, err = s.c.api.columnBytes.Call(context.TODO(),
+	r, err = s.c.api.columnBytes.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)

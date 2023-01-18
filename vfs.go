@@ -74,7 +74,10 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, vfs, out uint32) uint
 
 func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
 	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
-	log.Println("vfsOpen", name)
+	c, ok := ctx.Value(connContext{}).(*Conn)
+	if ok && mod == c.module {
+		log.Println("vfsOpen", name)
+	}
 	return uint32(IOERR)
 }
 
