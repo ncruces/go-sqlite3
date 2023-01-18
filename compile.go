@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
 // Configure SQLite.
@@ -27,7 +26,10 @@ func compile() {
 	ctx := context.Background()
 
 	wasm = wazero.NewRuntime(ctx)
-	wasi_snapshot_preview1.MustInstantiate(ctx, wasm)
+
+	if err := vfsInstantiate(ctx, wasm); err != nil {
+		panic(err)
+	}
 
 	if Binary == nil && Path != "" {
 		if bin, err := os.ReadFile(Path); err != nil {

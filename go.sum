@@ -1,7 +1,7 @@
 crawshaw.io/iox v0.0.0-20181124134642-c51c3df30797/go.mod h1:sXBiorCo8c46JlQV3oXPKINnZ8mcqnye1EkVkqsectk=
 crawshaw.io/sqlite v0.3.2 h1:N6IzTjkiw9FItHAa0jp+ZKC6tuLzXqAYIv+ccIWos1I=
 crawshaw.io/sqlite v0.3.2/go.mod h1:igAO5JulrQ1DbdZdtVq48mnZUBAPOeFzer7VhDWNtW4=
-github.com/tetratelabs/wazero v1.0.0-pre.7.0.20230114234926-2ce8988ab763 h1:cuXa6OWMd3L3+nNrX9SfT6GxS6ykUAvx8/eegN6KeNo=
-github.com/tetratelabs/wazero v1.0.0-pre.7.0.20230114234926-2ce8988ab763/go.mod h1:u8wrFmpdrykiFK0DFPiFm5a4+0RzsdmXYVtijBKqUVo=
+github.com/ncruces/julianday v0.1.3 h1:+JRqsbdGH8QlPWlB6i/pD8sENBZZ1qg24qBCAcYfGMU=
+github.com/ncruces/julianday v0.1.3/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
 github.com/tetratelabs/wazero v1.0.0-pre.7.0.20230117161130-15889085a5ca h1:cvbRnzLE99QnA6HT3yoqXjWEB2JMiyTs3GSLpQZg45A=
 github.com/tetratelabs/wazero v1.0.0-pre.7.0.20230117161130-15889085a5ca/go.mod h1:u8wrFmpdrykiFK0DFPiFm5a4+0RzsdmXYVtijBKqUVo=
