@@ -6,6 +6,8 @@ const (
 	_DONE = 101 /* sqlite3_step() has finished executing */
 
 	_UTF8 = 1
+
+	_MAX_PATHNAME = 512
 )
 
 type ErrorCode int

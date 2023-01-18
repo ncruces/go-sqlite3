@@ -213,10 +213,14 @@ func (c *Conn) newString(s string) uint32 {
 }
 
 func (c *Conn) getString(ptr, maxlen uint32) string {
-	mem, ok := c.memory.Read(ptr, maxlen)
+	return getString(c.memory, ptr, maxlen)
+}
+
+func getString(memory api.Memory, ptr, maxlen uint32) string {
+	mem, ok := memory.Read(ptr, maxlen)
 	if !ok {
-		if size := c.memory.Size(); ptr < size {
-			mem, ok = c.memory.Read(ptr, size-ptr)
+		if size := memory.Size(); ptr < size {
+			mem, ok = memory.Read(ptr, size-ptr)
 		}
 		if !ok {
 			panic("sqlite3: out of range")

@@ -2,7 +2,9 @@ package sqlite3
 
 import (
 	"context"
+	"log"
 	"math/rand"
+	"path/filepath"
 	"time"
 
 	"github.com/ncruces/julianday"
@@ -20,6 +22,8 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) (err error) {
 	}
 
 	env := r.NewHostModuleBuilder("env")
+	env.NewFunctionBuilder().WithFunc(vfsOpen).Export("go_open")
+	env.NewFunctionBuilder().WithFunc(vfsFullPathname).Export("go_full_pathname")
 	env.NewFunctionBuilder().WithFunc(vfsRandomness).Export("go_randomness")
 	env.NewFunctionBuilder().WithFunc(vfsSleep).Export("go_sleep")
 	env.NewFunctionBuilder().WithFunc(vfsCurrentTime).Export("go_current_time")
@@ -35,8 +39,8 @@ func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
 	panic(sys.NewExitError(mod.Name(), exitCode))
 }
 
-func vfsRandomness(ctx context.Context, mod api.Module, vfs, nByte, out uint32) uint32 {
-	mem, ok := mod.Memory().Read(out, nByte)
+func vfsRandomness(ctx context.Context, mod api.Module, vfs, nByte, zOut uint32) uint32 {
+	mem, ok := mod.Memory().Read(zOut, nByte)
 	if !ok {
 		return 0
 	}
@@ -65,5 +69,32 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, vfs, out uint32) uint
 	if !ok {
 		return uint32(ERROR)
 	}
+	return _OK
+}
+
+func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
+	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+	log.Println("vfsOpen", name)
+	return uint32(IOERR)
+}
+
+func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut uint32) uint32 {
+	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+	s, err := filepath.Abs(name)
+	if err != nil {
+		return uint32(IOERR)
+	}
+
+	siz := uint32(len(s) + 1)
+	if siz > zOut {
+		return uint32(IOERR)
+	}
+	mem, ok := mod.Memory().Read(zOut, siz)
+	if !ok {
+		return uint32(IOERR)
+	}
+
+	mem[len(s)] = 0
+	copy(mem, s)
 	return _OK
 }
