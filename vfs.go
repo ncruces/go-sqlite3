@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/ncruces/julianday"
@@ -140,20 +141,23 @@ func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut u
 		default:
 			return uint32(IOERR_ACCESS)
 		}
-	} else if err != nil {
-		return uint32(IOERR_ACCESS)
-	} else {
-		var mask fs.FileMode
+	} else if err == nil {
+		var want fs.FileMode = syscall.S_IRUSR
 		if flags == uint32(ACCESS_READWRITE) {
-			mask = 0600
-		} else {
-			mask = 0400
+			want |= syscall.S_IWUSR
 		}
-		if fi.Mode()&mask == mask {
+		if fi.IsDir() {
+			want |= syscall.S_IXUSR
+		}
+		if fi.Mode()&want == want {
 			res = 1
 		} else {
 			res = 0
 		}
+	} else if errors.Is(err, fs.ErrPermission) {
+		res = 0
+	} else {
+		return uint32(IOERR_ACCESS)
 	}
 
 	ok := mod.Memory().WriteUint32Le(pResOut, res)
