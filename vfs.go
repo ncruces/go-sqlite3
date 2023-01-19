@@ -104,7 +104,27 @@ func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut
 	return _OK
 }
 
-func vfsDelete(vfs, zName, syncDir uint32) uint32 { panic("vfsDelete") }
+func vfsDelete(ctx context.Context, mod api.Module, vfs, zName, syncDir uint32) uint32 {
+	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+	err := os.Remove(name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return _OK
+	}
+	if err != nil {
+		return uint32(IOERR_DELETE)
+	}
+	if syncDir != 0 {
+		f, err := os.Open(filepath.Dir(name))
+		if err == nil {
+			err = f.Sync()
+			f.Close()
+		}
+		if err != nil {
+			return uint32(IOERR_DELETE)
+		}
+	}
+	return _OK
+}
 
 func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut uint32) uint32 {
 	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
@@ -243,7 +263,19 @@ func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst
 	return _OK
 }
 
-func vfsTruncate(file uint32, size uint64) uint32 { panic("vfsTruncate") }
+func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) uint32 {
+	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+
+	c := ctx.Value(connContext{}).(*Conn)
+	err := c.files[id].Truncate(int64(size))
+	if err != nil {
+		return uint32(IOERR_TRUNCATE)
+	}
+	return _OK
+}
 
 func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
