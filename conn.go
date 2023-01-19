@@ -184,7 +184,7 @@ func (c *Conn) new(len uint32) uint32 {
 		panic(err)
 	}
 	if r[0] == 0 {
-		panic("sqlite3: out of memory")
+		panic(oomErr)
 	}
 	return uint32(r[0])
 }
@@ -199,7 +199,7 @@ func (c *Conn) newBytes(s []byte) uint32 {
 	mem, ok := c.memory.Read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
-		panic("sqlite3: out of range")
+		panic(rangeErr)
 	}
 
 	copy(mem, s)
@@ -212,7 +212,7 @@ func (c *Conn) newString(s string) uint32 {
 	mem, ok := c.memory.Read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
-		panic("sqlite3: out of range")
+		panic(rangeErr)
 	}
 
 	mem[len(s)] = 0
@@ -227,15 +227,13 @@ func (c *Conn) getString(ptr, maxlen uint32) string {
 func getString(memory api.Memory, ptr, maxlen uint32) string {
 	mem, ok := memory.Read(ptr, maxlen)
 	if !ok {
-		if size := memory.Size(); ptr < size {
-			mem, ok = memory.Read(ptr, size-ptr)
-		}
+		mem, ok = memory.Read(ptr, memory.Size()-ptr)
 		if !ok {
-			panic("sqlite3: out of range")
+			panic(rangeErr)
 		}
 	}
 	if i := bytes.IndexByte(mem, 0); i < 0 {
-		panic("sqlite3: missing NUL terminator")
+		panic(noNulErr)
 	} else {
 		return string(mem[:i])
 	}

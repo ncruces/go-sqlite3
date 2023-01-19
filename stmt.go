@@ -153,7 +153,7 @@ func (s *Stmt) ColumnText(col int) string {
 
 	mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
 	if !ok {
-		panic("sqlite3: out of range")
+		panic(rangeErr)
 	}
 	return string(mem)
 }
@@ -179,7 +179,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) int {
 
 	mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
 	if !ok {
-		panic("sqlite3: out of range")
+		panic(rangeErr)
 	}
 	return copy(mem, buf)
 }

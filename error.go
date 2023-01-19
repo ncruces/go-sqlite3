@@ -30,3 +30,15 @@ func (e Error) Error() string {
 
 	return b.String()
 }
+
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
+
+const (
+	oomErr      = errorString("sqlite3: out of memory")
+	rangeErr    = errorString("sqlite3: index out of range")
+	noNulErr    = errorString("sqlite3: missing NUL terminator")
+	noGlobalErr = errorString("sqlite3: could not find global: ")
+	noFuncErr   = errorString("sqlite3: could not find function: ")
+)

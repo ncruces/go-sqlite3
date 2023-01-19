@@ -54,7 +54,7 @@ func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
 func vfsRandomness(ctx context.Context, mod api.Module, vfs, nByte, zOut uint32) uint32 {
 	mem, ok := mod.Memory().Read(zOut, nByte)
 	if !ok {
-		return 0
+		panic(rangeErr)
 	}
 	n, _ := rand.Read(mem)
 	return uint32(n)
@@ -67,9 +67,8 @@ func vfsSleep(ctx context.Context, vfs, microseconds uint32) uint32 {
 
 func vfsCurrentTime(ctx context.Context, mod api.Module, vfs, out uint32) uint32 {
 	day := julianday.Float(time.Now())
-	ok := mod.Memory().WriteFloat64Le(out, day)
-	if !ok {
-		return uint32(ERROR)
+	if ok := mod.Memory().WriteFloat64Le(out, day); !ok {
+		panic(rangeErr)
 	}
 	return _OK
 }
@@ -77,9 +76,8 @@ func vfsCurrentTime(ctx context.Context, mod api.Module, vfs, out uint32) uint32
 func vfsCurrentTime64(ctx context.Context, mod api.Module, vfs, out uint32) uint32 {
 	day, nsec := julianday.Date(time.Now())
 	msec := day*86_400_000 + nsec/1_000_000
-	ok := mod.Memory().WriteUint64Le(out, uint64(msec))
-	if !ok {
-		return uint32(ERROR)
+	if ok := mod.Memory().WriteUint64Le(out, uint64(msec)); !ok {
+		panic(rangeErr)
 	}
 	return _OK
 }
@@ -92,12 +90,12 @@ func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut
 	}
 
 	siz := uint32(len(s) + 1)
-	if siz > zOut {
+	if siz > nOut {
 		return uint32(IOERR)
 	}
 	mem, ok := mod.Memory().Read(zOut, siz)
 	if !ok {
-		return uint32(IOERR)
+		panic(rangeErr)
 	}
 
 	mem[len(s)] = 0
@@ -160,9 +158,8 @@ func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut u
 		return uint32(IOERR_ACCESS)
 	}
 
-	ok := mod.Memory().WriteUint32Le(pResOut, res)
-	if !ok {
-		panic("sqlite: out-of-range")
+	if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok {
+		panic(rangeErr)
 	}
 	return _OK
 }
@@ -201,9 +198,8 @@ func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutF
 	c.files = append(c.files, f)
 found:
 
-	ok := mod.Memory().WriteUint32Le(file+ptrSize, uint32(id))
-	if !ok {
-		panic("sqlite: out-of-range")
+	if ok := mod.Memory().WriteUint32Le(file+ptrSize, uint32(id)); !ok {
+		panic(rangeErr)
 	}
 	return _OK
 }
@@ -211,7 +207,7 @@ found:
 func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -226,12 +222,12 @@ func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	mem, ok := mod.Memory().Read(buf, iAmt)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -251,12 +247,12 @@ func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst 
 func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	mem, ok := mod.Memory().Read(buf, iAmt)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -270,7 +266,7 @@ func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst
 func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -284,7 +280,7 @@ func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) 
 func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -298,7 +294,7 @@ func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
 func vfsFileSize(ctx context.Context, mod api.Module, file, pSize uint32) uint32 {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
-		panic("sqlite: out-of-range")
+		panic(rangeErr)
 	}
 
 	c := ctx.Value(connContext{}).(*Conn)
@@ -307,9 +303,8 @@ func vfsFileSize(ctx context.Context, mod api.Module, file, pSize uint32) uint32
 		return uint32(IOERR_SEEK)
 	}
 
-	ok = mod.Memory().WriteUint64Le(pSize, uint64(off))
-	if !ok {
-		panic("sqlite: out-of-range")
+	if ok := mod.Memory().WriteUint64Le(pSize, uint64(off)); !ok {
+		panic(rangeErr)
 	}
 	return _OK
 }

@@ -6,19 +6,19 @@ func newConn(module api.Module) *Conn {
 	getFun := func(name string) api.Function {
 		f := module.ExportedFunction(name)
 		if f == nil {
-			panic("sqlite3: could not find " + name + " function")
+			panic(noFuncErr + errorString(name))
 		}
 		return f
 	}
 
 	global := module.ExportedGlobal("malloc_destructor")
 	if global == nil {
-		panic("sqlite3: could not find malloc_destructor global")
+		panic(noGlobalErr + "malloc_destructor")
 	}
 	destructor := uint32(global.Get())
 	destructor, ok := module.Memory().ReadUint32Le(destructor)
 	if !ok {
-		panic("sqlite3: could not read malloc_destructor global")
+		panic(noGlobalErr + "malloc_destructor")
 	}
 
 	return &Conn{
