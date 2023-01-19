@@ -177,7 +177,10 @@ func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutF
 	c.files = append(c.files, f)
 found:
 
-	mod.Memory().WriteUint32Le(file+ptrSize, uint32(id))
+	ok := mod.Memory().WriteUint32Le(file+ptrSize, uint32(id))
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
 	return _OK
 }
 
@@ -227,4 +230,21 @@ func vfsTruncate(file uint32, size uint64) uint32 { panic("vfsTruncate") }
 
 func vfsSync(file, flags uint32) uint32 { panic("vfsSync") }
 
-func vfsFileSize(file, pSize uint32) uint32 { panic("vfsFileSize") }
+func vfsFileSize(ctx context.Context, mod api.Module, file, pSize uint32) uint32 {
+	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+
+	c := ctx.Value(connContext{}).(*Conn)
+	off, err := c.files[id].Seek(0, io.SeekEnd)
+	if err != nil {
+		return uint32(IOERR_SEEK)
+	}
+
+	ok = mod.Memory().WriteUint64Le(pSize, uint64(off))
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+	return _OK
+}
