@@ -7,26 +7,25 @@ This is very much a WIP.
 Roadmap:
 - [x] build SQLite using `zig cc --target=wasm32-wasi`
 - [x] `:memory:` databases
-- [x] use [`test_demovfs.c`](sqlite3/test_demovfs.c) for file databases
-- [ ] come up with a simple, nice API:
-  - idiomatic Go, close to the C SQLite API:
-    - [`github.com/bvinc/go-sqlite-lite`](https://github.com/bvinc/go-sqlite-lite)
-    - [`github.com/crawshaw/sqlite`](https://github.com/crawshaw/sqlite)
-    - [`github.com/zombiezen/go-sqlite`](https://github.com/zombiezen/go-sqlite)
-    - [`github.com/cvilsmeier/sqinn-go`](https://github.com/cvilsmeier/sqinn-go)
-  - [`database/sql`](https://pkg.go.dev/database/sql) drivers can come later, if ever
-- [ ] implement own VFS to sidestep WASI syscalls:
-  - locking will be a pain point:
-    - WASM has no threads
-    - concurrency is achieved by instantiating the module repeatedly
-    - file access needs to be synchronized, both in-process and out-of-process
-    - out-of-process should be compatible with SQLite on Windows/Unix
-- [ ] benchmark to see if this is useful at all:
-  - [`github.com/cvilsmeier/sqinn-go`](https://github.com/cvilsmeier/sqinn-go-bench)
-  - [`github.com/bvinc/go-sqlite-lite`](https://github.com/bvinc/go-sqlite-lite)
-  - [`github.com/mattn/go-sqlite3`](https://github.com/mattn/go-sqlite3)
-  - [`modernc.org/sqlite`](https://modernc.org/sqlite)
+- [x] port [`test_demovfs.c`](https://www.sqlite.org/src/doc/trunk/src/test_demovfs.c) to Go
+  - branch [`wasi`](https://github.com/ncruces/go-sqlite3/tree/wasi) uses `test_demovfs.c` directly
+- [x] come up with a simple, nice API, enough for simple queries
+- [ ] file locking, compatible with SQLite on Windows/Unix
+- [ ] shared-memory, compatible with SQLite on Windows/Unix
 
-Random TODO list:
-- optimize small allocations that last a single function call;
-- …
+Benchmarks:
+
+```
+goos: darwin
+goarch: amd64
+pkg: github.com/ncruces/go-sqlite3/bench
+cpu: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+
+BenchmarkCrawshaw-12                   8         677059222 ns/op        104003008 B/op   9000000 allocs/op
+BenchmarkWasm-12                       8         702393992 ns/op        178750252 B/op  11000110 allocs/op
+BenchmarkWASI-12                       5        1015034369 ns/op        178750009 B/op  11000102 allocs/op
+
+BenchmarkCrawshawFile-12               8         704186415 ns/op        104002593 B/op   8999998 allocs/op
+BenchmarkWasmFile-12                   5        1029067495 ns/op        178750070 B/op  11000102 allocs/op
+BenchmarkWASIFile-12                   3        2226217997 ns/op        868255072 B/op  16000200 allocs/op
+```
