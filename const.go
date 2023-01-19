@@ -148,6 +148,14 @@ const (
 	OPEN_EXRESCODE     OpenFlag = 0x02000000 /* Extended result codes */
 )
 
+type AccessFlag uint
+
+const (
+	ACCESS_EXISTS    AccessFlag = 0
+	ACCESS_READWRITE AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
+	ACCESS_READ      AccessFlag = 2 /* Unused */
+)
+
 type PrepareFlag uint
 
 const (

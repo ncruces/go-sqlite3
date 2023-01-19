@@ -2,7 +2,9 @@ package sqlite3
 
 import (
 	"context"
+	"errors"
 	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -104,7 +106,42 @@ func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut
 
 func vfsDelete(vfs, zName, syncDir uint32) uint32 { panic("vfsDelete") }
 
-func vfsAccess(vfs, zName, flags, pResOut uint32) uint32 { panic("vfsAccess") }
+func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut uint32) uint32 {
+	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+	fi, err := os.Stat(name)
+
+	var res uint32
+	if flags == uint32(ACCESS_EXISTS) {
+		switch {
+		case err == nil:
+			res = 1
+		case errors.Is(err, fs.ErrNotExist):
+			res = 0
+		default:
+			return uint32(IOERR_ACCESS)
+		}
+	} else if err != nil {
+		return uint32(IOERR_ACCESS)
+	} else {
+		var mask fs.FileMode
+		if flags == uint32(ACCESS_READWRITE) {
+			mask = 0600
+		} else {
+			mask = 0400
+		}
+		if fi.Mode()&mask == mask {
+			res = 1
+		} else {
+			res = 0
+		}
+	}
+
+	ok := mod.Memory().WriteUint32Le(pResOut, res)
+	if !ok {
+		panic("sqlite: out-of-range")
+	}
+	return _OK
+}
 
 func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
 	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
@@ -154,7 +191,7 @@ func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 	err := c.files[id].Close()
 	c.files[id] = nil
 	if err != nil {
-		return uint32(IOERR)
+		return uint32(IOERR_CLOSE)
 	}
 	return _OK
 }
