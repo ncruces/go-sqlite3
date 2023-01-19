@@ -219,19 +219,24 @@ func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 	return _OK
 }
 
-func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
+func vfsFile(ctx context.Context, mod api.Module, file uint32) *os.File {
 	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
 	if !ok {
 		panic(rangeErr)
 	}
 
+	c := ctx.Value(connContext{}).(*Conn)
+	return c.files[id]
+}
+
+func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
 	mem, ok := mod.Memory().Read(buf, iAmt)
 	if !ok {
 		panic(rangeErr)
 	}
 
-	c := ctx.Value(connContext{}).(*Conn)
-	n, err := c.files[id].ReadAt(mem, int64(iOfst))
+	f := vfsFile(ctx, mod, file)
+	n, err := f.ReadAt(mem, int64(iOfst))
 	if n == int(iAmt) {
 		return _OK
 	}
@@ -245,18 +250,13 @@ func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst 
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
-
 	mem, ok := mod.Memory().Read(buf, iAmt)
 	if !ok {
 		panic(rangeErr)
 	}
 
-	c := ctx.Value(connContext{}).(*Conn)
-	_, err := c.files[id].WriteAt(mem, int64(iOfst))
+	f := vfsFile(ctx, mod, file)
+	_, err := f.WriteAt(mem, int64(iOfst))
 	if err != nil {
 		return uint32(IOERR_WRITE)
 	}
@@ -264,13 +264,8 @@ func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) uint32 {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
-
-	c := ctx.Value(connContext{}).(*Conn)
-	err := c.files[id].Truncate(int64(size))
+	f := vfsFile(ctx, mod, file)
+	err := f.Truncate(int64(size))
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
 	}
@@ -278,13 +273,8 @@ func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) 
 }
 
 func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
-
-	c := ctx.Value(connContext{}).(*Conn)
-	err := c.files[id].Sync()
+	f := vfsFile(ctx, mod, file)
+	err := f.Sync()
 	if err != nil {
 		return uint32(IOERR_FSYNC)
 	}
@@ -292,13 +282,8 @@ func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, file, pSize uint32) uint32 {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
-
-	c := ctx.Value(connContext{}).(*Conn)
-	off, err := c.files[id].Seek(0, io.SeekEnd)
+	f := vfsFile(ctx, mod, file)
+	off, err := f.Seek(0, io.SeekEnd)
 	if err != nil {
 		return uint32(IOERR_SEEK)
 	}
