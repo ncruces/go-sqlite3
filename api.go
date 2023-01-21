@@ -28,6 +28,7 @@ func newConn(module api.Module) *Conn {
 			malloc:        getFun("malloc"),
 			free:          getFun("free"),
 			destructor:    uint64(destructor),
+			errcode:       getFun("sqlite3_errcode"),
 			errstr:        getFun("sqlite3_errstr"),
 			errmsg:        getFun("sqlite3_errmsg"),
 			erroff:        getFun("sqlite3_error_offset"),
@@ -59,6 +60,7 @@ type sqliteAPI struct {
 	malloc        api.Function
 	free          api.Function
 	destructor    uint64
+	errcode       api.Function
 	errstr        api.Function
 	errmsg        api.Function
 	erroff        api.Function

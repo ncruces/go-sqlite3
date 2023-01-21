@@ -141,31 +141,33 @@ func (c *Conn) error(rc uint64) error {
 		return nil
 	}
 
-	serr := Error{
+	err := Error{
 		Code:         ErrorCode(rc),
 		ExtendedCode: ExtendedErrorCode(rc),
 	}
 
+	if err.Code == NOMEM || err.ExtendedCode == IOERR_NOMEM {
+		panic(oomErr)
+	}
+
 	var r []uint64
 
-	// string
-	r, _ = c.api.errstr.Call(c.ctx, rc)
-	if r != nil {
-		serr.str = c.getString(uint32(r[0]), 512)
-	}
-
-	// message
+	// Do this first, sqlite3_errmsg is guaranteed to never change the value of the error code.
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
-		serr.msg = c.getString(uint32(r[0]), 512)
+		err.msg = c.getString(uint32(r[0]), 512)
 	}
 
-	switch serr.msg {
-	case "not an error", serr.str:
-		serr.msg = ""
+	r, _ = c.api.errstr.Call(c.ctx, rc)
+	if r != nil {
+		err.str = c.getString(uint32(r[0]), 512)
 	}
 
-	return &serr
+	if err.msg == err.str {
+		err.msg = ""
+
+	}
+	return &err
 }
 
 func (c *Conn) free(ptr uint32) {

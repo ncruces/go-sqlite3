@@ -149,7 +149,11 @@ func (s *Stmt) ColumnText(col int) string {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		// handle error
+		r, err = s.c.api.errcode.Call(s.c.ctx, uint64(s.handle))
+		if err != nil {
+			panic(err)
+		}
+		s.err = s.c.error(r[0])
 		return ""
 	}
 
@@ -166,7 +170,7 @@ func (s *Stmt) ColumnText(col int) string {
 	return string(mem)
 }
 
-func (s *Stmt) ColumnBlob(col int, buf []byte) int {
+func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 	r, err := s.c.api.columnBlob.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
@@ -175,8 +179,12 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) int {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		// handle error
-		return 0
+		r, err = s.c.api.errcode.Call(s.c.ctx, uint64(s.handle))
+		if err != nil {
+			panic(err)
+		}
+		s.err = s.c.error(r[0])
+		return nil
 	}
 
 	r, err = s.c.api.columnBytes.Call(s.c.ctx,
@@ -189,5 +197,5 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) int {
 	if !ok {
 		panic(rangeErr)
 	}
-	return copy(mem, buf)
+	return append(buf[0:0], mem...)
 }
