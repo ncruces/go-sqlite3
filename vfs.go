@@ -186,19 +186,13 @@ func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutF
 		return uint32(CANTOPEN)
 	}
 
-	var id int
-	for i := range c.files {
-		if c.files[i] == nil {
-			id = i
-			c.files[i] = f
-			goto found
-		}
+	if ok := mod.Memory().WriteUint32Le(file+ptrSize, c.getFile(f)); !ok {
+		panic(rangeErr)
 	}
-	id = len(c.files)
-	c.files = append(c.files, f)
-found:
-
-	if ok := mod.Memory().WriteUint32Le(file+ptrSize, uint32(id)); !ok {
+	if pOutFlags == 0 {
+		return _OK
+	}
+	if ok := mod.Memory().WriteUint32Le(pOutFlags, flags); !ok {
 		panic(rangeErr)
 	}
 	return _OK

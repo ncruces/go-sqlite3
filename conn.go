@@ -241,6 +241,17 @@ func getString(memory api.Memory, ptr, maxlen uint32) string {
 	}
 }
 
+func (c *Conn) getFile(f *os.File) uint32 {
+	for i := range c.files {
+		if c.files[i] == nil {
+			c.files[i] = f
+			return uint32(i)
+		}
+	}
+	c.files = append(c.files, f)
+	return uint32(len(c.files) - 1)
+}
+
 type connContext struct{}
 
 const ptrSize = 4

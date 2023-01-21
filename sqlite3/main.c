@@ -20,7 +20,7 @@ int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
 
 struct go_file {
   sqlite3_file base;
-  int fd;
+  int id;
 };
 
 int go_close(sqlite3_file *);
@@ -59,8 +59,9 @@ static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
       .xSectorSize = no_sector_size,
       .xDeviceCharacteristics = no_device_characteristics,
   };
-  file->pMethods = &go_io;
-  return go_open(vfs, zName, file, flags, pOutFlags);
+  int rc = go_open(vfs, zName, file, flags, pOutFlags);
+  file->pMethods = rc == SQLITE_OK ? &go_io : NULL;
+  return rc;
 }
 
 int sqlite3_os_init() {
