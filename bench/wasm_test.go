@@ -68,12 +68,7 @@ func wasmTest() {
 		}
 		defer stmt.Close()
 
-		for {
-			if row, err := stmt.Step(); err != nil {
-				panic(err)
-			} else if !row {
-				break
-			}
+		for stmt.Step() {
 			id := stmt.ColumnInt(0)
 			name := stmt.ColumnText(1)
 			age := stmt.ColumnInt64(2)
@@ -81,6 +76,9 @@ func wasmTest() {
 			if id < 1 || len(name) < 5 || age < 33 || rating < 0.13 {
 				panic("wrong row values")
 			}
+		}
+		if stmt.Err() != nil {
+			panic(err)
 		}
 	}()
 }

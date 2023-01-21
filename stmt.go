@@ -7,6 +7,7 @@ import (
 type Stmt struct {
 	c      *Conn
 	handle uint32
+	err    error
 }
 
 func (s *Stmt) Close() error {
@@ -27,18 +28,25 @@ func (s *Stmt) Reset() error {
 	return s.c.error(r[0])
 }
 
-func (s *Stmt) Step() (row bool, err error) {
+func (s *Stmt) Step() bool {
 	r, err := s.c.api.step.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
-		return false, err
+		s.err = err
+		return false
 	}
 	if r[0] == _ROW {
-		return true, nil
+		return true
 	}
 	if r[0] == _DONE {
-		return false, nil
+		s.err = nil
+	} else {
+		s.err = s.c.error(r[0])
 	}
-	return false, s.c.error(r[0])
+	return false
+}
+
+func (s *Stmt) Err() error {
+	return s.err
 }
 
 func (s *Stmt) BindBool(param int, value bool) error {

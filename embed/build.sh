@@ -4,18 +4,11 @@ set -eo pipefail
 cd -P -- "$(dirname -- "$0")"
 
 # download SQLite
-if [ ! -f "sqlite3/sqlite3.c" ]; then
-	url="https://www.sqlite.org/2022/sqlite-amalgamation-3400100.zip"
-	curl "$url" > sqlite3/sqlite.zip
-	unzip -d sqlite3/ sqlite3/sqlite.zip
-	mv sqlite3/sqlite-amalgamation-*/sqlite3* sqlite3/
-	rm -rf sqlite3/sqlite-amalgamation-*
-	rm sqlite3/sqlite.zip
-fi
+../sqlite3/download.sh
 
 # build SQLite
 zig cc --target=wasm32-wasi -flto -g0 -O2 \
-  -o embed/sqlite3.wasm sqlite3/*.c \
+  -o sqlite3.wasm ../sqlite3/*.c \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
@@ -27,15 +20,18 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-DSQLITE_DEFAULT_LOCKING_MODE=1 \
 	-DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1 \
 	-DSQLITE_LIKE_DOESNT_MATCH_BLOBS \
+	-DSQLITE_MAX_EXPR_DEPTH=0 \
 	-DSQLITE_OMIT_DECLTYPE \
 	-DSQLITE_OMIT_DEPRECATED \
 	-DSQLITE_OMIT_PROGRESS_CALLBACK \
 	-DSQLITE_OMIT_SHARED_CACHE \
 	-DSQLITE_OMIT_AUTOINIT \
 	-DSQLITE_OMIT_UTF16 \
+	-DSQLITE_USE_ALLOCA \
 	-Wl,--export=malloc \
 	-Wl,--export=free \
 	-Wl,--export=malloc_destructor \
+	-Wl,--export=sqlite3_errcode \
 	-Wl,--export=sqlite3_errstr \
 	-Wl,--export=sqlite3_errmsg \
 	-Wl,--export=sqlite3_error_offset \

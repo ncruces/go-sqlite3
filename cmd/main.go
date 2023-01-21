@@ -29,13 +29,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for {
-		if row, err := stmt.Step(); err != nil {
-			log.Fatal(err)
-		} else if !row {
-			break
-		}
+	for stmt.Step() {
 		fmt.Println(stmt.ColumnInt(0), stmt.ColumnText(1))
+	}
+	if stmt.Err() != nil {
+		log.Fatal(err)
 	}
 
 	err = stmt.Close()

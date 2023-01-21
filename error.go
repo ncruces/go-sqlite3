@@ -12,7 +12,7 @@ type Error struct {
 	msg          string
 }
 
-func (e Error) Error() string {
+func (e *Error) Error() string {
 	var b strings.Builder
 	b.WriteString("sqlite3: ")
 

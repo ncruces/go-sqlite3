@@ -142,7 +142,7 @@ func (c *Conn) error(rc uint64) error {
 	}
 
 	serr := Error{
-		Code:         ErrorCode(rc & 0xFF),
+		Code:         ErrorCode(rc),
 		ExtendedCode: ExtendedErrorCode(rc),
 	}
 
