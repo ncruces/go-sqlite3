@@ -3,14 +3,11 @@ package sqlite3
 import (
 	"bytes"
 	"context"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental/writefs"
 )
 
 type Conn struct {
@@ -22,29 +19,16 @@ type Conn struct {
 	files  []*os.File
 }
 
-func Open(name string) (conn *Conn, err error) {
-	return OpenFlags(name, OPEN_READWRITE|OPEN_CREATE)
+func Open(filename string) (conn *Conn, err error) {
+	return OpenFlags(filename, OPEN_READWRITE|OPEN_CREATE)
 }
 
-func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
+func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	once.Do(compile)
-
-	var fs fs.FS
-	if name != ":memory:" {
-		dir := filepath.Dir(name)
-		name = filepath.Base(name)
-		fs, err = writefs.NewDirFS(dir)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	ctx := context.Background()
 	cfg := wazero.NewModuleConfig().
 		WithName("sqlite3-" + strconv.FormatUint(counter.Add(1), 10))
-	if fs != nil {
-		cfg = cfg.WithFS(fs)
-	}
 	module, err := wasm.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		return nil, err
@@ -57,7 +41,7 @@ func OpenFlags(name string, flags OpenFlag) (conn *Conn, err error) {
 
 	c := newConn(module)
 	c.ctx = context.WithValue(ctx, connContext{}, c)
-	namePtr := c.newString(name)
+	namePtr := c.newString(filename)
 	connPtr := c.new(ptrSize)
 	defer c.free(namePtr)
 	defer c.free(connPtr)
@@ -227,7 +211,7 @@ func (c *Conn) getString(ptr, maxlen uint32) string {
 }
 
 func getString(memory api.Memory, ptr, maxlen uint32) string {
-	mem, ok := memory.Read(ptr, maxlen)
+	mem, ok := memory.Read(ptr, maxlen+1)
 	if !ok {
 		mem, ok = memory.Read(ptr, memory.Size()-ptr)
 		if !ok {

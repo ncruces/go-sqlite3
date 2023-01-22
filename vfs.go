@@ -51,8 +51,8 @@ func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
 	panic(sys.NewExitError(mod.Name(), exitCode))
 }
 
-func vfsRandomness(ctx context.Context, mod api.Module, vfs, nByte, zOut uint32) uint32 {
-	mem, ok := mod.Memory().Read(zOut, nByte)
+func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
+	mem, ok := mod.Memory().Read(zByte, nByte)
 	if !ok {
 		panic(rangeErr)
 	}
@@ -60,52 +60,52 @@ func vfsRandomness(ctx context.Context, mod api.Module, vfs, nByte, zOut uint32)
 	return uint32(n)
 }
 
-func vfsSleep(ctx context.Context, vfs, microseconds uint32) uint32 {
-	time.Sleep(time.Duration(microseconds) * time.Microsecond)
+func vfsSleep(ctx context.Context, pVfs, nMicro uint32) uint32 {
+	time.Sleep(time.Duration(nMicro) * time.Microsecond)
 	return _OK
 }
 
-func vfsCurrentTime(ctx context.Context, mod api.Module, vfs, out uint32) uint32 {
+func vfsCurrentTime(ctx context.Context, mod api.Module, pVfs, prNow uint32) uint32 {
 	day := julianday.Float(time.Now())
-	if ok := mod.Memory().WriteFloat64Le(out, day); !ok {
+	if ok := mod.Memory().WriteFloat64Le(prNow, day); !ok {
 		panic(rangeErr)
 	}
 	return _OK
 }
 
-func vfsCurrentTime64(ctx context.Context, mod api.Module, vfs, out uint32) uint32 {
+func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) uint32 {
 	day, nsec := julianday.Date(time.Now())
 	msec := day*86_400_000 + nsec/1_000_000
-	if ok := mod.Memory().WriteUint64Le(out, uint64(msec)); !ok {
+	if ok := mod.Memory().WriteUint64Le(piNow, uint64(msec)); !ok {
 		panic(rangeErr)
 	}
 	return _OK
 }
 
-func vfsFullPathname(ctx context.Context, mod api.Module, vfs, zName, nOut, zOut uint32) uint32 {
-	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
-	s, err := filepath.Abs(name)
+func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) uint32 {
+	rel := getString(mod.Memory(), zRelative, _MAX_PATHNAME)
+	abs, err := filepath.Abs(rel)
 	if err != nil {
 		return uint32(IOERR)
 	}
 
-	siz := uint32(len(s) + 1)
-	if siz > nOut {
+	siz := uint32(len(abs) + 1)
+	if siz > nFull {
 		return uint32(IOERR)
 	}
-	mem, ok := mod.Memory().Read(zOut, siz)
+	mem, ok := mod.Memory().Read(zFull, siz)
 	if !ok {
 		panic(rangeErr)
 	}
 
-	mem[len(s)] = 0
-	copy(mem, s)
+	mem[len(abs)] = 0
+	copy(mem, abs)
 	return _OK
 }
 
-func vfsDelete(ctx context.Context, mod api.Module, vfs, zName, syncDir uint32) uint32 {
-	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
-	err := os.Remove(name)
+func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) uint32 {
+	path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+	err := os.Remove(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return _OK
 	}
@@ -113,7 +113,7 @@ func vfsDelete(ctx context.Context, mod api.Module, vfs, zName, syncDir uint32) 
 		return uint32(IOERR_DELETE)
 	}
 	if syncDir != 0 {
-		f, err := os.Open(filepath.Dir(name))
+		f, err := os.Open(filepath.Dir(path))
 		if err == nil {
 			err = f.Sync()
 			f.Close()
@@ -125,9 +125,9 @@ func vfsDelete(ctx context.Context, mod api.Module, vfs, zName, syncDir uint32) 
 	return _OK
 }
 
-func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut uint32) uint32 {
-	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
-	fi, err := os.Stat(name)
+func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath, flags, pResOut uint32) uint32 {
+	path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+	fi, err := os.Stat(path)
 
 	var res uint32
 	if flags == uint32(ACCESS_EXISTS) {
@@ -164,7 +164,7 @@ func vfsAccess(ctx context.Context, mod api.Module, vfs, zName, flags, pResOut u
 	return _OK
 }
 
-func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutFlags uint32) uint32 {
+func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile, flags, pOutFlags uint32) uint32 {
 	name := getString(mod.Memory(), zName, _MAX_PATHNAME)
 	c := ctx.Value(connContext{}).(*Conn)
 
@@ -186,7 +186,7 @@ func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutF
 		return uint32(CANTOPEN)
 	}
 
-	if ok := mod.Memory().WriteUint32Le(file+ptrSize, c.getFile(f)); !ok {
+	if ok := mod.Memory().WriteUint32Le(pFile+ptrSize, c.getFile(f)); !ok {
 		panic(rangeErr)
 	}
 	if pOutFlags == 0 {
@@ -198,8 +198,8 @@ func vfsOpen(ctx context.Context, mod api.Module, vfs, zName, file, flags, pOutF
 	return _OK
 }
 
-func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
+	id, ok := mod.Memory().ReadUint32Le(pFile + ptrSize)
 	if !ok {
 		panic(rangeErr)
 	}
@@ -213,8 +213,8 @@ func vfsClose(ctx context.Context, mod api.Module, file uint32) uint32 {
 	return _OK
 }
 
-func vfsFile(ctx context.Context, mod api.Module, file uint32) *os.File {
-	id, ok := mod.Memory().ReadUint32Le(file + ptrSize)
+func vfsFile(ctx context.Context, mod api.Module, pFile uint32) *os.File {
+	id, ok := mod.Memory().ReadUint32Le(pFile + ptrSize)
 	if !ok {
 		panic(rangeErr)
 	}
@@ -223,14 +223,14 @@ func vfsFile(ctx context.Context, mod api.Module, file uint32) *os.File {
 	return c.files[id]
 }
 
-func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
-	mem, ok := mod.Memory().Read(buf, iAmt)
+func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
+	mem, ok := mod.Memory().Read(zBuf, iAmt)
 	if !ok {
 		panic(rangeErr)
 	}
 
-	f := vfsFile(ctx, mod, file)
-	n, err := f.ReadAt(mem, int64(iOfst))
+	file := vfsFile(ctx, mod, pFile)
+	n, err := file.ReadAt(mem, int64(iOfst))
 	if n == int(iAmt) {
 		return _OK
 	}
@@ -243,41 +243,41 @@ func vfsRead(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst 
 	return uint32(IOERR_SHORT_READ)
 }
 
-func vfsWrite(ctx context.Context, mod api.Module, file, buf, iAmt uint32, iOfst uint64) uint32 {
-	mem, ok := mod.Memory().Read(buf, iAmt)
+func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
+	mem, ok := mod.Memory().Read(zBuf, iAmt)
 	if !ok {
 		panic(rangeErr)
 	}
 
-	f := vfsFile(ctx, mod, file)
-	_, err := f.WriteAt(mem, int64(iOfst))
+	file := vfsFile(ctx, mod, pFile)
+	_, err := file.WriteAt(mem, int64(iOfst))
 	if err != nil {
 		return uint32(IOERR_WRITE)
 	}
 	return _OK
 }
 
-func vfsTruncate(ctx context.Context, mod api.Module, file uint32, size uint64) uint32 {
-	f := vfsFile(ctx, mod, file)
-	err := f.Truncate(int64(size))
+func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64) uint32 {
+	file := vfsFile(ctx, mod, pFile)
+	err := file.Truncate(int64(nByte))
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
 	}
 	return _OK
 }
 
-func vfsSync(ctx context.Context, mod api.Module, file, flags uint32) uint32 {
-	f := vfsFile(ctx, mod, file)
-	err := f.Sync()
+func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
+	file := vfsFile(ctx, mod, pFile)
+	err := file.Sync()
 	if err != nil {
 		return uint32(IOERR_FSYNC)
 	}
 	return _OK
 }
 
-func vfsFileSize(ctx context.Context, mod api.Module, file, pSize uint32) uint32 {
-	f := vfsFile(ctx, mod, file)
-	off, err := f.Seek(0, io.SeekEnd)
+func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint32 {
+	file := vfsFile(ctx, mod, pFile)
+	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return uint32(IOERR_SEEK)
 	}

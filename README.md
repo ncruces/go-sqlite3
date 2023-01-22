@@ -11,7 +11,7 @@ Roadmap:
   - branch [`wasi`](https://github.com/ncruces/go-sqlite3/tree/wasi) uses `test_demovfs.c` directly
 - [x] come up with a simple, nice API, enough for simple queries
 - [ ] file locking, compatible with SQLite on Windows/Unix
-- [ ] shared-memory, compatible with SQLite on Windows/Unix
+- [ ] ~shared-memory, compatible with SQLite on Windows/Unix~
 
 Benchmarks:
 
