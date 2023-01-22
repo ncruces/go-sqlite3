@@ -3,7 +3,6 @@ package sqlite3
 import (
 	"bytes"
 	"context"
-	"os"
 	"strconv"
 
 	"github.com/tetratelabs/wazero"
@@ -16,7 +15,6 @@ type Conn struct {
 	module api.Module
 	memory api.Memory
 	api    sqliteAPI
-	files  []*os.File
 }
 
 func Open(filename string) (conn *Conn, err error) {
@@ -40,7 +38,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	}()
 
 	c := newConn(module)
-	c.ctx = context.WithValue(ctx, connContext{}, c)
+	c.ctx = context.Background()
 	namePtr := c.newString(filename)
 	connPtr := c.new(ptrSize)
 	defer c.free(namePtr)
@@ -67,11 +65,6 @@ func (c *Conn) Close() error {
 
 	if err := c.error(r[0]); err != nil {
 		return err
-	}
-	for _, f := range c.files {
-		if f != nil {
-			f.Close()
-		}
 	}
 	return c.module.Close(c.ctx)
 }
@@ -224,18 +217,5 @@ func getString(memory api.Memory, ptr, maxlen uint32) string {
 		return string(mem[:i])
 	}
 }
-
-func (c *Conn) getFile(f *os.File) uint32 {
-	for i := range c.files {
-		if c.files[i] == nil {
-			c.files[i] = f
-			return uint32(i)
-		}
-	}
-	c.files = append(c.files, f)
-	return uint32(len(c.files) - 1)
-}
-
-type connContext struct{}
 
 const ptrSize = 4

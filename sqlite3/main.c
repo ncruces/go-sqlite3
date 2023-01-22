@@ -21,6 +21,7 @@ int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
 struct go_file {
   sqlite3_file base;
   int id;
+  int eLock;
 };
 
 int go_close(sqlite3_file *);
@@ -30,12 +31,17 @@ int go_truncate(sqlite3_file *, sqlite3_int64 size);
 int go_sync(sqlite3_file *, int flags);
 int go_file_size(sqlite3_file *, sqlite3_int64 *pSize);
 
+int go_lock(sqlite3_file *pFile, int eLock);
+int go_unlock(sqlite3_file *pFile, int eLock);
+int go_check_reserved_lock(sqlite3_file *pFile, int *pResOut);
+
 static int no_lock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
 static int no_unlock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
 static int no_check_reserved_lock(sqlite3_file *pFile, int *pResOut) {
   *pResOut = 0;
   return SQLITE_OK;
 }
+
 static int no_file_control(sqlite3_file *pFile, int op, void *pArg) {
   return SQLITE_NOTFOUND;
 }
@@ -52,9 +58,9 @@ static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
       .xTruncate = go_truncate,
       .xSync = go_sync,
       .xFileSize = go_file_size,
-      .xLock = no_lock,
-      .xUnlock = no_unlock,
-      .xCheckReservedLock = no_check_reserved_lock,
+      .xLock = go_lock,
+      .xUnlock = go_unlock,
+      .xCheckReservedLock = go_check_reserved_lock,
       .xFileControl = no_file_control,
       .xSectorSize = no_sector_size,
       .xDeviceCharacteristics = no_device_characteristics,
