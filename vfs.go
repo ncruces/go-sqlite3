@@ -133,6 +133,9 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 }
 
 func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath, flags, pResOut uint32) uint32 {
+	// Consider using [syscall.Access] for [ACCESS_READWRITE]/[ACCESS_READ]
+	// (as the Unix VFS does).
+
 	path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
 	fi, err := os.Stat(path)
 
@@ -192,11 +195,11 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile, flags, pOu
 		return uint32(CANTOPEN)
 	}
 
-	id, err := vfsGetFileID(file)
+	id, err := vfsGetOpenFileID(file)
 	if err != nil {
 		return uint32(CANTOPEN)
 	}
-	vfsSetFileData(mod, pFile, id, _NO_LOCK)
+	vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)
 
 	if pOutFlags == 0 {
 		return _OK
@@ -208,7 +211,8 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile, flags, pOu
 }
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
-	err := vfsReleaseFile(mod, pFile)
+	id := vfsFilePtr{mod, pFile}.ID()
+	err := vfsReleaseOpenFile(id)
 	if err != nil {
 		return uint32(IOERR_CLOSE)
 	}
@@ -221,7 +225,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 		panic(rangeErr)
 	}
 
-	file := vfsGetOSFile(mod, pFile)
+	file := vfsFilePtr{mod, pFile}.OSFile()
 	n, err := file.ReadAt(mem, int64(iOfst))
 	if n == int(iAmt) {
 		return _OK
@@ -241,7 +245,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 		panic(rangeErr)
 	}
 
-	file := vfsGetOSFile(mod, pFile)
+	file := vfsFilePtr{mod, pFile}.OSFile()
 	_, err := file.WriteAt(mem, int64(iOfst))
 	if err != nil {
 		return uint32(IOERR_WRITE)
@@ -250,7 +254,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64) uint32 {
-	file := vfsGetOSFile(mod, pFile)
+	file := vfsFilePtr{mod, pFile}.OSFile()
 	err := file.Truncate(int64(nByte))
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
@@ -259,7 +263,7 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64
 }
 
 func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
-	file := vfsGetOSFile(mod, pFile)
+	file := vfsFilePtr{mod, pFile}.OSFile()
 	err := file.Sync()
 	if err != nil {
 		return uint32(IOERR_FSYNC)
@@ -270,7 +274,7 @@ func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint32 {
 	// This uses [file.Seek] because we don't care about the offset for reading/writing.
 	// But consider using [file.Stat] instead (as other VFSes do).
-	file := vfsGetOSFile(mod, pFile)
+	file := vfsFilePtr{mod, pFile}.OSFile()
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return uint32(IOERR_SEEK)

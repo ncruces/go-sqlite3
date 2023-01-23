@@ -15,18 +15,18 @@ type vfsOpenFile struct {
 }
 
 var (
-	vfsMutex     sync.Mutex
-	vfsOpenFiles []*vfsOpenFile
+	vfsOpenFiles    []*vfsOpenFile
+	vfsOpenFilesMtx sync.Mutex
 )
 
-func vfsGetFileID(file *os.File) (uint32, error) {
+func vfsGetOpenFileID(file *os.File) (uint32, error) {
 	fi, err := file.Stat()
 	if err != nil {
 		return 0, err
 	}
 
-	vfsMutex.Lock()
-	defer vfsMutex.Unlock()
+	vfsOpenFilesMtx.Lock()
+	defer vfsOpenFilesMtx.Unlock()
 
 	// Reuse an already opened file.
 	for id, of := range vfsOpenFiles {
@@ -62,14 +62,9 @@ func vfsGetFileID(file *os.File) (uint32, error) {
 	return uint32(id), nil
 }
 
-func vfsReleaseFile(mod api.Module, pFile uint32) error {
-	id, ok := mod.Memory().ReadUint32Le(pFile + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
-
-	vfsMutex.Lock()
-	defer vfsMutex.Unlock()
+func vfsReleaseOpenFile(id uint32) error {
+	vfsOpenFilesMtx.Lock()
+	defer vfsOpenFilesMtx.Unlock()
 
 	of := vfsOpenFiles[id]
 	if of.nref--; of.nref > 0 {
@@ -80,32 +75,46 @@ func vfsReleaseFile(mod api.Module, pFile uint32) error {
 	return err
 }
 
-func vfsGetOSFile(mod api.Module, pFile uint32) *os.File {
-	id, ok := mod.Memory().ReadUint32Le(pFile + ptrSize)
-	if !ok {
-		panic(rangeErr)
-	}
+type vfsFilePtr struct {
+	api.Module
+	ptr uint32
+}
+
+func (p vfsFilePtr) OSFile() *os.File {
+	id := p.ID()
+	vfsOpenFilesMtx.Lock()
+	defer vfsOpenFilesMtx.Unlock()
 	return vfsOpenFiles[id].file
 }
 
-func vfsGetFileData(mod api.Module, pFile uint32) (id, lock uint32) {
-	var ok bool
-	if id, ok = mod.Memory().ReadUint32Le(pFile + ptrSize); !ok {
+func (p vfsFilePtr) ID() uint32 {
+	id, ok := p.Memory().ReadUint32Le(p.ptr + ptrSize)
+	if !ok {
 		panic(rangeErr)
 	}
-	if lock, ok = mod.Memory().ReadUint32Le(pFile + 2*ptrSize); !ok {
-		panic(rangeErr)
-	}
-	return
+	return id
 }
 
-func vfsSetFileData(mod api.Module, pFile, id, lock uint32) {
-	if ok := mod.Memory().WriteUint32Le(pFile+ptrSize, id); !ok {
+func (p vfsFilePtr) Lock() uint32 {
+	lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*ptrSize)
+	if !ok {
 		panic(rangeErr)
 	}
-	if ok := mod.Memory().WriteUint32Le(pFile+2*ptrSize, lock); !ok {
+	return lk
+}
+
+func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
+	if ok := p.Memory().WriteUint32Le(p.ptr+ptrSize, id); !ok {
 		panic(rangeErr)
 	}
+	return p
+}
+
+func (p vfsFilePtr) SetLock(lock uint32) vfsFilePtr {
+	if ok := p.Memory().WriteUint32Le(p.ptr+2*ptrSize, lock); !ok {
+		panic(rangeErr)
+	}
+	return p
 }
 
 const (
