@@ -11,7 +11,9 @@ type vfsOpenFile struct {
 	file *os.File
 	info os.FileInfo
 	nref int
-	lock int
+
+	shared int
+	vfsLocker
 }
 
 var (
@@ -42,23 +44,25 @@ func vfsGetOpenFileID(file *os.File) (uint32, error) {
 		}
 	}
 
-	openFile := vfsOpenFile{
+	of := vfsOpenFile{
 		file: file,
 		info: fi,
 		nref: 1,
+
+		vfsLocker: &vfsDebugLocker{},
 	}
 
 	// Find an empty slot.
-	for id, of := range vfsOpenFiles {
-		if of == nil {
-			vfsOpenFiles[id] = &openFile
+	for id, ptr := range vfsOpenFiles {
+		if ptr == nil {
+			vfsOpenFiles[id] = &of
 			return uint32(id), nil
 		}
 	}
 
 	// Add a new slot.
 	id := len(vfsOpenFiles)
-	vfsOpenFiles = append(vfsOpenFiles, &openFile)
+	vfsOpenFiles = append(vfsOpenFiles, &of)
 	return uint32(id), nil
 }
 
@@ -116,11 +120,3 @@ func (p vfsFilePtr) SetLock(lock uint32) vfsFilePtr {
 	}
 	return p
 }
-
-const (
-	_NO_LOCK        = 0
-	_SHARED_LOCK    = 1
-	_RESERVED_LOCK  = 2
-	_PENDING_LOCK   = 3
-	_EXCLUSIVE_LOCK = 4
-)

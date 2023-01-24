@@ -13,7 +13,7 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-DSQLITE_OS_OTHER=1 -DSQLITE_BYTEORDER=1234 \
-	-DHAVE_ISNAN -DHAVE_MALLOC_USABLE_SIZE \
+	-DHAVE_ISNAN -DHAVE_USLEEP -DHAVE_MALLOC_USABLE_SIZE \
 	-DSQLITE_DQS=0 \
 	-DSQLITE_THREADSAFE=0 \
 	-DSQLITE_DEFAULT_MEMSTATUS=0 \

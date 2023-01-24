@@ -41,4 +41,5 @@ const (
 	noNulErr    = errorString("sqlite3: missing NUL terminator")
 	noGlobalErr = errorString("sqlite3: could not find global: ")
 	noFuncErr   = errorString("sqlite3: could not find function: ")
+	assertErr   = errorString("sqlite3: assertion failed")
 )
