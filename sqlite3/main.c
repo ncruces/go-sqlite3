@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <time.h>
 
 #include "sqlite3.h"
 
@@ -6,6 +7,8 @@ int main() {
   int rc = sqlite3_initialize();
   if (rc != SQLITE_OK) return 1;
 }
+
+int go_localtime(sqlite3_int64, struct tm *);
 
 int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
 int go_sleep(sqlite3_vfs *, int microseconds);
@@ -47,6 +50,10 @@ static int no_file_control(sqlite3_file *pFile, int op, void *pArg) {
 }
 static int no_sector_size(sqlite3_file *pFile) { return 0; }
 static int no_device_characteristics(sqlite3_file *pFile) { return 0; }
+
+int localtime_s(struct tm *const pTm, time_t const *const pTime) {
+  return go_localtime((sqlite3_int64)*pTime, pTm);
+}
 
 static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
                      sqlite3_file *file, int flags, int *pOutFlags) {
