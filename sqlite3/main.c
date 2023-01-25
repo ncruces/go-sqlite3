@@ -73,7 +73,7 @@ static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
       .xDeviceCharacteristics = no_device_characteristics,
   };
   int rc = go_open(vfs, zName, file, flags, pOutFlags);
-  file->pMethods = rc == SQLITE_OK ? &go_io : NULL;
+  file->pMethods = (char)rc == SQLITE_OK ? &go_io : NULL;
   return rc;
 }
 

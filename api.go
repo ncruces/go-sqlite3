@@ -16,6 +16,9 @@ func newConn(module api.Module) *Conn {
 		panic(noGlobalErr + "malloc_destructor")
 	}
 	destructor := uint32(global.Get())
+	if destructor == 0 {
+		panic(noGlobalErr + "malloc_destructor")
+	}
 	destructor, ok := module.Memory().ReadUint32Le(destructor)
 	if !ok {
 		panic(noGlobalErr + "malloc_destructor")

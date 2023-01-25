@@ -21,12 +21,7 @@ var (
 	vfsOpenFilesMtx sync.Mutex
 )
 
-func vfsGetOpenFileID(file *os.File) (uint32, error) {
-	fi, err := file.Stat()
-	if err != nil {
-		return 0, err
-	}
-
+func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 {
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
 
@@ -35,18 +30,16 @@ func vfsGetOpenFileID(file *os.File) (uint32, error) {
 		if of == nil {
 			continue
 		}
-		if os.SameFile(fi, of.info) {
-			if err := file.Close(); err != nil {
-				return 0, err
-			}
+		if os.SameFile(info, of.info) {
 			of.nref++
-			return uint32(id), nil
+			_ = file.Close()
+			return uint32(id)
 		}
 	}
 
 	of := &vfsOpenFile{
 		file: file,
-		info: fi,
+		info: info,
 		nref: 1,
 
 		vfsLocker: &vfsNoopLocker{},
@@ -56,14 +49,14 @@ func vfsGetOpenFileID(file *os.File) (uint32, error) {
 	for id, ptr := range vfsOpenFiles {
 		if ptr == nil {
 			vfsOpenFiles[id] = of
-			return uint32(id), nil
+			return uint32(id)
 		}
 	}
 
 	// Add a new slot.
 	id := len(vfsOpenFiles)
 	vfsOpenFiles = append(vfsOpenFiles, of)
-	return uint32(id), nil
+	return uint32(id)
 }
 
 func vfsReleaseOpenFile(id uint32) error {
@@ -92,6 +85,9 @@ func (p vfsFilePtr) OSFile() *os.File {
 }
 
 func (p vfsFilePtr) ID() uint32 {
+	if p.ptr == 0 {
+		panic(nilErr)
+	}
 	id, ok := p.Memory().ReadUint32Le(p.ptr + wordSize)
 	if !ok {
 		panic(rangeErr)
@@ -100,6 +96,9 @@ func (p vfsFilePtr) ID() uint32 {
 }
 
 func (p vfsFilePtr) Lock() vfsLockState {
+	if p.ptr == 0 {
+		panic(nilErr)
+	}
 	lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*wordSize)
 	if !ok {
 		panic(rangeErr)
@@ -108,6 +107,9 @@ func (p vfsFilePtr) Lock() vfsLockState {
 }
 
 func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
+	if p.ptr == 0 {
+		panic(nilErr)
+	}
 	if ok := p.Memory().WriteUint32Le(p.ptr+wordSize, id); !ok {
 		panic(rangeErr)
 	}
@@ -115,6 +117,9 @@ func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
 }
 
 func (p vfsFilePtr) SetLock(lock vfsLockState) vfsFilePtr {
+	if p.ptr == 0 {
+		panic(nilErr)
+	}
 	if ok := p.Memory().WriteUint32Le(p.ptr+2*wordSize, uint32(lock)); !ok {
 		panic(rangeErr)
 	}

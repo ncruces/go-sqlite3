@@ -121,7 +121,7 @@ const (
 	AUTH_USER               = ExtendedErrorCode(AUTH) | (1 << 8)
 )
 
-type OpenFlag uint
+type OpenFlag uint32
 
 const (
 	OPEN_READONLY      OpenFlag = 0x00000001 /* Ok for sqlite3_open_v2() */
@@ -148,7 +148,7 @@ const (
 	OPEN_EXRESCODE     OpenFlag = 0x02000000 /* Extended result codes */
 )
 
-type AccessFlag uint
+type AccessFlag uint32
 
 const (
 	ACCESS_EXISTS    AccessFlag = 0

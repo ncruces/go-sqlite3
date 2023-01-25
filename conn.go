@@ -162,10 +162,11 @@ func (c *Conn) new(len uint32) uint32 {
 	if err != nil {
 		panic(err)
 	}
-	if r[0] == 0 {
+	ptr := uint32(r[0])
+	if ptr == 0 || ptr >= c.memory.Size() {
 		panic(oomErr)
 	}
-	return uint32(r[0])
+	return ptr
 }
 
 func (c *Conn) newBytes(s []byte) uint32 {
@@ -204,6 +205,9 @@ func (c *Conn) getString(ptr, maxlen uint32) string {
 }
 
 func getString(memory api.Memory, ptr, maxlen uint32) string {
+	if ptr == 0 {
+		panic(nilErr)
+	}
 	mem, ok := memory.Read(ptr, maxlen+1)
 	if !ok {
 		mem, ok = memory.Read(ptr, memory.Size()-ptr)

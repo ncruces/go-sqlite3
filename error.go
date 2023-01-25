@@ -36,6 +36,7 @@ type errorString string
 func (e errorString) Error() string { return string(e) }
 
 const (
+	nilErr      = errorString("sqlite3: invalid memory address or null pointer dereference")
 	oomErr      = errorString("sqlite3: out of memory")
 	rangeErr    = errorString("sqlite3: index out of range")
 	noNulErr    = errorString("sqlite3: missing NUL terminator")
