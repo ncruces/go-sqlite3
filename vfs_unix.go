@@ -4,6 +4,7 @@ package sqlite3
 
 import (
 	"os"
+	"runtime"
 	"syscall"
 )
 
@@ -139,9 +140,17 @@ func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) {
 }
 
 func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) bool {
-	return syscall.FcntlFlock(l.Fd(), syscall.F_GETLK, lock) == nil
+	F_GETLK := syscall.F_GETLK
+	if runtime.GOOS == "linux" {
+		F_GETLK = 36 // F_OFD_GETLK
+	}
+	return syscall.FcntlFlock(l.Fd(), F_GETLK, lock) == nil
 }
 
 func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) bool {
-	return syscall.FcntlFlock(l.Fd(), syscall.F_SETLK, lock) == nil
+	F_SETLK := syscall.F_SETLK
+	if runtime.GOOS == "linux" {
+		F_SETLK = 37 // F_OFD_SETLK
+	}
+	return syscall.FcntlFlock(l.Fd(), F_SETLK, lock) == nil
 }
