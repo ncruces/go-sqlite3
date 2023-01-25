@@ -8,7 +8,7 @@ type vfsDebugLocker struct {
 
 var _ vfsLocker = &vfsDebugLocker{}
 
-func (l *vfsDebugLocker) LockState() uint32 {
+func (l *vfsDebugLocker) LockerState() uint32 {
 	return l.state
 }
 
@@ -58,4 +58,11 @@ func (l *vfsDebugLocker) ReleaseLock() uint32 {
 	}
 	l.state = _NO_LOCK
 	return _OK
+}
+
+func (l *vfsDebugLocker) CheckReserved() (bool, uint32) {
+	if l.state > _SHARED_LOCK {
+		return true, _OK
+	}
+	return false, _OK
 }

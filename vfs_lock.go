@@ -53,13 +53,16 @@ const (
 )
 
 type vfsLocker interface {
-	LockState() uint32
+	LockerState() uint32
+
 	LockShared() uint32    // UNLOCKED -> SHARED
 	LockReserved() uint32  // SHARED -> RESERVED
-	LockPending() uint32   // SHARED|RESERVED -> (PENDING)
+	LockPending() uint32   // SHARED|RESERVED -> PENDING
 	LockExclusive() uint32 // PENDING -> EXCLUSIVE
 	DowngradeLock() uint32 // SHARED <- EXCLUSIVE|PENDING|RESERVED
 	ReleaseLock() uint32   // UNLOCKED <- EXCLUSIVE|PENDING|RESERVED|SHARED
+
+	CheckReserved() (bool, uint32)
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile, eLock uint32) uint32 {
@@ -81,7 +84,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile, eLock uint32) uint32 {
 			// We never move from unlocked to anything higher than shared lock.
 			panic(assertErr + " [pfa77m]")
 		case cLock != _SHARED_LOCK && eLock == _RESERVED_LOCK:
-			// A shared lock is always held when a reserve lock is requested.
+			// A shared lock is always held when a reserved lock is requested.
 			panic(assertErr + " [5cfmsp]")
 		}
 	}
@@ -89,7 +92,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile, eLock uint32) uint32 {
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
 	of := vfsOpenFiles[ptr.ID()]
-	fLock := of.LockState()
+	fLock := of.LockerState()
 
 	// If some other connection has a lock that precludes the requested lock, return BUSY.
 	if cLock != fLock && (eLock > _SHARED_LOCK || fLock >= _PENDING_LOCK) {
@@ -152,7 +155,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile, eLock uint32) uint32 {
 	}
 }
 
-func vfsUnlock(ctx context.Context, mod api.Module, pFile, eLock uint32) (rc uint32) {
+func vfsUnlock(ctx context.Context, mod api.Module, pFile, eLock uint32) uint32 {
 	if assert && (eLock != _NO_LOCK && eLock != _SHARED_LOCK) {
 		panic(assertErr + " [7i4jw3]")
 	}
@@ -168,7 +171,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile, eLock uint32) (rc uin
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
 	of := vfsOpenFiles[ptr.ID()]
-	fLock := of.LockState()
+	fLock := of.LockerState()
 
 	if assert && of.shared <= 0 {
 		panic(assertErr + " [2bhkwg]")
@@ -183,8 +186,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile, eLock uint32) (rc uin
 				// process is holding an incompatible lock. If it does, this
 				// indicates that the other process is not following the locking
 				// protocol. If this happens, return IOERR_RDLOCK. Returning
-				// BUSY would confuse the upper layer (in practice it causes
-				// an assert to fail).
+				// BUSY would confuse the upper layer.
 				return uint32(IOERR_RDLOCK)
 			}
 			ptr.SetLock(_SHARED_LOCK)
@@ -217,6 +219,28 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile, eLock uint32) (rc uin
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
-	mod.Memory().WriteUint32Le(pResOut, 0)
+	ptr := vfsFilePtr{mod, pFile}
+	cLock := ptr.Lock()
+
+	if assert && cLock > _SHARED_LOCK {
+		panic(assertErr + " [zarygt]")
+	}
+
+	vfsOpenFilesMtx.Lock()
+	defer vfsOpenFilesMtx.Unlock()
+	of := vfsOpenFiles[ptr.ID()]
+
+	locked, rc := of.CheckReserved()
+	if rc != _OK {
+		return uint32(IOERR_CHECKRESERVEDLOCK)
+	}
+
+	var res uint32
+	if locked {
+		res = 1
+	}
+	if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok {
+		panic(rangeErr)
+	}
 	return _OK
 }
