@@ -2,17 +2,17 @@ package sqlite3
 
 const assert = true
 
-type vfsDebugLocker struct {
-	state uint32
+type vfsNoopLocker struct {
+	state vfsLockState
 }
 
-var _ vfsLocker = &vfsDebugLocker{}
+var _ vfsLocker = &vfsNoopLocker{}
 
-func (l *vfsDebugLocker) LockerState() uint32 {
+func (l *vfsNoopLocker) LockState() vfsLockState {
 	return l.state
 }
 
-func (l *vfsDebugLocker) LockShared() uint32 {
+func (l *vfsNoopLocker) LockShared() uint32 {
 	if assert && !(l.state == _NO_LOCK) {
 		panic(assertErr + " [wz9dcw]")
 	}
@@ -20,7 +20,7 @@ func (l *vfsDebugLocker) LockShared() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) LockReserved() uint32 {
+func (l *vfsNoopLocker) LockReserved() uint32 {
 	if assert && !(l.state == _SHARED_LOCK) {
 		panic(assertErr + " [m9hcil]")
 	}
@@ -28,7 +28,7 @@ func (l *vfsDebugLocker) LockReserved() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) LockPending() uint32 {
+func (l *vfsNoopLocker) LockPending() uint32 {
 	if assert && !(l.state == _SHARED_LOCK || l.state == _RESERVED_LOCK) {
 		panic(assertErr + " [wx8nk2]")
 	}
@@ -36,7 +36,7 @@ func (l *vfsDebugLocker) LockPending() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) LockExclusive() uint32 {
+func (l *vfsNoopLocker) LockExclusive() uint32 {
 	if assert && !(l.state == _PENDING_LOCK) {
 		panic(assertErr + " [84nbax]")
 	}
@@ -44,7 +44,7 @@ func (l *vfsDebugLocker) LockExclusive() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) DowngradeLock() uint32 {
+func (l *vfsNoopLocker) DowngradeLock() uint32 {
 	if assert && !(l.state > _SHARED_LOCK) {
 		panic(assertErr + " [je31i3]")
 	}
@@ -52,7 +52,7 @@ func (l *vfsDebugLocker) DowngradeLock() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) ReleaseLock() uint32 {
+func (l *vfsNoopLocker) Unlock() uint32 {
 	if assert && !(l.state > _NO_LOCK) {
 		panic(assertErr + " [m6e9w5]")
 	}
@@ -60,8 +60,8 @@ func (l *vfsDebugLocker) ReleaseLock() uint32 {
 	return _OK
 }
 
-func (l *vfsDebugLocker) CheckReserved() (bool, uint32) {
-	if l.state > _SHARED_LOCK {
+func (l *vfsNoopLocker) CheckReservedLock() (bool, uint32) {
+	if l.state >= _RESERVED_LOCK {
 		return true, _OK
 	}
 	return false, _OK
