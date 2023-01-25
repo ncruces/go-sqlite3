@@ -8,6 +8,9 @@ const (
 	_UTF8 = 1
 
 	_MAX_PATHNAME = 512
+
+	assert = true
+	ptrlen = 4
 )
 
 type ErrorCode uint8

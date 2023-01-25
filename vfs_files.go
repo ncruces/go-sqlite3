@@ -42,7 +42,7 @@ func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 {
 		info: info,
 		nref: 1,
 
-		vfsLocker: &vfsNoopLocker{},
+		vfsLocker: &vfsFileLocker{file, _NO_LOCK},
 	}
 
 	// Find an empty slot.
@@ -88,7 +88,7 @@ func (p vfsFilePtr) ID() uint32 {
 	if p.ptr == 0 {
 		panic(nilErr)
 	}
-	id, ok := p.Memory().ReadUint32Le(p.ptr + wordSize)
+	id, ok := p.Memory().ReadUint32Le(p.ptr + ptrlen)
 	if !ok {
 		panic(rangeErr)
 	}
@@ -99,7 +99,7 @@ func (p vfsFilePtr) Lock() vfsLockState {
 	if p.ptr == 0 {
 		panic(nilErr)
 	}
-	lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*wordSize)
+	lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*ptrlen)
 	if !ok {
 		panic(rangeErr)
 	}
@@ -110,7 +110,7 @@ func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
 	if p.ptr == 0 {
 		panic(nilErr)
 	}
-	if ok := p.Memory().WriteUint32Le(p.ptr+wordSize, id); !ok {
+	if ok := p.Memory().WriteUint32Le(p.ptr+ptrlen, id); !ok {
 		panic(rangeErr)
 	}
 	return p
@@ -120,7 +120,7 @@ func (p vfsFilePtr) SetLock(lock vfsLockState) vfsFilePtr {
 	if p.ptr == 0 {
 		panic(nilErr)
 	}
-	if ok := p.Memory().WriteUint32Le(p.ptr+2*wordSize, uint32(lock)); !ok {
+	if ok := p.Memory().WriteUint32Le(p.ptr+2*ptrlen, uint32(lock)); !ok {
 		panic(rangeErr)
 	}
 	return p

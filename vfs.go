@@ -67,15 +67,15 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
 	}
 	// https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
 	if mem := mod.Memory(); true &&
-		mem.WriteUint32Le(pTm+0*wordSize, uint32(tm.Second())) &&
-		mem.WriteUint32Le(pTm+1*wordSize, uint32(tm.Minute())) &&
-		mem.WriteUint32Le(pTm+2*wordSize, uint32(tm.Hour())) &&
-		mem.WriteUint32Le(pTm+3*wordSize, uint32(tm.Day())) &&
-		mem.WriteUint32Le(pTm+4*wordSize, uint32(tm.Month()-time.January)) &&
-		mem.WriteUint32Le(pTm+5*wordSize, uint32(tm.Year()-1900)) &&
-		mem.WriteUint32Le(pTm+6*wordSize, uint32(tm.Weekday()-time.Sunday)) &&
-		mem.WriteUint32Le(pTm+7*wordSize, uint32(tm.YearDay()-1)) &&
-		mem.WriteUint32Le(pTm+8*wordSize, uint32(isdst)) {
+		mem.WriteUint32Le(pTm+0*ptrlen, uint32(tm.Second())) &&
+		mem.WriteUint32Le(pTm+1*ptrlen, uint32(tm.Minute())) &&
+		mem.WriteUint32Le(pTm+2*ptrlen, uint32(tm.Hour())) &&
+		mem.WriteUint32Le(pTm+3*ptrlen, uint32(tm.Day())) &&
+		mem.WriteUint32Le(pTm+4*ptrlen, uint32(tm.Month()-time.January)) &&
+		mem.WriteUint32Le(pTm+5*ptrlen, uint32(tm.Year()-1900)) &&
+		mem.WriteUint32Le(pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday)) &&
+		mem.WriteUint32Le(pTm+7*ptrlen, uint32(tm.YearDay()-1)) &&
+		mem.WriteUint32Le(pTm+8*ptrlen, uint32(isdst)) {
 		return _OK
 	}
 	panic(rangeErr)

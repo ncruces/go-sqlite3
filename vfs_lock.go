@@ -52,19 +52,22 @@ const (
 	_SHARED_SIZE   = 510
 )
 
-type vfsLockState uint32
+type (
+	vfsLockState uint32
+	xErrorCode   = ExtendedErrorCode
+)
 
 type vfsLocker interface {
 	LockState() vfsLockState
 
-	LockShared() uint32    // UNLOCKED -> SHARED
-	LockReserved() uint32  // SHARED -> RESERVED
-	LockPending() uint32   // SHARED|RESERVED -> PENDING
-	LockExclusive() uint32 // PENDING -> EXCLUSIVE
-	DowngradeLock() uint32 // SHARED <- EXCLUSIVE|PENDING|RESERVED
-	Unlock() uint32        // UNLOCKED <- EXCLUSIVE|PENDING|RESERVED|SHARED
+	LockShared() xErrorCode    // UNLOCKED -> SHARED
+	LockReserved() xErrorCode  // SHARED -> RESERVED
+	LockPending() xErrorCode   // SHARED|RESERVED -> PENDING
+	LockExclusive() xErrorCode // PENDING -> EXCLUSIVE
+	DowngradeLock() xErrorCode // SHARED <- EXCLUSIVE|PENDING|RESERVED
+	Unlock() xErrorCode        // UNLOCKED <- EXCLUSIVE|PENDING|RESERVED|SHARED
 
-	CheckReservedLock() (bool, uint32)
+	CheckReservedLock() (bool, xErrorCode)
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {

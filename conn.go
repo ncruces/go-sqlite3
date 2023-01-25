@@ -40,7 +40,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	c := newConn(module)
 	c.ctx = context.Background()
 	namePtr := c.newString(filename)
-	connPtr := c.new(wordSize)
+	connPtr := c.new(ptrlen)
 	defer c.free(namePtr)
 	defer c.free(connPtr)
 
@@ -86,8 +86,8 @@ func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	sqlPtr := c.newString(sql)
-	stmtPtr := c.new(wordSize)
-	tailPtr := c.new(wordSize)
+	stmtPtr := c.new(ptrlen)
+	tailPtr := c.new(ptrlen)
 	defer c.free(sqlPtr)
 	defer c.free(stmtPtr)
 	defer c.free(tailPtr)
@@ -221,5 +221,3 @@ func getString(memory api.Memory, ptr, maxlen uint32) string {
 		return string(mem[:i])
 	}
 }
-
-const wordSize = 4
