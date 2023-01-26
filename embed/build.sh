@@ -7,7 +7,7 @@ cd -P -- "$(dirname -- "$0")"
 ../sqlite3/download.sh
 
 # build SQLite
-zig cc --target=wasm32-wasi -flto -g0 -O2 \
+zig cc --target=wasm32-wasi -flto -g0 -Os \
   -o sqlite3.wasm ../sqlite3/*.c \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \

@@ -14,7 +14,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id int, name varchar(10))`)
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func main() {
 	for stmt.Step() {
 		fmt.Println(stmt.ColumnInt(0), stmt.ColumnText(1))
 	}
-	if stmt.Err() != nil {
+	if err := stmt.Err(); err != nil {
 		log.Fatal(err)
 	}
 

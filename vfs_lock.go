@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"os"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -68,6 +69,11 @@ type vfsLocker interface {
 	Unlock() xErrorCode        // UNLOCKED <- EXCLUSIVE|PENDING|RESERVED|SHARED
 
 	CheckReservedLock() (bool, xErrorCode)
+}
+
+type vfsFileLocker struct {
+	*os.File
+	state vfsLockState
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {

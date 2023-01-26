@@ -12,11 +12,6 @@ func deleteOnClose(f *os.File) {
 	_ = os.Remove(f.Name())
 }
 
-type vfsFileLocker struct {
-	*os.File
-	state vfsLockState
-}
-
 func (l *vfsFileLocker) LockState() vfsLockState {
 	return l.state
 }
