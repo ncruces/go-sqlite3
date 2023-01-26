@@ -62,33 +62,22 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
 		isdst = 1
 	}
 
-	if pTm == 0 {
-		panic(nilErr)
-	}
 	// https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
-	if mem := mod.Memory(); true &&
-		mem.WriteUint32Le(pTm+0*ptrlen, uint32(tm.Second())) &&
-		mem.WriteUint32Le(pTm+1*ptrlen, uint32(tm.Minute())) &&
-		mem.WriteUint32Le(pTm+2*ptrlen, uint32(tm.Hour())) &&
-		mem.WriteUint32Le(pTm+3*ptrlen, uint32(tm.Day())) &&
-		mem.WriteUint32Le(pTm+4*ptrlen, uint32(tm.Month()-time.January)) &&
-		mem.WriteUint32Le(pTm+5*ptrlen, uint32(tm.Year()-1900)) &&
-		mem.WriteUint32Le(pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday)) &&
-		mem.WriteUint32Le(pTm+7*ptrlen, uint32(tm.YearDay()-1)) &&
-		mem.WriteUint32Le(pTm+8*ptrlen, uint32(isdst)) {
-		return _OK
-	}
-	panic(rangeErr)
+	mem := memory{mod}
+	mem.writeUint32(pTm+0*ptrlen, uint32(tm.Second()))
+	mem.writeUint32(pTm+1*ptrlen, uint32(tm.Minute()))
+	mem.writeUint32(pTm+2*ptrlen, uint32(tm.Hour()))
+	mem.writeUint32(pTm+3*ptrlen, uint32(tm.Day()))
+	mem.writeUint32(pTm+4*ptrlen, uint32(tm.Month()-time.January))
+	mem.writeUint32(pTm+5*ptrlen, uint32(tm.Year()-1900))
+	mem.writeUint32(pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday))
+	mem.writeUint32(pTm+7*ptrlen, uint32(tm.YearDay()-1))
+	mem.writeUint32(pTm+8*ptrlen, uint32(isdst))
+	return _OK
 }
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
-	if zByte == 0 {
-		panic(nilErr)
-	}
-	mem, ok := mod.Memory().Read(zByte, nByte)
-	if !ok {
-		panic(rangeErr)
-	}
+	mem := memory{mod}.mustRead(zByte, nByte)
 	n, _ := rand.Read(mem)
 	return uint32(n)
 }
@@ -100,29 +89,19 @@ func vfsSleep(ctx context.Context, pVfs, nMicro uint32) uint32 {
 
 func vfsCurrentTime(ctx context.Context, mod api.Module, pVfs, prNow uint32) uint32 {
 	day := julianday.Float(time.Now())
-	if prNow == 0 {
-		panic(nilErr)
-	}
-	if ok := mod.Memory().WriteFloat64Le(prNow, day); !ok {
-		panic(rangeErr)
-	}
+	memory{mod}.writeFloat64(prNow, day)
 	return _OK
 }
 
 func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) uint32 {
 	day, nsec := julianday.Date(time.Now())
 	msec := day*86_400_000 + nsec/1_000_000
-	if piNow == 0 {
-		panic(nilErr)
-	}
-	if ok := mod.Memory().WriteUint64Le(piNow, uint64(msec)); !ok {
-		panic(rangeErr)
-	}
+	memory{mod}.writeUint64(piNow, uint64(msec))
 	return _OK
 }
 
 func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) uint32 {
-	rel := getString(mod.Memory(), zRelative, _MAX_PATHNAME)
+	rel := memory{mod}.readString(zRelative, _MAX_PATHNAME)
 	abs, err := filepath.Abs(rel)
 	if err != nil {
 		return uint32(IOERR)
@@ -136,13 +115,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	if siz > nFull {
 		return uint32(CANTOPEN_FULLPATH)
 	}
-	if zFull == 0 {
-		panic(nilErr)
-	}
-	mem, ok := mod.Memory().Read(zFull, siz)
-	if !ok {
-		panic(rangeErr)
-	}
+	mem := memory{mod}.mustRead(zFull, siz)
 
 	mem[len(abs)] = 0
 	copy(mem, abs)
@@ -150,7 +123,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) uint32 {
-	path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+	path := memory{mod}.readString(zPath, _MAX_PATHNAME)
 	err := os.Remove(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return _OK
@@ -175,7 +148,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 	// Consider using [syscall.Access] for [ACCESS_READWRITE]/[ACCESS_READ]
 	// (as the Unix VFS does).
 
-	path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+	path := memory{mod}.readString(zPath, _MAX_PATHNAME)
 	fi, err := os.Stat(path)
 
 	var res uint32
@@ -211,12 +184,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 		return uint32(IOERR_ACCESS)
 	}
 
-	if pResOut == 0 {
-		panic(nilErr)
-	}
-	if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok {
-		panic(rangeErr)
-	}
+	memory{mod}.writeUint32(pResOut, res)
 	return _OK
 }
 
@@ -240,7 +208,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 	if zName == 0 {
 		file, err = os.CreateTemp("", "*.db")
 	} else {
-		name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+		name := memory{mod}.readString(zName, _MAX_PATHNAME)
 		file, err = os.OpenFile(name, oflags, 0600)
 	}
 	if err != nil {
@@ -261,11 +229,8 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 	id := vfsGetOpenFileID(file, info)
 	vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)
 
-	if pOutFlags == 0 {
-		return _OK
-	}
-	if ok := mod.Memory().WriteUint32Le(pOutFlags, uint32(flags)); !ok {
-		panic(rangeErr)
+	if pOutFlags != 0 {
+		memory{mod}.writeUint32(pOutFlags, uint32(flags))
 	}
 	return _OK
 }
@@ -280,13 +245,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	if zBuf == 0 {
-		panic(nilErr)
-	}
-	buf, ok := mod.Memory().Read(zBuf, iAmt)
-	if !ok {
-		panic(rangeErr)
-	}
+	buf := memory{mod}.mustRead(zBuf, iAmt)
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	n, err := file.ReadAt(buf, int64(iOfst))
@@ -303,13 +262,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	if zBuf == 0 {
-		panic(nilErr)
-	}
-	buf, ok := mod.Memory().Read(zBuf, iAmt)
-	if !ok {
-		panic(rangeErr)
-	}
+	buf := memory{mod}.mustRead(zBuf, iAmt)
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	_, err := file.WriteAt(buf, int64(iOfst))
@@ -347,11 +300,6 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 		return uint32(IOERR_SEEK)
 	}
 
-	if pSize == 0 {
-		panic(nilErr)
-	}
-	if ok := mod.Memory().WriteUint64Le(pSize, uint64(off)); !ok {
-		panic(rangeErr)
-	}
+	memory{mod}.writeUint64(pSize, uint64(off))
 	return _OK
 }

@@ -1,9 +1,7 @@
 package sqlite3
 
 import (
-	"bytes"
 	"context"
-	"math"
 	"strconv"
 
 	"github.com/tetratelabs/wazero"
@@ -14,7 +12,7 @@ type Conn struct {
 	ctx    context.Context
 	handle uint32
 	module api.Module
-	memory api.Memory
+	memory memory
 	api    sqliteAPI
 }
 
@@ -50,8 +48,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		return nil, err
 	}
 
-	c.handle, _ = c.memory.ReadUint32Le(connPtr)
-
+	c.handle = c.memory.readUint32(connPtr)
 	if err := c.error(r[0]); err != nil {
 		return nil, err
 	}
@@ -101,8 +98,8 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	}
 
 	stmt = &Stmt{c: c}
-	stmt.handle, _ = c.memory.ReadUint32Le(stmtPtr)
-	i, _ := c.memory.ReadUint32Le(tailPtr)
+	stmt.handle = c.memory.readUint32(stmtPtr)
+	i := c.memory.readUint32(tailPtr)
 	tail = sql[i-sqlPtr:]
 
 	if err := c.error(r[0]); err != nil {
@@ -164,69 +161,43 @@ func (c *Conn) new(len uint32) uint32 {
 		panic(err)
 	}
 	ptr := uint32(r[0])
-	if ptr == 0 || ptr >= c.memory.Size() {
+	if ptr == 0 || ptr >= c.memory.size() {
 		panic(oomErr)
 	}
 	return ptr
 }
 
-func (c *Conn) newBytes(s []byte) uint32 {
-	if s == nil {
+func (c *Conn) newBytes(b []byte) uint32 {
+	if b == nil {
 		return 0
 	}
 
-	siz := uint32(len(s))
+	siz := uint32(len(b))
 	ptr := c.new(siz)
-	mem, ok := c.memory.Read(ptr, siz)
+	buf, ok := c.memory.read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
 		panic(rangeErr)
 	}
 
-	copy(mem, s)
+	copy(buf, b)
 	return ptr
 }
 
 func (c *Conn) newString(s string) uint32 {
 	siz := uint32(len(s) + 1)
 	ptr := c.new(siz)
-	mem, ok := c.memory.Read(ptr, siz)
+	buf, ok := c.memory.read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
 		panic(rangeErr)
 	}
 
-	mem[len(s)] = 0
-	copy(mem, s)
+	buf[len(s)] = 0
+	copy(buf, s)
 	return ptr
 }
 
 func (c *Conn) getString(ptr, maxlen uint32) string {
-	return getString(c.memory, ptr, maxlen)
-}
-
-func getString(memory api.Memory, ptr, maxlen uint32) string {
-	if ptr == 0 {
-		panic(nilErr)
-	}
-	switch maxlen {
-	case 0:
-		return ""
-	case math.MaxUint32:
-		//
-	default:
-		maxlen = maxlen + 1
-	}
-	mem, ok := memory.Read(ptr, maxlen)
-	if !ok {
-		mem, ok = memory.Read(ptr, memory.Size()-ptr)
-		if !ok {
-			panic(rangeErr)
-		}
-	}
-	if i := bytes.IndexByte(mem, 0); i < 0 {
-		panic(noNulErr)
-	} else {
-		return string(mem[:i])
-	}
+	return c.memory.readString(ptr, maxlen)
 }

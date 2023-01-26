@@ -15,18 +15,11 @@ func newConn(module api.Module) *Conn {
 	if global == nil {
 		panic(noGlobalErr + "malloc_destructor")
 	}
-	destructor := uint32(global.Get())
-	if destructor == 0 {
-		panic(noGlobalErr + "malloc_destructor")
-	}
-	destructor, ok := module.Memory().ReadUint32Le(destructor)
-	if !ok {
-		panic(noGlobalErr + "malloc_destructor")
-	}
+	destructor := memory{module}.readUint32(uint32(global.Get()))
 
 	return &Conn{
 		module: module,
-		memory: module.Memory(),
+		memory: memory{module},
 		api: sqliteAPI{
 			malloc:        getFun("malloc"),
 			free:          getFun("free"),

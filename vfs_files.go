@@ -85,43 +85,19 @@ func (p vfsFilePtr) OSFile() *os.File {
 }
 
 func (p vfsFilePtr) ID() uint32 {
-	if p.ptr == 0 {
-		panic(nilErr)
-	}
-	id, ok := p.Memory().ReadUint32Le(p.ptr + ptrlen)
-	if !ok {
-		panic(rangeErr)
-	}
-	return id
+	return memory{p}.readUint32(p.ptr + ptrlen)
 }
 
 func (p vfsFilePtr) Lock() vfsLockState {
-	if p.ptr == 0 {
-		panic(nilErr)
-	}
-	lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*ptrlen)
-	if !ok {
-		panic(rangeErr)
-	}
-	return vfsLockState(lk)
+	return vfsLockState(memory{p}.readUint32(p.ptr + 2*ptrlen))
 }
 
 func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
-	if p.ptr == 0 {
-		panic(nilErr)
-	}
-	if ok := p.Memory().WriteUint32Le(p.ptr+ptrlen, id); !ok {
-		panic(rangeErr)
-	}
+	memory{p}.writeUint32(p.ptr+ptrlen, id)
 	return p
 }
 
 func (p vfsFilePtr) SetLock(lock vfsLockState) vfsFilePtr {
-	if p.ptr == 0 {
-		panic(nilErr)
-	}
-	if ok := p.Memory().WriteUint32Le(p.ptr+2*ptrlen, uint32(lock)); !ok {
-		panic(rangeErr)
-	}
+	memory{p}.writeUint32(p.ptr+2*ptrlen, uint32(lock))
 	return p
 }

@@ -250,11 +250,6 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	if locked {
 		res = 1
 	}
-	if pResOut == 0 {
-		panic(nilErr)
-	}
-	if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok {
-		panic(rangeErr)
-	}
+	memory{mod}.writeUint32(pResOut, res)
 	return _OK
 }

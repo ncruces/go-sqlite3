@@ -55,23 +55,25 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/ncruces/go-sqlite3/api.go (73.3%)</option>
+				<option value="file0">github.com/ncruces/go-sqlite3/api.go (80.0%)</option>
 				
 				<option value="file1">github.com/ncruces/go-sqlite3/compile.go (54.5%)</option>
 				
-				<option value="file2">github.com/ncruces/go-sqlite3/conn.go (86.8%)</option>
+				<option value="file2">github.com/ncruces/go-sqlite3/conn.go (86.1%)</option>
 				
 				<option value="file3">github.com/ncruces/go-sqlite3/error.go (54.5%)</option>
 				
-				<option value="file4">github.com/ncruces/go-sqlite3/stmt.go (27.2%)</option>
+				<option value="file4">github.com/ncruces/go-sqlite3/mem.go (78.0%)</option>
 				
-				<option value="file5">github.com/ncruces/go-sqlite3/vfs.go (74.7%)</option>
+				<option value="file5">github.com/ncruces/go-sqlite3/stmt.go (27.3%)</option>
 				
-				<option value="file6">github.com/ncruces/go-sqlite3/vfs_files.go (70.6%)</option>
+				<option value="file6">github.com/ncruces/go-sqlite3/vfs.go (82.5%)</option>
 				
-				<option value="file7">github.com/ncruces/go-sqlite3/vfs_lock.go (51.6%)</option>
+				<option value="file7">github.com/ncruces/go-sqlite3/vfs_files.go (80.0%)</option>
 				
-				<option value="file8">github.com/ncruces/go-sqlite3/vfs_unix.go (53.6%)</option>
+				<option value="file8">github.com/ncruces/go-sqlite3/vfs_lock.go (53.3%)</option>
+				
+				<option value="file9">github.com/ncruces/go-sqlite3/vfs_unix.go (53.6%)</option>
 				
 				</select>
 			</div>
@@ -102,18 +104,11 @@ func newConn(module api.Module) *Conn <span class="cov8" title="1">{
         if global == nil </span><span class="cov0" title="0">{
                 panic(noGlobalErr + "malloc_destructor")</span>
         }
-        <span class="cov8" title="1">destructor := uint32(global.Get())
-        if destructor == 0 </span><span class="cov0" title="0">{
-                panic(noGlobalErr + "malloc_destructor")</span>
-        }
-        <span class="cov8" title="1">destructor, ok := module.Memory().ReadUint32Le(destructor)
-        if !ok </span><span class="cov0" title="0">{
-                panic(noGlobalErr + "malloc_destructor")</span>
-        }
+        <span class="cov8" title="1">destructor := memory{module}.readUint32(uint32(global.Get()))
 
-        <span class="cov8" title="1">return &amp;Conn{
+        return &amp;Conn{
                 module: module,
-                memory: module.Memory(),
+                memory: memory{module},
                 api: sqliteAPI{
                         malloc:        getFun("malloc"),
                         free:          getFun("free"),
@@ -229,9 +224,7 @@ func compile() <span class="cov8" title="1">{
 		<pre class="file" id="file2" style="display: none">package sqlite3
 
 import (
-        "bytes"
         "context"
-        "math"
         "strconv"
 
         "github.com/tetratelabs/wazero"
@@ -242,7 +235,7 @@ type Conn struct {
         ctx    context.Context
         handle uint32
         module api.Module
-        memory api.Memory
+        memory memory
         api    sqliteAPI
 }
 
@@ -278,8 +271,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) <span cl
                 return nil, err
         }</span>
 
-        <span class="cov8" title="1">c.handle, _ = c.memory.ReadUint32Le(connPtr)
-
+        <span class="cov8" title="1">c.handle = c.memory.readUint32(connPtr)
         if err := c.error(r[0]); err != nil </span><span class="cov8" title="1">{
                 return nil, err
         }</span>
@@ -329,8 +321,8 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
         }</span>
 
         <span class="cov8" title="1">stmt = &amp;Stmt{c: c}
-        stmt.handle, _ = c.memory.ReadUint32Le(stmtPtr)
-        i, _ := c.memory.ReadUint32Le(tailPtr)
+        stmt.handle = c.memory.readUint32(stmtPtr)
+        i := c.memory.readUint32(tailPtr)
         tail = sql[i-sqlPtr:]
 
         if err := c.error(r[0]); err != nil </span><span class="cov0" title="0">{
@@ -392,72 +384,46 @@ func (c *Conn) new(len uint32) uint32 <span class="cov8" title="1">{
                 panic(err)</span>
         }
         <span class="cov8" title="1">ptr := uint32(r[0])
-        if ptr == 0 || ptr &gt;= c.memory.Size() </span><span class="cov8" title="1">{
+        if ptr == 0 || ptr &gt;= c.memory.size() </span><span class="cov8" title="1">{
                 panic(oomErr)</span>
         }
         <span class="cov8" title="1">return ptr</span>
 }
 
-func (c *Conn) newBytes(s []byte) uint32 <span class="cov8" title="1">{
-        if s == nil </span><span class="cov8" title="1">{
+func (c *Conn) newBytes(b []byte) uint32 <span class="cov8" title="1">{
+        if b == nil </span><span class="cov8" title="1">{
                 return 0
         }</span>
 
-        <span class="cov8" title="1">siz := uint32(len(s))
+        <span class="cov8" title="1">siz := uint32(len(b))
         ptr := c.new(siz)
-        mem, ok := c.memory.Read(ptr, siz)
+        buf, ok := c.memory.read(ptr, siz)
         if !ok </span><span class="cov0" title="0">{
                 c.api.free.Call(c.ctx, uint64(ptr))
                 panic(rangeErr)</span>
         }
 
-        <span class="cov8" title="1">copy(mem, s)
+        <span class="cov8" title="1">copy(buf, b)
         return ptr</span>
 }
 
 func (c *Conn) newString(s string) uint32 <span class="cov8" title="1">{
         siz := uint32(len(s) + 1)
         ptr := c.new(siz)
-        mem, ok := c.memory.Read(ptr, siz)
+        buf, ok := c.memory.read(ptr, siz)
         if !ok </span><span class="cov0" title="0">{
                 c.api.free.Call(c.ctx, uint64(ptr))
                 panic(rangeErr)</span>
         }
 
-        <span class="cov8" title="1">mem[len(s)] = 0
-        copy(mem, s)
+        <span class="cov8" title="1">buf[len(s)] = 0
+        copy(buf, s)
         return ptr</span>
 }
 
 func (c *Conn) getString(ptr, maxlen uint32) string <span class="cov8" title="1">{
-        return getString(c.memory, ptr, maxlen)
+        return c.memory.readString(ptr, maxlen)
 }</span>
-
-func getString(memory api.Memory, ptr, maxlen uint32) string <span class="cov8" title="1">{
-        if ptr == 0 </span><span class="cov8" title="1">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">switch maxlen </span>{
-        case 0:<span class="cov8" title="1">
-                return ""</span>
-        case math.MaxUint32:<span class="cov8" title="1"></span>
-                //
-        default:<span class="cov8" title="1">
-                maxlen = maxlen + 1</span>
-        }
-        <span class="cov8" title="1">mem, ok := memory.Read(ptr, maxlen)
-        if !ok </span><span class="cov8" title="1">{
-                mem, ok = memory.Read(ptr, memory.Size()-ptr)
-                if !ok </span><span class="cov0" title="0">{
-                        panic(rangeErr)</span>
-                }
-        }
-        <span class="cov8" title="1">if i := bytes.IndexByte(mem, 0); i &lt; 0 </span><span class="cov8" title="1">{
-                panic(noNulErr)</span>
-        } else<span class="cov8" title="1"> {
-                return string(mem[:i])
-        }</span>
-}
 </pre>
 		
 		<pre class="file" id="file3" style="display: none">package sqlite3
@@ -509,6 +475,109 @@ const (
 </pre>
 		
 		<pre class="file" id="file4" style="display: none">package sqlite3
+
+import (
+        "bytes"
+        "math"
+
+        "github.com/tetratelabs/wazero/api"
+)
+
+type memory struct {
+        mod api.Module
+}
+
+func (m memory) size() uint32 <span class="cov8" title="1">{
+        return m.mod.Memory().Size()
+}</span>
+
+func (m memory) read(offset, byteCount uint32) ([]byte, bool) <span class="cov8" title="1">{
+        if offset == 0 </span><span class="cov8" title="1">{
+                panic(nilErr)</span>
+        }
+        <span class="cov8" title="1">return m.mod.Memory().Read(offset, byteCount)</span>
+}
+
+func (m memory) mustRead(offset, byteCount uint32) []byte <span class="cov8" title="1">{
+        buf, ok := m.read(offset, byteCount)
+        if !ok </span><span class="cov0" title="0">{
+                panic(rangeErr)</span>
+        }
+        <span class="cov8" title="1">return buf</span>
+}
+
+func (m memory) readUint32(offset uint32) uint32 <span class="cov8" title="1">{
+        if offset == 0 </span><span class="cov0" title="0">{
+                panic(nilErr)</span>
+        }
+        <span class="cov8" title="1">v, ok := m.mod.Memory().ReadUint32Le(offset)
+        if !ok </span><span class="cov0" title="0">{
+                panic(rangeErr)</span>
+        }
+        <span class="cov8" title="1">return v</span>
+}
+
+func (m memory) writeUint32(offset, v uint32) <span class="cov8" title="1">{
+        if offset == 0 </span><span class="cov0" title="0">{
+                panic(nilErr)</span>
+        }
+        <span class="cov8" title="1">ok := m.mod.Memory().WriteUint32Le(offset, v)
+        if !ok </span><span class="cov0" title="0">{
+                panic(rangeErr)</span>
+        }
+}
+
+func (m memory) readUint64(offset uint32) uint64 <span class="cov8" title="1">{
+        if offset == 0 </span><span class="cov0" title="0">{
+                panic(nilErr)</span>
+        }
+        <span class="cov8" title="1">v, ok := m.mod.Memory().ReadUint64Le(offset)
+        if !ok </span><span class="cov0" title="0">{
+                panic(rangeErr)</span>
+        }
+        <span class="cov8" title="1">return v</span>
+}
+
+func (m memory) writeUint64(offset uint32, v uint64) <span class="cov8" title="1">{
+        if offset == 0 </span><span class="cov0" title="0">{
+                panic(nilErr)</span>
+        }
+        <span class="cov8" title="1">ok := m.mod.Memory().WriteUint64Le(offset, v)
+        if !ok </span><span class="cov0" title="0">{
+                panic(rangeErr)</span>
+        }
+}
+
+func (m memory) readFloat64(offset uint32) float64 <span class="cov8" title="1">{
+        return math.Float64frombits(m.readUint64(offset))
+}</span>
+
+func (m memory) writeFloat64(offset uint32, v float64) <span class="cov8" title="1">{
+        m.writeUint64(offset, math.Float64bits(v))
+}</span>
+
+func (m memory) readString(ptr, maxlen uint32) string <span class="cov8" title="1">{
+        switch maxlen </span>{
+        case 0:<span class="cov8" title="1">
+                return ""</span>
+        case math.MaxUint32:<span class="cov8" title="1"></span>
+                //
+        default:<span class="cov8" title="1">
+                maxlen = maxlen + 1</span>
+        }
+        <span class="cov8" title="1">buf, ok := m.read(ptr, maxlen)
+        if !ok </span><span class="cov8" title="1">{
+                buf = m.mustRead(ptr, m.size()-ptr)
+        }</span>
+        <span class="cov8" title="1">if i := bytes.IndexByte(buf, 0); i &lt; 0 </span><span class="cov8" title="1">{
+                panic(noNulErr)</span>
+        } else<span class="cov8" title="1"> {
+                return string(buf[:i])
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package sqlite3
 
 import (
         "math"
@@ -673,11 +742,8 @@ func (s *Stmt) ColumnText(col int) string <span class="cov8" title="1">{
                 panic(err)</span>
         }
 
-        <span class="cov8" title="1">mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return string(mem)</span>
+        <span class="cov8" title="1">mem := s.c.memory.mustRead(ptr, uint32(r[0]))
+        return string(mem)</span>
 }
 
 func (s *Stmt) ColumnBlob(col int, buf []byte) []byte <span class="cov0" title="0">{
@@ -703,15 +769,12 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte <span class="cov0" title="
                 panic(err)</span>
         }
 
-        <span class="cov0" title="0">mem, ok := s.c.memory.Read(ptr, uint32(r[0]))
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov0" title="0">return append(buf[0:0], mem...)</span>
+        <span class="cov0" title="0">mem := s.c.memory.mustRead(ptr, uint32(r[0]))
+        return append(buf[0:0], mem...)</span>
 }
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">package sqlite3
+		<pre class="file" id="file6" style="display: none">package sqlite3
 
 import (
         "context"
@@ -775,36 +838,25 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
                 isdst = 1
         }</span>
 
-        <span class="cov8" title="1">if pTm == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
         // https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
-        <span class="cov8" title="1">if mem := mod.Memory(); true &amp;&amp;
-                mem.WriteUint32Le(pTm+0*ptrlen, uint32(tm.Second())) &amp;&amp;
-                mem.WriteUint32Le(pTm+1*ptrlen, uint32(tm.Minute())) &amp;&amp;
-                mem.WriteUint32Le(pTm+2*ptrlen, uint32(tm.Hour())) &amp;&amp;
-                mem.WriteUint32Le(pTm+3*ptrlen, uint32(tm.Day())) &amp;&amp;
-                mem.WriteUint32Le(pTm+4*ptrlen, uint32(tm.Month()-time.January)) &amp;&amp;
-                mem.WriteUint32Le(pTm+5*ptrlen, uint32(tm.Year()-1900)) &amp;&amp;
-                mem.WriteUint32Le(pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday)) &amp;&amp;
-                mem.WriteUint32Le(pTm+7*ptrlen, uint32(tm.YearDay()-1)) &amp;&amp;
-                mem.WriteUint32Le(pTm+8*ptrlen, uint32(isdst)) </span><span class="cov8" title="1">{
-                return _OK
-        }</span>
-        <span class="cov0" title="0">panic(rangeErr)</span>
+        <span class="cov8" title="1">mem := memory{mod}
+        mem.writeUint32(pTm+0*ptrlen, uint32(tm.Second()))
+        mem.writeUint32(pTm+1*ptrlen, uint32(tm.Minute()))
+        mem.writeUint32(pTm+2*ptrlen, uint32(tm.Hour()))
+        mem.writeUint32(pTm+3*ptrlen, uint32(tm.Day()))
+        mem.writeUint32(pTm+4*ptrlen, uint32(tm.Month()-time.January))
+        mem.writeUint32(pTm+5*ptrlen, uint32(tm.Year()-1900))
+        mem.writeUint32(pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday))
+        mem.writeUint32(pTm+7*ptrlen, uint32(tm.YearDay()-1))
+        mem.writeUint32(pTm+8*ptrlen, uint32(isdst))
+        return _OK</span>
 }
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 <span class="cov8" title="1">{
-        if zByte == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">mem, ok := mod.Memory().Read(zByte, nByte)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">n, _ := rand.Read(mem)
-        return uint32(n)</span>
-}
+        mem := memory{mod}.mustRead(zByte, nByte)
+        n, _ := rand.Read(mem)
+        return uint32(n)
+}</span>
 
 func vfsSleep(ctx context.Context, pVfs, nMicro uint32) uint32 <span class="cov8" title="1">{
         time.Sleep(time.Duration(nMicro) * time.Microsecond)
@@ -813,29 +865,19 @@ func vfsSleep(ctx context.Context, pVfs, nMicro uint32) uint32 <span class="cov8
 
 func vfsCurrentTime(ctx context.Context, mod api.Module, pVfs, prNow uint32) uint32 <span class="cov8" title="1">{
         day := julianday.Float(time.Now())
-        if prNow == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := mod.Memory().WriteFloat64Le(prNow, day); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return _OK</span>
-}
+        memory{mod}.writeFloat64(prNow, day)
+        return _OK
+}</span>
 
 func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) uint32 <span class="cov8" title="1">{
         day, nsec := julianday.Date(time.Now())
         msec := day*86_400_000 + nsec/1_000_000
-        if piNow == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := mod.Memory().WriteUint64Le(piNow, uint64(msec)); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return _OK</span>
-}
+        memory{mod}.writeUint64(piNow, uint64(msec))
+        return _OK
+}</span>
 
 func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) uint32 <span class="cov8" title="1">{
-        rel := getString(mod.Memory(), zRelative, _MAX_PATHNAME)
+        rel := memory{mod}.readString(zRelative, _MAX_PATHNAME)
         abs, err := filepath.Abs(rel)
         if err != nil </span><span class="cov0" title="0">{
                 return uint32(IOERR)
@@ -849,21 +891,15 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
         if siz &gt; nFull </span><span class="cov8" title="1">{
                 return uint32(CANTOPEN_FULLPATH)
         }</span>
-        <span class="cov8" title="1">if zFull == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">mem, ok := mod.Memory().Read(zFull, siz)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
+        <span class="cov8" title="1">mem := memory{mod}.mustRead(zFull, siz)
 
-        <span class="cov8" title="1">mem[len(abs)] = 0
+        mem[len(abs)] = 0
         copy(mem, abs)
         return _OK</span>
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) uint32 <span class="cov8" title="1">{
-        path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+        path := memory{mod}.readString(zPath, _MAX_PATHNAME)
         err := os.Remove(path)
         if errors.Is(err, fs.ErrNotExist) </span><span class="cov0" title="0">{
                 return _OK
@@ -888,7 +924,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
         // Consider using [syscall.Access] for [ACCESS_READWRITE]/[ACCESS_READ]
         // (as the Unix VFS does).
 
-        path := getString(mod.Memory(), zPath, _MAX_PATHNAME)
+        path := memory{mod}.readString(zPath, _MAX_PATHNAME)
         fi, err := os.Stat(path)
 
         var res uint32
@@ -924,13 +960,8 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
                 return uint32(IOERR_ACCESS)</span>
         }
 
-        <span class="cov8" title="1">if pResOut == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return _OK</span>
+        <span class="cov8" title="1">memory{mod}.writeUint32(pResOut, res)
+        return _OK</span>
 }
 
 func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, flags OpenFlag, pOutFlags uint32) uint32 <span class="cov8" title="1">{
@@ -953,7 +984,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
         if zName == 0 </span><span class="cov0" title="0">{
                 file, err = os.CreateTemp("", "*.db")
         }</span> else<span class="cov8" title="1"> {
-                name := getString(mod.Memory(), zName, _MAX_PATHNAME)
+                name := memory{mod}.readString(zName, _MAX_PATHNAME)
                 file, err = os.OpenFile(name, oflags, 0600)
         }</span>
         <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
@@ -974,12 +1005,9 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
         <span class="cov8" title="1">id := vfsGetOpenFileID(file, info)
         vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)
 
-        if pOutFlags == 0 </span><span class="cov8" title="1">{
-                return _OK
+        if pOutFlags != 0 </span><span class="cov8" title="1">{
+                memory{mod}.writeUint32(pOutFlags, uint32(flags))
         }</span>
-        <span class="cov8" title="1">if ok := mod.Memory().WriteUint32Le(pOutFlags, uint32(flags)); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
         <span class="cov8" title="1">return _OK</span>
 }
 
@@ -993,15 +1021,9 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 <span cl
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 <span class="cov8" title="1">{
-        if zBuf == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">buf, ok := mod.Memory().Read(zBuf, iAmt)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
+        buf := memory{mod}.mustRead(zBuf, iAmt)
 
-        <span class="cov8" title="1">file := vfsFilePtr{mod, pFile}.OSFile()
+        file := vfsFilePtr{mod, pFile}.OSFile()
         n, err := file.ReadAt(buf, int64(iOfst))
         if n == int(iAmt) </span><span class="cov0" title="0">{
                 return _OK
@@ -1016,15 +1038,9 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 <span class="cov8" title="1">{
-        if zBuf == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">buf, ok := mod.Memory().Read(zBuf, iAmt)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
+        buf := memory{mod}.mustRead(zBuf, iAmt)
 
-        <span class="cov8" title="1">file := vfsFilePtr{mod, pFile}.OSFile()
+        file := vfsFilePtr{mod, pFile}.OSFile()
         _, err := file.WriteAt(buf, int64(iOfst))
         if err != nil </span><span class="cov0" title="0">{
                 return uint32(IOERR_WRITE)
@@ -1060,17 +1076,12 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
                 return uint32(IOERR_SEEK)
         }</span>
 
-        <span class="cov8" title="1">if pSize == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := mod.Memory().WriteUint64Le(pSize, uint64(off)); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return _OK</span>
+        <span class="cov8" title="1">memory{mod}.writeUint64(pSize, uint64(off))
+        return _OK</span>
 }
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">package sqlite3
+		<pre class="file" id="file7" style="display: none">package sqlite3
 
 import (
         "os"
@@ -1157,49 +1168,25 @@ func (p vfsFilePtr) OSFile() *os.File <span class="cov8" title="1">{
 }</span>
 
 func (p vfsFilePtr) ID() uint32 <span class="cov8" title="1">{
-        if p.ptr == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">id, ok := p.Memory().ReadUint32Le(p.ptr + ptrlen)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return id</span>
-}
+        return memory{p}.readUint32(p.ptr + ptrlen)
+}</span>
 
 func (p vfsFilePtr) Lock() vfsLockState <span class="cov8" title="1">{
-        if p.ptr == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">lk, ok := p.Memory().ReadUint32Le(p.ptr + 2*ptrlen)
-        if !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return vfsLockState(lk)</span>
-}
+        return vfsLockState(memory{p}.readUint32(p.ptr + 2*ptrlen))
+}</span>
 
 func (p vfsFilePtr) SetID(id uint32) vfsFilePtr <span class="cov8" title="1">{
-        if p.ptr == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := p.Memory().WriteUint32Le(p.ptr+ptrlen, id); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return p</span>
-}
+        memory{p}.writeUint32(p.ptr+ptrlen, id)
+        return p
+}</span>
 
 func (p vfsFilePtr) SetLock(lock vfsLockState) vfsFilePtr <span class="cov8" title="1">{
-        if p.ptr == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov8" title="1">if ok := p.Memory().WriteUint32Le(p.ptr+2*ptrlen, uint32(lock)); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov8" title="1">return p</span>
-}
+        memory{p}.writeUint32(p.ptr+2*ptrlen, uint32(lock))
+        return p
+}</span>
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">package sqlite3
+		<pre class="file" id="file8" style="display: none">package sqlite3
 
 import (
         "context"
@@ -1451,17 +1438,14 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
         if locked </span><span class="cov0" title="0">{
                 res = 1
         }</span>
-        <span class="cov0" title="0">if pResOut == 0 </span><span class="cov0" title="0">{
-                panic(nilErr)</span>
-        }
-        <span class="cov0" title="0">if ok := mod.Memory().WriteUint32Le(pResOut, res); !ok </span><span class="cov0" title="0">{
-                panic(rangeErr)</span>
-        }
-        <span class="cov0" title="0">return _OK</span>
+        <span class="cov0" title="0">memory{mod}.writeUint32(pResOut, res)
+        return _OK</span>
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">package sqlite3
+		<pre class="file" id="file9" style="display: none">//go:build unix
+
+package sqlite3
 
 import (
         "os"
