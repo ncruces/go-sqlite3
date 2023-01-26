@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -131,7 +132,7 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 	if err != nil {
 		return uint32(IOERR_DELETE)
 	}
-	if syncDir != 0 {
+	if runtime.GOOS != "windows" && syncDir != 0 {
 		f, err := os.Open(filepath.Dir(path))
 		if err == nil {
 			err = f.Sync()
