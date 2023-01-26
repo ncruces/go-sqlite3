@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 SCRIPT_DIR="$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")"
 
@@ -8,7 +8,7 @@ go tool cover -html="$SCRIPT_DIR/coverage.out" -o "$SCRIPT_DIR/coverage.html"
 COVERAGE=$(go tool cover -func="$SCRIPT_DIR/coverage.out" | grep total: | grep -Eo '[0-9]+\.[0-9]+')
 
 echo
-echo "Full coverage: $COVERAGE% of statements"
+echo "coverage: $COVERAGE% of statements"
 
 COLOR=orange
 if (( $(echo "$COVERAGE <= 50" | bc -l) )) ; then
