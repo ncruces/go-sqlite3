@@ -65,7 +65,7 @@
 				
 				<option value="file4">github.com/ncruces/go-sqlite3/stmt.go (27.2%)</option>
 				
-				<option value="file5">github.com/ncruces/go-sqlite3/vfs.go (67.4%)</option>
+				<option value="file5">github.com/ncruces/go-sqlite3/vfs.go (74.7%)</option>
 				
 				<option value="file6">github.com/ncruces/go-sqlite3/vfs_files.go (70.6%)</option>
 				
@@ -848,7 +848,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
         // This might be buggy on Windows (the Windows VFS doesn't try).
 
         <span class="cov8" title="1">siz := uint32(len(abs) + 1)
-        if siz &gt; nFull </span><span class="cov0" title="0">{
+        if siz &gt; nFull </span><span class="cov8" title="1">{
                 return uint32(CANTOPEN_FULLPATH)
         }</span>
         <span class="cov8" title="1">if zFull == 0 </span><span class="cov0" title="0">{
@@ -873,13 +873,13 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
         <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
                 return uint32(IOERR_DELETE)
         }</span>
-        <span class="cov8" title="1">if syncDir != 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if syncDir != 0 </span><span class="cov8" title="1">{
                 f, err := os.Open(filepath.Dir(path))
-                if err == nil </span><span class="cov0" title="0">{
+                if err == nil </span><span class="cov8" title="1">{
                         err = f.Sync()
                         f.Close()
                 }</span>
-                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
                         return uint32(IOERR_DELETE)
                 }</span>
         }
@@ -897,7 +897,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
         switch </span>{
         case flags == ACCESS_EXISTS:<span class="cov8" title="1">
                 switch </span>{
-                case err == nil:<span class="cov0" title="0">
+                case err == nil:<span class="cov8" title="1">
                         res = 1</span>
                 case errors.Is(err, fs.ErrNotExist):<span class="cov8" title="1">
                         res = 0</span>
@@ -905,15 +905,15 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
                         return uint32(IOERR_ACCESS)</span>
                 }
 
-        case err == nil:<span class="cov0" title="0">
+        case err == nil:<span class="cov8" title="1">
                 var want fs.FileMode = syscall.S_IRUSR
-                if flags == ACCESS_READWRITE </span><span class="cov0" title="0">{
+                if flags == ACCESS_READWRITE </span><span class="cov8" title="1">{
                         want |= syscall.S_IWUSR
                 }</span>
-                <span class="cov0" title="0">if fi.IsDir() </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if fi.IsDir() </span><span class="cov8" title="1">{
                         want |= syscall.S_IXUSR
                 }</span>
-                <span class="cov0" title="0">if fi.Mode()&amp;want == want </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if fi.Mode()&amp;want == want </span><span class="cov8" title="1">{
                         res = 1
                 }</span> else<span class="cov0" title="0"> {
                         res = 0

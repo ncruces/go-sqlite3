@@ -34,10 +34,10 @@ func TestOpen_dir(t *testing.T) {
 		t.Fatal("want sqlite3.Error")
 	}
 	if serr.Code != sqlite3.CANTOPEN {
-		t.Fatal("want sqlite3.CANTOPEN")
+		t.Error("want sqlite3.CANTOPEN")
 	}
 	if got := err.Error(); got != "sqlite3: unable to open database file" {
-		t.Fatal("got message: ", got)
+		t.Error("got message: ", got)
 	}
 }
 
@@ -69,17 +69,17 @@ func testOpen(t *testing.T, name string) {
 	idx := 0
 	for ; stmt.Step(); idx++ {
 		if ids[idx] != stmt.ColumnInt(0) {
-			t.Errorf("want %d got %d", ids[idx], stmt.ColumnInt(0))
+			t.Errorf("got %d, want %d", stmt.ColumnInt(0), ids[idx])
 		}
 		if names[idx] != stmt.ColumnText(1) {
-			t.Errorf("want %q got %q", names[idx], stmt.ColumnText(1))
+			t.Errorf("got %q, want %q", stmt.ColumnText(1), names[idx])
 		}
 	}
 	if err := stmt.Err(); err != nil {
 		t.Fatal(err)
 	}
 	if idx != 3 {
-		t.Errorf("want %d rows got %d", len(ids), idx)
+		t.Errorf("got %d rows, want %d", idx, len(ids))
 	}
 
 	err = stmt.Close()
