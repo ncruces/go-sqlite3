@@ -1,5 +1,3 @@
-//go:build unix
-
 package sqlite3
 
 import (
@@ -17,6 +15,10 @@ func (l *vfsFileLocker) LockState() vfsLockState {
 }
 
 func (l *vfsFileLocker) LockShared() xErrorCode {
+	if assert && !(l.state == _NO_LOCK) {
+		panic(assertErr + " [wz9dcw]")
+	}
+
 	// A PENDING lock is needed before acquiring a SHARED lock.
 	if !l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -49,6 +51,10 @@ func (l *vfsFileLocker) LockShared() xErrorCode {
 }
 
 func (l *vfsFileLocker) LockReserved() xErrorCode {
+	if assert && !(l.state == _SHARED_LOCK) {
+		panic(assertErr + " [m9hcil]")
+	}
+
 	// Acquire the RESERVED lock.
 	if !l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -62,6 +68,10 @@ func (l *vfsFileLocker) LockReserved() xErrorCode {
 }
 
 func (l *vfsFileLocker) LockPending() xErrorCode {
+	if assert && !(l.state == _SHARED_LOCK || l.state == _RESERVED_LOCK) {
+		panic(assertErr + " [wx8nk2]")
+	}
+
 	// Acquire the PENDING lock.
 	if !l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -75,6 +85,10 @@ func (l *vfsFileLocker) LockPending() xErrorCode {
 }
 
 func (l *vfsFileLocker) LockExclusive() xErrorCode {
+	if assert && !(l.state == _PENDING_LOCK) {
+		panic(assertErr + " [84nbax]")
+	}
+
 	// Acquire the EXCLUSIVE lock.
 	if !l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -88,6 +102,10 @@ func (l *vfsFileLocker) LockExclusive() xErrorCode {
 }
 
 func (l *vfsFileLocker) DowngradeLock() xErrorCode {
+	if assert && !(l.state > _SHARED_LOCK) {
+		panic(assertErr + " [je31i3]")
+	}
+
 	// Downgrade to a SHARED lock.
 	if !l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,

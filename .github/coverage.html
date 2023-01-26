@@ -71,9 +71,7 @@
 				
 				<option value="file7">github.com/ncruces/go-sqlite3/vfs_lock.go (51.6%)</option>
 				
-				<option value="file8">github.com/ncruces/go-sqlite3/vfs_lock_noop.go (0.0%)</option>
-				
-				<option value="file9">github.com/ncruces/go-sqlite3/vfs_unix.go (54.3%)</option>
+				<option value="file8">github.com/ncruces/go-sqlite3/vfs_unix.go (53.6%)</option>
 				
 				</select>
 			</div>
@@ -1465,76 +1463,6 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 		
 		<pre class="file" id="file8" style="display: none">package sqlite3
 
-type vfsNoopLocker struct {
-        state vfsLockState
-}
-
-var _ vfsLocker = &amp;vfsNoopLocker{}
-
-func (l *vfsNoopLocker) LockState() vfsLockState <span class="cov0" title="0">{
-        return l.state
-}</span>
-
-func (l *vfsNoopLocker) LockShared() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state == _NO_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [wz9dcw]")</span>
-        }
-        <span class="cov0" title="0">l.state = _SHARED_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) LockReserved() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state == _SHARED_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [m9hcil]")</span>
-        }
-        <span class="cov0" title="0">l.state = _RESERVED_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) LockPending() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state == _SHARED_LOCK || l.state == _RESERVED_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [wx8nk2]")</span>
-        }
-        <span class="cov0" title="0">l.state = _PENDING_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) LockExclusive() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state == _PENDING_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [84nbax]")</span>
-        }
-        <span class="cov0" title="0">l.state = _EXCLUSIVE_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) DowngradeLock() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state &gt; _SHARED_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [je31i3]")</span>
-        }
-        <span class="cov0" title="0">l.state = _SHARED_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) Unlock() xErrorCode <span class="cov0" title="0">{
-        if assert &amp;&amp; !(l.state &gt; _NO_LOCK) </span><span class="cov0" title="0">{
-                panic(assertErr + " [m6e9w5]")</span>
-        }
-        <span class="cov0" title="0">l.state = _NO_LOCK
-        return _OK</span>
-}
-
-func (l *vfsNoopLocker) CheckReservedLock() (bool, xErrorCode) <span class="cov0" title="0">{
-        if l.state &gt;= _RESERVED_LOCK </span><span class="cov0" title="0">{
-                return true, _OK
-        }</span>
-        <span class="cov0" title="0">return false, _OK</span>
-}
-</pre>
-		
-		<pre class="file" id="file9" style="display: none">//go:build unix
-
-package sqlite3
-
 import (
         "os"
         "runtime"
@@ -1550,8 +1478,12 @@ func (l *vfsFileLocker) LockState() vfsLockState <span class="cov8" title="1">{
 }</span>
 
 func (l *vfsFileLocker) LockShared() xErrorCode <span class="cov8" title="1">{
+        if assert &amp;&amp; !(l.state == _NO_LOCK) </span><span class="cov0" title="0">{
+                panic(assertErr + " [wz9dcw]")</span>
+        }
+
         // A PENDING lock is needed before acquiring a SHARED lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_RDLCK,
                 Start: _PENDING_BYTE,
                 Len:   1,
@@ -1582,8 +1514,12 @@ func (l *vfsFileLocker) LockShared() xErrorCode <span class="cov8" title="1">{
 }
 
 func (l *vfsFileLocker) LockReserved() xErrorCode <span class="cov8" title="1">{
+        if assert &amp;&amp; !(l.state == _SHARED_LOCK) </span><span class="cov0" title="0">{
+                panic(assertErr + " [m9hcil]")</span>
+        }
+
         // Acquire the RESERVED lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _RESERVED_BYTE,
                 Len:   1,
@@ -1595,8 +1531,12 @@ func (l *vfsFileLocker) LockReserved() xErrorCode <span class="cov8" title="1">{
 }
 
 func (l *vfsFileLocker) LockPending() xErrorCode <span class="cov8" title="1">{
+        if assert &amp;&amp; !(l.state == _SHARED_LOCK || l.state == _RESERVED_LOCK) </span><span class="cov0" title="0">{
+                panic(assertErr + " [wx8nk2]")</span>
+        }
+
         // Acquire the PENDING lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _PENDING_BYTE,
                 Len:   1,
@@ -1608,8 +1548,12 @@ func (l *vfsFileLocker) LockPending() xErrorCode <span class="cov8" title="1">{
 }
 
 func (l *vfsFileLocker) LockExclusive() xErrorCode <span class="cov8" title="1">{
+        if assert &amp;&amp; !(l.state == _PENDING_LOCK) </span><span class="cov0" title="0">{
+                panic(assertErr + " [84nbax]")</span>
+        }
+
         // Acquire the EXCLUSIVE lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _SHARED_FIRST,
                 Len:   _SHARED_SIZE,
@@ -1621,8 +1565,12 @@ func (l *vfsFileLocker) LockExclusive() xErrorCode <span class="cov8" title="1">
 }
 
 func (l *vfsFileLocker) DowngradeLock() xErrorCode <span class="cov8" title="1">{
+        if assert &amp;&amp; !(l.state &gt; _SHARED_LOCK) </span><span class="cov0" title="0">{
+                panic(assertErr + " [je31i3]")</span>
+        }
+
         // Downgrade to a SHARED lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_RDLCK,
                 Start: _SHARED_FIRST,
                 Len:   _SHARED_SIZE,
