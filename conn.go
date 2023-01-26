@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"bytes"
 	"context"
+	"math"
 	"strconv"
 
 	"github.com/tetratelabs/wazero"
@@ -208,7 +209,15 @@ func getString(memory api.Memory, ptr, maxlen uint32) string {
 	if ptr == 0 {
 		panic(nilErr)
 	}
-	mem, ok := memory.Read(ptr, maxlen+1)
+	switch maxlen {
+	case 0:
+		return ""
+	case math.MaxUint32:
+		//
+	default:
+		maxlen = maxlen + 1
+	}
+	mem, ok := memory.Read(ptr, maxlen)
 	if !ok {
 		mem, ok = memory.Read(ptr, memory.Size()-ptr)
 		if !ok {

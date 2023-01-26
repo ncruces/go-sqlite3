@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/ncruces/go-sqlite3/compile.go (54.5%)</option>
 				
-				<option value="file2">github.com/ncruces/go-sqlite3/conn.go (73.9%)</option>
+				<option value="file2">github.com/ncruces/go-sqlite3/conn.go (86.8%)</option>
 				
 				<option value="file3">github.com/ncruces/go-sqlite3/error.go (54.5%)</option>
 				
@@ -233,6 +233,7 @@ func compile() <span class="cov8" title="1">{
 import (
         "bytes"
         "context"
+        "math"
         "strconv"
 
         "github.com/tetratelabs/wazero"
@@ -378,7 +379,7 @@ func (c *Conn) error(rc uint64) error <span class="cov8" title="1">{
 }
 
 func (c *Conn) free(ptr uint32) <span class="cov8" title="1">{
-        if ptr == 0 </span><span class="cov0" title="0">{
+        if ptr == 0 </span><span class="cov8" title="1">{
                 return
         }</span>
         <span class="cov8" title="1">_, err := c.api.free.Call(c.ctx, uint64(ptr))
@@ -393,18 +394,18 @@ func (c *Conn) new(len uint32) uint32 <span class="cov8" title="1">{
                 panic(err)</span>
         }
         <span class="cov8" title="1">ptr := uint32(r[0])
-        if ptr == 0 || ptr &gt;= c.memory.Size() </span><span class="cov0" title="0">{
+        if ptr == 0 || ptr &gt;= c.memory.Size() </span><span class="cov8" title="1">{
                 panic(oomErr)</span>
         }
         <span class="cov8" title="1">return ptr</span>
 }
 
-func (c *Conn) newBytes(s []byte) uint32 <span class="cov0" title="0">{
-        if s == nil </span><span class="cov0" title="0">{
+func (c *Conn) newBytes(s []byte) uint32 <span class="cov8" title="1">{
+        if s == nil </span><span class="cov8" title="1">{
                 return 0
         }</span>
 
-        <span class="cov0" title="0">siz := uint32(len(s))
+        <span class="cov8" title="1">siz := uint32(len(s))
         ptr := c.new(siz)
         mem, ok := c.memory.Read(ptr, siz)
         if !ok </span><span class="cov0" title="0">{
@@ -412,7 +413,7 @@ func (c *Conn) newBytes(s []byte) uint32 <span class="cov0" title="0">{
                 panic(rangeErr)</span>
         }
 
-        <span class="cov0" title="0">copy(mem, s)
+        <span class="cov8" title="1">copy(mem, s)
         return ptr</span>
 }
 
@@ -435,17 +436,25 @@ func (c *Conn) getString(ptr, maxlen uint32) string <span class="cov8" title="1"
 }</span>
 
 func getString(memory api.Memory, ptr, maxlen uint32) string <span class="cov8" title="1">{
-        if ptr == 0 </span><span class="cov0" title="0">{
+        if ptr == 0 </span><span class="cov8" title="1">{
                 panic(nilErr)</span>
         }
-        <span class="cov8" title="1">mem, ok := memory.Read(ptr, maxlen+1)
-        if !ok </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">switch maxlen </span>{
+        case 0:<span class="cov8" title="1">
+                return ""</span>
+        case math.MaxUint32:<span class="cov8" title="1"></span>
+                //
+        default:<span class="cov8" title="1">
+                maxlen = maxlen + 1</span>
+        }
+        <span class="cov8" title="1">mem, ok := memory.Read(ptr, maxlen)
+        if !ok </span><span class="cov8" title="1">{
                 mem, ok = memory.Read(ptr, memory.Size()-ptr)
                 if !ok </span><span class="cov0" title="0">{
                         panic(rangeErr)</span>
                 }
         }
-        <span class="cov8" title="1">if i := bytes.IndexByte(mem, 0); i &lt; 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if i := bytes.IndexByte(mem, 0); i &lt; 0 </span><span class="cov8" title="1">{
                 panic(noNulErr)</span>
         } else<span class="cov8" title="1"> {
                 return string(mem[:i])
