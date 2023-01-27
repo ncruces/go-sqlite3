@@ -5,15 +5,14 @@ SCRIPT_DIR="$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 go test ./... -coverprofile "$SCRIPT_DIR/coverage.out"
 go tool cover -html="$SCRIPT_DIR/coverage.out" -o "$SCRIPT_DIR/coverage.html"
-COVERAGE=$(go tool cover -func="$SCRIPT_DIR/coverage.out" | grep total: | grep -Eo '[0-9]+\.[0-9]+')
+COVERAGE=$(go tool cover -func="$SCRIPT_DIR/coverage.out" | tail -1 | grep -Eo '\d+\.\d')
 
-echo
 echo "coverage: $COVERAGE% of statements"
 
 COLOR=orange
-if (( $(echo "$COVERAGE <= 50" | bc -l) )) ; then
+if awk "BEGIN {exit !($COVERAGE <= 50)}"; then
 	COLOR=red
-elif (( $(echo "$COVERAGE > 80" | bc -l) )); then
+elif awk "BEGIN {exit !($COVERAGE > 80)}"; then
 	COLOR=green
 fi
 curl -s "https://img.shields.io/badge/coverage-$COVERAGE%25-$COLOR" > "$SCRIPT_DIR/coverage.svg"

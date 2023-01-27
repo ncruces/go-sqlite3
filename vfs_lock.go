@@ -193,12 +193,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 		}
 		if eLock == _SHARED_LOCK {
 			if rc := of.DowngradeLock(); rc != _OK {
-				// In theory, the downgrade to a SHARED cannot fail because another
-				// process is holding an incompatible lock. If it does, this
-				// indicates that the other process is not following the locking
-				// protocol. If this happens, return IOERR_RDLOCK. Returning
-				// BUSY would confuse the upper layer.
-				return uint32(IOERR_RDLOCK)
+				return uint32(rc)
 			}
 			ptr.SetLock(_SHARED_LOCK)
 			return _OK
@@ -218,7 +213,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 
 	case of.shared == 1:
 		if rc := of.Unlock(); rc != _OK {
-			return uint32(IOERR_UNLOCK)
+			return uint32(rc)
 		}
 		ptr.SetLock(_NO_LOCK)
 		of.shared = 0

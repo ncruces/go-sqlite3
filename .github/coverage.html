@@ -67,13 +67,13 @@
 				
 				<option value="file5">github.com/ncruces/go-sqlite3/stmt.go (27.3%)</option>
 				
-				<option value="file6">github.com/ncruces/go-sqlite3/vfs.go (82.5%)</option>
+				<option value="file6">github.com/ncruces/go-sqlite3/vfs.go (83.1%)</option>
 				
-				<option value="file7">github.com/ncruces/go-sqlite3/vfs_files.go (80.0%)</option>
+				<option value="file7">github.com/ncruces/go-sqlite3/vfs_files.go (100.0%)</option>
 				
-				<option value="file8">github.com/ncruces/go-sqlite3/vfs_lock.go (53.3%)</option>
+				<option value="file8">github.com/ncruces/go-sqlite3/vfs_lock.go (78.3%)</option>
 				
-				<option value="file9">github.com/ncruces/go-sqlite3/vfs_unix.go (53.6%)</option>
+				<option value="file9">github.com/ncruces/go-sqlite3/vfs_unix.go (52.5%)</option>
 				
 				</select>
 			</div>
@@ -784,6 +784,7 @@ import (
         "math/rand"
         "os"
         "path/filepath"
+        "runtime"
         "syscall"
         "time"
 
@@ -907,7 +908,7 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
         <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
                 return uint32(IOERR_DELETE)
         }</span>
-        <span class="cov8" title="1">if syncDir != 0 </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if runtime.GOOS != "windows" &amp;&amp; syncDir != 0 </span><span class="cov8" title="1">{
                 f, err := os.Open(filepath.Dir(path))
                 if err == nil </span><span class="cov8" title="1">{
                         err = f.Sync()
@@ -1025,7 +1026,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 
         file := vfsFilePtr{mod, pFile}.OSFile()
         n, err := file.ReadAt(buf, int64(iOfst))
-        if n == int(iAmt) </span><span class="cov0" title="0">{
+        if n == int(iAmt) </span><span class="cov8" title="1">{
                 return _OK
         }</span>
         <span class="cov8" title="1">if n == 0 &amp;&amp; err != io.EOF </span><span class="cov0" title="0">{
@@ -1110,10 +1111,10 @@ func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 <span class="cov8"
 
         // Reuse an already opened file.
         for id, of := range vfsOpenFiles </span><span class="cov8" title="1">{
-                if of == nil </span><span class="cov0" title="0">{
+                if of == nil </span><span class="cov8" title="1">{
                         continue</span>
                 }
-                <span class="cov8" title="1">if os.SameFile(info, of.info) </span><span class="cov0" title="0">{
+                <span class="cov8" title="1">if os.SameFile(info, of.info) </span><span class="cov8" title="1">{
                         of.nref++
                         _ = file.Close()
                         return uint32(id)
@@ -1130,7 +1131,7 @@ func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 <span class="cov8"
 
         // Find an empty slot.
         for id, ptr := range vfsOpenFiles </span><span class="cov8" title="1">{
-                if ptr == nil </span><span class="cov0" title="0">{
+                if ptr == nil </span><span class="cov8" title="1">{
                         vfsOpenFiles[id] = of
                         return uint32(id)
                 }</span>
@@ -1147,7 +1148,7 @@ func vfsReleaseOpenFile(id uint32) error <span class="cov8" title="1">{
         defer vfsOpenFilesMtx.Unlock()
 
         of := vfsOpenFiles[id]
-        if of.nref--; of.nref &gt; 0 </span><span class="cov0" title="0">{
+        if of.nref--; of.nref &gt; 0 </span><span class="cov8" title="1">{
                 return nil
         }</span>
         <span class="cov8" title="1">err := of.file.Close()
@@ -1294,10 +1295,10 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
         fLock := of.LockState()
 
         // If some other connection has a lock that precludes the requested lock, return BUSY.
-        if cLock != fLock &amp;&amp; (eLock &gt; _SHARED_LOCK || fLock &gt;= _PENDING_LOCK) </span><span class="cov0" title="0">{
+        if cLock != fLock &amp;&amp; (eLock &gt; _SHARED_LOCK || fLock &gt;= _PENDING_LOCK) </span><span class="cov8" title="1">{
                 return uint32(BUSY)
         }</span>
-        <span class="cov8" title="1">if eLock == _EXCLUSIVE_LOCK &amp;&amp; of.shared &gt; 1 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if eLock == _EXCLUSIVE_LOCK &amp;&amp; of.shared &gt; 1 </span><span class="cov8" title="1">{
                 // We are trying for an exclusive lock but another connection in this
                 // same process is still holding a shared lock.
                 return uint32(BUSY)
@@ -1305,11 +1306,11 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 
         // If a SHARED lock is requested, and some other connection has a SHARED or RESERVED lock,
         // then increment the reference count and return OK.
-        <span class="cov8" title="1">if eLock == _SHARED_LOCK &amp;&amp; (fLock == _SHARED_LOCK || fLock == _RESERVED_LOCK) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if eLock == _SHARED_LOCK &amp;&amp; (fLock == _SHARED_LOCK || fLock == _RESERVED_LOCK) </span><span class="cov8" title="1">{
                 if assert &amp;&amp; !(cLock == _NO_LOCK &amp;&amp; of.shared &gt; 0) </span><span class="cov0" title="0">{
                         panic(assertErr + " [k7coz6]")</span>
                 }
-                <span class="cov0" title="0">ptr.SetLock(_SHARED_LOCK)
+                <span class="cov8" title="1">ptr.SetLock(_SHARED_LOCK)
                 of.shared++
                 return _OK</span>
         }
@@ -1363,7 +1364,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
         cLock := ptr.Lock()
 
         // If we don't have a more restrictive lock, do nothing.
-        if cLock &lt;= eLock </span><span class="cov0" title="0">{
+        if cLock &lt;= eLock </span><span class="cov8" title="1">{
                 return _OK
         }</span>
 
@@ -1381,12 +1382,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
                 }
                 <span class="cov8" title="1">if eLock == _SHARED_LOCK </span><span class="cov8" title="1">{
                         if rc := of.DowngradeLock(); rc != _OK </span><span class="cov0" title="0">{
-                                // In theory, the downgrade to a SHARED cannot fail because another
-                                // process is holding an incompatible lock. If it does, this
-                                // indicates that the other process is not following the locking
-                                // protocol. If this happens, return IOERR_RDLOCK. Returning
-                                // BUSY would confuse the upper layer.
-                                return uint32(IOERR_RDLOCK)
+                                return uint32(rc)
                         }</span>
                         <span class="cov8" title="1">ptr.SetLock(_SHARED_LOCK)
                         return _OK</span>
@@ -1399,14 +1395,14 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
         // Decrement the shared lock counter. Release the file lock
         // only when all connections have released the lock.
         <span class="cov8" title="1">switch </span>{
-        case of.shared &gt; 1:<span class="cov0" title="0">
+        case of.shared &gt; 1:<span class="cov8" title="1">
                 ptr.SetLock(_NO_LOCK)
                 of.shared--
                 return _OK</span>
 
         case of.shared == 1:<span class="cov8" title="1">
                 if rc := of.Unlock(); rc != _OK </span><span class="cov0" title="0">{
-                        return uint32(IOERR_UNLOCK)
+                        return uint32(rc)
                 }</span>
                 <span class="cov8" title="1">ptr.SetLock(_NO_LOCK)
                 of.shared = 0
@@ -1417,7 +1413,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
         }
 }
 
-func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 <span class="cov0" title="0">{
+func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 <span class="cov8" title="1">{
         ptr := vfsFilePtr{mod, pFile}
         cLock := ptr.Lock()
 
@@ -1425,7 +1421,7 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
                 panic(assertErr + " [zarygt]")</span>
         }
 
-        <span class="cov0" title="0">vfsOpenFilesMtx.Lock()
+        <span class="cov8" title="1">vfsOpenFilesMtx.Lock()
         defer vfsOpenFilesMtx.Unlock()
         of := vfsOpenFiles[ptr.ID()]
 
@@ -1434,11 +1430,11 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
                 return uint32(IOERR_CHECKRESERVEDLOCK)
         }</span>
 
-        <span class="cov0" title="0">var res uint32
-        if locked </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">var res uint32
+        if locked </span><span class="cov8" title="1">{
                 res = 1
         }</span>
-        <span class="cov0" title="0">memory{mod}.writeUint32(pResOut, res)
+        <span class="cov8" title="1">memory{mod}.writeUint32(pResOut, res)
         return _OK</span>
 }
 </pre>
@@ -1467,30 +1463,30 @@ func (l *vfsFileLocker) LockShared() xErrorCode <span class="cov8" title="1">{
         }
 
         // A PENDING lock is needed before acquiring a SHARED lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_RDLCK,
                 Start: _PENDING_BYTE,
                 Len:   1,
-        }) </span><span class="cov0" title="0">{
-                return IOERR_LOCK
+        }); err != nil </span><span class="cov0" title="0">{
+                return l.errorCode(err, IOERR_LOCK)
         }</span>
 
         // Acquire the SHARED lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_RDLCK,
                 Start: _SHARED_FIRST,
                 Len:   _SHARED_SIZE,
-        }) </span><span class="cov0" title="0">{
-                return IOERR_LOCK
+        }); err != nil </span><span class="cov0" title="0">{
+                return l.errorCode(err, IOERR_LOCK)
         }</span>
         <span class="cov8" title="1">l.state = _SHARED_LOCK
 
         // Relese the PENDING lock.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_UNLCK,
                 Start: _PENDING_BYTE,
                 Len:   1,
-        }) </span><span class="cov0" title="0">{
+        }); err != nil </span><span class="cov0" title="0">{
                 return IOERR_UNLOCK
         }</span>
 
@@ -1503,12 +1499,12 @@ func (l *vfsFileLocker) LockReserved() xErrorCode <span class="cov8" title="1">{
         }
 
         // Acquire the RESERVED lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _RESERVED_BYTE,
                 Len:   1,
-        }) </span><span class="cov0" title="0">{
-                return IOERR_LOCK
+        }); err != nil </span><span class="cov0" title="0">{
+                return l.errorCode(err, IOERR_LOCK)
         }</span>
         <span class="cov8" title="1">l.state = _RESERVED_LOCK
         return _OK</span>
@@ -1520,12 +1516,12 @@ func (l *vfsFileLocker) LockPending() xErrorCode <span class="cov8" title="1">{
         }
 
         // Acquire the PENDING lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _PENDING_BYTE,
                 Len:   1,
-        }) </span><span class="cov0" title="0">{
-                return IOERR_LOCK
+        }); err != nil </span><span class="cov0" title="0">{
+                return l.errorCode(err, IOERR_LOCK)
         }</span>
         <span class="cov8" title="1">l.state = _PENDING_LOCK
         return _OK</span>
@@ -1537,12 +1533,12 @@ func (l *vfsFileLocker) LockExclusive() xErrorCode <span class="cov8" title="1">
         }
 
         // Acquire the EXCLUSIVE lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_WRLCK,
                 Start: _SHARED_FIRST,
                 Len:   _SHARED_SIZE,
-        }) </span><span class="cov0" title="0">{
-                return IOERR_LOCK
+        }); err != nil </span><span class="cov0" title="0">{
+                return l.errorCode(err, IOERR_LOCK)
         }</span>
         <span class="cov8" title="1">l.state = _EXCLUSIVE_LOCK
         return _OK</span>
@@ -1554,21 +1550,26 @@ func (l *vfsFileLocker) DowngradeLock() xErrorCode <span class="cov8" title="1">
         }
 
         // Downgrade to a SHARED lock.
-        <span class="cov8" title="1">if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        <span class="cov8" title="1">if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_RDLCK,
                 Start: _SHARED_FIRST,
                 Len:   _SHARED_SIZE,
-        }) </span><span class="cov0" title="0">{
+        }); err != nil </span><span class="cov0" title="0">{
+                // In theory, the downgrade to a SHARED cannot fail because another
+                // process is holding an incompatible lock. If it does, this
+                // indicates that the other process is not following the locking
+                // protocol. If this happens, return IOERR_RDLOCK. Returning
+                // BUSY would confuse the upper layer.
                 return IOERR_RDLOCK
         }</span>
         <span class="cov8" title="1">l.state = _SHARED_LOCK
 
         // Release the PENDING and RESERVED locks.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type:  syscall.F_UNLCK,
                 Start: _PENDING_BYTE,
                 Len:   2,
-        }) </span><span class="cov0" title="0">{
+        }); err != nil </span><span class="cov0" title="0">{
                 return IOERR_UNLOCK
         }</span>
         <span class="cov8" title="1">return _OK</span>
@@ -1576,43 +1577,61 @@ func (l *vfsFileLocker) DowngradeLock() xErrorCode <span class="cov8" title="1">
 
 func (l *vfsFileLocker) Unlock() xErrorCode <span class="cov8" title="1">{
         // Release all locks.
-        if !l.fcntlSetLock(&amp;syscall.Flock_t{
+        if err := l.fcntlSetLock(&amp;syscall.Flock_t{
                 Type: syscall.F_UNLCK,
-        }) </span><span class="cov0" title="0">{
+        }); err != nil </span><span class="cov0" title="0">{
                 return IOERR_UNLOCK
         }</span>
         <span class="cov8" title="1">l.state = _NO_LOCK
         return _OK</span>
 }
 
-func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) <span class="cov0" title="0">{
-        if l.state &gt;= _RESERVED_LOCK </span><span class="cov0" title="0">{
+func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) <span class="cov8" title="1">{
+        if l.state &gt;= _RESERVED_LOCK </span><span class="cov8" title="1">{
                 return true, _OK
         }</span>
         // Test all write locks.
         <span class="cov0" title="0">lock := syscall.Flock_t{
                 Type: syscall.F_RDLCK,
         }
-        if !l.fcntlGetLock(&amp;lock) </span><span class="cov0" title="0">{
+        if l.fcntlGetLock(&amp;lock) != nil </span><span class="cov0" title="0">{
                 return false, IOERR_CHECKRESERVEDLOCK
         }</span>
         <span class="cov0" title="0">return lock.Type == syscall.F_UNLCK, _OK</span>
 }
 
-func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) bool <span class="cov0" title="0">{
+func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error <span class="cov0" title="0">{
         F_GETLK := syscall.F_GETLK
         if runtime.GOOS == "linux" </span><span class="cov0" title="0">{
                 F_GETLK = 36 // F_OFD_GETLK
         }</span>
-        <span class="cov0" title="0">return syscall.FcntlFlock(l.Fd(), F_GETLK, lock) == nil</span>
+        <span class="cov0" title="0">return syscall.FcntlFlock(l.Fd(), F_GETLK, lock)</span>
 }
 
-func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) bool <span class="cov8" title="1">{
+func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error <span class="cov8" title="1">{
         F_SETLK := syscall.F_SETLK
         if runtime.GOOS == "linux" </span><span class="cov0" title="0">{
                 F_SETLK = 37 // F_OFD_SETLK
         }</span>
-        <span class="cov8" title="1">return syscall.FcntlFlock(l.Fd(), F_SETLK, lock) == nil</span>
+        <span class="cov8" title="1">return syscall.FcntlFlock(l.Fd(), F_SETLK, lock)</span>
+}
+
+func (vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode <span class="cov0" title="0">{
+        if errno, ok := err.(syscall.Errno); ok </span><span class="cov0" title="0">{
+                switch errno </span>{
+                case syscall.EACCES:<span class="cov0" title="0"></span>
+                case syscall.EAGAIN:<span class="cov0" title="0"></span>
+                case syscall.EBUSY:<span class="cov0" title="0"></span>
+                case syscall.EINTR:<span class="cov0" title="0"></span>
+                case syscall.ENOLCK:<span class="cov0" title="0"></span>
+                case syscall.EDEADLK:<span class="cov0" title="0"></span>
+                case syscall.ETIMEDOUT:<span class="cov0" title="0">
+                        return xErrorCode(BUSY)</span>
+                case syscall.EPERM:<span class="cov0" title="0">
+                        return xErrorCode(PERM)</span>
+                }
+        }
+        <span class="cov0" title="0">return def</span>
 }
 </pre>
 		
