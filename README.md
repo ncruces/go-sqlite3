@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/image)](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
 [![Go Report](https://goreportcard.com/badge/github.com/ncruces/go-sqlite3)](https://goreportcard.com/report/github.com/ncruces/go-sqlite3)
-[![Go Coverage](.github/coverage.svg)](https://raw.githack.com/ncruces/go-sqlite3/main/.github/coverage.html)
+[![Go Coverage](https://github.com/ncruces/go-sqlite3/wiki/coverage.svg)](https://raw.githack.com/wiki/ncruces/go-sqlite3/coverage.html)
 
 ⚠️ CAUTION ⚠️
 
