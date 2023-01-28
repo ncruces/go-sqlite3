@@ -163,7 +163,7 @@ func (s *Stmt) ColumnText(col int) string {
 		panic(err)
 	}
 
-	mem := s.c.memory.mustRead(ptr, uint32(r[0]))
+	mem := s.c.mem.mustRead(ptr, uint32(r[0]))
 	return string(mem)
 }
 
@@ -190,6 +190,6 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 		panic(err)
 	}
 
-	mem := s.c.memory.mustRead(ptr, uint32(r[0]))
+	mem := s.c.mem.mustRead(ptr, uint32(r[0]))
 	return append(buf[0:0], mem...)
 }

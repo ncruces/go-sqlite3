@@ -18,8 +18,7 @@ func newConn(module api.Module) *Conn {
 	destructor := memory{module}.readUint32(uint32(global.Get()))
 
 	return &Conn{
-		module: module,
-		memory: memory{module},
+		mem: memory{module},
 		api: sqliteAPI{
 			malloc:        getFun("malloc"),
 			free:          getFun("free"),

@@ -37,7 +37,7 @@ func TestConn_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := db.memory.mustRead(ptr, uint32(len(want))); !bytes.Equal(got, want) {
+	if got := db.mem.mustRead(ptr, uint32(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -61,7 +61,7 @@ func TestConn_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := db.memory.mustRead(ptr, uint32(len(want))); string(got) != want {
+	if got := db.mem.mustRead(ptr, uint32(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -85,22 +85,22 @@ func TestConn_getString(t *testing.T) {
 	}
 
 	want := "sqlite3"
-	if got := db.getString(ptr, math.MaxUint32); got != want {
+	if got := db.mem.readString(ptr, math.MaxUint32); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
-	if got := db.getString(ptr, 0); got != "" {
+	if got := db.mem.readString(ptr, 0); got != "" {
 		t.Errorf("got %q, want empty", got)
 	}
 
 	func() {
 		defer func() { _ = recover() }()
-		db.getString(ptr, uint32(len(want)/2))
+		db.mem.readString(ptr, uint32(len(want)/2))
 		t.Error("should have panicked")
 	}()
 
 	func() {
 		defer func() { _ = recover() }()
-		db.getString(0, math.MaxUint32)
+		db.mem.readString(0, math.MaxUint32)
 		t.Error("should have panicked")
 	}()
 }

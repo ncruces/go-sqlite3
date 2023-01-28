@@ -2,18 +2,13 @@ package sqlite3
 
 import (
 	"context"
-	"strconv"
-
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 )
 
 type Conn struct {
 	ctx    context.Context
-	handle uint32
-	module api.Module
-	memory memory
 	api    sqliteAPI
+	mem    memory
+	handle uint32
 }
 
 func Open(filename string) (conn *Conn, err error) {
@@ -21,12 +16,8 @@ func Open(filename string) (conn *Conn, err error) {
 }
 
 func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
-	once.Do(compile)
-
 	ctx := context.Background()
-	cfg := wazero.NewModuleConfig().
-		WithName("sqlite3-" + strconv.FormatUint(counter.Add(1), 10))
-	module, err := wasm.InstantiateModule(ctx, module, cfg)
+	module, err := sqlite3.instantiateModule(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +39,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		return nil, err
 	}
 
-	c.handle = c.memory.readUint32(connPtr)
+	c.handle = c.mem.readUint32(connPtr)
 	if err := c.error(r[0]); err != nil {
 		return nil, err
 	}
@@ -64,7 +55,7 @@ func (c *Conn) Close() error {
 	if err := c.error(r[0]); err != nil {
 		return err
 	}
-	return c.module.Close(c.ctx)
+	return c.mem.mod.Close(c.ctx)
 }
 
 func (c *Conn) Exec(sql string) error {
@@ -98,8 +89,8 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	}
 
 	stmt = &Stmt{c: c}
-	stmt.handle = c.memory.readUint32(stmtPtr)
-	i := c.memory.readUint32(tailPtr)
+	stmt.handle = c.mem.readUint32(stmtPtr)
+	i := c.mem.readUint32(tailPtr)
 	tail = sql[i-sqlPtr:]
 
 	if err := c.error(r[0]); err != nil {
@@ -130,12 +121,12 @@ func (c *Conn) error(rc uint64) error {
 	// Do this first, sqlite3_errmsg is guaranteed to never change the value of the error code.
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
-		err.msg = c.getString(uint32(r[0]), 512)
+		err.msg = c.mem.readString(uint32(r[0]), 512)
 	}
 
 	r, _ = c.api.errstr.Call(c.ctx, rc)
 	if r != nil {
-		err.str = c.getString(uint32(r[0]), 512)
+		err.str = c.mem.readString(uint32(r[0]), 512)
 	}
 
 	if err.msg == err.str {
@@ -161,7 +152,7 @@ func (c *Conn) new(len uint32) uint32 {
 		panic(err)
 	}
 	ptr := uint32(r[0])
-	if ptr == 0 || ptr >= c.memory.size() {
+	if ptr == 0 || ptr >= c.mem.size() {
 		panic(oomErr)
 	}
 	return ptr
@@ -174,7 +165,7 @@ func (c *Conn) newBytes(b []byte) uint32 {
 
 	siz := uint32(len(b))
 	ptr := c.new(siz)
-	buf, ok := c.memory.read(ptr, siz)
+	buf, ok := c.mem.read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
 		panic(rangeErr)
@@ -187,7 +178,7 @@ func (c *Conn) newBytes(b []byte) uint32 {
 func (c *Conn) newString(s string) uint32 {
 	siz := uint32(len(s) + 1)
 	ptr := c.new(siz)
-	buf, ok := c.memory.read(ptr, siz)
+	buf, ok := c.mem.read(ptr, siz)
 	if !ok {
 		c.api.free.Call(c.ctx, uint64(ptr))
 		panic(rangeErr)
@@ -196,8 +187,4 @@ func (c *Conn) newString(s string) uint32 {
 	buf[len(s)] = 0
 	copy(buf, s)
 	return ptr
-}
-
-func (c *Conn) getString(ptr, maxlen uint32) string {
-	return c.memory.readString(ptr, maxlen)
 }

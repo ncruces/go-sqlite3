@@ -7,11 +7,19 @@ import (
 	"io/fs"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/ncruces/julianday"
 )
+
+func Test_vfsExit(t *testing.T) {
+	mem := newMemory(128)
+	defer func() { _ = recover() }()
+	vfsExit(context.TODO(), mem.mod, 1)
+	t.Error("should have panicked")
+}
 
 func Test_vfsLocaltime(t *testing.T) {
 	mem := newMemory(128)
@@ -96,43 +104,40 @@ func Test_vfsCurrentTime(t *testing.T) {
 }
 
 func Test_vfsCurrentTime64(t *testing.T) {
-	memory := make(mockMemory, 128)
-	module := &mockModule{&memory}
+	mem := newMemory(128)
 
 	now := time.Now()
 	time.Sleep(time.Millisecond)
-	rc := vfsCurrentTime64(context.TODO(), module, 0, 4)
+	rc := vfsCurrentTime64(context.TODO(), mem.mod, 0, 4)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
 
 	day, nsec := julianday.Date(now)
 	want := day*86_400_000 + nsec/1_000_000
-	if got, _ := memory.ReadUint64Le(4); int64(got)-want > 100 {
+	if got := mem.readUint64(4); float32(got) != float32(want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
 
 func Test_vfsFullPathname(t *testing.T) {
-	memory := make(mockMemory, 128+_MAX_PATHNAME)
-	module := &mockModule{&memory}
+	mem := newMemory(128)
+	mem.writeString(4, ".")
 
-	memory.Write(4, []byte{'.', 0})
-
-	rc := vfsFullPathname(context.TODO(), module, 0, 4, 0, 8)
+	rc := vfsFullPathname(context.TODO(), mem.mod, 0, 4, 0, 8)
 	if rc != uint32(CANTOPEN_FULLPATH) {
 		t.Errorf("returned %d, want %d", rc, CANTOPEN_FULLPATH)
 	}
 
-	rc = vfsFullPathname(context.TODO(), module, 0, 4, _MAX_PATHNAME, 8)
+	rc = vfsFullPathname(context.TODO(), mem.mod, 0, 4, _MAX_PATHNAME, 8)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
-	// want, _ := filepath.Abs(".")
-	// if got := getString(&memory, 8, _MAX_PATHNAME); got != want {
-	// 	t.Errorf("got %v, want %v", got, want)
-	// }
+	want, _ := filepath.Abs(".")
+	if got := mem.readString(8, _MAX_PATHNAME); got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func Test_vfsDelete(t *testing.T) {
@@ -156,7 +161,12 @@ func Test_vfsDelete(t *testing.T) {
 	}
 
 	if _, err := os.Stat(name); !errors.Is(err, fs.ErrNotExist) {
-		t.Error("did not delete the file")
+		t.Fatal("did not delete the file")
+	}
+
+	rc = vfsDelete(context.TODO(), module, 0, 4, 1)
+	if rc != _OK {
+		t.Fatal("returned", rc)
 	}
 }
 

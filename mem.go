@@ -99,3 +99,13 @@ func (m memory) readString(ptr, maxlen uint32) string {
 		return string(buf[:i])
 	}
 }
+
+func (m memory) writeString(ptr uint32, s string) {
+	siz := uint32(len(s) + 1)
+	buf, ok := m.read(ptr, siz)
+	if !ok {
+		panic(rangeErr)
+	}
+	buf[len(s)] = 0
+	copy(buf, s)
+}

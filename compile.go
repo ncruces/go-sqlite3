@@ -3,10 +3,12 @@ package sqlite3
 import (
 	"context"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 )
 
 // Configure SQLite.
@@ -15,33 +17,43 @@ var (
 	Path   string // Path to load the binary from.
 )
 
-var (
-	once    sync.Once
-	wasm    wazero.Runtime
-	module  wazero.CompiledModule
-	counter atomic.Uint64
-)
+var sqlite3 sqlite3Runtime
 
-func compile() {
-	ctx := context.Background()
+type sqlite3Runtime struct {
+	once      sync.Once
+	runtime   wazero.Runtime
+	compiled  wazero.CompiledModule
+	instances atomic.Uint64
+	ctx       context.Context
+	err       error
+}
 
-	wasm = wazero.NewRuntime(ctx)
-
-	if err := vfsInstantiate(ctx, wasm); err != nil {
-		panic(err)
+func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, error) {
+	s.ctx = ctx
+	s.once.Do(s.compileModule)
+	if s.err != nil {
+		return nil, s.err
 	}
 
-	if Binary == nil && Path != "" {
-		if bin, err := os.ReadFile(Path); err != nil {
-			panic(err)
-		} else {
-			Binary = bin
+	cfg := wazero.NewModuleConfig().
+		WithName("sqlite3-" + strconv.FormatUint(s.instances.Add(1), 10))
+	return s.runtime.InstantiateModule(ctx, s.compiled, cfg)
+}
+
+func (s *sqlite3Runtime) compileModule() {
+	s.runtime = wazero.NewRuntime(s.ctx)
+	s.err = vfsInstantiate(s.ctx, s.runtime)
+	if s.err != nil {
+		return
+	}
+
+	bin := Binary
+	if bin == nil && Path != "" {
+		bin, s.err = os.ReadFile(Path)
+		if s.err != nil {
+			return
 		}
 	}
 
-	if m, err := wasm.CompileModule(ctx, Binary); err != nil {
-		panic(err)
-	} else {
-		module = m
-	}
+	s.compiled, s.err = s.runtime.CompileModule(s.ctx, bin)
 }
