@@ -161,16 +161,26 @@ func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) {
 
 func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error {
 	F_GETLK := syscall.F_GETLK
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
+		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 		F_GETLK = 36 // F_OFD_GETLK
+	case "darwin":
+		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
+		F_GETLK = 92 // F_OFD_GETLK
 	}
 	return syscall.FcntlFlock(l.Fd(), F_GETLK, lock)
 }
 
 func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 	F_SETLK := syscall.F_SETLK
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
+		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 		F_SETLK = 37 // F_OFD_SETLK
+	case "darwin":
+		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
+		F_SETLK = 90 // F_OFD_SETLK
 	}
 	return syscall.FcntlFlock(l.Fd(), F_SETLK, lock)
 }
