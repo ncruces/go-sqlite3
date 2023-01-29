@@ -11,87 +11,86 @@ type memory struct {
 	mod api.Module
 }
 
-func (m memory) size() uint32 {
-	return m.mod.Memory().Size()
-}
-
-func (m memory) read(offset, byteCount uint32) ([]byte, bool) {
-	if offset == 0 {
+func (m memory) view(ptr, size uint32) []byte {
+	if ptr == 0 {
 		panic(nilErr)
 	}
-	return m.mod.Memory().Read(offset, byteCount)
-}
-
-func (m memory) mustRead(offset, byteCount uint32) []byte {
-	buf, ok := m.read(offset, byteCount)
+	buf, ok := m.mod.Memory().Read(ptr, size)
 	if !ok {
 		panic(rangeErr)
 	}
 	return buf
 }
 
-func (m memory) readUint32(offset uint32) uint32 {
-	if offset == 0 {
+func (m memory) readUint32(ptr uint32) uint32 {
+	if ptr == 0 {
 		panic(nilErr)
 	}
-	v, ok := m.mod.Memory().ReadUint32Le(offset)
+	v, ok := m.mod.Memory().ReadUint32Le(ptr)
 	if !ok {
 		panic(rangeErr)
 	}
 	return v
 }
 
-func (m memory) writeUint32(offset, v uint32) {
-	if offset == 0 {
+func (m memory) writeUint32(ptr, v uint32) {
+	if ptr == 0 {
 		panic(nilErr)
 	}
-	ok := m.mod.Memory().WriteUint32Le(offset, v)
+	ok := m.mod.Memory().WriteUint32Le(ptr, v)
 	if !ok {
 		panic(rangeErr)
 	}
 }
 
-func (m memory) readUint64(offset uint32) uint64 {
-	if offset == 0 {
+func (m memory) readUint64(ptr uint32) uint64 {
+	if ptr == 0 {
 		panic(nilErr)
 	}
-	v, ok := m.mod.Memory().ReadUint64Le(offset)
+	v, ok := m.mod.Memory().ReadUint64Le(ptr)
 	if !ok {
 		panic(rangeErr)
 	}
 	return v
 }
 
-func (m memory) writeUint64(offset uint32, v uint64) {
-	if offset == 0 {
+func (m memory) writeUint64(ptr uint32, v uint64) {
+	if ptr == 0 {
 		panic(nilErr)
 	}
-	ok := m.mod.Memory().WriteUint64Le(offset, v)
+	ok := m.mod.Memory().WriteUint64Le(ptr, v)
 	if !ok {
 		panic(rangeErr)
 	}
 }
 
-func (m memory) readFloat64(offset uint32) float64 {
-	return math.Float64frombits(m.readUint64(offset))
+func (m memory) readFloat64(ptr uint32) float64 {
+	return math.Float64frombits(m.readUint64(ptr))
 }
 
-func (m memory) writeFloat64(offset uint32, v float64) {
-	m.writeUint64(offset, math.Float64bits(v))
+func (m memory) writeFloat64(ptr uint32, v float64) {
+	m.writeUint64(ptr, math.Float64bits(v))
 }
 
 func (m memory) readString(ptr, maxlen uint32) string {
+	if ptr == 0 {
+		panic(nilErr)
+	}
 	switch maxlen {
 	case 0:
 		return ""
 	case math.MaxUint32:
-		//
+		// avoid overflow
 	default:
 		maxlen = maxlen + 1
 	}
-	buf, ok := m.read(ptr, maxlen)
+	mem := m.mod.Memory()
+	buf, ok := mem.Read(ptr, maxlen)
 	if !ok {
-		buf = m.mustRead(ptr, m.size()-ptr)
+		buf, ok = mem.Read(ptr, mem.Size()-ptr)
+		if !ok {
+			panic(rangeErr)
+		}
 	}
 	if i := bytes.IndexByte(buf, 0); i < 0 {
 		panic(noNulErr)
@@ -102,10 +101,7 @@ func (m memory) readString(ptr, maxlen uint32) string {
 
 func (m memory) writeString(ptr uint32, s string) {
 	siz := uint32(len(s) + 1)
-	buf, ok := m.read(ptr, siz)
-	if !ok {
-		panic(rangeErr)
-	}
+	buf := m.view(ptr, siz)
 	buf[len(s)] = 0
 	copy(buf, s)
 }

@@ -78,7 +78,7 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
 }
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
-	mem := memory{mod}.mustRead(zByte, nByte)
+	mem := memory{mod}.view(zByte, nByte)
 	n, _ := rand.Read(mem)
 	return uint32(n)
 }
@@ -116,7 +116,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	if siz > nFull {
 		return uint32(CANTOPEN_FULLPATH)
 	}
-	mem := memory{mod}.mustRead(zFull, siz)
+	mem := memory{mod}.view(zFull, siz)
 
 	mem[len(abs)] = 0
 	copy(mem, abs)
@@ -246,7 +246,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	buf := memory{mod}.mustRead(zBuf, iAmt)
+	buf := memory{mod}.view(zBuf, iAmt)
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	n, err := file.ReadAt(buf, int64(iOfst))
@@ -257,13 +257,13 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 		return uint32(IOERR_READ)
 	}
 	for i := range buf[n:] {
-		buf[i] = 0
+		buf[n+i] = 0
 	}
 	return uint32(IOERR_SHORT_READ)
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	buf := memory{mod}.mustRead(zBuf, iAmt)
+	buf := memory{mod}.view(zBuf, iAmt)
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	_, err := file.WriteAt(buf, int64(iOfst))

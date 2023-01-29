@@ -37,7 +37,7 @@ func TestConn_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := db.mem.mustRead(ptr, uint32(len(want))); !bytes.Equal(got, want) {
+	if got := db.mem.view(ptr, uint32(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -61,7 +61,7 @@ func TestConn_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := db.mem.mustRead(ptr, uint32(len(want))); string(got) != want {
+	if got := db.mem.view(ptr, uint32(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -152,7 +152,7 @@ func (c *Conn) new(len uint32) uint32 {
 		panic(err)
 	}
 	ptr := uint32(r[0])
-	if ptr == 0 || ptr >= c.mem.size() {
+	if ptr == 0 {
 		panic(oomErr)
 	}
 	return ptr
@@ -165,12 +165,7 @@ func (c *Conn) newBytes(b []byte) uint32 {
 
 	siz := uint32(len(b))
 	ptr := c.new(siz)
-	buf, ok := c.mem.read(ptr, siz)
-	if !ok {
-		c.api.free.Call(c.ctx, uint64(ptr))
-		panic(rangeErr)
-	}
-
+	buf := c.mem.view(ptr, siz)
 	copy(buf, b)
 	return ptr
 }
@@ -178,12 +173,7 @@ func (c *Conn) newBytes(b []byte) uint32 {
 func (c *Conn) newString(s string) uint32 {
 	siz := uint32(len(s) + 1)
 	ptr := c.new(siz)
-	buf, ok := c.mem.read(ptr, siz)
-	if !ok {
-		c.api.free.Call(c.ctx, uint64(ptr))
-		panic(rangeErr)
-	}
-
+	buf := c.mem.view(ptr, siz)
 	buf[len(s)] = 0
 	copy(buf, s)
 	return ptr

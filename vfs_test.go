@@ -69,7 +69,7 @@ func Test_vfsRandomness(t *testing.T) {
 	rand.Seed(0)
 	rand.Read(want[:])
 
-	if got := mem.mustRead(4, 16); !bytes.Equal(got, want[:]) {
+	if got := mem.view(4, 16); !bytes.Equal(got, want[:]) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -121,7 +121,7 @@ func Test_vfsCurrentTime64(t *testing.T) {
 }
 
 func Test_vfsFullPathname(t *testing.T) {
-	mem := newMemory(128)
+	mem := newMemory(128 + _MAX_PATHNAME)
 	mem.writeString(4, ".")
 
 	rc := vfsFullPathname(context.TODO(), mem.mod, 0, 4, 0, 8)
@@ -141,10 +141,6 @@ func Test_vfsFullPathname(t *testing.T) {
 }
 
 func Test_vfsDelete(t *testing.T) {
-	memory := make(mockMemory, 128+_MAX_PATHNAME)
-	module := &mockModule{&memory}
-
-	os.CreateTemp("", "sqlite3")
 	file, err := os.CreateTemp("", "sqlite3-")
 	if err != nil {
 		t.Fatal(err)
@@ -153,9 +149,10 @@ func Test_vfsDelete(t *testing.T) {
 	defer os.RemoveAll(name)
 	file.Close()
 
-	memory.Write(4, []byte(name))
+	mem := newMemory(128 + _MAX_PATHNAME)
+	mem.writeString(4, name)
 
-	rc := vfsDelete(context.TODO(), module, 0, 4, 1)
+	rc := vfsDelete(context.TODO(), mem.mod, 0, 4, 1)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -164,38 +161,101 @@ func Test_vfsDelete(t *testing.T) {
 		t.Fatal("did not delete the file")
 	}
 
-	rc = vfsDelete(context.TODO(), module, 0, 4, 1)
+	rc = vfsDelete(context.TODO(), mem.mod, 0, 4, 1)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 }
 
 func Test_vfsAccess(t *testing.T) {
-	memory := make(mockMemory, 128+_MAX_PATHNAME)
-	module := &mockModule{&memory}
-
-	os.CreateTemp("", "sqlite3")
 	dir, err := os.MkdirTemp("", "sqlite3-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	memory.Write(8, []byte(dir))
+	mem := newMemory(128 + _MAX_PATHNAME)
+	mem.writeString(8, dir)
 
-	rc := vfsAccess(context.TODO(), module, 0, 8, ACCESS_EXISTS, 4)
+	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, ACCESS_EXISTS, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got, ok := memory.ReadByte(4); !ok && got != 1 {
+	if got := mem.readUint32(4); got != 1 {
 		t.Error("directory did not exist")
 	}
 
-	rc = vfsAccess(context.TODO(), module, 0, 8, ACCESS_READWRITE, 4)
+	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got, ok := memory.ReadByte(4); !ok && got != 1 {
+	if got := mem.readUint32(4); got != 1 {
 		t.Error("can't access directory")
+	}
+}
+
+func Test_vfsFile(t *testing.T) {
+	mem := newMemory(128)
+
+	// Open a temporary file.
+	rc := vfsOpen(context.TODO(), mem.mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Write stuff.
+	text := "Hello world!"
+	mem.writeString(16, text)
+	rc = vfsWrite(context.TODO(), mem.mod, 4, 16, uint32(len(text)), 0)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Check file size.
+	rc = vfsFileSize(context.TODO(), mem.mod, 4, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := mem.readUint32(16); got != uint32(len(text)) {
+		t.Errorf("got %d", got)
+	}
+
+	// Partial read at offset.
+	rc = vfsRead(context.TODO(), mem.mod, 4, 16, uint32(len(text)), 4)
+	if rc != uint32(IOERR_SHORT_READ) {
+		t.Fatal("returned", rc)
+	}
+	if got := mem.readString(16, 64); got != text[4:] {
+		t.Errorf("got %q", got)
+	}
+
+	// Truncate the file.
+	rc = vfsTruncate(context.TODO(), mem.mod, 4, 4)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Check file size.
+	rc = vfsFileSize(context.TODO(), mem.mod, 4, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := mem.readUint32(16); got != 4 {
+		t.Errorf("got %d", got)
+	}
+
+	// Read at offset.
+	rc = vfsRead(context.TODO(), mem.mod, 4, 32, 4, 0)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := mem.readString(32, 64); got != text[:4] {
+		t.Errorf("got %q", got)
+	}
+
+	// Close the file.
+	rc = vfsClose(context.TODO(), mem.mod, 4)
+	if rc != _OK {
+		t.Fatal("returned", rc)
 	}
 }
