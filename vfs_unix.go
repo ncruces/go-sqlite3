@@ -156,7 +156,7 @@ func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) {
 	if l.fcntlGetLock(&lock) != nil {
 		return false, IOERR_CHECKRESERVEDLOCK
 	}
-	return lock.Type == syscall.F_UNLCK, _OK
+	return lock.Type != syscall.F_UNLCK, _OK
 }
 
 func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error {
