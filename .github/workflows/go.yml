@@ -30,3 +30,4 @@ jobs:
     - if: matrix.os == 'ubuntu-latest'
       name: Update coverage report
       uses: ncruces/go-coverage-report@main
+      continue-on-error: true
