@@ -2,10 +2,10 @@ package sqlite3
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"io"
 	"io/fs"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -79,7 +79,7 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
 	mem := memory{mod}.view(zByte, nByte)
-	n, _ := rand.Read(mem)
+	n, _ := rand.Reader.Read(mem)
 	return uint32(n)
 }
 

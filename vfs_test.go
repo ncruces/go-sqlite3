@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,18 +58,14 @@ func Test_vfsLocaltime(t *testing.T) {
 func Test_vfsRandomness(t *testing.T) {
 	mem := newMemory(128)
 
-	rand.Seed(0)
 	rc := vfsRandomness(context.TODO(), mem.mod, 0, 16, 4)
 	if rc != 16 {
 		t.Fatal("returned", rc)
 	}
 
-	var want [16]byte
-	rand.Seed(0)
-	rand.Read(want[:])
-
-	if got := mem.view(4, 16); !bytes.Equal(got, want[:]) {
-		t.Errorf("got %q, want %q", got, want)
+	var zero [16]byte
+	if got := mem.view(4, 16); bytes.Equal(got, zero[:]) {
+		t.Fatal("all zero")
 	}
 }
 
