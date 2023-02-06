@@ -114,7 +114,7 @@ func TestConn_free(t *testing.T) {
 
 	db.free(0)
 
-	ptr := db.new(0)
+	ptr := db.new(1)
 	if ptr == 0 {
 		t.Error("got nullptr, want a pointer")
 	}

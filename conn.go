@@ -152,7 +152,7 @@ func (c *Conn) new(len uint32) uint32 {
 		panic(err)
 	}
 	ptr := uint32(r[0])
-	if ptr == 0 {
+	if ptr == 0 && len != 0 {
 		panic(oomErr)
 	}
 	return ptr
