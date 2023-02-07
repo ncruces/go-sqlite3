@@ -8,6 +8,10 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+func init() {
+	Path = "./embed/sqlite3.wasm"
+}
+
 func newMemory(size uint32) memory {
 	mem := make(mockMemory, size)
 	return memory{mockModule{&mem}}
