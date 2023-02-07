@@ -12,13 +12,9 @@ func deleteOnClose(f *os.File) {
 	_ = os.Remove(f.Name())
 }
 
-func (l *vfsFileLocker) LockState() vfsLockState {
-	return l.state
-}
-
-func (l *vfsFileLocker) LockShared() xErrorCode {
-	if assert && !(l.state == _NO_LOCK) {
-		panic(assertErr + " [wz9dcw]")
+func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
+	if l.state != _NO_LOCK {
+		panic(assertErr())
 	}
 
 	// A PENDING lock is needed before acquiring a SHARED lock.
@@ -52,9 +48,9 @@ func (l *vfsFileLocker) LockShared() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) LockReserved() xErrorCode {
-	if assert && !(l.state == _SHARED_LOCK) {
-		panic(assertErr + " [m9hcil]")
+func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
+	if l.state != _SHARED_LOCK {
+		panic(assertErr())
 	}
 
 	// Acquire the RESERVED lock.
@@ -69,9 +65,9 @@ func (l *vfsFileLocker) LockReserved() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) LockPending() xErrorCode {
-	if assert && !(l.state == _SHARED_LOCK || l.state == _RESERVED_LOCK) {
-		panic(assertErr + " [wx8nk2]")
+func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
+	if l.state != _RESERVED_LOCK {
+		panic(assertErr())
 	}
 
 	// Acquire the PENDING lock.
@@ -86,9 +82,9 @@ func (l *vfsFileLocker) LockPending() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) LockExclusive() xErrorCode {
-	if assert && !(l.state == _PENDING_LOCK) {
-		panic(assertErr + " [84nbax]")
+func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
+	if l.state != _SHARED_LOCK && l.state != _PENDING_LOCK {
+		panic(assertErr())
 	}
 
 	// Acquire the EXCLUSIVE lock.
@@ -103,9 +99,9 @@ func (l *vfsFileLocker) LockExclusive() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) DowngradeLock() xErrorCode {
-	if assert && !(l.state > _SHARED_LOCK) {
-		panic(assertErr + " [je31i3]")
+func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
+	if l.state <= _SHARED_LOCK {
+		panic(assertErr())
 	}
 
 	// Downgrade to a SHARED lock.
@@ -134,7 +130,11 @@ func (l *vfsFileLocker) DowngradeLock() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) Unlock() xErrorCode {
+func (l *vfsFileLocker) Release() ExtendedErrorCode {
+	if l.state <= _NO_LOCK {
+		panic(assertErr())
+	}
+
 	// Release all locks.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type: syscall.F_UNLCK,
@@ -145,13 +145,15 @@ func (l *vfsFileLocker) Unlock() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) {
+func (l *vfsFileLocker) CheckReserved() (bool, ExtendedErrorCode) {
 	if l.state >= _RESERVED_LOCK {
 		return true, _OK
 	}
-	// Test all write locks.
+	// Test the RESERVED lock.
 	lock := syscall.Flock_t{
-		Type: syscall.F_RDLCK,
+		Type:  syscall.F_RDLCK,
+		Start: _RESERVED_BYTE,
+		Len:   1,
 	}
 	if l.fcntlGetLock(&lock) != nil {
 		return false, IOERR_CHECKRESERVEDLOCK
@@ -169,7 +171,7 @@ func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error {
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_GETLK = 92 // F_OFD_GETLK
 	}
-	return syscall.FcntlFlock(l.Fd(), F_GETLK, lock)
+	return syscall.FcntlFlock(l.file.Fd(), F_GETLK, lock)
 }
 
 func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
@@ -182,10 +184,10 @@ func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_SETLK = 90 // F_OFD_SETLK
 	}
-	return syscall.FcntlFlock(l.Fd(), F_SETLK, lock)
+	return syscall.FcntlFlock(l.file.Fd(), F_SETLK, lock)
 }
 
-func (vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode {
+func (*vfsFileLocker) errorCode(err error, def ExtendedErrorCode) ExtendedErrorCode {
 	if errno, ok := err.(syscall.Errno); ok {
 		switch errno {
 		case syscall.EACCES:
@@ -195,9 +197,9 @@ func (vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode {
 		case syscall.ENOLCK:
 		case syscall.EDEADLK:
 		case syscall.ETIMEDOUT:
-			return xErrorCode(BUSY)
+			return ExtendedErrorCode(BUSY)
 		case syscall.EPERM:
-			return xErrorCode(PERM)
+			return ExtendedErrorCode(PERM)
 		}
 	}
 	return def

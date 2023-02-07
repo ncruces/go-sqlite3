@@ -31,13 +31,13 @@ func Test_vfsLock(t *testing.T) {
 	defer file2.Close()
 
 	vfsOpenFiles = append(vfsOpenFiles, &vfsOpenFile{
-		file:      file1,
-		nref:      1,
-		vfsLocker: &vfsFileLocker{file1, _NO_LOCK},
+		file:   file1,
+		nref:   1,
+		locker: vfsFileLocker{file: file1},
 	}, &vfsOpenFile{
-		file:      file2,
-		nref:      1,
-		vfsLocker: &vfsFileLocker{file2, _NO_LOCK},
+		file:   file2,
+		nref:   1,
+		locker: vfsFileLocker{file: file2},
 	})
 
 	mem := newMemory(128)
@@ -65,7 +65,7 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(context.TODO(), mem.mod, 16, _EXCLUSIVE_LOCK)
+	rc = vfsLock(context.TODO(), mem.mod, 16, _RESERVED_LOCK)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

@@ -8,12 +8,10 @@ import (
 )
 
 type vfsOpenFile struct {
-	file *os.File
-	info os.FileInfo
-	nref int
-
-	shared int
-	vfsLocker
+	file   *os.File
+	info   os.FileInfo
+	nref   int
+	locker vfsFileLocker
 }
 
 var (
@@ -38,11 +36,10 @@ func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 {
 	}
 
 	of := &vfsOpenFile{
-		file: file,
-		info: info,
-		nref: 1,
-
-		vfsLocker: &vfsFileLocker{file, _NO_LOCK},
+		file:   file,
+		info:   info,
+		nref:   1,
+		locker: vfsFileLocker{file: file},
 	}
 
 	// Find an empty slot.
@@ -82,6 +79,13 @@ func (p vfsFilePtr) OSFile() *os.File {
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
 	return vfsOpenFiles[id].file
+}
+
+func (p vfsFilePtr) Locker() *vfsFileLocker {
+	id := p.ID()
+	vfsOpenFilesMtx.Lock()
+	defer vfsOpenFilesMtx.Unlock()
+	return &vfsOpenFiles[id].locker
 }
 
 func (p vfsFilePtr) ID() uint32 {

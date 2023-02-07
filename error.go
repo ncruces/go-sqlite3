@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -42,5 +43,12 @@ const (
 	noNulErr    = errorString("sqlite3: missing NUL terminator")
 	noGlobalErr = errorString("sqlite3: could not find global: ")
 	noFuncErr   = errorString("sqlite3: could not find function: ")
-	assertErr   = errorString("sqlite3: assertion failed")
 )
+
+func assertErr() errorString {
+	msg := "sqlite3: assertion failed"
+	if _, file, line, ok := runtime.Caller(1); ok {
+		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
+	}
+	return errorString(msg)
+}

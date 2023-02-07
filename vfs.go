@@ -292,8 +292,8 @@ func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint32 {
-	// This uses [file.Seek] because we don't care about the offset for reading/writing.
-	// But consider using [file.Stat] instead (as other VFSes do).
+	// This uses [os.File.Seek] because we don't care about the offset for reading/writing.
+	// But consider using [os.File.Stat] instead (as other VFSes do).
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	off, err := file.Seek(0, io.SeekEnd)

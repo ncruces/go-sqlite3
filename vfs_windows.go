@@ -4,41 +4,37 @@ import "os"
 
 func deleteOnClose(f *os.File) {}
 
-func (l *vfsFileLocker) LockState() vfsLockState {
-	return l.state
-}
-
-func (l *vfsFileLocker) LockShared() xErrorCode {
+func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
 	l.state = _SHARED_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) LockReserved() xErrorCode {
+func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
 	l.state = _RESERVED_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) LockPending() xErrorCode {
+func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
 	l.state = _PENDING_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) LockExclusive() xErrorCode {
+func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
 	l.state = _EXCLUSIVE_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) DowngradeLock() xErrorCode {
+func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
 	l.state = _SHARED_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) Unlock() xErrorCode {
+func (l *vfsFileLocker) Release() ExtendedErrorCode {
 	l.state = _NO_LOCK
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReservedLock() (bool, xErrorCode) {
+func (l *vfsFileLocker) CheckReserved() (bool, ExtendedErrorCode) {
 	if l.state >= _RESERVED_LOCK {
 		return true, _OK
 	}

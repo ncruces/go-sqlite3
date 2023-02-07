@@ -9,7 +9,6 @@ const (
 
 	_MAX_PATHNAME = 512
 
-	assert = true
 	ptrlen = 4
 )
 

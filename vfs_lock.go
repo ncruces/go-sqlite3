@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"os"
+	"sync"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -53,32 +54,18 @@ const (
 	_SHARED_SIZE   = 510
 )
 
-type (
-	vfsLockState uint32
-	xErrorCode   = ExtendedErrorCode
-)
-
-type vfsLocker interface {
-	LockState() vfsLockState
-
-	LockShared() xErrorCode    // UNLOCKED -> SHARED
-	LockReserved() xErrorCode  // SHARED -> RESERVED
-	LockPending() xErrorCode   // SHARED|RESERVED -> PENDING
-	LockExclusive() xErrorCode // PENDING -> EXCLUSIVE
-	DowngradeLock() xErrorCode // SHARED <- EXCLUSIVE|PENDING|RESERVED
-	Unlock() xErrorCode        // UNLOCKED <- EXCLUSIVE|PENDING|RESERVED|SHARED
-
-	CheckReservedLock() (bool, xErrorCode)
-}
+type vfsLockState uint32
 
 type vfsFileLocker struct {
-	*os.File
-	state vfsLockState
+	sync.Mutex
+	file   *os.File
+	state  vfsLockState
+	shared int
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {
-	if assert && (eLock == _NO_LOCK || eLock == _PENDING_LOCK) {
-		panic(assertErr + " [d4oxww]")
+	if eLock != _SHARED_LOCK && eLock != _RESERVED_LOCK && eLock != _EXCLUSIVE_LOCK {
+		panic(assertErr())
 	}
 
 	ptr := vfsFilePtr{mod, pFile}
@@ -89,86 +76,89 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		return _OK
 	}
 
-	if assert {
-		switch {
-		case cLock == _NO_LOCK && eLock > _SHARED_LOCK:
-			// We never move from unlocked to anything higher than shared lock.
-			panic(assertErr + " [pfa77m]")
-		case cLock != _SHARED_LOCK && eLock == _RESERVED_LOCK:
-			// A shared lock is always held when a reserved lock is requested.
-			panic(assertErr + " [5cfmsp]")
-		}
+	switch {
+	case cLock == _NO_LOCK && eLock > _SHARED_LOCK:
+		// We never move from unlocked to anything higher than a shared lock.
+		panic(assertErr())
+	case cLock != _SHARED_LOCK && eLock == _RESERVED_LOCK:
+		// A shared lock is always held when a reserved lock is requested.
+		panic(assertErr())
 	}
 
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
-	of := vfsOpenFiles[ptr.ID()]
-	fLock := of.LockState()
+	fLock := ptr.Locker()
+	fLock.Lock()
+	defer fLock.Unlock()
 
 	// If some other connection has a lock that precludes the requested lock, return BUSY.
-	if cLock != fLock && (eLock > _SHARED_LOCK || fLock >= _PENDING_LOCK) {
+	if cLock != fLock.state && (eLock > _SHARED_LOCK || fLock.state >= _PENDING_LOCK) {
 		return uint32(BUSY)
 	}
-	if eLock == _EXCLUSIVE_LOCK && of.shared > 1 {
-		// We are trying for an exclusive lock but another connection in this
-		// same process is still holding a shared lock.
+	// We are trying for an exclusive lock but another connection is still holding a shared lock.
+	if eLock == _EXCLUSIVE_LOCK && fLock.shared > 1 {
 		return uint32(BUSY)
 	}
 
 	// If a SHARED lock is requested, and some other connection has a SHARED or RESERVED lock,
 	// then increment the reference count and return OK.
-	if eLock == _SHARED_LOCK && (fLock == _SHARED_LOCK || fLock == _RESERVED_LOCK) {
-		if assert && !(cLock == _NO_LOCK && of.shared > 0) {
-			panic(assertErr + " [k7coz6]")
+	if eLock == _SHARED_LOCK && (fLock.state == _SHARED_LOCK || fLock.state == _RESERVED_LOCK) {
+		if cLock != _NO_LOCK || fLock.shared <= 0 {
+			panic(assertErr())
 		}
 		ptr.SetLock(_SHARED_LOCK)
-		of.shared++
+		fLock.shared++
 		return _OK
+	}
+
+	// Get PENDING lock before acquiring an EXCLUSIVE lock.
+	if eLock == _EXCLUSIVE_LOCK && cLock == _RESERVED_LOCK {
+		if rc := fLock.GetPending(); rc != _OK {
+			return uint32(rc)
+		}
+		ptr.SetLock(_PENDING_LOCK)
 	}
 
 	// If control gets to this point, then actually go ahead and make
 	// operating system calls for the specified lock.
 	switch eLock {
 	case _SHARED_LOCK:
-		if assert && !(fLock == _NO_LOCK && of.shared == 0) {
-			panic(assertErr + " [jsyttq]")
+		if !(fLock.state == _NO_LOCK && fLock.shared == 0) {
+			panic(assertErr())
 		}
-		if rc := of.LockShared(); rc != _OK {
+		if rc := fLock.GetShared(); rc != _OK {
 			return uint32(rc)
 		}
-		of.shared = 1
 		ptr.SetLock(_SHARED_LOCK)
+		fLock.shared = 1
 		return _OK
 
 	case _RESERVED_LOCK:
-		if rc := of.LockReserved(); rc != _OK {
+		if !(fLock.state == _SHARED_LOCK && fLock.shared > 0) {
+			panic(assertErr())
+		}
+		if rc := fLock.GetReserved(); rc != _OK {
 			return uint32(rc)
 		}
 		ptr.SetLock(_RESERVED_LOCK)
 		return _OK
 
 	case _EXCLUSIVE_LOCK:
-		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if cLock < _PENDING_LOCK {
-			if rc := of.LockPending(); rc != _OK {
-				return uint32(rc)
-			}
-			ptr.SetLock(_PENDING_LOCK)
+		if !(fLock.state != _NO_LOCK && fLock.shared > 0) {
+			panic(assertErr())
 		}
-		if rc := of.LockExclusive(); rc != _OK {
+		if rc := fLock.GetExclusive(); rc != _OK {
 			return uint32(rc)
 		}
 		ptr.SetLock(_EXCLUSIVE_LOCK)
 		return _OK
 
 	default:
-		panic(assertErr + " [56ng2l]")
+		panic(assertErr())
 	}
 }
 
 func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {
-	if assert && (eLock != _NO_LOCK && eLock != _SHARED_LOCK) {
-		panic(assertErr + " [7i4jw3]")
+	if eLock != _NO_LOCK && eLock != _SHARED_LOCK {
+		panic(assertErr())
 	}
 
 	ptr := vfsFilePtr{mod, pFile}
@@ -179,20 +169,19 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 		return _OK
 	}
 
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
-	of := vfsOpenFiles[ptr.ID()]
-	fLock := of.LockState()
+	fLock := ptr.Locker()
+	fLock.Lock()
+	defer fLock.Unlock()
 
-	if assert && of.shared <= 0 {
-		panic(assertErr + " [2bhkwg]")
+	if fLock.shared <= 0 {
+		panic(assertErr())
 	}
 	if cLock > _SHARED_LOCK {
-		if assert && cLock != fLock {
-			panic(assertErr + " [6pmjqf]")
+		if cLock != fLock.state {
+			panic(assertErr())
 		}
 		if eLock == _SHARED_LOCK {
-			if rc := of.DowngradeLock(); rc != _OK {
+			if rc := fLock.Downgrade(); rc != _OK {
 				return uint32(rc)
 			}
 			ptr.SetLock(_SHARED_LOCK)
@@ -200,27 +189,25 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 		}
 	}
 
-	if assert && eLock != _NO_LOCK {
-		panic(assertErr + " [gilo9p]")
+	if eLock != _NO_LOCK {
+		panic(assertErr())
 	}
-	// Decrement the shared lock counter. Release the file lock
-	// only when all connections have released the lock.
+	// Release the file lock only when all connections have released the lock.
+	// Decrement the shared lock counter.
 	switch {
-	case of.shared > 1:
-		ptr.SetLock(_NO_LOCK)
-		of.shared--
-		return _OK
-
-	case of.shared == 1:
-		if rc := of.Unlock(); rc != _OK {
+	case fLock.shared == 1:
+		if rc := fLock.Release(); rc != _OK {
 			return uint32(rc)
 		}
+		fallthrough
+
+	case fLock.shared > 1:
 		ptr.SetLock(_NO_LOCK)
-		of.shared = 0
+		fLock.shared--
 		return _OK
 
 	default:
-		panic(assertErr + " [50gw51]")
+		panic(assertErr())
 	}
 }
 
@@ -228,15 +215,15 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	ptr := vfsFilePtr{mod, pFile}
 	cLock := ptr.Lock()
 
-	if assert && cLock > _SHARED_LOCK {
-		panic(assertErr + " [zarygt]")
+	if cLock > _SHARED_LOCK {
+		panic(assertErr())
 	}
 
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
-	of := vfsOpenFiles[ptr.ID()]
+	fLock := ptr.Locker()
+	fLock.Lock()
+	defer fLock.Unlock()
 
-	locked, rc := of.CheckReservedLock()
+	locked, rc := fLock.CheckReserved()
 	if rc != _OK {
 		return uint32(IOERR_CHECKRESERVEDLOCK)
 	}
