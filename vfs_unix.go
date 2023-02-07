@@ -13,10 +13,6 @@ func deleteOnClose(f *os.File) {
 }
 
 func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
-	if l.state != _NO_LOCK {
-		panic(assertErr())
-	}
-
 	// A PENDING lock is needed before acquiring a SHARED lock.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -27,83 +23,51 @@ func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
 	}
 
 	// Acquire the SHARED lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
+	rc := l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
 		Start: _SHARED_FIRST,
 		Len:   _SHARED_SIZE,
-	}); err != nil {
-		return l.errorCode(err, IOERR_LOCK)
-	}
-	l.state = _SHARED_LOCK
+	}), IOERR_LOCK)
 
-	// Relese the PENDING lock.
+	// Drop the temporary PENDING lock.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_UNLCK,
 		Start: _PENDING_BYTE,
 		Len:   1,
-	}); err != nil {
+	}); rc == _OK && err != nil {
 		return IOERR_UNLOCK
 	}
-
-	return _OK
+	return rc
 }
 
 func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
-	if l.state != _SHARED_LOCK {
-		panic(assertErr())
-	}
-
 	// Acquire the RESERVED lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
+	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
 		Start: _RESERVED_BYTE,
 		Len:   1,
-	}); err != nil {
-		return l.errorCode(err, IOERR_LOCK)
-	}
-	l.state = _RESERVED_LOCK
-	return _OK
+	}), IOERR_LOCK)
 }
 
 func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
-	if l.state != _RESERVED_LOCK {
-		panic(assertErr())
-	}
-
 	// Acquire the PENDING lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
+	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
 		Start: _PENDING_BYTE,
 		Len:   1,
-	}); err != nil {
-		return l.errorCode(err, IOERR_LOCK)
-	}
-	l.state = _PENDING_LOCK
-	return _OK
+	}), IOERR_LOCK)
 }
 
 func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
-	if l.state != _SHARED_LOCK && l.state != _PENDING_LOCK {
-		panic(assertErr())
-	}
-
 	// Acquire the EXCLUSIVE lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
+	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
 		Start: _SHARED_FIRST,
 		Len:   _SHARED_SIZE,
-	}); err != nil {
-		return l.errorCode(err, IOERR_LOCK)
-	}
-	l.state = _EXCLUSIVE_LOCK
-	return _OK
+	}), IOERR_LOCK)
 }
 
 func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
-	if l.state <= _SHARED_LOCK {
-		panic(assertErr())
-	}
-
 	// Downgrade to a SHARED lock.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -117,7 +81,6 @@ func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
 		// BUSY would confuse the upper layer.
 		return IOERR_RDLOCK
 	}
-	l.state = _SHARED_LOCK
 
 	// Release the PENDING and RESERVED locks.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
@@ -131,24 +94,16 @@ func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
 }
 
 func (l *vfsFileLocker) Release() ExtendedErrorCode {
-	if l.state <= _NO_LOCK {
-		panic(assertErr())
-	}
-
 	// Release all locks.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type: syscall.F_UNLCK,
 	}); err != nil {
 		return IOERR_UNLOCK
 	}
-	l.state = _NO_LOCK
 	return _OK
 }
 
 func (l *vfsFileLocker) CheckReserved() (bool, ExtendedErrorCode) {
-	if l.state >= _RESERVED_LOCK {
-		return true, _OK
-	}
 	// Test the RESERVED lock.
 	lock := syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -188,6 +143,9 @@ func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 }
 
 func (*vfsFileLocker) errorCode(err error, def ExtendedErrorCode) ExtendedErrorCode {
+	if err == nil {
+		return _OK
+	}
 	if errno, ok := err.(syscall.Errno); ok {
 		switch errno {
 		case syscall.EACCES:

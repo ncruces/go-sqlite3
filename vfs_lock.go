@@ -64,6 +64,7 @@ type vfsFileLocker struct {
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {
+	// SQLite never explicitly requests a pendig lock.
 	if eLock != _SHARED_LOCK && eLock != _RESERVED_LOCK && eLock != _EXCLUSIVE_LOCK {
 		panic(assertErr())
 	}
@@ -93,10 +94,6 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	if cLock != fLock.state && (eLock > _SHARED_LOCK || fLock.state >= _PENDING_LOCK) {
 		return uint32(BUSY)
 	}
-	// We are trying for an exclusive lock but another connection is still holding a shared lock.
-	if eLock == _EXCLUSIVE_LOCK && fLock.shared > 1 {
-		return uint32(BUSY)
-	}
 
 	// If a SHARED lock is requested, and some other connection has a SHARED or RESERVED lock,
 	// then increment the reference count and return OK.
@@ -109,46 +106,56 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		return _OK
 	}
 
-	// Get PENDING lock before acquiring an EXCLUSIVE lock.
-	if eLock == _EXCLUSIVE_LOCK && cLock == _RESERVED_LOCK {
-		if rc := fLock.GetPending(); rc != _OK {
-			return uint32(rc)
-		}
-		ptr.SetLock(_PENDING_LOCK)
-	}
-
 	// If control gets to this point, then actually go ahead and make
 	// operating system calls for the specified lock.
 	switch eLock {
 	case _SHARED_LOCK:
-		if !(fLock.state == _NO_LOCK && fLock.shared == 0) {
+		if fLock.state != _NO_LOCK || fLock.shared != 0 {
 			panic(assertErr())
 		}
 		if rc := fLock.GetShared(); rc != _OK {
 			return uint32(rc)
 		}
 		ptr.SetLock(_SHARED_LOCK)
+		fLock.state = _SHARED_LOCK
 		fLock.shared = 1
 		return _OK
 
 	case _RESERVED_LOCK:
-		if !(fLock.state == _SHARED_LOCK && fLock.shared > 0) {
+		if fLock.state != _SHARED_LOCK || fLock.shared <= 0 {
 			panic(assertErr())
 		}
 		if rc := fLock.GetReserved(); rc != _OK {
 			return uint32(rc)
 		}
 		ptr.SetLock(_RESERVED_LOCK)
+		fLock.state = _RESERVED_LOCK
 		return _OK
 
 	case _EXCLUSIVE_LOCK:
-		if !(fLock.state != _NO_LOCK && fLock.shared > 0) {
+		if fLock.state <= _NO_LOCK || fLock.state >= _EXCLUSIVE_LOCK || fLock.shared <= 0 {
 			panic(assertErr())
 		}
+
+		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
+		if fLock.state == _RESERVED_LOCK {
+			if rc := fLock.GetPending(); rc != _OK {
+				return uint32(rc)
+			}
+			ptr.SetLock(_PENDING_LOCK)
+			fLock.state = _PENDING_LOCK
+		}
+
+		// We are trying for an EXCLUSIVE lock but another connection is still holding a shared lock.
+		if fLock.shared > 1 {
+			return uint32(BUSY)
+		}
+
 		if rc := fLock.GetExclusive(); rc != _OK {
 			return uint32(rc)
 		}
 		ptr.SetLock(_EXCLUSIVE_LOCK)
+		fLock.state = _EXCLUSIVE_LOCK
 		return _OK
 
 	default:
@@ -185,6 +192,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 				return uint32(rc)
 			}
 			ptr.SetLock(_SHARED_LOCK)
+			fLock.state = _SHARED_LOCK
 			return _OK
 		}
 	}
@@ -192,23 +200,15 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 	if eLock != _NO_LOCK {
 		panic(assertErr())
 	}
+
+	// Release the connection lock and decrement the shared lock counter.
 	// Release the file lock only when all connections have released the lock.
-	// Decrement the shared lock counter.
-	switch {
-	case fLock.shared == 1:
-		if rc := fLock.Release(); rc != _OK {
-			return uint32(rc)
-		}
-		fallthrough
-
-	case fLock.shared > 1:
-		ptr.SetLock(_NO_LOCK)
-		fLock.shared--
-		return _OK
-
-	default:
-		panic(assertErr())
+	ptr.SetLock(_NO_LOCK)
+	if fLock.shared--; fLock.shared == 0 {
+		fLock.state = _NO_LOCK
+		return uint32(fLock.Release())
 	}
+	return _OK
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
@@ -223,15 +223,16 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	fLock.Lock()
 	defer fLock.Unlock()
 
-	locked, rc := fLock.CheckReserved()
-	if rc != _OK {
-		return uint32(IOERR_CHECKRESERVEDLOCK)
+	if fLock.state >= _RESERVED_LOCK {
+		memory{mod}.writeUint32(pResOut, 1)
+		return _OK
 	}
 
+	locked, rc := fLock.CheckReserved()
 	var res uint32
 	if locked {
 		res = 1
 	}
 	memory{mod}.writeUint32(pResOut, res)
-	return _OK
+	return uint32(rc)
 }
