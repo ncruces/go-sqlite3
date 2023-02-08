@@ -9,7 +9,7 @@ import (
 
 func Test_vfsLock(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "solaris":
+	case "linux", "darwin", "solaris", "windows":
 		//
 	default:
 		t.Skip()

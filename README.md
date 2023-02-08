@@ -15,5 +15,4 @@ Roadmap:
 - [x] port [`test_demovfs.c`](https://www.sqlite.org/src/doc/trunk/src/test_demovfs.c) to Go
   - branch [`wasi`](https://github.com/ncruces/go-sqlite3/tree/wasi) uses `test_demovfs.c` directly
 - [x] come up with a simple, nice API, enough for simple queries
-- [x] file locking, compatible with SQLite on Unix
-- [ ] file locking, compatible with SQLite on Windows
+- [x] file locking, compatible with SQLite on Windows/Unix
