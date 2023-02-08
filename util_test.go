@@ -147,9 +147,9 @@ func (m mockMemory) WriteString(offset uint32, val string) bool {
 }
 
 func (m *mockMemory) Grow(delta uint32) (result uint32, ok bool) {
-	mem := append(*m, make([]byte, 65536)...)
-	m = &mem
-	return delta, true
+	prev := (len(*m) + 65535) / 65536
+	*m = append(*m, make([]byte, 65536*delta)...)
+	return uint32(prev), true
 }
 
 func (m mockMemory) PageSize() (result uint32) {
