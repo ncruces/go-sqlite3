@@ -12,7 +12,7 @@ func deleteOnClose(f *os.File) {
 	_ = os.Remove(f.Name())
 }
 
-func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
+func (l *vfsFileLocker) GetShared() xErrorCode {
 	// A PENDING lock is needed before acquiring a SHARED lock.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -40,7 +40,7 @@ func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
 	return rc
 }
 
-func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
+func (l *vfsFileLocker) GetReserved() xErrorCode {
 	// Acquire the RESERVED lock.
 	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -49,7 +49,7 @@ func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
 	}), IOERR_LOCK)
 }
 
-func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
+func (l *vfsFileLocker) GetPending() xErrorCode {
 	// Acquire the PENDING lock.
 	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -58,7 +58,7 @@ func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
 	}), IOERR_LOCK)
 }
 
-func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
+func (l *vfsFileLocker) GetExclusive() xErrorCode {
 	// Acquire the EXCLUSIVE lock.
 	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_WRLCK,
@@ -67,7 +67,7 @@ func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
 	}), IOERR_LOCK)
 }
 
-func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
+func (l *vfsFileLocker) Downgrade() xErrorCode {
 	// Downgrade to a SHARED lock.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -93,7 +93,7 @@ func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) Release() ExtendedErrorCode {
+func (l *vfsFileLocker) Release() xErrorCode {
 	// Release all locks.
 	if err := l.fcntlSetLock(&syscall.Flock_t{
 		Type: syscall.F_UNLCK,
@@ -103,7 +103,7 @@ func (l *vfsFileLocker) Release() ExtendedErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReserved() (bool, ExtendedErrorCode) {
+func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
 	// Test the RESERVED lock.
 	lock := syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
@@ -142,7 +142,7 @@ func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 	return syscall.FcntlFlock(l.file.Fd(), F_SETLK, lock)
 }
 
-func (*vfsFileLocker) errorCode(err error, def ExtendedErrorCode) ExtendedErrorCode {
+func (*vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK
 	}
@@ -155,9 +155,9 @@ func (*vfsFileLocker) errorCode(err error, def ExtendedErrorCode) ExtendedErrorC
 		case syscall.ENOLCK:
 		case syscall.EDEADLK:
 		case syscall.ETIMEDOUT:
-			return ExtendedErrorCode(BUSY)
+			return xErrorCode(BUSY)
 		case syscall.EPERM:
-			return ExtendedErrorCode(PERM)
+			return xErrorCode(PERM)
 		}
 	}
 	return def

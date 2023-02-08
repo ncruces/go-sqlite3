@@ -4,30 +4,30 @@ import "os"
 
 func deleteOnClose(f *os.File) {}
 
-func (l *vfsFileLocker) GetShared() ExtendedErrorCode {
+func (l *vfsFileLocker) GetShared() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) GetReserved() ExtendedErrorCode {
+func (l *vfsFileLocker) GetReserved() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) GetPending() ExtendedErrorCode {
+func (l *vfsFileLocker) GetPending() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) GetExclusive() ExtendedErrorCode {
+func (l *vfsFileLocker) GetExclusive() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) Downgrade() ExtendedErrorCode {
+func (l *vfsFileLocker) Downgrade() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) Release() ExtendedErrorCode {
+func (l *vfsFileLocker) Release() xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReserved() (bool, ExtendedErrorCode) {
+func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
 	return false, _OK
 }
