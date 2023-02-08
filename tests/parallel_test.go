@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -41,12 +40,12 @@ func TestParallel(t *testing.T) {
 
 		err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 
 		err = db.Exec(`INSERT INTO users(id, name) VALUES(0, 'go'), (1, 'zig'), (2, 'whatever')`)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 
 		return db.Close()
@@ -104,7 +103,6 @@ func TestParallel(t *testing.T) {
 		} else {
 			group.Go(writer)
 		}
-		time.Sleep(time.Microsecond)
 	}
 	err = group.Wait()
 	if err != nil {

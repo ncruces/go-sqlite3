@@ -49,6 +49,16 @@ func (s *Stmt) Err() error {
 	return s.err
 }
 
+func (s *Stmt) Exec() error {
+	for s.Step() {
+	}
+	err := s.Err()
+	if rerr := s.Reset(); err == nil {
+		err = rerr
+	}
+	return err
+}
+
 func (s *Stmt) BindBool(param int, value bool) error {
 	if value {
 		return s.BindInt64(param, 1)
@@ -111,6 +121,15 @@ func (s *Stmt) BindNull(param int) error {
 	return s.c.error(r[0])
 }
 
+func (s *Stmt) ColumnType(col int) Datatype {
+	r, err := s.c.api.columnType.Call(s.c.ctx,
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+	return Datatype(r[0])
+}
+
 func (s *Stmt) ColumnBool(col int) bool {
 	if i := s.ColumnInt64(col); i != 0 {
 		return true
@@ -132,7 +151,7 @@ func (s *Stmt) ColumnInt64(col int) int64 {
 }
 
 func (s *Stmt) ColumnFloat(col int) float64 {
-	r, err := s.c.api.columnInteger.Call(s.c.ctx,
+	r, err := s.c.api.columnFloat.Call(s.c.ctx,
 		uint64(s.handle), uint64(col))
 	if err != nil {
 		panic(err)
@@ -181,7 +200,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 			panic(err)
 		}
 		s.err = s.c.error(r[0])
-		return nil
+		return buf[0:0]
 	}
 
 	r, err = s.c.api.columnBytes.Call(s.c.ctx,

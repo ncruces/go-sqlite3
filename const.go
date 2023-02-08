@@ -1,5 +1,7 @@
 package sqlite3
 
+import "strconv"
+
 const (
 	_OK   = 0   /* Successful result */
 	_ROW  = 100 /* sqlite3_step() has another row ready */
@@ -175,3 +177,20 @@ const (
 	BLOB    Datatype = 4
 	NULL    Datatype = 5
 )
+
+func (t Datatype) String() string {
+	const name = "INTEGERFLOATTEXTBLOBNULL"
+	switch t {
+	case INTEGER:
+		return name[0:7]
+	case FLOAT:
+		return name[7:12]
+	case TEXT:
+		return name[12:16]
+	case BLOB:
+		return name[16:20]
+	case NULL:
+		return name[20:24]
+	}
+	return strconv.FormatUint(uint64(t), 10)
+}
