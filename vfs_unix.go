@@ -14,66 +14,38 @@ func deleteOnClose(f *os.File) {
 
 func (l *vfsFileLocker) GetShared() xErrorCode {
 	// A PENDING lock is needed before acquiring a SHARED lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_RDLCK,
-		Start: _PENDING_BYTE,
-		Len:   1,
-	}); err != nil {
-		return l.errorCode(err, IOERR_LOCK)
+	if rc := l.readLock(_PENDING_BYTE, 1); rc != _OK {
+		return rc
 	}
 
 	// Acquire the SHARED lock.
-	rc := l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_RDLCK,
-		Start: _SHARED_FIRST,
-		Len:   _SHARED_SIZE,
-	}), IOERR_LOCK)
+	rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE)
 
 	// Drop the temporary PENDING lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_UNLCK,
-		Start: _PENDING_BYTE,
-		Len:   1,
-	}); rc == _OK && err != nil {
-		return IOERR_UNLOCK
+	if rc2 := l.unlock(_PENDING_BYTE, 1); rc == _OK {
+		return rc2
 	}
 	return rc
 }
 
 func (l *vfsFileLocker) GetReserved() xErrorCode {
 	// Acquire the RESERVED lock.
-	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_WRLCK,
-		Start: _RESERVED_BYTE,
-		Len:   1,
-	}), IOERR_LOCK)
+	return l.writeLock(_RESERVED_BYTE, 1)
 }
 
 func (l *vfsFileLocker) GetPending() xErrorCode {
 	// Acquire the PENDING lock.
-	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_WRLCK,
-		Start: _PENDING_BYTE,
-		Len:   1,
-	}), IOERR_LOCK)
+	return l.writeLock(_PENDING_BYTE, 1)
 }
 
 func (l *vfsFileLocker) GetExclusive() xErrorCode {
 	// Acquire the EXCLUSIVE lock.
-	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_WRLCK,
-		Start: _SHARED_FIRST,
-		Len:   _SHARED_SIZE,
-	}), IOERR_LOCK)
+	return l.writeLock(_SHARED_FIRST, _SHARED_SIZE)
 }
 
 func (l *vfsFileLocker) Downgrade() xErrorCode {
 	// Downgrade to a SHARED lock.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_RDLCK,
-		Start: _SHARED_FIRST,
-		Len:   _SHARED_SIZE,
-	}); err != nil {
+	if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
 		// In theory, the downgrade to a SHARED cannot fail because another
 		// process is holding an incompatible lock. If it does, this
 		// indicates that the other process is not following the locking
@@ -83,32 +55,52 @@ func (l *vfsFileLocker) Downgrade() xErrorCode {
 	}
 
 	// Release the PENDING and RESERVED locks.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
-		Type:  syscall.F_UNLCK,
-		Start: _PENDING_BYTE,
-		Len:   2,
-	}); err != nil {
-		return IOERR_UNLOCK
-	}
-	return _OK
+	return l.unlock(_PENDING_BYTE, 2)
 }
 
 func (l *vfsFileLocker) Release() xErrorCode {
 	// Release all locks.
-	if err := l.fcntlSetLock(&syscall.Flock_t{
-		Type: syscall.F_UNLCK,
-	}); err != nil {
+	return l.unlock(0, 0)
+}
+
+func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
+	// Test the RESERVED lock.
+	return l.checkLock(_RESERVED_BYTE, 1)
+}
+
+func (l *vfsFileLocker) unlock(start, len int64) xErrorCode {
+	err := l.fcntlSetLock(&syscall.Flock_t{
+		Type:  syscall.F_UNLCK,
+		Start: start,
+		Len:   len,
+	})
+	if err != nil {
 		return IOERR_UNLOCK
 	}
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
-	// Test the RESERVED lock.
+func (l *vfsFileLocker) readLock(start, len int64) xErrorCode {
+	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
+		Type:  syscall.F_RDLCK,
+		Start: start,
+		Len:   len,
+	}), IOERR_LOCK)
+}
+
+func (l *vfsFileLocker) writeLock(start, len int64) xErrorCode {
+	return l.errorCode(l.fcntlSetLock(&syscall.Flock_t{
+		Type:  syscall.F_WRLCK,
+		Start: start,
+		Len:   len,
+	}), IOERR_LOCK)
+}
+
+func (l *vfsFileLocker) checkLock(start, len int64) (bool, xErrorCode) {
 	lock := syscall.Flock_t{
 		Type:  syscall.F_RDLCK,
-		Start: _RESERVED_BYTE,
-		Len:   1,
+		Start: start,
+		Len:   len,
 	}
 	if l.fcntlGetLock(&lock) != nil {
 		return false, IOERR_CHECKRESERVEDLOCK
@@ -125,6 +117,9 @@ func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error {
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_GETLK = 92 // F_OFD_GETLK
+	case "solaris":
+		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
+		F_GETLK = 47 // F_OFD_GETLK
 	}
 	return syscall.FcntlFlock(l.file.Fd(), F_GETLK, lock)
 }
@@ -138,6 +133,9 @@ func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_SETLK = 90 // F_OFD_SETLK
+	case "solaris":
+		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
+		F_SETLK = 48 // F_OFD_SETLK
 	}
 	return syscall.FcntlFlock(l.file.Fd(), F_SETLK, lock)
 }
