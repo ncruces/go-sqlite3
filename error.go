@@ -6,13 +6,30 @@ import (
 	"strings"
 )
 
+// Error wraps an SQLite Error Code.
+//
+// https://www.sqlite.org/c3ref/errcode.html
 type Error struct {
-	Code         ErrorCode
-	ExtendedCode ExtendedErrorCode
-	str          string
-	msg          string
+	code uint64
+	str  string
+	msg  string
 }
 
+// Code returns the primary error code for this error.
+//
+// https://www.sqlite.org/rescode.html
+func (e *Error) Code() ErrorCode {
+	return ErrorCode(e.code)
+}
+
+// ExtendedCode returns the extended error code for this error.
+//
+// https://www.sqlite.org/rescode.html
+func (e *Error) ExtendedCode() ExtendedErrorCode {
+	return ExtendedErrorCode(e.code)
+}
+
+// Error implements the error interface.
 func (e *Error) Error() string {
 	var b strings.Builder
 	b.WriteString("sqlite3: ")
@@ -20,7 +37,7 @@ func (e *Error) Error() string {
 	if e.str != "" {
 		b.WriteString(e.str)
 	} else {
-		b.WriteString(strconv.Itoa(int(e.Code)))
+		b.WriteString(strconv.Itoa(int(e.code)))
 	}
 
 	if e.msg != "" {

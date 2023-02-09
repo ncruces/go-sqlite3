@@ -4,6 +4,9 @@ import (
 	"context"
 )
 
+// Conn is a database connection handle.
+//
+// https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
 	ctx    context.Context
 	api    sqliteAPI
@@ -11,10 +14,14 @@ type Conn struct {
 	handle uint32
 }
 
+// Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
 func Open(filename string) (conn *Conn, err error) {
 	return OpenFlags(filename, OPEN_READWRITE|OPEN_CREATE)
 }
 
+// OpenFlags opens an SQLite database file as specified by the filename argument.
+//
+// https://www.sqlite.org/c3ref/open.html
 func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	ctx := context.Background()
 	module, err := sqlite3.instantiateModule(ctx)
@@ -46,6 +53,12 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	return c, nil
 }
 
+// Close closes a database connection.
+// If the database connection is associated with unfinalized prepared statements,
+// open blob handles, and/or unfinished backup objects,
+// Close will leave the database connection open and return [BUSY].
+//
+// https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
@@ -58,6 +71,10 @@ func (c *Conn) Close() error {
 	return c.mem.mod.Close(c.ctx)
 }
 
+// Exec is a convenience function that allows an application to run
+// multiple statements of SQL without having to use a lot of code.
+//
+// https://www.sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
 	sqlPtr := c.newString(sql)
 	defer c.free(sqlPtr)
@@ -69,10 +86,17 @@ func (c *Conn) Exec(sql string) error {
 	return c.error(r[0])
 }
 
+// Prepare calls [PrepareFlags] with no flags.
 func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 	return c.PrepareFlags(sql, 0)
 }
 
+// PrepareFlags compiles the first statement in sql;
+// tail is left pointing to what remains uncompiled.
+// If the input text contains no SQL (if the input is an empty string or a comment),
+// both stmt and err will be nil
+//
+// https://www.sqlite.org/c3ref/exec.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	sqlPtr := c.newString(sql)
 	stmtPtr := c.new(ptrlen)
@@ -107,12 +131,9 @@ func (c *Conn) error(rc uint64) error {
 		return nil
 	}
 
-	err := Error{
-		Code:         ErrorCode(rc),
-		ExtendedCode: ExtendedErrorCode(rc),
-	}
+	err := Error{code: rc}
 
-	if err.Code == NOMEM || err.ExtendedCode == IOERR_NOMEM {
+	if err.Code() == NOMEM || err.ExtendedCode() == IOERR_NOMEM {
 		panic(oomErr)
 	}
 

@@ -17,7 +17,7 @@ func TestDir(t *testing.T) {
 	if !errors.As(err, &serr) {
 		t.Fatal("want sqlite3.Error")
 	}
-	if serr.Code != sqlite3.CANTOPEN {
+	if serr.Code() != sqlite3.CANTOPEN {
 		t.Error("want sqlite3.CANTOPEN")
 	}
 	if got := err.Error(); got != "sqlite3: unable to open database file" {
