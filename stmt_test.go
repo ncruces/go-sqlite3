@@ -33,6 +33,16 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = stmt.ClearBindings()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = stmt.Exec()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = stmt.BindBool(1, true)
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +128,7 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The table should have: 0, 1, 2, π, NULL, "", "text", `blob`, NULL
+	// The table should have: 0, NULL, 1, 2, π, NULL, "", "text", `blob`, NULL
 	stmt, _, err = db.Prepare(`SELECT col FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -142,6 +152,27 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); string(got) != "0" {
 			t.Errorf("got %q, want zero", got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != NULL {
+			t.Errorf("got %v, want NULL", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+		if got := stmt.ColumnBlob(0, nil); got != nil {
+			t.Errorf("got %q, want nil", got)
 		}
 	}
 
@@ -322,4 +353,9 @@ func TestStmt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestStmt_Close(t *testing.T) {
+	var stmt *Stmt
+	stmt.Close()
 }

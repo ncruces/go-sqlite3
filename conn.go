@@ -53,13 +53,18 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	return c, nil
 }
 
-// Close closes a database connection.
+// Close closes the database connection.
+//
 // If the database connection is associated with unfinalized prepared statements,
 // open blob handles, and/or unfinished backup objects,
 // Close will leave the database connection open and return [BUSY].
 //
 // https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
+	if c == nil {
+		return nil
+	}
+
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
 		return err
@@ -68,6 +73,8 @@ func (c *Conn) Close() error {
 	if err := c.error(r[0]); err != nil {
 		return err
 	}
+
+	c.handle = 0
 	return c.mem.mod.Close(c.ctx)
 }
 
@@ -86,17 +93,17 @@ func (c *Conn) Exec(sql string) error {
 	return c.error(r[0])
 }
 
-// Prepare calls [PrepareFlags] with no flags.
+// Prepare calls [Conn.PrepareFlags] with no flags.
 func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 	return c.PrepareFlags(sql, 0)
 }
 
-// PrepareFlags compiles the first statement in sql;
+// PrepareFlags compiles the first SQL statement in sql;
 // tail is left pointing to what remains uncompiled.
 // If the input text contains no SQL (if the input is an empty string or a comment),
-// both stmt and err will be nil
+// both stmt and err will be nil.
 //
-// https://www.sqlite.org/c3ref/exec.html
+// https://www.sqlite.org/c3ref/prepare.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	sqlPtr := c.newString(sql)
 	stmtPtr := c.new(ptrlen)

@@ -121,3 +121,8 @@ func TestConn_free(t *testing.T) {
 
 	db.free(ptr)
 }
+
+func TestConn_Close(t *testing.T) {
+	var conn *Conn
+	conn.Close()
+}
