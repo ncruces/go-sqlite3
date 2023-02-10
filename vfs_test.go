@@ -17,7 +17,7 @@ func Test_vfsExit(t *testing.T) {
 	mem := newMemory(128)
 	defer func() { _ = recover() }()
 	vfsExit(context.TODO(), mem.mod, 1)
-	t.Error("should have panicked")
+	t.Error("want panic")
 }
 
 func Test_vfsLocaltime(t *testing.T) {

@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"math"
 )
 
 // Conn is a database connection handle.
@@ -34,8 +35,11 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		}
 	}()
 
-	c := newConn(module)
-	c.ctx = context.Background()
+	c, err := newConn(ctx, module)
+	if err != nil {
+		return nil, err
+	}
+
 	namePtr := c.newString(filename)
 	connPtr := c.new(ptrlen)
 	defer c.free(namePtr)
@@ -124,7 +128,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	i := c.mem.readUint32(tailPtr)
 	tail = sql[i-sqlPtr:]
 
-	if err := c.error(r[0]); err != nil {
+	if err := c.error(r[0], sql); err != nil {
 		return nil, "", err
 	}
 	if stmt.handle == 0 {
@@ -133,7 +137,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	return
 }
 
-func (c *Conn) error(rc uint64) error {
+func (c *Conn) error(rc uint64, sql ...string) error {
 	if rc == _OK {
 		return nil
 	}
@@ -146,10 +150,18 @@ func (c *Conn) error(rc uint64) error {
 
 	var r []uint64
 
-	// Do this first, sqlite3_errmsg is guaranteed to never change the value of the error code.
+	// sqlite3_errmsg is guaranteed to never change the value of the error code.
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
 		err.msg = c.mem.readString(uint32(r[0]), 512)
+	}
+
+	if sql != nil {
+		// sqlite3_error_offset is guaranteed to never change the value of the error code.
+		r, _ = c.api.erroff.Call(c.ctx, uint64(c.handle))
+		if r != nil && r[0] != math.MaxUint32 {
+			err.sql = sql[0][r[0]:]
+		}
 	}
 
 	r, _ = c.api.errstr.Call(c.ctx, rc)

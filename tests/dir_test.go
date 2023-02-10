@@ -15,12 +15,12 @@ func TestDir(t *testing.T) {
 	}
 	var serr *sqlite3.Error
 	if !errors.As(err, &serr) {
-		t.Fatal("want sqlite3.Error")
+		t.Fatalf("got %T, want sqlite3.Error", err)
 	}
-	if serr.Code() != sqlite3.CANTOPEN {
-		t.Error("want sqlite3.CANTOPEN")
+	if rc := serr.Code(); rc != sqlite3.CANTOPEN {
+		t.Errorf("got %d, want sqlite3.CANTOPEN", rc)
 	}
-	if got := err.Error(); got != "sqlite3: unable to open database file" {
+	if got := err.Error(); got != `sqlite3: unable to open database file` {
 		t.Error("got message: ", got)
 	}
 }

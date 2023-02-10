@@ -2,9 +2,103 @@ package sqlite3
 
 import (
 	"bytes"
+	"errors"
 	"math"
 	"testing"
 )
+
+func TestConn_Close(t *testing.T) {
+	var conn *Conn
+	conn.Close()
+}
+
+func TestConn_Close_BUSY(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare("BEGIN")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	err = db.Close()
+	if err == nil {
+		t.Fatal("want error")
+	}
+	var serr *Error
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != BUSY {
+		t.Errorf("got %d, want sqlite3.BUSY", rc)
+	}
+	if got := err.Error(); got != `sqlite3: database is locked: unable to close due to unfinalized statements or unfinished backups` {
+		t.Error("got message: ", got)
+	}
+}
+
+func TestConn_Prepare_Empty(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt != nil {
+		t.Error("want nil")
+	}
+}
+
+func TestConn_Prepare_Invalid(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var serr *Error
+
+	_, _, err = db.Prepare("SELECT")
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != ERROR {
+		t.Errorf("got %d, want sqlite3.ERROR", rc)
+	}
+	if got := err.Error(); got != `sqlite3: SQL logic error: incomplete input` {
+		t.Error("got message: ", got)
+	}
+
+	_, _, err = db.Prepare("SELECT * FRM sqlite_schema")
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.ERROR", err)
+	}
+	if rc := serr.Code(); rc != ERROR {
+		t.Errorf("got %d, want sqlite3.ERROR", rc)
+	}
+	if got := serr.SQL(); got != `FRM sqlite_schema` {
+		t.Error("got SQL: ", got)
+	}
+	if got := serr.Error(); got != `sqlite3: SQL logic error: near "FRM": syntax error` {
+		t.Error("got message: ", got)
+	}
+}
 
 func TestConn_new(t *testing.T) {
 	db, err := Open(":memory:")
@@ -15,7 +109,7 @@ func TestConn_new(t *testing.T) {
 
 	defer func() { _ = recover() }()
 	db.new(math.MaxUint32)
-	t.Error("should have panicked")
+	t.Error("want panic")
 }
 
 func TestConn_newBytes(t *testing.T) {
@@ -27,7 +121,7 @@ func TestConn_newBytes(t *testing.T) {
 
 	ptr := db.newBytes(nil)
 	if ptr != 0 {
-		t.Errorf("got %x, want nullptr", ptr)
+		t.Errorf("got %#x, want nullptr", ptr)
 	}
 
 	buf := []byte("sqlite3")
@@ -95,13 +189,13 @@ func TestConn_getString(t *testing.T) {
 	func() {
 		defer func() { _ = recover() }()
 		db.mem.readString(ptr, uint32(len(want)/2))
-		t.Error("should have panicked")
+		t.Error("want panic")
 	}()
 
 	func() {
 		defer func() { _ = recover() }()
 		db.mem.readString(0, math.MaxUint32)
-		t.Error("should have panicked")
+		t.Error("want panic")
 	}()
 }
 
@@ -120,9 +214,4 @@ func TestConn_free(t *testing.T) {
 	}
 
 	db.free(ptr)
-}
-
-func TestConn_Close(t *testing.T) {
-	var conn *Conn
-	conn.Close()
 }

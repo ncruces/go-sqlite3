@@ -1,28 +1,37 @@
 package sqlite3
 
-import "github.com/tetratelabs/wazero/api"
+import (
+	"context"
 
-func newConn(module api.Module) *Conn {
+	"github.com/tetratelabs/wazero/api"
+)
+
+func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 	getFun := func(name string) api.Function {
 		f := module.ExportedFunction(name)
 		if f == nil {
-			panic(noFuncErr + errorString(name))
+			err = noFuncErr + errorString(name)
+			return nil
 		}
 		return f
 	}
 
-	global := module.ExportedGlobal("malloc_destructor")
-	if global == nil {
-		panic(noGlobalErr + "malloc_destructor")
+	getPtr := func(name string) uint32 {
+		global := module.ExportedGlobal(name)
+		if global == nil {
+			err = noGlobalErr + errorString(name)
+			return 0
+		}
+		return memory{module}.readUint32(uint32(global.Get()))
 	}
-	destructor := memory{module}.readUint32(uint32(global.Get()))
 
-	return &Conn{
+	c := Conn{
+		ctx: ctx,
 		mem: memory{module},
 		api: sqliteAPI{
 			malloc:        getFun("malloc"),
 			free:          getFun("free"),
-			destructor:    uint64(destructor),
+			destructor:    uint64(getPtr("malloc_destructor")),
 			errcode:       getFun("sqlite3_errcode"),
 			errstr:        getFun("sqlite3_errstr"),
 			errmsg:        getFun("sqlite3_errmsg"),
@@ -49,6 +58,10 @@ func newConn(module api.Module) *Conn {
 			columnType:    getFun("sqlite3_column_type"),
 		},
 	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
 }
 
 type sqliteAPI struct {

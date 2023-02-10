@@ -13,6 +13,7 @@ type Error struct {
 	code uint64
 	str  string
 	msg  string
+	sql  string
 }
 
 // Code returns the primary error code for this error.
@@ -47,6 +48,11 @@ func (e *Error) Error() string {
 	}
 
 	return b.String()
+}
+
+// SQL returns the SQL starting at the token that triggered a syntax error.
+func (e *Error) SQL() string {
+	return e.sql
 }
 
 type errorString string
