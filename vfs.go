@@ -45,6 +45,7 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) (err error) {
 	env.NewFunctionBuilder().WithFunc(vfsLock).Export("go_lock")
 	env.NewFunctionBuilder().WithFunc(vfsUnlock).Export("go_unlock")
 	env.NewFunctionBuilder().WithFunc(vfsCheckReservedLock).Export("go_check_reserved_lock")
+	env.NewFunctionBuilder().WithFunc(vfsFileControl).Export("go_file_control")
 	_, err = env.Instantiate(ctx)
 	return err
 }
@@ -303,4 +304,16 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 
 	memory{mod}.writeUint64(pSize, uint64(off))
 	return _OK
+}
+
+func vfsFileControl(ctx context.Context, pFile, op, pArg uint32) uint32 {
+	// SQLite calls vfsFileControl with these opcodes:
+	//  SQLITE_FCNTL_SIZE_HINT
+	//  SQLITE_FCNTL_PRAGMA
+	//  SQLITE_FCNTL_BUSYHANDLER
+	//  SQLITE_FCNTL_HAS_MOVED
+	//  SQLITE_FCNTL_SYNC
+	//  SQLITE_FCNTL_COMMIT_PHASETWO
+	//  SQLITE_FCNTL_PDB
+	return uint32(NOTFOUND)
 }

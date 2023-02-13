@@ -33,6 +33,7 @@ int go_write(sqlite3_file *, const void *, int iAmt, sqlite3_int64 iOfst);
 int go_truncate(sqlite3_file *, sqlite3_int64 size);
 int go_sync(sqlite3_file *, int flags);
 int go_file_size(sqlite3_file *, sqlite3_int64 *pSize);
+int go_file_control(sqlite3_file *pFile, int op, void *pArg);
 
 int go_lock(sqlite3_file *pFile, int eLock);
 int go_unlock(sqlite3_file *pFile, int eLock);
