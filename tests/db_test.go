@@ -37,6 +37,7 @@ func testDB(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer stmt.Close()
 
 	row := 0
 	ids := []int{0, 1, 2}

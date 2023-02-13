@@ -133,6 +133,7 @@ func TestStmt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer stmt.Close()
 
 	if stmt.Step() {
 		if got := stmt.ColumnType(0); got != INTEGER {

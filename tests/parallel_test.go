@@ -14,7 +14,9 @@ import (
 )
 
 func TestParallel(t *testing.T) {
-	testParallel(t, t.TempDir(), 100)
+	name := filepath.Join(t.TempDir(), "test.db")
+	testParallel(t, name, 100)
+	testIntegrity(t, name)
 }
 
 func TestMultiProcess(t *testing.T) {
@@ -22,10 +24,10 @@ func TestMultiProcess(t *testing.T) {
 		return
 	}
 
-	dir := t.TempDir()
-	t.Setenv("TestParallel_dir", dir)
+	name := filepath.Join(t.TempDir(), "test.db")
+	t.Setenv("TestMultiProcess_dbname", name)
+
 	cmd := exec.Command("go", "test", "-v", "-run", "TestChildProcess")
-	cmd.Stderr = os.Stderr
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -40,22 +42,25 @@ func TestMultiProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testParallel(t, dir, 1000)
-	cmd.Wait()
+	testParallel(t, name, 1000)
+	if err := cmd.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	testIntegrity(t, name)
 }
 
 func TestChildProcess(t *testing.T) {
-	dir := os.Getenv("TestParallel_dir")
-	if dir == "" || testing.Short() {
+	name := os.Getenv("TestMultiProcess_dbname")
+	if name == "" || testing.Short() {
 		return
 	}
 
-	testParallel(t, dir, 1000)
+	testParallel(t, name, 1000)
 }
 
-func testParallel(t *testing.T, dir string, n int) {
+func testParallel(t *testing.T, name string, n int) {
 	writer := func() error {
-		db, err := sqlite3.Open(filepath.Join(dir, "test.db"))
+		db, err := sqlite3.Open(name)
 		if err != nil {
 			return err
 		}
@@ -83,7 +88,7 @@ func testParallel(t *testing.T, dir string, n int) {
 	}
 
 	reader := func() error {
-		db, err := sqlite3.Open(filepath.Join(dir, "test.db"))
+		db, err := sqlite3.Open(name)
 		if err != nil {
 			return err
 		}
@@ -101,6 +106,7 @@ func testParallel(t *testing.T, dir string, n int) {
 		if err != nil {
 			return err
 		}
+		defer stmt.Close()
 
 		row := 0
 		for stmt.Step() {
@@ -136,6 +142,44 @@ func testParallel(t *testing.T, dir string, n int) {
 		}
 	}
 	err = group.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testIntegrity(t *testing.T, name string) {
+	db, err := sqlite3.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	test := `PRAGMA integrity_check`
+	if testing.Short() {
+		test = `PRAGMA quick_check`
+	}
+
+	stmt, _, err := db.Prepare(test)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	for stmt.Step() {
+		if row := stmt.ColumnText(0); row != "ok" {
+			t.Error(row)
+		}
+	}
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
