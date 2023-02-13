@@ -10,7 +10,7 @@ import (
 func Test_vfsLock(t *testing.T) {
 	// Other OSes lack open file descriptors locks.
 	switch runtime.GOOS {
-	case "linux", "darwin", "solaris", "windows":
+	case "linux", "darwin", "illumos", "windows":
 		//
 	default:
 		t.Skip()

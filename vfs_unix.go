@@ -117,7 +117,7 @@ func (l *vfsFileLocker) fcntlGetLock(lock *syscall.Flock_t) error {
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_GETLK = 92 // F_OFD_GETLK
-	case "solaris":
+	case "illumos":
 		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
 		F_GETLK = 47 // F_OFD_GETLK
 	}
@@ -133,7 +133,7 @@ func (l *vfsFileLocker) fcntlSetLock(lock *syscall.Flock_t) error {
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 		F_SETLK = 90 // F_OFD_SETLK
-	case "solaris":
+	case "illumos":
 		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
 		F_SETLK = 48 // F_OFD_SETLK
 	}
