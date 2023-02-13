@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,13 +13,7 @@ func TestDB_memory(t *testing.T) {
 }
 
 func TestDB_file(t *testing.T) {
-	dir, err := os.MkdirTemp("", "sqlite3-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	testDB(t, filepath.Join(dir, "test.db"))
+	testDB(t, filepath.Join(t.TempDir(), "test.db"))
 }
 
 func testDB(t *testing.T, name string) {

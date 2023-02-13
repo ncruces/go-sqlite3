@@ -140,13 +140,14 @@ func (*vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode {
 	}
 	if errno, ok := err.(syscall.Errno); ok {
 		switch errno {
-		case syscall.EACCES:
-		case syscall.EAGAIN:
-		case syscall.EBUSY:
-		case syscall.EINTR:
-		case syscall.ENOLCK:
-		case syscall.EDEADLK:
-		case syscall.ETIMEDOUT:
+		case
+			syscall.EACCES,
+			syscall.EAGAIN,
+			syscall.EBUSY,
+			syscall.EINTR,
+			syscall.ENOLCK,
+			syscall.EDEADLK,
+			syscall.ETIMEDOUT:
 			return xErrorCode(BUSY)
 		case syscall.EPERM:
 			return xErrorCode(PERM)

@@ -163,14 +163,8 @@ func Test_vfsDelete(t *testing.T) {
 }
 
 func Test_vfsAccess(t *testing.T) {
-	dir, err := os.MkdirTemp("", "sqlite3-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
 	mem := newMemory(128 + _MAX_PATHNAME)
-	mem.writeString(8, dir)
+	mem.writeString(8, t.TempDir())
 
 	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, ACCESS_EXISTS, 4)
 	if rc != _OK {

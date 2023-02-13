@@ -2,6 +2,7 @@ package tests
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -12,12 +13,35 @@ import (
 )
 
 func TestParallel(t *testing.T) {
-	dir, err := os.MkdirTemp("", "sqlite3-")
-	if err != nil {
+	testParallel(t, t.TempDir(), 50)
+}
+
+func TestMultiProcess(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	dir := t.TempDir()
+	t.Setenv("TestParallel_dir", dir)
+	cmd := exec.Command("go", "test", "-run", "TestChildProcess")
+	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
 
+	testParallel(t, dir, 500)
+	cmd.Wait()
+}
+
+func TestChildProcess(t *testing.T) {
+	dir := os.Getenv("TestParallel_dir")
+	if dir == "" || testing.Short() {
+		return
+	}
+
+	testParallel(t, dir, 500)
+}
+
+func testParallel(t *testing.T, dir string, n int) {
 	writer := func() error {
 		db, err := sqlite3.Open(filepath.Join(dir, "test.db"))
 		if err != nil {
@@ -27,7 +51,7 @@ func TestParallel(t *testing.T) {
 
 		err = db.Exec(`
 			PRAGMA locking_mode = NORMAL;
-			PRAGMA busy_timeout = 1000;
+			PRAGMA busy_timeout = 10000;
 		`)
 		if err != nil {
 			return err
@@ -55,7 +79,7 @@ func TestParallel(t *testing.T) {
 
 		err = db.Exec(`
 			PRAGMA locking_mode = NORMAL;
-			PRAGMA busy_timeout = 1000;
+			PRAGMA busy_timeout = 10000;
 		`)
 		if err != nil {
 			return err
@@ -85,14 +109,14 @@ func TestParallel(t *testing.T) {
 		return db.Close()
 	}
 
-	err = writer()
+	err := writer()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var group errgroup.Group
 	group.SetLimit(4)
-	for i := 0; i < 32; i++ {
+	for i := 0; i < n; i++ {
 		if i&7 != 7 {
 			group.Go(reader)
 		} else {
