@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestParallel(t *testing.T) {
-	testParallel(t, t.TempDir(), 50)
+	testParallel(t, t.TempDir(), 100)
 }
 
 func TestMultiProcess(t *testing.T) {
@@ -23,12 +24,23 @@ func TestMultiProcess(t *testing.T) {
 
 	dir := t.TempDir()
 	t.Setenv("TestParallel_dir", dir)
-	cmd := exec.Command("go", "test", "-run", "TestChildProcess")
+	cmd := exec.Command("go", "test", "-v", "-run", "TestChildProcess")
+	cmd.Stderr = os.Stderr
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	testParallel(t, dir, 500)
+	var buf [3]byte
+	// Wait for child to start.
+	if _, err := io.ReadFull(out, buf[:]); err != nil || string(buf[:]) != "===" {
+		t.Fatal(err)
+	}
+
+	testParallel(t, dir, 1000)
 	cmd.Wait()
 }
 
@@ -38,7 +50,7 @@ func TestChildProcess(t *testing.T) {
 		return
 	}
 
-	testParallel(t, dir, 500)
+	testParallel(t, dir, 1000)
 }
 
 func testParallel(t *testing.T, dir string, n int) {
