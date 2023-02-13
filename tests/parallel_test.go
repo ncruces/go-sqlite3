@@ -3,7 +3,6 @@ package tests
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"golang.org/x/sync/errgroup"
@@ -13,10 +12,6 @@ import (
 )
 
 func TestParallel(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip()
-	}
-
 	dir, err := os.MkdirTemp("", "sqlite3-")
 	if err != nil {
 		t.Fatal(err)

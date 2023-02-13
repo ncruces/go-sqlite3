@@ -10,19 +10,8 @@ import (
 func deleteOnClose(f *os.File) {}
 
 func (l *vfsFileLocker) GetShared() xErrorCode {
-	// A PENDING lock is needed before acquiring a SHARED lock.
-	if rc := l.readLock(_PENDING_BYTE, 1); rc != _OK {
-		return rc
-	}
-
 	// Acquire the SHARED lock.
-	rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE)
-
-	// Drop the temporary PENDING lock.
-	if rc2 := l.unlock(_PENDING_BYTE, 1); rc == _OK {
-		return rc2
-	}
-	return rc
+	return l.readLock(_SHARED_FIRST, _SHARED_SIZE)
 }
 
 func (l *vfsFileLocker) GetReserved() xErrorCode {
@@ -79,6 +68,15 @@ func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
 	rc := l.readLock(_RESERVED_BYTE, 1)
 	if rc == _OK {
 		l.unlock(_RESERVED_BYTE, 1)
+	}
+	return rc != _OK, _OK
+}
+
+func (l *vfsFileLocker) CheckPending() (bool, xErrorCode) {
+	// Test the PENDING lock.
+	rc := l.readLock(_PENDING_BYTE, 1)
+	if rc == _OK {
+		l.unlock(_PENDING_BYTE, 1)
 	}
 	return rc != _OK, _OK
 }
