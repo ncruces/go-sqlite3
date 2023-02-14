@@ -27,10 +27,6 @@
 
 // Need this to access WAL databases without the use of shared memory.
 #define SQLITE_DEFAULT_LOCKING_MODE 1
-// Go uses UTF-8 everywhere.
-#define SQLITE_OMIT_UTF16
-// Remove some testing code.
-#define SQLITE_UNTESTABLE
 
 // Implemented in Go.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -95,7 +96,7 @@ int sqlite3_os_init() {
       .xCurrentTime = go_current_time,
       .xCurrentTimeInt64 = go_current_time_64,
   };
-  return sqlite3_vfs_register(&go_vfs, /*default=*/1);
+  return sqlite3_vfs_register(&go_vfs, /*default=*/true);
 }
 
 sqlite3_destructor_type malloc_destructor = &free;
