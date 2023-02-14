@@ -2,9 +2,11 @@ package sqlite3
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math"
 	"testing"
+	"time"
 )
 
 func TestConn_Close(t *testing.T) {
@@ -19,7 +21,7 @@ func TestConn_Close_BUSY(t *testing.T) {
 	}
 	defer db.Close()
 
-	stmt, _, err := db.Prepare("BEGIN")
+	stmt, _, err := db.Prepare(`BEGIN`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,6 +43,54 @@ func TestConn_Close_BUSY(t *testing.T) {
 	}
 }
 
+func TestConn_Interrupt(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`
+		WITH RECURSIVE
+		  fibonacci (curr, next)
+		AS (
+		  SELECT 0, 1
+		  UNION ALL
+		  SELECT next, curr + next FROM fibonacci
+		  LIMIT 10e6
+		)
+		SELECT min(curr) FROM fibonacci
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
+	db.SetInterrupt(ctx.Done())
+	defer cancel()
+
+	for stmt.Step() {
+	}
+
+	err = stmt.Err()
+	if err == nil {
+		t.Fatal("want error")
+	}
+	var serr *Error
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != INTERRUPT {
+		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+	}
+	if got := err.Error(); got != `sqlite3: interrupted` {
+		t.Error("got message: ", got)
+	}
+
+	db.SetInterrupt(nil)
+}
+
 func TestConn_Prepare_Empty(t *testing.T) {
 	db, err := Open(":memory:")
 	if err != nil {
@@ -48,7 +98,7 @@ func TestConn_Prepare_Empty(t *testing.T) {
 	}
 	defer db.Close()
 
-	stmt, _, err := db.Prepare("")
+	stmt, _, err := db.Prepare(``)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +118,7 @@ func TestConn_Prepare_Invalid(t *testing.T) {
 
 	var serr *Error
 
-	_, _, err = db.Prepare("SELECT")
+	_, _, err = db.Prepare(`SELECT`)
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -82,7 +132,7 @@ func TestConn_Prepare_Invalid(t *testing.T) {
 		t.Error("got message: ", got)
 	}
 
-	_, _, err = db.Prepare("SELECT * FRM sqlite_schema")
+	_, _, err = db.Prepare(`SELECT * FRM sqlite_schema`)
 	if err == nil {
 		t.Fatal("want error")
 	}

@@ -95,6 +95,18 @@ func (s *Stmt) Exec() error {
 	return s.Reset()
 }
 
+// BindCount gets the number of SQL parameters in a prepared statement.
+//
+// https://www.sqlite.org/c3ref/bind_parameter_count.html
+func (s *Stmt) BindCount() int {
+	r, err := s.c.api.bindCount.Call(s.c.ctx,
+		uint64(s.handle))
+	if err != nil {
+		panic(err)
+	}
+	return int(r[0])
+}
+
 // BindBool binds a bool to the prepared statement.
 // The leftmost SQL parameter has an index of 1.
 // SQLite does not have a separate boolean storage class.

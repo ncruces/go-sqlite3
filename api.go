@@ -44,18 +44,24 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			step:          getFun("sqlite3_step"),
 			exec:          getFun("sqlite3_exec"),
 			clearBindings: getFun("sqlite3_clear_bindings"),
+			bindCount:     getFun("sqlite3_bind_parameter_count"),
 			bindInteger:   getFun("sqlite3_bind_int64"),
 			bindFloat:     getFun("sqlite3_bind_double"),
 			bindText:      getFun("sqlite3_bind_text64"),
 			bindBlob:      getFun("sqlite3_bind_blob64"),
 			bindZeroBlob:  getFun("sqlite3_bind_zeroblob64"),
 			bindNull:      getFun("sqlite3_bind_null"),
+			columnCount:   getFun("sqlite3_column_count"),
+			columnName:    getFun("sqlite3_column_name"),
+			columnType:    getFun("sqlite3_column_type"),
 			columnInteger: getFun("sqlite3_column_int64"),
 			columnFloat:   getFun("sqlite3_column_double"),
 			columnText:    getFun("sqlite3_column_text"),
 			columnBlob:    getFun("sqlite3_column_blob"),
 			columnBytes:   getFun("sqlite3_column_bytes"),
-			columnType:    getFun("sqlite3_column_type"),
+			lastRowid:     getFun("sqlite3_last_insert_rowid"),
+			changes:       getFun("sqlite3_changes64"),
+			interrupt:     getFun("sqlite3_interrupt"),
 		},
 	}
 	if err != nil {
@@ -80,16 +86,22 @@ type sqliteAPI struct {
 	step          api.Function
 	exec          api.Function
 	clearBindings api.Function
+	bindCount     api.Function
 	bindInteger   api.Function
 	bindFloat     api.Function
 	bindText      api.Function
 	bindBlob      api.Function
 	bindZeroBlob  api.Function
 	bindNull      api.Function
+	columnCount   api.Function
+	columnName    api.Function
+	columnType    api.Function
 	columnInteger api.Function
 	columnFloat   api.Function
 	columnText    api.Function
 	columnBlob    api.Function
 	columnBytes   api.Function
-	columnType    api.Function
+	lastRowid     api.Function
+	changes       api.Function
+	interrupt     api.Function
 }

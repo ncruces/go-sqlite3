@@ -5,6 +5,9 @@
 #define SQLITE_OS_OTHER 1
 #define SQLITE_BYTEORDER 1234
 
+#define HAVE_STDINT_H 1
+#define HAVE_INTTYPES_H 1
+
 #define HAVE_ISNAN 1
 #define HAVE_USLEEP 1
 #define HAVE_LOCALTIME_S 1
@@ -24,6 +27,16 @@
 #define SQLITE_OMIT_SHARED_CACHE
 #define SQLITE_OMIT_AUTOINIT
 #define SQLITE_USE_ALLOCA
+
+// Recommended Extensions
+
+// #define SQLITE_ENABLE_MATH_FUNCTIONS 1
+// #define SQLITE_ENABLE_FTS3 1
+// #define SQLITE_ENABLE_FTS3_PARENTHESIS 1
+// #define SQLITE_ENABLE_FTS4 1
+// #define SQLITE_ENABLE_FTS5 1
+// #define SQLITE_ENABLE_RTREE 1
+// #define SQLITE_ENABLE_GEOPOLY 1
 
 // Need this to access WAL databases without the use of shared memory.
 #define SQLITE_DEFAULT_LOCKING_MODE 1

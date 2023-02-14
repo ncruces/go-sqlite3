@@ -23,6 +23,10 @@ func TestStmt(t *testing.T) {
 	}
 	defer stmt.Close()
 
+	if got := stmt.BindCount(); got != 1 {
+		t.Errorf("got %d, want 1", got)
+	}
+
 	err = stmt.BindBool(1, false)
 	if err != nil {
 		t.Fatal(err)

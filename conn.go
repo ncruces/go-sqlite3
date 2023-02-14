@@ -14,6 +14,9 @@ type Conn struct {
 	mem    memory
 	arena  arena
 	handle uint32
+
+	waiter chan struct{}
+	done   <-chan struct{}
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
@@ -70,6 +73,8 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
+	c.SetInterrupt(nil)
+
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
 		return err
@@ -81,6 +86,57 @@ func (c *Conn) Close() error {
 
 	c.handle = 0
 	return c.mem.mod.Close(c.ctx)
+}
+
+// SetInterrupt interrupts a long-running query when done is closed.
+//
+// Subsequent uses of the connection will return [INTERRUPT]
+// until done is reset by another call to SetInterrupt.
+//
+// Typically, done is provided by [context.Context.Done]:
+//
+//	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
+//	conn.SetInterrupt(ctx.Done())
+//	defer cancel()
+//
+// https://www.sqlite.org/c3ref/interrupt.html
+func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
+	// Is a waiter running?
+	if c.waiter != nil {
+		c.waiter <- struct{}{} // Cancel the waiter.
+		<-c.waiter             // Wait for it to finish.
+		c.waiter = nil
+	}
+
+	old = c.done
+	c.done = done
+	if done == nil {
+		return old
+	}
+
+	waiter := make(chan struct{})
+	c.waiter = waiter
+	go func() {
+		select {
+		case <-waiter:
+			// Waiter was cancelled.
+		case <-done:
+			// Done was closed.
+
+			// Because it doesn't touch the C stack,
+			// sqlite3_interrupt is safe to call from a goroutine.
+			_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
+			if err != nil {
+				panic(err)
+			}
+
+			// Wait for the next call to SetInterrupt.
+			<-waiter // Waiter was cancelled.
+		}
+		// Signal that the waiter is finished.
+		waiter <- struct{}{}
+	}()
+	return old
 }
 
 // Exec is a convenience function that allows an application to run
@@ -111,9 +167,9 @@ func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 // https://www.sqlite.org/c3ref/prepare.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	defer c.arena.reset()
-	sqlPtr := c.arena.string(sql)
 	stmtPtr := c.arena.new(ptrlen)
 	tailPtr := c.arena.new(ptrlen)
+	sqlPtr := c.arena.string(sql)
 
 	r, err := c.api.prepare.Call(c.ctx, uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
