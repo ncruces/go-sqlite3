@@ -94,7 +94,7 @@ func (l *vfsFileLocker) readLock(start, len uint32) xErrorCode {
 	return l.errorCode(windows.LockFileEx(windows.Handle(l.file.Fd()),
 		windows.LOCKFILE_FAIL_IMMEDIATELY,
 		0, len, 0, &windows.Overlapped{Offset: start}),
-		IOERR_LOCK)
+		IOERR_RDLOCK)
 }
 
 func (l *vfsFileLocker) writeLock(start, len uint32) xErrorCode {

@@ -79,7 +79,7 @@ func (l *vfsFileLocker) readLock(start, len int64) xErrorCode {
 		Type:  syscall.F_RDLCK,
 		Start: start,
 		Len:   len,
-	}), IOERR_LOCK)
+	}), IOERR_RDLOCK)
 }
 
 func (l *vfsFileLocker) writeLock(start, len int64) xErrorCode {
