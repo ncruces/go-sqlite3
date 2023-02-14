@@ -113,11 +113,11 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	// Or using [os.Readlink] to resolve a symbolic link (as the Unix VFS did).
 	// This might be buggy on Windows (the Windows VFS doesn't try).
 
-	siz := uint32(len(abs) + 1)
-	if siz > nFull {
+	size := uint32(len(abs) + 1)
+	if size > nFull {
 		return uint32(CANTOPEN_FULLPATH)
 	}
-	mem := memory{mod}.view(zFull, siz)
+	mem := memory{mod}.view(zFull, size)
 
 	mem[len(abs)] = 0
 	copy(mem, abs)

@@ -112,6 +112,36 @@ func TestConn_new(t *testing.T) {
 	t.Error("want panic")
 }
 
+func TestConn_newArena(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	arena := db.newArena(16)
+	defer arena.reset()
+
+	const title = "Lorem ipsum"
+
+	ptr := arena.string(title)
+	if ptr == 0 {
+		t.Fatalf("got nullptr")
+	}
+	if got := db.mem.readString(ptr, math.MaxUint32); got != title {
+		t.Errorf("got %q, want %q", got, title)
+	}
+
+	const body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+	ptr = arena.string(body)
+	if ptr == 0 {
+		t.Fatalf("got nullptr")
+	}
+	if got := db.mem.readString(ptr, math.MaxUint32); got != body {
+		t.Errorf("got %q, want %q", got, body)
+	}
+}
+
 func TestConn_newBytes(t *testing.T) {
 	db, err := Open(":memory:")
 	if err != nil {

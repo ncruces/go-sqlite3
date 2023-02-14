@@ -99,9 +99,13 @@ func (m memory) readString(ptr, maxlen uint32) string {
 	}
 }
 
+func (m memory) writeBytes(ptr uint32, b []byte) {
+	buf := m.view(ptr, uint32(len(b)))
+	copy(buf, b)
+}
+
 func (m memory) writeString(ptr uint32, s string) {
-	siz := uint32(len(s) + 1)
-	buf := m.view(ptr, siz)
+	buf := m.view(ptr, uint32(len(s)+1))
 	buf[len(s)] = 0
 	copy(buf, s)
 }
