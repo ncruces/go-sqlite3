@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"math"
+	"time"
 )
 
 // Conn is a database connection handle.
@@ -118,23 +119,37 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 	c.waiter = waiter
 	go func() {
 		select {
-		case <-waiter:
-			// Waiter was cancelled.
-		case <-done:
-			// Done was closed.
+		case <-waiter: // Waiter was cancelled.
+			// Signal that the waiter has finished.
+			waiter <- struct{}{}
+			return
+		case <-done: // Done was closed.
 
-			// Because it doesn't touch the C stack,
-			// sqlite3_interrupt is safe to call from a goroutine.
-			_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
-			if err != nil {
-				panic(err)
+			// Interrupt every 100ms to prevent a race condition
+			// where the interrupt is lost if no statemet is running.
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				// Because it doesn't touch the C stack,
+				// sqlite3_interrupt is safe to call from a goroutine.
+				_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
+				if err != nil {
+					panic(err)
+				}
+
+				// Wait for the next call to SetInterrupt.
+				select {
+				case <-waiter: // Waiter was cancelled.
+					// Signal that the waiter has finished.
+					waiter <- struct{}{}
+					return
+
+				case <-ticker.C:
+					// Interrupt again.
+					continue
+				}
 			}
-
-			// Wait for the next call to SetInterrupt.
-			<-waiter // Waiter was cancelled.
 		}
-		// Signal that the waiter is finished.
-		waiter <- struct{}{}
 	}()
 	return old
 }
@@ -147,6 +162,9 @@ func (c *Conn) Exec(sql string) error {
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 
+	if c.interrupted() {
+		return c.error(uint64(INTERRUPT))
+	}
 	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	if err != nil {
 		return err
@@ -171,6 +189,9 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)
 
+	if c.interrupted() {
+		return nil, "", c.error(uint64(INTERRUPT))
+	}
 	r, err := c.api.prepare.Call(c.ctx, uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
@@ -205,30 +226,37 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 
 	var r []uint64
 
-	// sqlite3_errmsg is guaranteed to never change the value of the error code.
+	r, _ = c.api.errstr.Call(c.ctx, rc)
+	if r != nil {
+		err.str = c.mem.readString(uint32(r[0]), 512)
+	}
+
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
 		err.msg = c.mem.readString(uint32(r[0]), 512)
 	}
 
 	if sql != nil {
-		// sqlite3_error_offset is guaranteed to never change the value of the error code.
 		r, _ = c.api.erroff.Call(c.ctx, uint64(c.handle))
 		if r != nil && r[0] != math.MaxUint32 {
 			err.sql = sql[0][r[0]:]
 		}
 	}
 
-	r, _ = c.api.errstr.Call(c.ctx, rc)
-	if r != nil {
-		err.str = c.mem.readString(uint32(r[0]), 512)
-	}
-
-	if err.msg == err.str {
+	switch err.msg {
+	case err.str, "not an error":
 		err.msg = ""
-
 	}
 	return &err
+}
+
+func (c *Conn) interrupted() bool {
+	select {
+	case <-c.done:
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *Conn) free(ptr uint32) {

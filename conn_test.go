@@ -70,18 +70,32 @@ func TestConn_Interrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond)
 	db.SetInterrupt(ctx.Done())
 	defer cancel()
 
-	for stmt.Step() {
-	}
+	var serr *Error
 
-	err = stmt.Err()
+	// Interrupting works.
+	err = stmt.Exec()
 	if err == nil {
 		t.Fatal("want error")
 	}
-	var serr *Error
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != INTERRUPT {
+		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+	}
+	if got := err.Error(); got != `sqlite3: interrupted` {
+		t.Error("got message: ", got)
+	}
+
+	// And it stays interrupted.
+	err = stmt.Exec()
+	if err == nil {
+		t.Fatal("want error")
+	}
 	if !errors.As(err, &serr) {
 		t.Fatalf("got %T, want sqlite3.Error", err)
 	}
