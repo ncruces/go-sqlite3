@@ -28,7 +28,13 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - if: matrix.os == 'ubuntu-latest'
-      name: Update coverage report
+    - name: Test data races
+      run: go test -v -race ./...
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Update coverage report
       uses: ncruces/go-coverage-report@main
+      if: |
+        matrix.os == 'ubuntu-latest' &&
+        github.event_name == 'push'  
       continue-on-error: true

@@ -15,6 +15,8 @@ func TestConn_Close(t *testing.T) {
 }
 
 func TestConn_Close_BUSY(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -44,6 +46,8 @@ func TestConn_Close_BUSY(t *testing.T) {
 }
 
 func TestConn_Interrupt(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -92,6 +96,8 @@ func TestConn_Interrupt(t *testing.T) {
 }
 
 func TestConn_Prepare_Empty(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -110,6 +116,8 @@ func TestConn_Prepare_Empty(t *testing.T) {
 }
 
 func TestConn_Prepare_Invalid(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -151,6 +159,8 @@ func TestConn_Prepare_Invalid(t *testing.T) {
 }
 
 func TestConn_new(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -163,6 +173,8 @@ func TestConn_new(t *testing.T) {
 }
 
 func TestConn_newArena(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -193,6 +205,8 @@ func TestConn_newArena(t *testing.T) {
 }
 
 func TestConn_newBytes(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -217,6 +231,8 @@ func TestConn_newBytes(t *testing.T) {
 }
 
 func TestConn_newString(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -241,6 +257,8 @@ func TestConn_newString(t *testing.T) {
 }
 
 func TestConn_getString(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -280,6 +298,8 @@ func TestConn_getString(t *testing.T) {
 }
 
 func TestConn_free(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)

@@ -24,13 +24,11 @@ type sqlite3Runtime struct {
 	runtime   wazero.Runtime
 	compiled  wazero.CompiledModule
 	instances atomic.Uint64
-	ctx       context.Context
 	err       error
 }
 
 func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, error) {
-	s.ctx = ctx
-	s.once.Do(s.compileModule)
+	s.once.Do(func() { s.compileModule(ctx) })
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -40,9 +38,9 @@ func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, err
 	return s.runtime.InstantiateModule(ctx, s.compiled, cfg)
 }
 
-func (s *sqlite3Runtime) compileModule() {
-	s.runtime = wazero.NewRuntime(s.ctx)
-	s.err = vfsInstantiate(s.ctx, s.runtime)
+func (s *sqlite3Runtime) compileModule(ctx context.Context) {
+	s.runtime = wazero.NewRuntime(ctx)
+	s.err = vfsInstantiate(ctx, s.runtime)
 	if s.err != nil {
 		return
 	}
@@ -55,5 +53,5 @@ func (s *sqlite3Runtime) compileModule() {
 		}
 	}
 
-	s.compiled, s.err = s.runtime.CompileModule(s.ctx, bin)
+	s.compiled, s.err = s.runtime.CompileModule(ctx, bin)
 }

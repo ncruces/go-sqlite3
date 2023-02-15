@@ -6,6 +6,8 @@ import (
 )
 
 func TestStmt(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
