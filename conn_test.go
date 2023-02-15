@@ -46,8 +46,6 @@ func TestConn_Close_BUSY(t *testing.T) {
 }
 
 func TestConn_Interrupt(t *testing.T) {
-	t.Parallel()
-
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +59,7 @@ func TestConn_Interrupt(t *testing.T) {
 		  SELECT 0, 1
 		  UNION ALL
 		  SELECT next, curr + next FROM fibonacci
-		  LIMIT 10e6
+		  LIMIT 100e6
 		)
 		SELECT min(curr) FROM fibonacci
 	`)
