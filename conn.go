@@ -125,9 +125,9 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 			return
 		case <-done: // Done was closed.
 
-			// Interrupt every 100ms to prevent a race condition
+			// Interrupt every ms to prevent a race condition
 			// where the interrupt is lost if no statemet is running.
-			ticker := time.NewTicker(100 * time.Millisecond)
+			ticker := time.NewTicker(time.Millisecond)
 			defer ticker.Stop()
 			for {
 				// Because it doesn't touch the C stack,
