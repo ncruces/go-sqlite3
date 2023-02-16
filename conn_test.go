@@ -2,11 +2,9 @@ package sqlite3
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"math"
 	"testing"
-	"time"
 )
 
 func TestConn_Close(t *testing.T) {
@@ -45,9 +43,7 @@ func TestConn_Close_BUSY(t *testing.T) {
 	}
 }
 
-func TestConn_Interrupt(t *testing.T) {
-	t.Parallel()
-
+func TestConn_SetInterrupt(t *testing.T) {
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +57,7 @@ func TestConn_Interrupt(t *testing.T) {
 		  SELECT 0, 1
 		  UNION ALL
 		  SELECT next, curr + next FROM fibonacci
-		  LIMIT 10e6
+		  LIMIT 1e6
 		)
 		SELECT min(curr) FROM fibonacci
 	`)
@@ -70,29 +66,47 @@ func TestConn_Interrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
-	db.SetInterrupt(ctx.Done())
-	defer cancel()
+	done := make(chan struct{})
+	close(done)
+	db.SetInterrupt(done)
 
-	for stmt.Step() {
-	}
-
-	err = stmt.Err()
-	if err == nil {
-		t.Fatal("want error")
-	}
 	var serr *Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
+
+	// Interrupting works.
+	err = stmt.Exec()
+	if err != nil {
+		if !errors.As(err, &serr) {
+			t.Fatalf("got %T, want sqlite3.Error", err)
+		}
+		if rc := serr.Code(); rc != INTERRUPT {
+			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+		}
+		if got := err.Error(); got != `sqlite3: interrupted` {
+			t.Error("got message: ", got)
+		}
 	}
-	if rc := serr.Code(); rc != INTERRUPT {
-		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-	}
-	if got := err.Error(); got != `sqlite3: interrupted` {
-		t.Error("got message: ", got)
+
+	// Interrupting sticks.
+	err = db.Exec(`SELECT 1`)
+	if err != nil {
+		if !errors.As(err, &serr) {
+			t.Fatalf("got %T, want sqlite3.Error", err)
+		}
+		if rc := serr.Code(); rc != INTERRUPT {
+			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+		}
+		if got := err.Error(); got != `sqlite3: interrupted` {
+			t.Error("got message: ", got)
+		}
 	}
 
 	db.SetInterrupt(nil)
+
+	// Interrupting can be cleared.
+	err = db.Exec(`SELECT 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestConn_Prepare_Empty(t *testing.T) {

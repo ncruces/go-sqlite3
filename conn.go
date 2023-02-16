@@ -12,11 +12,12 @@ type Conn struct {
 	ctx    context.Context
 	api    sqliteAPI
 	mem    memory
-	arena  arena
 	handle uint32
 
-	waiter chan struct{}
-	done   <-chan struct{}
+	arena   arena
+	pending *Stmt
+	waiter  chan struct{}
+	done    <-chan struct{}
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
@@ -108,32 +109,44 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		c.waiter = nil
 	}
 
+	// Finalize the uncompleted SQL statement.
+	if c.pending != nil {
+		c.pending.Close()
+		c.pending = nil
+	}
+
 	old = c.done
 	c.done = done
 	if done == nil {
 		return old
 	}
 
+	// Creating an uncompleted SQL statement prevents SQLite from ignoring
+	// an interrupt that comes before any other statements are started.
+	c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
+	c.pending.Step()
+
 	waiter := make(chan struct{})
 	c.waiter = waiter
 	go func() {
 		select {
-		case <-waiter:
-			// Waiter was cancelled.
-		case <-done:
-			// Done was closed.
+		case <-waiter: // Waiter was cancelled.
+			break
 
-			// Because it doesn't touch the C stack,
-			// sqlite3_interrupt is safe to call from a goroutine.
+		case <-done: // Done was closed.
+
+			// This is safe to call from a goroutine
+			// because it doesn't touch the C stack.
 			_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
 			if err != nil {
 				panic(err)
 			}
 
 			// Wait for the next call to SetInterrupt.
-			<-waiter // Waiter was cancelled.
+			<-waiter
 		}
-		// Signal that the waiter is finished.
+
+		// Signal that the waiter has finished.
 		waiter <- struct{}{}
 	}()
 	return old
@@ -205,28 +218,26 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 
 	var r []uint64
 
-	// sqlite3_errmsg is guaranteed to never change the value of the error code.
+	r, _ = c.api.errstr.Call(c.ctx, rc)
+	if r != nil {
+		err.str = c.mem.readString(uint32(r[0]), 512)
+	}
+
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
 		err.msg = c.mem.readString(uint32(r[0]), 512)
 	}
 
 	if sql != nil {
-		// sqlite3_error_offset is guaranteed to never change the value of the error code.
 		r, _ = c.api.erroff.Call(c.ctx, uint64(c.handle))
 		if r != nil && r[0] != math.MaxUint32 {
 			err.sql = sql[0][r[0]:]
 		}
 	}
 
-	r, _ = c.api.errstr.Call(c.ctx, rc)
-	if r != nil {
-		err.str = c.mem.readString(uint32(r[0]), 512)
-	}
-
-	if err.msg == err.str {
+	switch err.msg {
+	case err.str, "not an error":
 		err.msg = ""
-
 	}
 	return &err
 }
