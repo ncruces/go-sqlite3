@@ -38,15 +38,15 @@ func (s *Stmt) Reset() error {
 	if err != nil {
 		return err
 	}
+
+	stepErr := s.err
 	s.err = nil
 
 	if err := s.c.error(r[0]); err != nil {
 		return err
 	}
-	if s.c.interrupted() {
-		return s.c.error(uint64(INTERRUPT))
-	}
-	return nil
+
+	return stepErr
 }
 
 // ClearBindings resets all bindings on the prepared statement.
@@ -70,10 +70,13 @@ func (s *Stmt) ClearBindings() error {
 //
 // https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
+	s.c.stepping.Lock()
+	defer s.c.stepping.Unlock()
 	if s.c.interrupted() {
 		s.err = s.c.error(uint64(INTERRUPT))
 		return false
 	}
+
 	r, err := s.c.api.step.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
 		s.err = err

@@ -13,11 +13,12 @@ type Conn struct {
 	ctx    context.Context
 	api    sqliteAPI
 	mem    memory
-	arena  arena
 	handle uint32
 
-	waiter chan struct{}
-	done   <-chan struct{}
+	arena     arena
+	stepping  chanMutex
+	interrupt context.Context
+	waiter    chan struct{}
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
@@ -45,6 +46,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		return nil, err
 	}
 	c.arena = c.newArena(1024)
+	c.stepping = newChanMutex()
 
 	defer c.arena.reset()
 	connPtr := c.arena.new(ptrlen)
@@ -74,7 +76,7 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
-	c.SetInterrupt(nil)
+	c.SetInterrupt(context.Background())
 
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
@@ -101,7 +103,7 @@ func (c *Conn) Close() error {
 //	defer cancel()
 //
 // https://www.sqlite.org/c3ref/interrupt.html
-func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
+func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// Is a waiter running?
 	if c.waiter != nil {
 		c.waiter <- struct{}{} // Cancel the waiter.
@@ -109,9 +111,9 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		c.waiter = nil
 	}
 
-	old = c.done
-	c.done = done
-	if done == nil {
+	old = c.interrupt
+	c.interrupt = ctx
+	if ctx == nil || ctx.Err() != nil || ctx == context.Background() || ctx == context.TODO() {
 		return old
 	}
 
@@ -120,38 +122,46 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 	go func() {
 		select {
 		case <-waiter: // Waiter was cancelled.
-			// Signal that the waiter has finished.
-			waiter <- struct{}{}
-			return
-		case <-done: // Done was closed.
+			break
 
-			// Interrupt every ms to prevent a race condition
-			// where the interrupt is lost if no statemet is running.
+		case <-ctx.Done(): // Done was closed.
+			// Interrupt every millisecond to prevent the interrupt
+			// getting lost if no statemet was already running.
 			ticker := time.NewTicker(time.Millisecond)
 			defer ticker.Stop()
+
+		retry:
 			for {
-				// Because it doesn't touch the C stack,
-				// sqlite3_interrupt is safe to call from a goroutine.
+				// This is safe to call from a goroutine
+				// because it doesn't touch the C stack.
 				_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
 				if err != nil {
 					panic(err)
 				}
 
-				// Wait for the next call to SetInterrupt.
 				select {
 				case <-waiter: // Waiter was cancelled.
-					// Signal that the waiter has finished.
-					waiter <- struct{}{}
-					return
+					break retry
+
+				case c.stepping <- struct{}{}: // Step has finished: Lock.
+					c.stepping.Unlock()
+					<-waiter // Wait for the next call to SetInterrupt.
+					break retry
 
 				case <-ticker.C:
-					// Interrupt again.
-					continue
+					continue retry
 				}
 			}
 		}
+
+		// Signal that the waiter has finished.
+		waiter <- struct{}{}
 	}()
 	return old
+}
+
+func (c *Conn) interrupted() bool {
+	return c.interrupt != nil && c.interrupt.Err() != nil
 }
 
 // Exec is a convenience function that allows an application to run
@@ -162,9 +172,12 @@ func (c *Conn) Exec(sql string) error {
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 
+	c.stepping.Lock()
+	defer c.stepping.Unlock()
 	if c.interrupted() {
 		return c.error(uint64(INTERRUPT))
 	}
+
 	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	if err != nil {
 		return err
@@ -189,9 +202,6 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)
 
-	if c.interrupted() {
-		return nil, "", c.error(uint64(INTERRUPT))
-	}
 	r, err := c.api.prepare.Call(c.ctx, uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
@@ -248,15 +258,6 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 		err.msg = ""
 	}
 	return &err
-}
-
-func (c *Conn) interrupted() bool {
-	select {
-	case <-c.done:
-		return true
-	default:
-		return false
-	}
 }
 
 func (c *Conn) free(ptr uint32) {

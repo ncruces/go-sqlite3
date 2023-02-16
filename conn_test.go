@@ -45,66 +45,59 @@ func TestConn_Close_BUSY(t *testing.T) {
 	}
 }
 
-func TestConn_Interrupt(t *testing.T) {
+func TestConn_SetInterrupt(t *testing.T) {
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	stmt, _, err := db.Prepare(`
+	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
+	db.SetInterrupt(ctx)
+	defer cancel()
+
+	var serr *Error
+
+	// Interrupting works.
+
+	err = db.Exec(`
 		WITH RECURSIVE
 		  fibonacci (curr, next)
 		AS (
 		  SELECT 0, 1
 		  UNION ALL
 		  SELECT next, curr + next FROM fibonacci
-		  LIMIT 100e6
+		  LIMIT 1e6
 		)
 		SELECT min(curr) FROM fibonacci
 	`)
 	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond)
-	db.SetInterrupt(ctx.Done())
-	defer cancel()
-
-	var serr *Error
-
-	// Interrupting works.
-	err = stmt.Exec()
-	if err == nil {
-		t.Fatal("want error")
-	}
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != INTERRUPT {
-		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-	}
-	if got := err.Error(); got != `sqlite3: interrupted` {
-		t.Error("got message: ", got)
+		if !errors.As(err, &serr) {
+			t.Fatalf("got %T, want sqlite3.Error", err)
+		}
+		if rc := serr.Code(); rc != INTERRUPT {
+			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+		}
+		if got := err.Error(); got != `sqlite3: interrupted` {
+			t.Error("got message: ", got)
+		}
 	}
 
 	// And it stays interrupted.
-	err = stmt.Exec()
-	if err == nil {
-		t.Fatal("want error")
-	}
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != INTERRUPT {
-		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-	}
-	if got := err.Error(); got != `sqlite3: interrupted` {
-		t.Error("got message: ", got)
+	err = db.Exec(`BEGIN`)
+	if err != nil {
+		if !errors.As(err, &serr) {
+			t.Fatalf("got %T, want sqlite3.Error", err)
+		}
+		if rc := serr.Code(); rc != INTERRUPT {
+			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+		}
+		if got := err.Error(); got != `sqlite3: interrupted` {
+			t.Error("got message: ", got)
+		}
 	}
 
-	db.SetInterrupt(nil)
+	db.SetInterrupt(context.TODO())
 }
 
 func TestConn_Prepare_Empty(t *testing.T) {
