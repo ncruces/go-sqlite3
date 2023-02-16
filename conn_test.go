@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math"
 	"testing"
@@ -50,6 +51,17 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer db.Close()
 
+	ctx, cancel := context.WithCancel(context.TODO())
+	db.SetInterrupt(ctx.Done())
+
+	// Interrupt doesn't interrupt this.
+	err = db.Exec(`SELECT 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db.SetInterrupt(nil)
+
 	stmt, _, err := db.Prepare(`
 		WITH RECURSIVE
 		  fibonacci (curr, next)
@@ -66,9 +78,8 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	done := make(chan struct{})
-	close(done)
-	db.SetInterrupt(done)
+	cancel()
+	db.SetInterrupt(ctx.Done())
 
 	var serr *Error
 
