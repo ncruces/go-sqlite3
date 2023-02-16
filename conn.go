@@ -52,7 +52,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 
 	r, err := c.api.open.Call(c.ctx, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	c.handle = c.mem.readUint32(connPtr)
@@ -70,7 +70,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 //
 // https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
-	if c == nil {
+	if c == nil || c.handle == 0 {
 		return nil
 	}
 
@@ -78,7 +78,7 @@ func (c *Conn) Close() error {
 
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	if err := c.error(r[0]); err != nil {
@@ -162,7 +162,7 @@ func (c *Conn) Exec(sql string) error {
 
 	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return c.error(r[0])
 }
@@ -188,7 +188,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
 	if err != nil {
-		return nil, "", err
+		panic(err)
 	}
 
 	stmt = &Stmt{c: c}

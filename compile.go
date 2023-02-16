@@ -40,10 +40,7 @@ func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, err
 
 func (s *sqlite3Runtime) compileModule(ctx context.Context) {
 	s.runtime = wazero.NewRuntime(ctx)
-	s.err = vfsInstantiate(ctx, s.runtime)
-	if s.err != nil {
-		return
-	}
+	vfsInstantiate(ctx, s.runtime)
 
 	bin := Binary
 	if bin == nil && Path != "" {

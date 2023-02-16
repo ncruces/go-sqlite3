@@ -17,13 +17,13 @@ type Stmt struct {
 //
 // https://www.sqlite.org/c3ref/finalize.html
 func (s *Stmt) Close() error {
-	if s == nil {
+	if s == nil || s.handle == 0 {
 		return nil
 	}
 
 	r, err := s.c.api.finalize.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	s.handle = 0
@@ -36,7 +36,7 @@ func (s *Stmt) Close() error {
 func (s *Stmt) Reset() error {
 	r, err := s.c.api.reset.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	s.err = nil
 	return s.c.error(r[0])
@@ -48,7 +48,7 @@ func (s *Stmt) Reset() error {
 func (s *Stmt) ClearBindings() error {
 	r, err := s.c.api.clearBindings.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }
@@ -65,8 +65,7 @@ func (s *Stmt) ClearBindings() error {
 func (s *Stmt) Step() bool {
 	r, err := s.c.api.step.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
-		s.err = err
-		return false
+		panic(err)
 	}
 	if r[0] == _ROW {
 		return true
@@ -136,7 +135,7 @@ func (s *Stmt) BindInt64(param int, value int64) error {
 	r, err := s.c.api.bindInteger.Call(s.c.ctx,
 		uint64(s.handle), uint64(param), uint64(value))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }
@@ -149,7 +148,7 @@ func (s *Stmt) BindFloat(param int, value float64) error {
 	r, err := s.c.api.bindFloat.Call(s.c.ctx,
 		uint64(s.handle), uint64(param), math.Float64bits(value))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }
@@ -165,7 +164,7 @@ func (s *Stmt) BindText(param int, value string) error {
 		uint64(ptr), uint64(len(value)),
 		s.c.api.destructor, _UTF8)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }
@@ -182,7 +181,7 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 		uint64(ptr), uint64(len(value)),
 		s.c.api.destructor)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }
@@ -195,7 +194,7 @@ func (s *Stmt) BindNull(param int) error {
 	r, err := s.c.api.bindNull.Call(s.c.ctx,
 		uint64(s.handle), uint64(param))
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return s.c.error(r[0])
 }

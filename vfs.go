@@ -18,12 +18,12 @@ import (
 	"github.com/tetratelabs/wazero/sys"
 )
 
-func vfsInstantiate(ctx context.Context, r wazero.Runtime) (err error) {
+func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 	wasi := r.NewHostModuleBuilder("wasi_snapshot_preview1")
 	wasi.NewFunctionBuilder().WithFunc(vfsExit).Export("proc_exit")
-	_, err = wasi.Instantiate(ctx)
+	_, err := wasi.Instantiate(ctx)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	env := r.NewHostModuleBuilder("env")
@@ -47,7 +47,9 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) (err error) {
 	env.NewFunctionBuilder().WithFunc(vfsCheckReservedLock).Export("go_check_reserved_lock")
 	env.NewFunctionBuilder().WithFunc(vfsFileControl).Export("go_file_control")
 	_, err = env.Instantiate(ctx)
-	return err
+	if err != nil {
+		panic(err)
+	}
 }
 
 func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
