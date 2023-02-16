@@ -3,7 +3,6 @@ package sqlite3
 import (
 	"context"
 	"math"
-	"time"
 )
 
 // Conn is a database connection handle.
@@ -15,10 +14,10 @@ type Conn struct {
 	mem    memory
 	handle uint32
 
-	arena     arena
-	stepping  chanMutex
-	interrupt context.Context
-	waiter    chan struct{}
+	arena   arena
+	pending *Stmt
+	waiter  chan struct{}
+	done    <-chan struct{}
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
@@ -46,7 +45,6 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		return nil, err
 	}
 	c.arena = c.newArena(1024)
-	c.stepping = newChanMutex()
 
 	defer c.arena.reset()
 	connPtr := c.arena.new(ptrlen)
@@ -76,7 +74,7 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
-	c.SetInterrupt(context.Background())
+	c.SetInterrupt(nil)
 
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
@@ -103,7 +101,7 @@ func (c *Conn) Close() error {
 //	defer cancel()
 //
 // https://www.sqlite.org/c3ref/interrupt.html
-func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
+func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 	// Is a waiter running?
 	if c.waiter != nil {
 		c.waiter <- struct{}{} // Cancel the waiter.
@@ -111,11 +109,21 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 		c.waiter = nil
 	}
 
-	old = c.interrupt
-	c.interrupt = ctx
-	if ctx == nil || ctx.Err() != nil || ctx == context.Background() || ctx == context.TODO() {
+	if c.pending != nil {
+		c.pending.Close()
+		c.pending = nil
+	}
+
+	old = c.done
+	c.done = done
+	if done == nil {
 		return old
 	}
+
+	// Creating an uncompleted SQL statement prevents SQLite from ignoring
+	// an interrupt that comes before any other statements are started.
+	c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
+	c.pending.Step()
 
 	waiter := make(chan struct{})
 	c.waiter = waiter
@@ -124,44 +132,23 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 		case <-waiter: // Waiter was cancelled.
 			break
 
-		case <-ctx.Done(): // Done was closed.
-			// Interrupt every millisecond to prevent the interrupt
-			// getting lost if no statemet was already running.
-			ticker := time.NewTicker(time.Millisecond)
-			defer ticker.Stop()
+		case <-done: // Done was closed.
 
-		retry:
-			for {
-				// This is safe to call from a goroutine
-				// because it doesn't touch the C stack.
-				_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
-				if err != nil {
-					panic(err)
-				}
-
-				select {
-				case <-waiter: // Waiter was cancelled.
-					break retry
-
-				case c.stepping <- struct{}{}: // Step has finished: Lock.
-					c.stepping.Unlock()
-					<-waiter // Wait for the next call to SetInterrupt.
-					break retry
-
-				case <-ticker.C:
-					continue retry
-				}
+			// This is safe to call from a goroutine
+			// because it doesn't touch the C stack.
+			_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
+			if err != nil {
+				panic(err)
 			}
+
+			// Wait for the next call to SetInterrupt.
+			<-waiter
 		}
 
 		// Signal that the waiter has finished.
 		waiter <- struct{}{}
 	}()
 	return old
-}
-
-func (c *Conn) interrupted() bool {
-	return c.interrupt != nil && c.interrupt.Err() != nil
 }
 
 // Exec is a convenience function that allows an application to run
@@ -171,12 +158,6 @@ func (c *Conn) interrupted() bool {
 func (c *Conn) Exec(sql string) error {
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
-
-	c.stepping.Lock()
-	defer c.stepping.Unlock()
-	if c.interrupted() {
-		return c.error(uint64(INTERRUPT))
-	}
 
 	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	if err != nil {
