@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math"
 	"testing"
-	"time"
 )
 
 func TestConn_Close(t *testing.T) {
@@ -68,9 +67,9 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.TODO())
 	db.SetInterrupt(ctx.Done())
-	defer cancel()
+	cancel()
 
 	var serr *Error
 
