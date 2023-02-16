@@ -2,7 +2,6 @@ package sqlite3
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"math"
 	"testing"
@@ -67,9 +66,9 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	db.SetInterrupt(ctx.Done())
-	cancel()
+	done := make(chan struct{})
+	close(done)
+	db.SetInterrupt(done)
 
 	var serr *Error
 

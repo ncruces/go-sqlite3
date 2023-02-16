@@ -109,6 +109,7 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		c.waiter = nil
 	}
 
+	// Finalize the uncompleted SQL statement.
 	if c.pending != nil {
 		c.pending.Close()
 		c.pending = nil
