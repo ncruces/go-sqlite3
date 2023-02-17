@@ -106,19 +106,19 @@ func albumsByArtist(name string) ([]Album, error) {
 
 	rows, err := db.Query("SELECT * FROM album WHERE artist = ?", name)
 	if err != nil {
-		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+		return nil, fmt.Errorf("albumsByArtist %q: %w", name, err)
 	}
 	defer rows.Close()
 	// Loop through rows, using Scan to assign column data to struct fields.
 	for rows.Next() {
 		var alb Album
 		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-			return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+			return nil, fmt.Errorf("albumsByArtist %q: %w", name, err)
 		}
 		albums = append(albums, alb)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+		return nil, fmt.Errorf("albumsByArtist %q: %w", name, err)
 	}
 	return albums, nil
 }
@@ -133,7 +133,7 @@ func albumByID(id int64) (Album, error) {
 		if err == sql.ErrNoRows {
 			return alb, fmt.Errorf("albumsById %d: no such album", id)
 		}
-		return alb, fmt.Errorf("albumsById %d: %v", id, err)
+		return alb, fmt.Errorf("albumsById %d: %w", id, err)
 	}
 	return alb, nil
 }
@@ -143,11 +143,11 @@ func albumByID(id int64) (Album, error) {
 func addAlbum(alb Album) (int64, error) {
 	result, err := db.Exec("INSERT INTO album (title, artist, price) VALUES (?, ?, ?)", alb.Title, alb.Artist, alb.Price)
 	if err != nil {
-		return 0, fmt.Errorf("addAlbum: %v", err)
+		return 0, fmt.Errorf("addAlbum: %w", err)
 	}
 	id, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("addAlbum: %v", err)
+		return 0, fmt.Errorf("addAlbum: %w", err)
 	}
 	return id, nil
 }

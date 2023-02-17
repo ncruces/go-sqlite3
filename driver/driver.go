@@ -157,11 +157,10 @@ func (r rows) Columns() []string {
 
 func (r rows) Next(dest []driver.Value) error {
 	if !r.s.Step() {
-		err := r.s.Err()
-		if err == nil {
-			return io.EOF
+		if err := r.s.Err(); err != nil {
+			return err
 		}
-		return err
+		return io.EOF
 	}
 
 	for i := range dest {
@@ -173,9 +172,14 @@ func (r rows) Next(dest []driver.Value) error {
 		case sqlite3.TEXT:
 			dest[i] = maybeDate(r.s.ColumnText(i))
 		case sqlite3.BLOB:
-			dest[i] = r.s.ColumnBlob(i, nil)
+			buf, _ := dest[i].([]byte)
+			dest[i] = r.s.ColumnBlob(i, buf)
 		case sqlite3.NULL:
-			dest[i] = nil
+			if buf, ok := dest[i].([]byte); ok {
+				dest[i] = buf[0:0]
+			} else {
+				dest[i] = nil
+			}
 		default:
 			panic(assertErr)
 		}
