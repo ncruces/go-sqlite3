@@ -14,5 +14,7 @@ Roadmap:
 - [x] `:memory:` databases
 - [x] port [`test_demovfs.c`](https://www.sqlite.org/src/doc/trunk/src/test_demovfs.c) to Go
   - branch [`wasi`](https://github.com/ncruces/go-sqlite3/tree/wasi) uses `test_demovfs.c` directly
-- [x] come up with a simple, nice API, enough for simple queries
+- [x] design a simple, nice API, enough for simple use cases
+- [x] minimal `database/sql` driver
 - [x] file locking, compatible with SQLite on Windows/Unix
+- [ ] shared memory, compatible with SQLite on Windows/Unix

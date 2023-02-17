@@ -205,6 +205,22 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	return
 }
 
+func (c *Conn) LastInsertRowID() uint64 {
+	r, err := c.api.lastRowid.Call(c.ctx, uint64(c.handle))
+	if err != nil {
+		panic(err)
+	}
+	return r[0]
+}
+
+func (c *Conn) Changes() uint64 {
+	r, err := c.api.changes.Call(c.ctx, uint64(c.handle))
+	if err != nil {
+		panic(err)
+	}
+	return r[0]
+}
+
 func (c *Conn) error(rc uint64, sql ...string) error {
 	if rc == _OK {
 		return nil

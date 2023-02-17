@@ -199,6 +199,36 @@ func (s *Stmt) BindNull(param int) error {
 	return s.c.error(r[0])
 }
 
+// ColumnCount returns the number of columns in a result set.
+//
+// https://www.sqlite.org/c3ref/column_count.html
+func (s *Stmt) ColumnCount() int {
+	r, err := s.c.api.columnCount.Call(s.c.ctx,
+		uint64(s.handle))
+	if err != nil {
+		panic(err)
+	}
+	return int(r[0])
+}
+
+// ColumnName returns the name of the result column.
+// The leftmost column of the result set has the index 0.
+//
+// https://www.sqlite.org/c3ref/column_name.html
+func (s *Stmt) ColumnName(col int) string {
+	r, err := s.c.api.columnName.Call(s.c.ctx,
+		uint64(s.handle), uint64(col))
+	if err != nil {
+		panic(err)
+	}
+
+	ptr := uint32(r[0])
+	if ptr == 0 {
+		return ""
+	}
+	return s.c.mem.readString(ptr, 512)
+}
+
 // ColumnType returns the initial [Datatype] of the result column.
 // The leftmost column of the result set has the index 0.
 //
