@@ -118,6 +118,10 @@ func (s stmt) Query(args []driver.Value) (driver.Rows, error) {
 			err = s.stmt.BindBlob(i+1, a)
 		case time.Time:
 			err = s.stmt.BindText(i+1, a.Format(time.RFC3339Nano))
+		case nil:
+			err = s.stmt.BindNull(i + 1)
+		default:
+			panic(assertErr)
 		}
 		if err != nil {
 			return nil, err
@@ -167,9 +171,13 @@ func (r rows) Next(dest []driver.Value) error {
 		case sqlite3.FLOAT:
 			dest[i] = r.s.ColumnFloat(i)
 		case sqlite3.TEXT:
-			dest[i] = r.s.ColumnText(i)
+			dest[i] = maybeDate(r.s.ColumnText(i))
 		case sqlite3.BLOB:
 			dest[i] = r.s.ColumnBlob(i, nil)
+		case sqlite3.NULL:
+			dest[i] = nil
+		default:
+			panic(assertErr)
 		}
 	}
 
