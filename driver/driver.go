@@ -2,7 +2,6 @@
 package driver
 
 import (
-	"context"
 	"database/sql"
 	"database/sql/driver"
 	"io"
@@ -22,14 +21,27 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	// If the database is not in WAL mode,
+	// use normal locking mode.
+	journal, err := pragma(c, "journal_mode")
+	if err != nil {
+		return nil, err
+	}
+	if journal != "wal" {
+		pragma(c, "locking_mode=normal")
+	}
 	return conn{c}, nil
 }
 
 type conn struct{ conn *sqlite3.Conn }
 
 var (
-	_ driver.Validator       = conn{}
-	_ driver.SessionResetter = conn{}
+	// Ensure these interfaces are implemented:
+	_ driver.Validator = conn{}
+	// _ driver.SessionResetter = conn{}
+	// _ driver.ExecerContext   = conn{}
+	// _ driver.QueryerContext  = conn{}
+	// _ driver.ConnBeginTx     = conn{}
 )
 
 func (c conn) Close() error {
@@ -37,11 +49,9 @@ func (c conn) Close() error {
 }
 
 func (c conn) IsValid() bool {
-	return false
-}
-
-func (c conn) ResetSession(ctx context.Context) error {
-	return driver.ErrBadConn
+	// Pool only normal locking mode connections.
+	mode, _ := pragma(c.conn, "locking_mode")
+	return mode == "normal"
 }
 
 func (c conn) Begin() (driver.Tx, error) {
@@ -72,10 +82,29 @@ func (c conn) Prepare(query string) (driver.Stmt, error) {
 	return stmt{s, c.conn}, nil
 }
 
+func pragma(c *sqlite3.Conn, pragma string) (string, error) {
+	stmt, _, err := c.Prepare(`PRAGMA ` + pragma)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+	if stmt.Step() {
+		return stmt.ColumnText(0), nil
+	}
+	return "", stmt.Err()
+}
+
 type stmt struct {
 	stmt *sqlite3.Stmt
 	conn *sqlite3.Conn
 }
+
+var (
+	// Ensure these interfaces are implemented:
+	// _ driver.StmtExecContext  = stmt{}
+	// _ driver.StmtQueryContext = stmt{}
+	_ = stmt{}
+)
 
 func (s stmt) Close() error {
 	return s.stmt.Close()
