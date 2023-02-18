@@ -18,7 +18,7 @@ func init() {
 type sqlite struct{}
 
 func (sqlite) Open(name string) (driver.Conn, error) {
-	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI)
+	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI|sqlite3.OPEN_EXRESCODE)
 	if err != nil {
 		return nil, err
 	}
@@ -38,10 +38,10 @@ type conn struct{ conn *sqlite3.Conn }
 
 var (
 	// Ensure these interfaces are implemented:
-	_ driver.Validator = conn{}
-	// _ driver.SessionResetter = conn{}
-	// _ driver.ExecerContext   = conn{}
+	_ driver.Validator     = conn{}
+	_ driver.ExecerContext = conn{}
 	// _ driver.ConnBeginTx     = conn{}
+	// _ driver.SessionResetter = conn{}
 )
 
 func (c conn) Close() error {
@@ -75,11 +75,42 @@ func (c conn) Rollback() error {
 }
 
 func (c conn) Prepare(query string) (driver.Stmt, error) {
-	s, _, err := c.conn.Prepare(query)
+	s, tail, err := c.conn.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
+	if tail != "" {
+		// Check if the tail contains any SQL.
+		s, _, err := c.conn.Prepare(tail)
+		if err != nil {
+			return nil, err
+		}
+		if s != nil {
+			s.Close()
+			return nil, tailErr
+		}
+	}
 	return stmt{s, c.conn}, nil
+}
+
+func (c conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if len(args) != 0 {
+		// Slow path.
+		return nil, driver.ErrSkip
+	}
+
+	ch := c.conn.SetInterrupt(ctx.Done())
+	defer c.conn.SetInterrupt(ch)
+
+	err := c.conn.Exec(query)
+	if err != nil {
+		return nil, err
+	}
+
+	return result{
+		int64(c.conn.LastInsertRowID()),
+		int64(c.conn.Changes()),
+	}, nil
 }
 
 func pragma(c *sqlite3.Conn, pragma string) (string, error) {

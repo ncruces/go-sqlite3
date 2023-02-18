@@ -66,18 +66,14 @@ type Album struct {
 }
 
 func setupDatabase() error {
-	_, err := db.Exec(`DROP TABLE IF EXISTS album`)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(`
+	_, err := db.Exec(`
+		DROP TABLE IF EXISTS album;
 		CREATE TABLE album (
 			id         INTEGER PRIMARY KEY AUTOINCREMENT,
 			title      VARCHAR(128) NOT NULL,
 			artist     VARCHAR(255) NOT NULL,
 			price      DECIMAL(5,2) NOT NULL
-		)
+		);
 	`)
 	if err != nil {
 		return err
