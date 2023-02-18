@@ -1,3 +1,4 @@
+// Package sqlite3 wraps the C SQLite API.
 package sqlite3
 
 import (

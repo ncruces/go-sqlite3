@@ -1,5 +1,7 @@
 package driver_test
 
+// Adapted from: https://go.dev/doc/tutorial/database-access
+
 import (
 	"database/sql"
 	"fmt"
@@ -12,9 +14,14 @@ import (
 
 var db *sql.DB
 
-func Example() {
-	// Adapted from: https://go.dev/doc/tutorial/database-access
+type Album struct {
+	ID     int64
+	Title  string
+	Artist string
+	Price  float32
+}
 
+func Example() {
 	// Get a database handle.
 	var err error
 	db, err = sql.Open("sqlite3", "./recordings.db")
@@ -24,7 +31,7 @@ func Example() {
 	defer db.Close()
 	defer os.Remove("./recordings.db")
 
-	err = setupDatabase()
+	err = createAlbumsTable()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,14 +65,7 @@ func Example() {
 	// ID of added album: 5
 }
 
-type Album struct {
-	ID     int64
-	Title  string
-	Artist string
-	Price  float32
-}
-
-func setupDatabase() error {
+func createAlbumsTable() error {
 	_, err := db.Exec(`
 		DROP TABLE IF EXISTS album;
 		CREATE TABLE album (

@@ -205,6 +205,10 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	return
 }
 
+// LastInsertRowID returns the rowid of the most recent successful INSERT
+// on the database connection.
+//
+// https://www.sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() uint64 {
 	r, err := c.api.lastRowid.Call(c.ctx, uint64(c.handle))
 	if err != nil {
@@ -213,6 +217,11 @@ func (c *Conn) LastInsertRowID() uint64 {
 	return r[0]
 }
 
+// Changes returns the number of rows modified, inserted or deleted
+// by the most recently completed INSERT, UPDATE or DELETE statement
+// on the database connection.
+//
+// https://www.sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() uint64 {
 	r, err := c.api.changes.Call(c.ctx, uint64(c.handle))
 	if err != nil {

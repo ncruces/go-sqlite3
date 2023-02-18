@@ -15,6 +15,9 @@ const (
 	ptrlen = 4
 )
 
+// ErrorCode is a result code that [Error.Code] might return.
+//
+// https://www.sqlite.org/rescode.html
 type ErrorCode uint8
 
 const (
@@ -48,6 +51,9 @@ const (
 	WARNING    ErrorCode = 28 /* Warnings from sqlite3_log() */
 )
 
+// ExtendedErrorCode is a result code that [Error.ExtendedCode] might return.
+//
+// https://www.sqlite.org/rescode.html
 type (
 	ExtendedErrorCode uint16
 	xErrorCode        = ExtendedErrorCode
@@ -129,6 +135,9 @@ const (
 	AUTH_USER               ExtendedErrorCode = xErrorCode(AUTH) | (1 << 8)
 )
 
+// OpenFlag is a flag for a file open operation.
+//
+// https://www.sqlite.org/c3ref/c_open_autoproxy.html
 type OpenFlag uint32
 
 const (
@@ -156,14 +165,17 @@ const (
 	OPEN_EXRESCODE     OpenFlag = 0x02000000 /* Extended result codes */
 )
 
-type AccessFlag uint32
+type _AccessFlag uint32
 
 const (
-	ACCESS_EXISTS    AccessFlag = 0
-	ACCESS_READWRITE AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
-	ACCESS_READ      AccessFlag = 2 /* Unused */
+	_ACCESS_EXISTS    _AccessFlag = 0
+	_ACCESS_READWRITE _AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
+	_ACCESS_READ      _AccessFlag = 2 /* Unused */
 )
 
+// PrepareFlag is a flag that can be passed to [Conn.PrepareFlags].
+//
+// https://www.sqlite.org/c3ref/c_prepare_normalize.html
 type PrepareFlag uint32
 
 const (
@@ -172,6 +184,9 @@ const (
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
 )
 
+// Datatype is a fundamental datatype of SQLite.
+//
+// https://www.sqlite.org/c3ref/c_blob.html
 type Datatype uint32
 
 const (

@@ -148,7 +148,7 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 	return _OK
 }
 
-func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags AccessFlag, pResOut uint32) uint32 {
+func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _AccessFlag, pResOut uint32) uint32 {
 	// Consider using [syscall.Access] for [ACCESS_READWRITE]/[ACCESS_READ]
 	// (as the Unix VFS does).
 
@@ -157,7 +157,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 
 	var res uint32
 	switch {
-	case flags == ACCESS_EXISTS:
+	case flags == _ACCESS_EXISTS:
 		switch {
 		case err == nil:
 			res = 1
@@ -169,7 +169,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 
 	case err == nil:
 		var want fs.FileMode = syscall.S_IRUSR
-		if flags == ACCESS_READWRITE {
+		if flags == _ACCESS_READWRITE {
 			want |= syscall.S_IWUSR
 		}
 		if fi.IsDir() {

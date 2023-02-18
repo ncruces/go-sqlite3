@@ -1,4 +1,4 @@
-package main
+package sqlite3_test
 
 import (
 	"fmt"
@@ -8,8 +8,10 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
-func main() {
-	db, err := sqlite3.Open(":memory:")
+const memory = ":memory:"
+
+func Example() {
+	db, err := sqlite3.Open(memory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,4 +47,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Output:
+	// 0 go
+	// 1 zig
+	// 2 whatever
 }

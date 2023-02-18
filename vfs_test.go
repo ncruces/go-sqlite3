@@ -166,7 +166,7 @@ func Test_vfsAccess(t *testing.T) {
 	mem := newMemory(128 + _MAX_PATHNAME)
 	mem.writeString(8, t.TempDir())
 
-	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, ACCESS_EXISTS, 4)
+	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_EXISTS, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -174,7 +174,7 @@ func Test_vfsAccess(t *testing.T) {
 		t.Error("directory did not exist")
 	}
 
-	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, ACCESS_READWRITE, 4)
+	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
