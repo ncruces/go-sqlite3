@@ -9,6 +9,7 @@ const (
 
 	_UTF8 = 1
 
+	_MAX_STRING   = 512 // Used for short strings: names, error messages…
 	_MAX_PATHNAME = 512
 
 	ptrlen = 4

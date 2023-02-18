@@ -366,3 +366,35 @@ func TestStmt_Close(t *testing.T) {
 	var stmt *Stmt
 	stmt.Close()
 }
+
+func TestStmt_BindName(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	want := []string{"", "", "", "", "?5", ":AAA", "@AAA", "$AAA"}
+	stmt, _, err := db.Prepare(`SELECT ?, ?5, :AAA, @AAA, $AAA`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if got := stmt.BindCount(); got != len(want) {
+		t.Errorf("got %d, want %d", got, len(want))
+	}
+
+	for i, name := range want {
+		id := i + 1
+		if got := stmt.BindName(id); got != name {
+			t.Errorf("got %q, want %q", got, name)
+		}
+		if name == "" {
+			id = 0
+		}
+		if got := stmt.BindIndex(name); got != id {
+			t.Errorf("got %d, want %d", got, id)
+		}
+	}
+}

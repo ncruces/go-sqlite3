@@ -236,12 +236,12 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 
 	r, _ = c.api.errstr.Call(c.ctx, rc)
 	if r != nil {
-		err.str = c.mem.readString(uint32(r[0]), 512)
+		err.str = c.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
 	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
 	if r != nil {
-		err.msg = c.mem.readString(uint32(r[0]), 512)
+		err.msg = c.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
 	if sql != nil {

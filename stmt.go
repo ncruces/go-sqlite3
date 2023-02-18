@@ -94,7 +94,7 @@ func (s *Stmt) Exec() error {
 	return s.Reset()
 }
 
-// BindCount gets the number of SQL parameters in a prepared statement.
+// BindCount returns the number of SQL parameters in the prepared statement.
 //
 // https://www.sqlite.org/c3ref/bind_parameter_count.html
 func (s *Stmt) BindCount() int {
@@ -104,6 +104,39 @@ func (s *Stmt) BindCount() int {
 		panic(err)
 	}
 	return int(r[0])
+}
+
+// BindIndex returns the index of a parameter in the prepared statement
+// given its name.
+//
+// https://www.sqlite.org/c3ref/bind_parameter_index.html
+func (s *Stmt) BindIndex(name string) int {
+	defer s.c.arena.reset()
+	namePtr := s.c.arena.string(name)
+	r, err := s.c.api.bindIndex.Call(s.c.ctx,
+		uint64(s.handle), uint64(namePtr))
+	if err != nil {
+		panic(err)
+	}
+	return int(r[0])
+}
+
+// BindName returns the name of a parameter in the prepared statement.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://www.sqlite.org/c3ref/bind_parameter_name.html
+func (s *Stmt) BindName(param int) string {
+	r, err := s.c.api.bindName.Call(s.c.ctx,
+		uint64(s.handle), uint64(param))
+	if err != nil {
+		panic(err)
+	}
+
+	ptr := uint32(r[0])
+	if ptr == 0 {
+		return ""
+	}
+	return s.c.mem.readString(ptr, _MAX_STRING)
 }
 
 // BindBool binds a bool to the prepared statement.
@@ -226,7 +259,7 @@ func (s *Stmt) ColumnName(col int) string {
 	if ptr == 0 {
 		return ""
 	}
-	return s.c.mem.readString(ptr, 512)
+	return s.c.mem.readString(ptr, _MAX_STRING)
 }
 
 // ColumnType returns the initial [Datatype] of the result column.

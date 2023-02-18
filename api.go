@@ -45,12 +45,14 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			exec:          getFun("sqlite3_exec"),
 			clearBindings: getFun("sqlite3_clear_bindings"),
 			bindCount:     getFun("sqlite3_bind_parameter_count"),
+			bindIndex:     getFun("sqlite3_bind_parameter_index"),
+			bindName:      getFun("sqlite3_bind_parameter_name"),
+			bindNull:      getFun("sqlite3_bind_null"),
 			bindInteger:   getFun("sqlite3_bind_int64"),
 			bindFloat:     getFun("sqlite3_bind_double"),
 			bindText:      getFun("sqlite3_bind_text64"),
 			bindBlob:      getFun("sqlite3_bind_blob64"),
 			bindZeroBlob:  getFun("sqlite3_bind_zeroblob64"),
-			bindNull:      getFun("sqlite3_bind_null"),
 			columnCount:   getFun("sqlite3_column_count"),
 			columnName:    getFun("sqlite3_column_name"),
 			columnType:    getFun("sqlite3_column_type"),
@@ -86,13 +88,15 @@ type sqliteAPI struct {
 	step          api.Function
 	exec          api.Function
 	clearBindings api.Function
+	bindNull      api.Function
 	bindCount     api.Function
+	bindIndex     api.Function
+	bindName      api.Function
 	bindInteger   api.Function
 	bindFloat     api.Function
 	bindText      api.Function
 	bindBlob      api.Function
 	bindZeroBlob  api.Function
-	bindNull      api.Function
 	columnCount   api.Function
 	columnName    api.Function
 	columnType    api.Function
