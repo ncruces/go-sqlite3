@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"io"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
@@ -18,30 +20,42 @@ func init() {
 type sqlite struct{}
 
 func (sqlite) Open(name string) (driver.Conn, error) {
+	u, err := url.Parse(name)
+	if err != nil {
+		return nil, err
+	}
 	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI|sqlite3.OPEN_EXRESCODE)
 	if err != nil {
 		return nil, err
 	}
-	// If the database is not in WAL mode,
-	// use normal locking mode.
-	journal, err := pragma(c, "journal_mode")
+	var pragmas strings.Builder
+	for _, p := range u.Query()["_pragma"] {
+		pragmas.WriteString(`PRAGMA `)
+		pragmas.WriteString(p)
+		pragmas.WriteByte(';')
+	}
+	if pragmas.Len() == 0 {
+		pragmas.WriteString(`PRAGMA locking_mode=normal;`)
+		pragmas.WriteString(`PRAGMA busy_timeout=60000;`)
+	}
+	err = c.Exec(pragmas.String())
 	if err != nil {
 		return nil, err
 	}
-	if journal != "wal" {
-		pragma(c, "locking_mode=normal")
-	}
-	return conn{c}, nil
+	return conn{c, pragmas.String()}, nil
 }
 
-type conn struct{ conn *sqlite3.Conn }
+type conn struct {
+	conn    *sqlite3.Conn
+	pragmas string
+}
 
 var (
 	// Ensure these interfaces are implemented:
-	_ driver.Validator     = conn{}
-	_ driver.ExecerContext = conn{}
+	_ driver.Validator       = conn{}
+	_ driver.SessionResetter = conn{}
+	_ driver.ExecerContext   = conn{}
 	// _ driver.ConnBeginTx     = conn{}
-	// _ driver.SessionResetter = conn{}
 )
 
 func (c conn) Close() error {
@@ -52,6 +66,10 @@ func (c conn) IsValid() bool {
 	// Pool only normal locking mode connections.
 	mode, _ := pragma(c.conn, "locking_mode")
 	return mode == "normal"
+}
+
+func (c conn) ResetSession(ctx context.Context) error {
+	return c.conn.Exec(c.pragmas)
 }
 
 func (c conn) Begin() (driver.Tx, error) {
