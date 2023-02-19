@@ -19,7 +19,7 @@ func Test_emptyStatement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := emptyStatement(tt.stmt); got != tt.want {
-				t.Errorf("emptyStatement(%q) = %v, want %v", tt.stmt, got, tt.want)
+				t.Errorf("got %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -29,6 +29,7 @@ func Fuzz_emptyStatement(f *testing.F) {
 	f.Add("")
 	f.Add(" ")
 	f.Add(";\n ")
+	f.Add("; ;\v")
 	f.Add("BEGIN")
 	f.Add("SELECT 1;")
 
@@ -41,12 +42,15 @@ func Fuzz_emptyStatement(f *testing.F) {
 	f.Fuzz(func(t *testing.T, sql string) {
 		// If empty, SQLite parses it as empty.
 		if emptyStatement(sql) {
-			stmt, _, err := db.Prepare(sql)
+			stmt, tail, err := db.Prepare(sql)
 			if err != nil {
-				t.Error(err)
+				t.Errorf("%q, %v", sql, err)
 			}
 			if stmt != nil {
-				t.Error(stmt)
+				t.Errorf("%q, %v", sql, stmt)
+			}
+			if tail != "" {
+				t.Errorf("%q", sql)
 			}
 			stmt.Close()
 		}

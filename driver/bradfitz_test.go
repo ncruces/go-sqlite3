@@ -144,6 +144,11 @@ func testTxQuery(t params) {
 func TestPreparedStmt_SQLite(t *testing.T) { sqlite.RunTest(t, testPreparedStmt) }
 
 func testPreparedStmt(t params) {
+	if testing.Short() {
+		t.Logf("skipping in short mode")
+		return
+	}
+
 	t.mustExec("CREATE TABLE " + TablePrefix + "t (count INT)")
 	sel, err := t.Prepare("SELECT count FROM " + TablePrefix + "t ORDER BY count DESC")
 	if err != nil {

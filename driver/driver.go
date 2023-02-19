@@ -20,34 +20,48 @@ func init() {
 type sqlite struct{}
 
 func (sqlite) Open(name string) (driver.Conn, error) {
-	u, err := url.Parse(name)
-	if err != nil {
-		return nil, err
-	}
 	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI|sqlite3.OPEN_EXRESCODE)
 	if err != nil {
 		return nil, err
 	}
+
+	var txBegin = "BEGIN "
 	var pragmas strings.Builder
-	for _, p := range u.Query()["_pragma"] {
-		pragmas.WriteString(`PRAGMA `)
-		pragmas.WriteString(p)
-		pragmas.WriteByte(';')
+	if _, after, ok := strings.Cut(name, "?"); ok {
+		query, _ := url.ParseQuery(after)
+
+		switch v := query.Get("_txlock"); v {
+		case "deferred", "immediate", "exclusive":
+			txBegin += v
+		}
+
+		for _, p := range query["_pragma"] {
+			pragmas.WriteString(`PRAGMA `)
+			pragmas.WriteString(p)
+			pragmas.WriteByte(';')
+		}
 	}
 	if pragmas.Len() == 0 {
 		pragmas.WriteString(`PRAGMA locking_mode=normal;`)
 		pragmas.WriteString(`PRAGMA busy_timeout=60000;`)
 	}
+
 	err = c.Exec(pragmas.String())
 	if err != nil {
 		return nil, err
 	}
-	return conn{c, pragmas.String()}, nil
+	return conn{
+		conn:    c,
+		txBegin: txBegin,
+		pragmas: pragmas.String(),
+	}, nil
 }
 
 type conn struct {
-	conn    *sqlite3.Conn
-	pragmas string
+	conn       *sqlite3.Conn
+	pragmas    string
+	txBegin    string
+	txRollback bool
 }
 
 var (
@@ -55,7 +69,7 @@ var (
 	_ driver.Validator       = conn{}
 	_ driver.SessionResetter = conn{}
 	_ driver.ExecerContext   = conn{}
-	// _ driver.ConnBeginTx     = conn{}
+	_ driver.ConnBeginTx     = conn{}
 )
 
 func (c conn) Close() error {
@@ -73,7 +87,27 @@ func (c conn) ResetSession(ctx context.Context) error {
 }
 
 func (c conn) Begin() (driver.Tx, error) {
-	err := c.conn.Exec(`BEGIN`)
+	return c.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	switch opts.Isolation {
+	default:
+		return nil, isolationErr
+	case driver.IsolationLevel(sql.LevelDefault):
+	case driver.IsolationLevel(sql.LevelSerializable):
+	}
+
+	txBegin := c.txBegin
+	if opts.ReadOnly {
+		txBegin = `
+			BEGIN DEFERRED;
+			PRAGMA query_only=on;
+		`
+	}
+	c.txRollback = opts.ReadOnly
+
+	err := c.conn.Exec(txBegin)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +115,9 @@ func (c conn) Begin() (driver.Tx, error) {
 }
 
 func (c conn) Commit() error {
+	if c.txRollback {
+		return c.Rollback()
+	}
 	err := c.conn.Exec(`COMMIT`)
 	if err != nil {
 		c.Rollback()
