@@ -15,6 +15,8 @@ type Stmt struct {
 
 // Close destroys the prepared statement object.
 //
+// It is safe to close a nil, zero or closed prepared statement.
+//
 // https://www.sqlite.org/c3ref/finalize.html
 func (s *Stmt) Close() error {
 	if s == nil || s.handle == 0 {

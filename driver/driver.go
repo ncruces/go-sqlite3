@@ -99,12 +99,14 @@ func (c conn) Prepare(query string) (driver.Stmt, error) {
 	}
 	if tail != "" {
 		// Check if the tail contains any SQL.
-		s, _, err := c.conn.Prepare(tail)
+		st, _, err := c.conn.Prepare(tail)
 		if err != nil {
+			s.Close()
 			return nil, err
 		}
-		if s != nil {
+		if st != nil {
 			s.Close()
+			st.Close()
 			return nil, tailErr
 		}
 	}

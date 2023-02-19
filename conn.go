@@ -68,6 +68,8 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 // open blob handles, and/or unfinished backup objects,
 // Close will leave the database connection open and return [BUSY].
 //
+// It is safe to close a nil, zero or closed connection.
+//
 // https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
 	if c == nil || c.handle == 0 {
@@ -179,6 +181,10 @@ func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 //
 // https://www.sqlite.org/c3ref/prepare.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
+	if emptyStatement(sql) {
+		return nil, "", nil
+	}
+
 	defer c.arena.reset()
 	stmtPtr := c.arena.new(ptrlen)
 	tailPtr := c.arena.new(ptrlen)
