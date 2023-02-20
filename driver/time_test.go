@@ -15,6 +15,10 @@ func Fuzz_maybeDate(f *testing.F) {
 	f.Add(time.DateTime)
 	f.Add(time.DateOnly)
 	f.Add(time.TimeOnly)
+	f.Add("2006-01-02T15:04:05Z")
+	f.Add("2006-01-02T15:04:05.000Z")
+	f.Add("2006-01-02T15:04:05.9999999999Z")
+	f.Add("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
 	f.Fuzz(func(t *testing.T, str string) {
 		value := maybeDate(str)

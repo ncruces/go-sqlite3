@@ -32,6 +32,10 @@ func testDB(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	changes := db.Changes()
+	if changes != 3 {
+		t.Errorf("got %d want 3", changes)
+	}
 
 	stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
 	if err != nil {
@@ -43,18 +47,22 @@ func testDB(t *testing.T, name string) {
 	ids := []int{0, 1, 2}
 	names := []string{"go", "zig", "whatever"}
 	for ; stmt.Step(); row++ {
-		if ids[row] != stmt.ColumnInt(0) {
-			t.Errorf("got %d, want %d", stmt.ColumnInt(0), ids[row])
+		id := stmt.ColumnInt(0)
+		name := stmt.ColumnText(1)
+
+		if id != ids[row] {
+			t.Errorf("got %d, want %d", id, ids[row])
 		}
-		if names[row] != stmt.ColumnText(1) {
-			t.Errorf("got %q, want %q", stmt.ColumnText(1), names[row])
+		if name != names[row] {
+			t.Errorf("got %q, want %q", name, names[row])
 		}
-	}
-	if err := stmt.Err(); err != nil {
-		t.Fatal(err)
 	}
 	if row != 3 {
-		t.Errorf("got %d rows, want %d", row, len(ids))
+		t.Errorf("got %d, want %d", row, len(ids))
+	}
+
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
 	}
 
 	err = stmt.Close()

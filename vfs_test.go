@@ -136,12 +136,12 @@ func Test_vfsFullPathname(t *testing.T) {
 }
 
 func Test_vfsDelete(t *testing.T) {
-	file, err := os.CreateTemp("", "sqlite3-")
+	name := filepath.Join(t.TempDir(), "test.db")
+
+	file, err := os.Create(name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := file.Name()
-	defer os.RemoveAll(name)
 	file.Close()
 
 	mem := newMemory(128 + _MAX_PATHNAME)

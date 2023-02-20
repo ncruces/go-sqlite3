@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 )
@@ -16,15 +17,14 @@ func Test_vfsLock(t *testing.T) {
 		t.Skip()
 	}
 
+	name := filepath.Join(t.TempDir(), "test.db")
+
 	// Create a temporary file.
-	file1, err := os.CreateTemp("", "sqlite3-")
+	file1, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file1.Close()
-
-	name := file1.Name()
-	defer os.RemoveAll(name)
 
 	// Open the temporary file again.
 	file2, err := os.OpenFile(name, os.O_RDWR, 0)

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -44,7 +45,11 @@ func TestMultiProcess(t *testing.T) {
 
 	testParallel(t, name, 1000)
 	if err := cmd.Wait(); err != nil {
-		t.Fatal(err)
+		t.Error(err)
+		var eerr *exec.ExitError
+		if errors.As(err, &eerr) {
+			t.Error(eerr.Stderr)
+		}
 	}
 	testIntegrity(t, name)
 }

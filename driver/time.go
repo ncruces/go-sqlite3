@@ -12,16 +12,14 @@ import (
 func maybeDate(text string) driver.Value {
 	// Weed out (some) values that can't possibly be
 	// [time.RFC3339Nano] timestamps.
-	if len(text) < len("2006-01-02T15:04:05") {
+	if len(text) < len("2006-01-02T15:04:05Z") {
+		return text
+	}
+	if len(text) > len(time.RFC3339Nano) {
 		return text
 	}
 	if text[4] != '-' || text[10] != 'T' || text[16] != ':' {
 		return text
-	}
-	for _, c := range []byte(text[:4]) {
-		if c < '0' || '9' < c {
-			return text
-		}
 	}
 
 	// Slow path.

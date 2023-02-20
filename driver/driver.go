@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -48,7 +49,7 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 
 	err = c.Exec(pragmas.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
 	}
 	return conn{
 		conn:    c,
@@ -61,7 +62,7 @@ type conn struct {
 	conn       *sqlite3.Conn
 	pragmas    string
 	txBegin    string
-	txRollback bool
+	txReadOnly bool
 }
 
 var (
@@ -101,11 +102,11 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 	txBegin := c.txBegin
 	if opts.ReadOnly {
 		txBegin = `
-			BEGIN DEFERRED;
+			BEGIN deferred;
 			PRAGMA query_only=on;
 		`
 	}
-	c.txRollback = opts.ReadOnly
+	c.txReadOnly = opts.ReadOnly
 
 	err := c.conn.Exec(txBegin)
 	if err != nil {
@@ -115,7 +116,7 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 }
 
 func (c conn) Commit() error {
-	if c.txRollback {
+	if c.txReadOnly {
 		return c.Rollback()
 	}
 	err := c.conn.Exec(`COMMIT`)
@@ -198,7 +199,13 @@ func (s stmt) Close() error {
 }
 
 func (s stmt) NumInput() int {
-	return s.stmt.BindCount()
+	n := s.stmt.BindCount()
+	for i := 1; i <= n; i++ {
+		if s.stmt.BindName(i) != "" {
+			return -1
+		}
+	}
+	return n
 }
 
 // Deprecated: use ExecContext instead.

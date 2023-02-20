@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"testing"
 )
 
@@ -51,7 +52,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	db.SetInterrupt(ctx.Done())
 
 	// Interrupt doesn't interrupt this.
@@ -137,6 +138,26 @@ func TestConn_Prepare_Empty(t *testing.T) {
 
 	if stmt != nil {
 		t.Error("want nil")
+	}
+}
+
+func TestConn_Prepare_Tail(t *testing.T) {
+	t.Parallel()
+
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, tail, err := db.Prepare(`SELECT 1; -- HERE`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if !strings.Contains(tail, "-- HERE") {
+		t.Errorf("got %q", tail)
 	}
 }
 
