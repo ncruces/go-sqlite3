@@ -78,7 +78,8 @@ func Test_Open_pragma_invalid(t *testing.T) {
 }
 
 func Test_Open_txLock(t *testing.T) {
-	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "test.db")+
+	db, err := sql.Open("sqlite3", "file:"+
+		filepath.Join(t.TempDir(), "test.db")+
 		"?_txlock=exclusive&_pragma=busy_timeout(0)")
 	if err != nil {
 		t.Fatal(err)
@@ -101,6 +102,10 @@ func Test_Open_txLock(t *testing.T) {
 	if rc := serr.Code(); rc != sqlite3.BUSY {
 		t.Errorf("got %d, want sqlite3.BUSY", rc)
 	}
+	var terr interface{ Temporary() bool }
+	if !errors.As(err, &terr) || !terr.Temporary() {
+		t.Error("not temporary", err)
+	}
 	if got := err.Error(); got != `sqlite3: database is locked` {
 		t.Error("got message: ", got)
 	}
@@ -108,6 +113,22 @@ func Test_Open_txLock(t *testing.T) {
 	err = tx1.Commit()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func Test_Open_txLock_invalid(t *testing.T) {
+	db, err := sql.Open("sqlite3", "file::memory:?_txlock=xclusive")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Conn(context.TODO())
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if got := err.Error(); got != `sqlite3: invalid _txlock: xclusive` {
+		t.Error("got message: ", got)
 	}
 }
 
@@ -122,7 +143,7 @@ func Test_BeginTx(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err != isolationErr {
+	if err.Error() != string(isolationErr) {
 		t.Error("want isolationErr")
 	}
 
@@ -205,7 +226,7 @@ func Test_Prepare(t *testing.T) {
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT 2`)
-	if err != tailErr {
+	if err.Error() != string(tailErr) {
 		t.Error("want tailErr")
 	}
 }

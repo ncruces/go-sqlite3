@@ -26,14 +26,18 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 		return nil, err
 	}
 
-	var txBegin = "BEGIN "
+	var txBegin string
 	var pragmas strings.Builder
 	if _, after, ok := strings.Cut(name, "?"); ok {
 		query, _ := url.ParseQuery(after)
 
-		switch v := query.Get("_txlock"); v {
+		switch s := query.Get("_txlock"); s {
+		case "":
+			txBegin = "BEGIN"
 		case "deferred", "immediate", "exclusive":
-			txBegin += v
+			txBegin = "BEGIN " + s
+		default:
+			return nil, fmt.Errorf("sqlite3: invalid _txlock: %s", s)
 		}
 
 		for _, p := range query["_pragma"] {
@@ -219,6 +223,8 @@ func (s stmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	// Use QueryContext to setup bindings.
+	// No need to close rows: that simply resets the statement, exec does the same.
 	_, err := s.QueryContext(ctx, args)
 	if err != nil {
 		return nil, err

@@ -50,6 +50,11 @@ func (e *Error) Error() string {
 	return b.String()
 }
 
+// Temporary returns true for [BUSY] errors.
+func (e *Error) Temporary() bool {
+	return e.Code() == BUSY
+}
+
 // SQL returns the SQL starting at the token that triggered a syntax error.
 func (e *Error) SQL() string {
 	return e.sql
@@ -60,6 +65,7 @@ type errorString string
 func (e errorString) Error() string { return string(e) }
 
 const (
+	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
 	nilErr      = errorString("sqlite3: invalid memory address or null pointer dereference")
 	oomErr      = errorString("sqlite3: out of memory")
 	rangeErr    = errorString("sqlite3: index out of range")

@@ -49,6 +49,10 @@ func (s *sqlite3Runtime) compileModule(ctx context.Context) {
 			return
 		}
 	}
+	if bin == nil {
+		s.err = binaryErr
+		return
+	}
 
 	s.compiled, s.err = s.runtime.CompileModule(ctx, bin)
 }

@@ -40,6 +40,10 @@ func TestConn_Close_BUSY(t *testing.T) {
 	if rc := serr.Code(); rc != BUSY {
 		t.Errorf("got %d, want sqlite3.BUSY", rc)
 	}
+	var terr interface{ Temporary() bool }
+	if !errors.As(err, &terr) || !terr.Temporary() {
+		t.Error("not temporary", err)
+	}
 	if got := err.Error(); got != `sqlite3: database is locked: unable to close due to unfinalized statements or unfinished backups` {
 		t.Error("got message: ", got)
 	}
