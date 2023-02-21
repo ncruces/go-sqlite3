@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"math"
 	"testing"
+	"time"
 )
 
 func TestStmt(t *testing.T) {
@@ -395,6 +396,66 @@ func TestStmt_BindName(t *testing.T) {
 		}
 		if got := stmt.BindIndex(name); got != id {
 			t.Errorf("got %d, want %d", got, id)
+		}
+	}
+}
+
+func TestStmt_Time(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT ?, ?, ?, datetime(), unixepoch(), julianday(), NULL, 'abc'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
+	err = stmt.BindTime(1, reference, TimeFormat4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = stmt.BindTime(2, reference, TimeFormatUnixMilli)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = stmt.BindTime(3, reference, TimeFormatJulianDay)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if now := time.Now(); stmt.Step() {
+		if got := stmt.ColumnTime(0, TimeFormatAuto); !reference.Equal(got) {
+			t.Errorf("got %v, want %v", got, reference)
+		}
+		if got := stmt.ColumnTime(1, TimeFormatAuto); !reference.Equal(got) {
+			t.Errorf("got %v, want %v", got, reference)
+		}
+		if got := stmt.ColumnTime(2, TimeFormatAuto); reference.Sub(got) > time.Millisecond {
+			t.Errorf("got %v, want %v", got, reference)
+		}
+
+		if got := stmt.ColumnTime(3, TimeFormatAuto); now.Sub(got) > time.Second {
+			t.Errorf("got %v, want %v", got, now)
+		}
+		if got := stmt.ColumnTime(4, TimeFormatAuto); now.Sub(got) > time.Second {
+			t.Errorf("got %v, want %v", got, now)
+		}
+		if got := stmt.ColumnTime(5, TimeFormatAuto); now.Sub(got) > time.Millisecond {
+			t.Errorf("got %v, want %v", got, now)
+		}
+
+		if got := stmt.ColumnTime(6, TimeFormatAuto); got != (time.Time{}) {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnTime(7, TimeFormatAuto); got != (time.Time{}) {
+			t.Errorf("got %v, want zero", got)
+		}
+		if stmt.Err() == nil {
+			t.Errorf("want error")
 		}
 	}
 }

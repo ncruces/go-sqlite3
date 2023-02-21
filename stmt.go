@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"math"
+	"time"
 )
 
 // Stmt is a prepared statement object.
@@ -234,6 +235,24 @@ func (s *Stmt) BindNull(param int) error {
 	return s.c.error(r[0])
 }
 
+// BindTime binds a [time.Time] to the prepared statement.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://www.sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
+	switch v := format.Encode(value).(type) {
+	case string:
+		s.BindText(param, v)
+	case int64:
+		s.BindInt64(param, v)
+	case float64:
+		s.BindFloat(param, v)
+	default:
+		panic(assertErr())
+	}
+	return nil
+}
+
 // ColumnCount returns the number of columns in a result set.
 //
 // https://www.sqlite.org/c3ref/column_count.html
@@ -259,7 +278,7 @@ func (s *Stmt) ColumnName(col int) string {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		return ""
+		panic(oomErr)
 	}
 	return s.c.mem.readString(ptr, _MAX_STRING)
 }
@@ -323,6 +342,31 @@ func (s *Stmt) ColumnFloat(col int) float64 {
 		panic(err)
 	}
 	return math.Float64frombits(r[0])
+}
+
+// ColumnTime returns the value of the result column as a [time.Time].
+// The leftmost column of the result set has the index 0.
+//
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnTime(col int, format TimeFormat) time.Time {
+	var v any
+	switch s.ColumnType(col) {
+	case INTEGER:
+		v = s.ColumnInt64(col)
+	case FLOAT:
+		v = s.ColumnFloat(col)
+	case TEXT, BLOB:
+		v = s.ColumnText(col)
+	case NULL:
+		return time.Time{}
+	default:
+		panic(assertErr())
+	}
+	t, err := format.Decode(v)
+	if err != nil {
+		s.err = err
+	}
+	return t
 }
 
 // ColumnText returns the value of the result column as a string.

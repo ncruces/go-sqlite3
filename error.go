@@ -72,6 +72,7 @@ const (
 	noNulErr    = errorString("sqlite3: missing NUL terminator")
 	noGlobalErr = errorString("sqlite3: could not find global: ")
 	noFuncErr   = errorString("sqlite3: could not find function: ")
+	timeErr     = errorString("sqlite3: invalid time value")
 )
 
 func assertErr() errorString {
