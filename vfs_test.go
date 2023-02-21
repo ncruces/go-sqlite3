@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -163,8 +164,19 @@ func Test_vfsDelete(t *testing.T) {
 }
 
 func Test_vfsAccess(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(t.TempDir(), "test.db")
+	if f, err := os.Create(file); err != nil {
+		t.Fatal(err)
+	} else {
+		f.Close()
+	}
+	if err := os.Chmod(file, syscall.S_IRUSR); err != nil {
+		t.Fatal(err)
+	}
+
 	mem := newMemory(128 + _MAX_PATHNAME)
-	mem.writeString(8, t.TempDir())
+	mem.writeString(8, dir)
 
 	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_EXISTS, 4)
 	if rc != _OK {
@@ -180,6 +192,15 @@ func Test_vfsAccess(t *testing.T) {
 	}
 	if got := mem.readUint32(4); got != 1 {
 		t.Error("can't access directory")
+	}
+
+	mem.writeString(8, file)
+	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_READWRITE, 4)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := mem.readUint32(4); got != 0 {
+		t.Error("can access file")
 	}
 }
 

@@ -83,8 +83,12 @@ func (c conn) Close() error {
 
 func (c conn) IsValid() bool {
 	// Pool only normal locking mode connections.
-	mode, _ := pragma(c.conn, "locking_mode")
-	return mode == "normal"
+	stmt, _, err := c.conn.Prepare(`PRAGMA locking_mode`)
+	if err != nil {
+		return false
+	}
+	defer stmt.Close()
+	return stmt.Step() && stmt.ColumnText(0) == "normal"
 }
 
 func (c conn) ResetSession(ctx context.Context) error {
@@ -173,18 +177,6 @@ func (c conn) ExecContext(ctx context.Context, query string, args []driver.Named
 		int64(c.conn.LastInsertRowID()),
 		int64(c.conn.Changes()),
 	}, nil
-}
-
-func pragma(c *sqlite3.Conn, pragma string) (string, error) {
-	stmt, _, err := c.Prepare(`PRAGMA ` + pragma)
-	if err != nil {
-		return "", err
-	}
-	defer stmt.Close()
-	if stmt.Step() {
-		return stmt.ColumnText(0), nil
-	}
-	return "", stmt.Err()
 }
 
 type stmt struct {

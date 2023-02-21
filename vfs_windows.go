@@ -39,27 +39,39 @@ func (l *vfsFileLocker) GetExclusive() xErrorCode {
 }
 
 func (l *vfsFileLocker) Downgrade() xErrorCode {
-	// Release the SHARED lock.
-	l.unlock(_SHARED_FIRST, _SHARED_SIZE)
+	if l.state >= _EXCLUSIVE_LOCK {
+		// Release the SHARED lock.
+		l.unlock(_SHARED_FIRST, _SHARED_SIZE)
 
-	// Reacquire the SHARED lock.
-	if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
-		// This should never happen.
-		// We should always be able to reacquire the read lock.
-		return IOERR_RDLOCK
+		// Reacquire the SHARED lock.
+		if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
+			// This should never happen.
+			// We should always be able to reacquire the read lock.
+			return IOERR_RDLOCK
+		}
 	}
 
 	// Release the PENDING and RESERVED locks.
-	l.unlock(_RESERVED_BYTE, 1)
-	l.unlock(_PENDING_BYTE, 1)
+	if l.state >= _RESERVED_LOCK {
+		l.unlock(_RESERVED_BYTE, 1)
+	}
+	if l.state >= _PENDING_LOCK {
+		l.unlock(_PENDING_BYTE, 1)
+	}
 	return _OK
 }
 
 func (l *vfsFileLocker) Release() xErrorCode {
 	// Release all locks.
-	l.unlock(_SHARED_FIRST, _SHARED_SIZE)
-	l.unlock(_RESERVED_BYTE, 1)
-	l.unlock(_PENDING_BYTE, 1)
+	if l.state >= _RESERVED_LOCK {
+		l.unlock(_RESERVED_BYTE, 1)
+	}
+	if l.state >= _SHARED_LOCK {
+		l.unlock(_SHARED_FIRST, _SHARED_SIZE)
+	}
+	if l.state >= _PENDING_LOCK {
+		l.unlock(_PENDING_BYTE, 1)
+	}
 	return _OK
 }
 

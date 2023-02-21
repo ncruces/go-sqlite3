@@ -242,8 +242,9 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 	// Release the file lock only when all connections have released the lock.
 	ptr.SetLock(_NO_LOCK)
 	if fLock.shared--; fLock.shared == 0 {
+		rc := fLock.Release()
 		fLock.state = _NO_LOCK
-		return uint32(fLock.Release())
+		return uint32(rc)
 	}
 	return _OK
 }

@@ -33,16 +33,17 @@ func (l *vfsFileLocker) GetExclusive() xErrorCode {
 }
 
 func (l *vfsFileLocker) Downgrade() xErrorCode {
-	// Downgrade to a SHARED lock.
-	if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
-		// In theory, the downgrade to a SHARED cannot fail because another
-		// process is holding an incompatible lock. If it does, this
-		// indicates that the other process is not following the locking
-		// protocol. If this happens, return IOERR_RDLOCK. Returning
-		// BUSY would confuse the upper layer.
-		return IOERR_RDLOCK
+	if l.state >= _EXCLUSIVE_LOCK {
+		// Downgrade to a SHARED lock.
+		if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
+			// In theory, the downgrade to a SHARED cannot fail because another
+			// process is holding an incompatible lock. If it does, this
+			// indicates that the other process is not following the locking
+			// protocol. If this happens, return IOERR_RDLOCK. Returning
+			// BUSY would confuse the upper layer.
+			return IOERR_RDLOCK
+		}
 	}
-
 	// Release the PENDING and RESERVED locks.
 	return l.unlock(_PENDING_BYTE, 2)
 }
