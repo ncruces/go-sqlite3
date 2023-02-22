@@ -59,8 +59,12 @@ const (
 // [TimeFormatDefault] and [TimeFormatAuto] encode using [time.RFC3339Nano],
 // with nanosecond accuracy, and preserving timezone.
 //
-// Formats that don't record the timezone
+// Formats [TimeFormat1] through [TimeFormat10]
 // convert time values to UTC before encoding.
+//
+// Returns a string for the text formats,
+// a float64 for [TimeFormatJulianDay] and [TimeFormatUnixFrac],
+// or an int64 for the other numeric formats.
 //
 // https://www.sqlite.org/lang_datefunc.html
 func (f TimeFormat) Encode(t time.Time) any {
@@ -81,11 +85,13 @@ func (f TimeFormat) Encode(t time.Time) any {
 	// Special formats
 	case TimeFormatDefault, TimeFormatAuto:
 		f = time.RFC3339Nano
-	}
 	// SQLite assumes UTC if unspecified.
-	if !strings.Contains(string(f), "MST") &&
-		!strings.Contains(string(f), "Z07") &&
-		!strings.Contains(string(f), "-07") {
+	case
+		TimeFormat1, TimeFormat2,
+		TimeFormat3, TimeFormat4,
+		TimeFormat5, TimeFormat6,
+		TimeFormat7, TimeFormat8,
+		TimeFormat9, TimeFormat10:
 		t = t.UTC()
 	}
 	return t.Format(string(f))
@@ -93,8 +99,19 @@ func (f TimeFormat) Encode(t time.Time) any {
 
 // Decode decodes a time value using this format.
 //
-// Decoding of SQLite recognized formats is lenient:
-// timezones and fractional seconds are always optional.
+// The time value can be a string, an int64, or a float64.
+//
+// Formats [TimeFormat8] through [TimeFormat10]
+// assume a date of 2000-01-01.
+//
+// The timezone indicator and fractional seconds are always optional
+// for formats [TimeFormat2] through [TimeFormat10].
+//
+// [TimeFormatAuto] implements (and extends) the SQLite auto modifier.
+// The julian day number is safe to use for historical dates,
+// from 4712BC through 9999AD.
+// Unix timestamps (expressed in seconds, milliseconds, microseconds, or nanoseconds),
+// are safe to use for current events, from 1980 through at least 2260.
 //
 // https://www.sqlite.org/lang_datefunc.html
 func (f TimeFormat) Decode(v any) (time.Time, error) {
@@ -263,14 +280,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		if !ok {
 			return time.Time{}, timeErr
 		}
-		f := string(f)
-		f = strings.TrimSuffix(f, "Z07:00")
-		f = strings.TrimSuffix(f, ".000")
-		t, err := time.Parse(f+"Z07:00", s)
-		if err != nil {
-			t, err = time.Parse(f, s)
-		}
-		return t, err
+		return f.parseRelaxed(s)
 
 	case
 		TimeFormat8, TimeFormat8TZ,
@@ -280,13 +290,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		if !ok {
 			return time.Time{}, timeErr
 		}
-		f := string(f)
-		f = strings.TrimSuffix(f, "Z07:00")
-		f = strings.TrimSuffix(f, ".000")
-		t, err := time.Parse(f+"Z07:00", s)
-		if err != nil {
-			t, err = time.Parse(f, s)
-		}
+		t, err := f.parseRelaxed(s)
 		return t.AddDate(2000, 0, 0), err
 
 	default:
@@ -294,10 +298,20 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		if !ok {
 			return time.Time{}, timeErr
 		}
-		f := string(f)
 		if f == "" {
 			f = time.RFC3339Nano
 		}
-		return time.Parse(f, s)
+		return time.Parse(string(f), s)
 	}
+}
+
+func (f TimeFormat) parseRelaxed(s string) (time.Time, error) {
+	fs := string(f)
+	fs = strings.TrimSuffix(fs, "Z07:00")
+	fs = strings.TrimSuffix(fs, ".000")
+	t, err := time.Parse(fs+"Z07:00", s)
+	if err != nil {
+		return time.Parse(fs, s)
+	}
+	return t, nil
 }

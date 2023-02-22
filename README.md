@@ -6,8 +6,7 @@
 
 ⚠️ CAUTION ⚠️
 
-This is a WIP.\
-DO NOT USE with data you care about.
+This is a WIP.
 
 Roadmap:
 - [x] build SQLite using `zig cc --target=wasm32-wasi`
@@ -19,8 +18,10 @@ Roadmap:
 - [x] file locking, compatible with SQLite on Windows/Unix
 - [ ] shared memory, compatible with SQLite on Windows/Unix
   - needed for improved WAL mode
-- [ ] advanced features
+- [ ] advanced SQLite features
+  - [ ] nested transactions
   - [ ] incremental BLOB I/O
   - [ ] online backup
   - [ ] session extension
-  - [ ] snapshot
+  - [ ] snapshots
+  - [ ] SQL functions
