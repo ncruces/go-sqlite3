@@ -1,4 +1,4 @@
-package compile_empty
+package compile
 
 import (
 	"testing"

@@ -197,6 +197,7 @@ const (
 	NULL    Datatype = 5
 )
 
+// String implements the [fmt.Stringer] interface.
 func (t Datatype) String() string {
 	const name = "INTEGERFLOATTEXTBLOBNULL"
 	switch t {

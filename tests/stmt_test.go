@@ -1,15 +1,17 @@
-package sqlite3
+package tests
 
 import (
 	"math"
 	"testing"
 	"time"
+
+	"github.com/ncruces/go-sqlite3"
 )
 
 func TestStmt(t *testing.T) {
 	t.Parallel()
 
-	db, err := Open(":memory:")
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,103 +32,80 @@ func TestStmt(t *testing.T) {
 		t.Errorf("got %d, want 1", got)
 	}
 
-	err = stmt.BindBool(1, false)
-	if err != nil {
+	if err := stmt.BindBool(1, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.BindBool(1, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.ClearBindings()
-	if err != nil {
+	if err := stmt.BindInt(1, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err = stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.BindFloat(1, math.Pi); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.BindBool(1, true)
-	if err != nil {
+	if err := stmt.BindNull(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.BindText(1, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.BindInt(1, 2)
-	if err != nil {
+	if err := stmt.BindText(1, "text"); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.BindBlob(1, []byte("blob")); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.BindFloat(1, math.Pi)
-	if err != nil {
+	if err := stmt.BindBlob(1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.BindZeroBlob(1, 4); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = stmt.BindNull(1)
-	if err != nil {
+	if err := stmt.ClearBindings(); err != nil {
 		t.Fatal(err)
 	}
-
-	err = stmt.Exec()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.BindText(1, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.Exec()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.BindText(1, "text")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.Exec()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.BindBlob(1, []byte("blob"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.Exec()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.BindBlob(1, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = stmt.Exec()
-	if err != nil {
+	if err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,7 +114,7 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The table should have: 0, NULL, 1, 2, π, NULL, "", "text", `blob`, NULL
+	// The table should have: 0, 1, 2, π, NULL, "", "text", "blob", NULL, "\0\0\0\0", NULL
 	stmt, _, err = db.Prepare(`SELECT col FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +122,7 @@ func TestStmt(t *testing.T) {
 	defer stmt.Close()
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != INTEGER {
+		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -164,28 +143,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != NULL {
-			t.Errorf("got %v, want NULL", got)
-		}
-		if got := stmt.ColumnBool(0); got != false {
-			t.Errorf("got %v, want false", got)
-		}
-		if got := stmt.ColumnInt(0); got != 0 {
-			t.Errorf("got %v, want zero", got)
-		}
-		if got := stmt.ColumnFloat(0); got != 0 {
-			t.Errorf("got %v, want zero", got)
-		}
-		if got := stmt.ColumnText(0); got != "" {
-			t.Errorf("got %q, want empty", got)
-		}
-		if got := stmt.ColumnBlob(0, nil); got != nil {
-			t.Errorf("got %q, want nil", got)
-		}
-	}
-
-	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != INTEGER {
+		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
 		if got := stmt.ColumnBool(0); got != true {
@@ -206,7 +164,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != INTEGER {
+		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
 		if got := stmt.ColumnBool(0); got != true {
@@ -227,7 +185,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != FLOAT {
+		if got := stmt.ColumnType(0); got != sqlite3.FLOAT {
 			t.Errorf("got %v, want FLOAT", got)
 		}
 		if got := stmt.ColumnBool(0); got != true {
@@ -248,7 +206,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != NULL {
+		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Errorf("got %v, want NULL", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -269,7 +227,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != TEXT {
+		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -290,7 +248,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != TEXT {
+		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -311,7 +269,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != BLOB {
+		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -332,7 +290,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != NULL {
+		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Errorf("got %v, want NULL", got)
 		}
 		if got := stmt.ColumnBool(0); got != false {
@@ -352,24 +310,66 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	err = stmt.Close()
-	if err != nil {
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
+			t.Errorf("got %v, want BLOB", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "\x00\x00\x00\x00" {
+			t.Errorf(`got %q, want "\x00\x00\x00\x00"`, got)
+		}
+		if got := stmt.ColumnBlob(0, nil); string(got) != "\x00\x00\x00\x00" {
+			t.Errorf(`got %q, want "\x00\x00\x00\x00"`, got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.NULL {
+			t.Errorf("got %v, want NULL", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+		if got := stmt.ColumnBlob(0, nil); got != nil {
+			t.Errorf("got %q, want nil", got)
+		}
+	}
+
+	if err := stmt.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = db.Close()
-	if err != nil {
+	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestStmt_Close(t *testing.T) {
-	var stmt *Stmt
+	var stmt *sqlite3.Stmt
 	stmt.Close()
 }
 
 func TestStmt_BindName(t *testing.T) {
-	db, err := Open(":memory:")
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +401,9 @@ func TestStmt_BindName(t *testing.T) {
 }
 
 func TestStmt_Time(t *testing.T) {
-	db, err := Open(":memory:")
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,44 +416,44 @@ func TestStmt_Time(t *testing.T) {
 	defer stmt.Close()
 
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
-	err = stmt.BindTime(1, reference, TimeFormat4)
+	err = stmt.BindTime(1, reference, sqlite3.TimeFormat4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = stmt.BindTime(2, reference, TimeFormatUnixMilli)
+	err = stmt.BindTime(2, reference, sqlite3.TimeFormatUnixMilli)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = stmt.BindTime(3, reference, TimeFormatJulianDay)
+	err = stmt.BindTime(3, reference, sqlite3.TimeFormatJulianDay)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if now := time.Now(); stmt.Step() {
-		if got := stmt.ColumnTime(0, TimeFormatAuto); !reference.Equal(got) {
+		if got := stmt.ColumnTime(0, sqlite3.TimeFormatAuto); !reference.Equal(got) {
 			t.Errorf("got %v, want %v", got, reference)
 		}
-		if got := stmt.ColumnTime(1, TimeFormatAuto); !reference.Equal(got) {
+		if got := stmt.ColumnTime(1, sqlite3.TimeFormatAuto); !reference.Equal(got) {
 			t.Errorf("got %v, want %v", got, reference)
 		}
-		if got := stmt.ColumnTime(2, TimeFormatAuto); reference.Sub(got) > time.Millisecond {
+		if got := stmt.ColumnTime(2, sqlite3.TimeFormatAuto); reference.Sub(got) > time.Millisecond {
 			t.Errorf("got %v, want %v", got, reference)
 		}
 
-		if got := stmt.ColumnTime(3, TimeFormatAuto); now.Sub(got) > time.Second {
+		if got := stmt.ColumnTime(3, sqlite3.TimeFormatAuto); now.Sub(got) > time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(4, TimeFormatAuto); now.Sub(got) > time.Second {
+		if got := stmt.ColumnTime(4, sqlite3.TimeFormatAuto); now.Sub(got) > time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(5, TimeFormatAuto); now.Sub(got) > time.Millisecond {
+		if got := stmt.ColumnTime(5, sqlite3.TimeFormatAuto); now.Sub(got) > time.Millisecond {
 			t.Errorf("got %v, want %v", got, now)
 		}
 
-		if got := stmt.ColumnTime(6, TimeFormatAuto); got != (time.Time{}) {
+		if got := stmt.ColumnTime(6, sqlite3.TimeFormatAuto); got != (time.Time{}) {
 			t.Errorf("got %v, want zero", got)
 		}
-		if got := stmt.ColumnTime(7, TimeFormatAuto); got != (time.Time{}) {
+		if got := stmt.ColumnTime(7, sqlite3.TimeFormatAuto); got != (time.Time{}) {
 			t.Errorf("got %v, want zero", got)
 		}
 		if stmt.Err() == nil {

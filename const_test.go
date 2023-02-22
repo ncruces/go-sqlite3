@@ -3,6 +3,8 @@ package sqlite3
 import "testing"
 
 func TestDatatype_String(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		data Datatype
 		want string

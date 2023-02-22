@@ -19,3 +19,8 @@ Roadmap:
 - [x] file locking, compatible with SQLite on Windows/Unix
 - [ ] shared memory, compatible with SQLite on Windows/Unix
   - needed for improved WAL mode
+- [ ] advanced features
+  - [ ] incremental BLOB I/O
+  - [ ] online backup
+  - [ ] session extension
+  - [ ] snapshot

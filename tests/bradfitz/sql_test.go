@@ -1,10 +1,13 @@
-package driver_test
+package bradfitz
+
+// Adapted from: https://github.com/bradfitz/go-sql-test
 
 import (
 	"database/sql"
 	"fmt"
 	"math/rand"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -37,11 +40,6 @@ func (t params) mustExec(sql string, args ...interface{}) sql.Result {
 	return res
 }
 
-// q converts "?" characters to $1, $2, $n on postgres, :1, :2, :n on Oracle
-func (t params) q(sql string) string {
-	return sql
-}
-
 func (sqliteDB) RunTest(t *testing.T, fn func(params)) {
 	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "foo.db"))
 	if err != nil {
@@ -53,21 +51,17 @@ func (sqliteDB) RunTest(t *testing.T, fn func(params)) {
 	}
 }
 
-func sqlBlobParam(t params, size int) string {
-	return fmt.Sprintf("blob[%d]", size)
-}
-
 func TestBlobs_SQLite(t *testing.T) { sqlite.RunTest(t, testBlobs) }
 
 func testBlobs(t params) {
 	var blob = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-	t.mustExec("create table " + TablePrefix + "foo (id integer primary key, bar " + sqlBlobParam(t, 16) + ")")
-	t.mustExec(t.q("insert into "+TablePrefix+"foo (id, bar) values(?,?)"), 0, blob)
+	t.mustExec("create table " + TablePrefix + "foo (id integer primary key, bar blob)")
+	t.mustExec("insert into "+TablePrefix+"foo (id, bar) values(?,?)", 0, blob)
 
 	want := fmt.Sprintf("%x", blob)
 
 	b := make([]byte, 16)
-	err := t.QueryRow(t.q("select bar from "+TablePrefix+"foo where id = ?"), 0).Scan(&b)
+	err := t.QueryRow("select bar from "+TablePrefix+"foo where id = ?", 0).Scan(&b)
 	got := fmt.Sprintf("%x", b)
 	if err != nil {
 		t.Errorf("[]byte scan: %v", err)
@@ -75,7 +69,7 @@ func testBlobs(t params) {
 		t.Errorf("for []byte, got %q; want %q", got, want)
 	}
 
-	err = t.QueryRow(t.q("select bar from "+TablePrefix+"foo where id = ?"), 0).Scan(&got)
+	err = t.QueryRow("select bar from "+TablePrefix+"foo where id = ?", 0).Scan(&got)
 	want = string(blob)
 	if err != nil {
 		t.Errorf("string scan: %v", err)
@@ -88,14 +82,13 @@ func TestManyQueryRow_SQLite(t *testing.T) { sqlite.RunTest(t, testManyQueryRow)
 
 func testManyQueryRow(t params) {
 	if testing.Short() {
-		t.Logf("skipping in short mode")
-		return
+		t.Skip("skipping in short mode")
 	}
 	t.mustExec("create table " + TablePrefix + "foo (id integer primary key, name varchar(50))")
-	t.mustExec(t.q("insert into "+TablePrefix+"foo (id, name) values(?,?)"), 1, "bob")
+	t.mustExec("insert into "+TablePrefix+"foo (id, name) values(?,?)", 1, "bob")
 	var name string
 	for i := 0; i < 10000; i++ {
-		err := t.QueryRow(t.q("select name from "+TablePrefix+"foo where id = ?"), 1).Scan(&name)
+		err := t.QueryRow("select name from "+TablePrefix+"foo where id = ?", 1).Scan(&name)
 		if err != nil || name != "bob" {
 			t.Fatalf("on query %d: err=%v, name=%q", i, err, name)
 		}
@@ -116,12 +109,12 @@ func testTxQuery(t params) {
 		t.Logf("cannot drop table "+TablePrefix+"foo: %s", err)
 	}
 
-	_, err = tx.Exec(t.q("insert into "+TablePrefix+"foo (id, name) values(?,?)"), 1, "bob")
+	_, err = tx.Exec("insert into "+TablePrefix+"foo (id, name) values(?,?)", 1, "bob")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r, err := tx.Query(t.q("select name from "+TablePrefix+"foo where id = ?"), 1)
+	r, err := tx.Query("select name from "+TablePrefix+"foo where id = ?", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,8 +138,7 @@ func TestPreparedStmt_SQLite(t *testing.T) { sqlite.RunTest(t, testPreparedStmt)
 
 func testPreparedStmt(t params) {
 	if testing.Short() {
-		t.Logf("skipping in short mode")
-		return
+		t.Skip("skipping in short mode")
 	}
 
 	t.mustExec("CREATE TABLE " + TablePrefix + "t (count INT)")
@@ -154,7 +146,7 @@ func testPreparedStmt(t params) {
 	if err != nil {
 		t.Fatalf("prepare 1: %v", err)
 	}
-	ins, err := t.Prepare(t.q("INSERT INTO " + TablePrefix + "t (count) VALUES (?)"))
+	ins, err := t.Prepare("INSERT INTO " + TablePrefix + "t (count) VALUES (?)")
 	if err != nil {
 		t.Fatalf("prepare 2: %v", err)
 	}
@@ -166,12 +158,11 @@ func testPreparedStmt(t params) {
 	}
 
 	const nRuns = 10
-	ch := make(chan bool)
+	var wg sync.WaitGroup
 	for i := 0; i < nRuns; i++ {
+		wg.Add(1)
 		go func() {
-			defer func() {
-				ch <- true
-			}()
+			defer wg.Done()
 			for j := 0; j < 10; j++ {
 				count := 0
 				if err := sel.QueryRow().Scan(&count); err != nil && err != sql.ErrNoRows {
@@ -185,7 +176,5 @@ func testPreparedStmt(t params) {
 			}
 		}()
 	}
-	for i := 0; i < nRuns; i++ {
-		<-ch
-	}
+	wg.Wait()
 }

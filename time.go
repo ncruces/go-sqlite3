@@ -14,6 +14,9 @@ import (
 // https://www.sqlite.org/lang_datefunc.html
 type TimeFormat string
 
+// TimeFormats recognized by SQLite to encode/decode time values.
+//
+// https://www.sqlite.org/lang_datefunc.html
 const (
 	TimeFormatDefault TimeFormat = "" // time.RFC3339Nano
 
@@ -43,9 +46,9 @@ const (
 	TimeFormatJulianDay TimeFormat = "julianday"
 	TimeFormatUnix      TimeFormat = "unixepoch"
 	TimeFormatUnixFrac  TimeFormat = "unixepoch_frac"
-	TimeFormatUnixMilli TimeFormat = "unixepoch_milli"
-	TimeFormatUnixMicro TimeFormat = "unixepoch_micro"
-	TimeFormatUnixNano  TimeFormat = "unixepoch_nano"
+	TimeFormatUnixMilli TimeFormat = "unixepoch_milli" // not an SQLite format
+	TimeFormatUnixMicro TimeFormat = "unixepoch_micro" // not an SQLite format
+	TimeFormatUnixNano  TimeFormat = "unixepoch_nano"  // not an SQLite format
 
 	// Auto
 	TimeFormatAuto TimeFormat = "auto"
@@ -54,7 +57,10 @@ const (
 // Encode encodes a time value using this format.
 //
 // [TimeFormatDefault] and [TimeFormatAuto] encode using [time.RFC3339Nano],
-// preserving timezone, with nanosecond accuracy.
+// with nanosecond accuracy, and preserving timezone.
+//
+// Formats that don't record the timezone
+// convert time values to UTC before encoding.
 //
 // https://www.sqlite.org/lang_datefunc.html
 func (f TimeFormat) Encode(t time.Time) any {
@@ -65,7 +71,7 @@ func (f TimeFormat) Encode(t time.Time) any {
 	case TimeFormatUnix:
 		return t.Unix()
 	case TimeFormatUnixFrac:
-		return float64(t.Unix()) + float64(t.Nanosecond())/1_000_000_000
+		return float64(t.Unix()) + float64(t.Nanosecond())*1e-9
 	case TimeFormatUnixMilli:
 		return t.UnixMilli()
 	case TimeFormatUnixMicro:
@@ -77,13 +83,18 @@ func (f TimeFormat) Encode(t time.Time) any {
 		f = time.RFC3339Nano
 	}
 	// SQLite assumes UTC if unspecified.
-	if !strings.Contains(string(f), "Z07") && !strings.Contains(string(f), "-07") {
+	if !strings.Contains(string(f), "MST") &&
+		!strings.Contains(string(f), "Z07") &&
+		!strings.Contains(string(f), "-07") {
 		t = t.UTC()
 	}
 	return t.Format(string(f))
 }
 
 // Decode decodes a time value using this format.
+//
+// Decoding of SQLite recognized formats is lenient:
+// timezones and fractional seconds are always optional.
 //
 // https://www.sqlite.org/lang_datefunc.html
 func (f TimeFormat) Decode(v any) (time.Time, error) {
@@ -112,7 +123,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		switch v := v.(type) {
 		case float64:
 			sec, frac := math.Modf(v)
-			nsec := math.Floor(frac * 1_000_000_000)
+			nsec := math.Floor(frac * 1e9)
 			return time.Unix(int64(sec), int64(nsec)), nil
 		case int64:
 			return time.Unix(v, 0), nil
@@ -130,7 +141,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.UnixMilli(int64(v)), nil
+			return time.UnixMilli(int64(math.Floor(v))), nil
 		case int64:
 			return time.UnixMilli(int64(v)), nil
 		default:
@@ -147,7 +158,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.UnixMicro(int64(v)), nil
+			return time.UnixMicro(int64(math.Floor(v))), nil
 		case int64:
 			return time.UnixMicro(int64(v)), nil
 		default:
@@ -164,7 +175,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.Unix(0, int64(v)), nil
+			return time.Unix(0, int64(math.Floor(v))), nil
 		case int64:
 			return time.Unix(0, int64(v)), nil
 		default:

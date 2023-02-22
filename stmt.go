@@ -222,6 +222,19 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 	return s.c.error(r[0])
 }
 
+// BindZeroBlob binds a zero-filled, length n BLOB to the prepared statement.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://www.sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindZeroBlob(param int, n int64) error {
+	r, err := s.c.api.bindZeroBlob.Call(s.c.ctx,
+		uint64(s.handle), uint64(param), uint64(n))
+	if err != nil {
+		panic(err)
+	}
+	return s.c.error(r[0])
+}
+
 // BindNull binds a NULL to the prepared statement.
 // The leftmost SQL parameter has an index of 1.
 //

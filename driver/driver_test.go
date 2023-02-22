@@ -157,7 +157,7 @@ func Test_BeginTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = tx1.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+	_, err = tx1.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -308,5 +308,41 @@ func Test_QueryRow_blob_null(t *testing.T) {
 		if !bytes.Equal(buf, want[i]) {
 			t.Errorf("got %q, want %q", buf, want[i])
 		}
+	}
+}
+
+func Test_ZeroBlob(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = conn.ExecContext(ctx, `INSERT INTO test(col) VALUES(?)`, sqlite3.ZeroBlob(4))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got []byte
+	err = conn.QueryRowContext(ctx, `SELECT col FROM test`).Scan(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "\x00\x00\x00\x00" {
+		t.Errorf(`got %q, want "\x00\x00\x00\x00"`, got)
 	}
 }

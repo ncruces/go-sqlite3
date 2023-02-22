@@ -22,7 +22,7 @@ func TestParallel(t *testing.T) {
 
 func TestMultiProcess(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip()
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
@@ -57,7 +57,7 @@ func TestMultiProcess(t *testing.T) {
 func TestChildProcess(t *testing.T) {
 	name := os.Getenv("TestMultiProcess_dbname")
 	if name == "" || testing.Short() {
-		return
+		t.SkipNow()
 	}
 
 	testParallel(t, name, 1000)

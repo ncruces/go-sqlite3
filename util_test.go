@@ -5,6 +5,8 @@ import (
 )
 
 func Test_emptyStatement(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		stmt string

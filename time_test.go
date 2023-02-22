@@ -7,6 +7,8 @@ import (
 )
 
 func TestTimeFormat_Encode(t *testing.T) {
+	t.Parallel()
+
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 
 	tests := []struct {
@@ -33,6 +35,8 @@ func TestTimeFormat_Encode(t *testing.T) {
 }
 
 func TestTimeFormat_Decode(t *testing.T) {
+	t.Parallel()
+
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 	reftime := time.Date(2000, 1, 1, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 

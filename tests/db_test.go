@@ -17,6 +17,8 @@ func TestDB_file(t *testing.T) {
 }
 
 func testDB(t *testing.T, name string) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(name)
 	if err != nil {
 		t.Fatal(err)

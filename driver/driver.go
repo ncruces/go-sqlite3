@@ -186,8 +186,9 @@ type stmt struct {
 
 var (
 	// Ensure these interfaces are implemented:
-	_ driver.StmtExecContext  = stmt{}
-	_ driver.StmtQueryContext = stmt{}
+	_ driver.StmtExecContext   = stmt{}
+	_ driver.StmtQueryContext  = stmt{}
+	_ driver.NamedValueChecker = stmt{}
 )
 
 func (s stmt) Close() error {
@@ -256,6 +257,8 @@ func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (drive
 			switch a := arg.Value.(type) {
 			case bool:
 				err = s.stmt.BindBool(id, a)
+			case int:
+				err = s.stmt.BindInt(id, a)
 			case int64:
 				err = s.stmt.BindInt64(id, a)
 			case float64:
@@ -264,6 +267,8 @@ func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (drive
 				err = s.stmt.BindText(id, a)
 			case []byte:
 				err = s.stmt.BindBlob(id, a)
+			case sqlite3.ZeroBlob:
+				err = s.stmt.BindZeroBlob(id, int64(a))
 			case time.Time:
 				err = s.stmt.BindText(id, a.Format(time.RFC3339Nano))
 			case nil:
@@ -278,6 +283,16 @@ func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (drive
 	}
 
 	return rows{ctx, s.stmt, s.conn}, nil
+}
+
+func (s stmt) CheckNamedValue(arg *driver.NamedValue) error {
+	switch arg.Value.(type) {
+	case bool, int, int64, float64, string, []byte,
+		sqlite3.ZeroBlob, time.Time, nil:
+		return nil
+	default:
+		return driver.ErrSkip
+	}
 }
 
 type result struct{ lastInsertId, rowsAffected int64 }

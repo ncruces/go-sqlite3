@@ -1,4 +1,4 @@
-package compile_empty
+package compile
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
-func TestCompile_empty(t *testing.T) {
+func TestCompile_missing(t *testing.T) {
 	sqlite3.Path = "sqlite3.wasm"
 	_, err := sqlite3.Open(":memory:")
 	if err == nil {
