@@ -47,8 +47,8 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 		}
 	}
 	if pragmas.Len() == 0 {
-		pragmas.WriteString(`PRAGMA locking_mode=normal;`)
 		pragmas.WriteString(`PRAGMA busy_timeout=60000;`)
+		pragmas.WriteString(`PRAGMA locking_mode=normal;`)
 	}
 
 	err = c.Exec(pragmas.String())
@@ -58,41 +58,23 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 	return conn{
 		conn:    c,
 		txBegin: txBegin,
-		pragmas: pragmas.String(),
 	}, nil
 }
 
 type conn struct {
 	conn       *sqlite3.Conn
-	pragmas    string
 	txBegin    string
 	txReadOnly bool
 }
 
 var (
 	// Ensure these interfaces are implemented:
-	_ driver.Validator       = conn{}
-	_ driver.SessionResetter = conn{}
-	_ driver.ExecerContext   = conn{}
-	_ driver.ConnBeginTx     = conn{}
+	_ driver.ExecerContext = conn{}
+	_ driver.ConnBeginTx   = conn{}
 )
 
 func (c conn) Close() error {
 	return c.conn.Close()
-}
-
-func (c conn) IsValid() bool {
-	// Pool only normal locking mode connections.
-	stmt, _, err := c.conn.Prepare(`PRAGMA locking_mode`)
-	if err != nil {
-		return false
-	}
-	defer stmt.Close()
-	return stmt.Step() && stmt.ColumnText(0) == "normal"
-}
-
-func (c conn) ResetSession(ctx context.Context) error {
-	return c.conn.Exec(c.pragmas)
 }
 
 func (c conn) Begin() (driver.Tx, error) {

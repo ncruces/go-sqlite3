@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -16,7 +15,7 @@ import (
 
 func TestParallel(t *testing.T) {
 	name := filepath.Join(t.TempDir(), "test.db")
-	testParallel(t, name, 100)
+	testParallel(t, name, 1000)
 	testIntegrity(t, name)
 }
 
@@ -46,10 +45,6 @@ func TestMultiProcess(t *testing.T) {
 	testParallel(t, name, 1000)
 	if err := cmd.Wait(); err != nil {
 		t.Error(err)
-		var eerr *exec.ExitError
-		if errors.As(err, &eerr) {
-			t.Error(eerr.Stderr)
-		}
 	}
 	testIntegrity(t, name)
 }
@@ -72,8 +67,10 @@ func testParallel(t *testing.T, name string, n int) {
 		defer db.Close()
 
 		err = db.Exec(`
-			PRAGMA locking_mode = NORMAL;
-			PRAGMA busy_timeout = 10000;
+			PRAGMA busy_timeout=10000;
+			PRAGMA synchronous=off;
+			PRAGMA locking_mode=normal;
+			PRAGMA journal_mode=truncate;
 		`)
 		if err != nil {
 			return err
@@ -100,8 +97,8 @@ func testParallel(t *testing.T, name string, n int) {
 		defer db.Close()
 
 		err = db.Exec(`
-			PRAGMA locking_mode = NORMAL;
-			PRAGMA busy_timeout = 10000;
+			PRAGMA busy_timeout=10000;
+			PRAGMA locking_mode=normal;
 		`)
 		if err != nil {
 			return err
@@ -148,7 +145,7 @@ func testParallel(t *testing.T, name string, n int) {
 	}
 	err = group.Wait()
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 }
 

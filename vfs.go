@@ -223,12 +223,15 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		deleteOnClose(file)
 	}
 
-	info, err := file.Stat()
-	if err != nil {
-		return uint32(CANTOPEN)
-	}
-	if info.IsDir() {
-		return uint32(CANTOPEN_ISDIR)
+	var info fs.FileInfo
+	if flags&OPEN_MAIN_DB != 0 {
+		info, err = file.Stat()
+		if err != nil {
+			return uint32(CANTOPEN)
+		}
+		if info.IsDir() {
+			return uint32(CANTOPEN_ISDIR)
+		}
 	}
 	id := vfsGetOpenFileID(file, info)
 	vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)

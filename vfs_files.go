@@ -24,14 +24,16 @@ func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 {
 	defer vfsOpenFilesMtx.Unlock()
 
 	// Reuse an already opened file.
-	for id, of := range vfsOpenFiles {
-		if of == nil {
-			continue
-		}
-		if os.SameFile(info, of.info) {
-			of.nref++
-			_ = file.Close()
-			return uint32(id)
+	if info != nil {
+		for id, of := range vfsOpenFiles {
+			if of == nil {
+				continue
+			}
+			if os.SameFile(info, of.info) {
+				of.nref++
+				_ = file.Close()
+				return uint32(id)
+			}
 		}
 	}
 
