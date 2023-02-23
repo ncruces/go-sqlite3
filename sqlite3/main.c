@@ -7,8 +7,8 @@ int main() {
   if (rc != SQLITE_OK) return 1;
 }
 
-sqlite3_vfs *os_vfs();
+sqlite3_vfs *sqlite3_demovfs();
 
 int sqlite3_os_init() {
-  return sqlite3_vfs_register(os_vfs(), /*default=*/true);
+  return sqlite3_vfs_register(sqlite3_demovfs(), /*default=*/true);
 }

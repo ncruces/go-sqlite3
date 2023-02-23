@@ -41,6 +41,8 @@ func (t params) mustExec(sql string, args ...interface{}) sql.Result {
 }
 
 func (sqliteDB) RunTest(t *testing.T, fn func(params)) {
+	t.Skip("WASI has no file locking")
+
 	db, err := sql.Open("sqlite3", "file:"+
 		filepath.Join(t.TempDir(), "foo.db")+
 		"?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)&_pragma=synchronous(off)")

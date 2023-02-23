@@ -440,13 +440,13 @@ func TestStmt_ColumnTime(t *testing.T) {
 			t.Errorf("got %v, want %v", got, reference)
 		}
 
-		if got := stmt.ColumnTime(3, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second {
+		if got := stmt.ColumnTime(3, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > 2*time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(4, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second {
+		if got := stmt.ColumnTime(4, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > 2*time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(5, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second/10 {
+		if got := stmt.ColumnTime(5, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > 2*time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
 

@@ -1,5 +1,3 @@
-#include <time.h>
-
 // Platform Configuration
 
 #define SQLITE_OS_OTHER 1
@@ -10,7 +8,6 @@
 
 #define HAVE_ISNAN 1
 #define HAVE_USLEEP 1
-#define HAVE_LOCALTIME_S 1
 #define HAVE_MALLOC_USABLE_SIZE 1
 
 // Recommended Options
@@ -55,6 +52,3 @@
 
 // Resumable Bulk Update Extension
 // #define SQLITE_ENABLE_RBU 1
-
-// Implemented in Go.
-int localtime_s(struct tm *const pTm, time_t const *const pTime);

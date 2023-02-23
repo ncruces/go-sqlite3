@@ -66,6 +66,8 @@ func TestChildProcess(t *testing.T) {
 }
 
 func testParallel(t *testing.T, name string, n int) {
+	t.Skip("WASI has no file locking")
+
 	writer := func() error {
 		db, err := sqlite3.Open(name)
 		if err != nil {

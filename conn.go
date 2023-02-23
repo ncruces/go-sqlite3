@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
 	"unsafe"
 
+	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -48,7 +50,15 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 
 func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	ctx := context.Background()
-	module, err := sqlite3.instantiateModule(ctx)
+
+	var fs wazero.FSConfig
+	if filename != "" && filename != ":memory:" {
+		dir := filepath.Dir(filename)
+		filename = filepath.Base(filename)
+		fs = wazero.NewFSConfig().WithDirMount(dir, ".")
+	}
+
+	module, err := sqlite3.instantiateModule(ctx, fs)
 	if err != nil {
 		return nil, err
 	}

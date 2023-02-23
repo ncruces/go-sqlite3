@@ -11,3 +11,8 @@ if [ ! -f "sqlite3.c" ]; then
 	rm -rf sqlite-amalgamation-*
 	rm sqlite.zip
 fi
+
+if [ ! -f "test_demovfs.c" ]; then
+	url="https://github.com/sqlite/sqlite/raw/master/src/test_demovfs.c"
+	curl -sL "$url" > "test_demovfs.c"
+fi

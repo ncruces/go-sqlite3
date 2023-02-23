@@ -11,6 +11,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
 // Configure SQLite WASM.
@@ -34,7 +35,7 @@ type sqlite3Runtime struct {
 	err       error
 }
 
-func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, error) {
+func (s *sqlite3Runtime) instantiateModule(ctx context.Context, fs wazero.FSConfig) (api.Module, error) {
 	s.once.Do(func() { s.compileModule(ctx) })
 	if s.err != nil {
 		return nil, s.err
@@ -44,13 +45,14 @@ func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, err
 		WithName("sqlite3-" + strconv.FormatUint(s.instances.Add(1), 10)).
 		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
 		WithOsyield(runtime.Gosched).
-		WithRandSource(rand.Reader)
+		WithRandSource(rand.Reader).
+		WithFSConfig(fs)
 	return s.runtime.InstantiateModule(ctx, s.compiled, cfg)
 }
 
 func (s *sqlite3Runtime) compileModule(ctx context.Context) {
 	s.runtime = wazero.NewRuntime(ctx)
-	vfsInstantiate(ctx, s.runtime)
+	wasi_snapshot_preview1.MustInstantiate(ctx, s.runtime)
 
 	bin := Binary
 	if bin == nil && Path != "" {

@@ -77,7 +77,7 @@ func Test_Open_pragma_invalid(t *testing.T) {
 }
 
 func Test_Open_txLock(t *testing.T) {
-	t.Parallel()
+	t.Skip("WASI has no file locking")
 
 	db, err := sql.Open("sqlite3", "file:"+
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+

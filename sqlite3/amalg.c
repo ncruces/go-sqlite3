@@ -1,7 +1,7 @@
 #include <stddef.h>
 
 #include "main.c"
-#include "os.c"
+#include "test_demovfs.c"
 #include "qsort.c"
 #include "sqlite3.c"
 
