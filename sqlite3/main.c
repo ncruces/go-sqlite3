@@ -71,7 +71,6 @@ static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
       .xUnlock = go_unlock,
       .xCheckReservedLock = go_check_reserved_lock,
       .xFileControl = no_file_control,
-      .xSectorSize = no_sector_size,
       .xDeviceCharacteristics = no_device_characteristics,
   };
   int rc = go_open(vfs, zName, file, flags, pOutFlags);
