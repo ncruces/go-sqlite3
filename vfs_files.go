@@ -7,68 +7,35 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-type vfsOpenFile struct {
-	file   *os.File
-	info   os.FileInfo
-	nref   int
-	locker vfsFileLocker
-}
-
 var (
-	vfsOpenFiles    []*vfsOpenFile
+	vfsOpenFiles    []*os.File
 	vfsOpenFilesMtx sync.Mutex
 )
 
-func vfsGetOpenFileID(file *os.File, info os.FileInfo) uint32 {
+func vfsGetFileID(file *os.File) uint32 {
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
-
-	// Reuse an already opened file.
-	if info != nil {
-		for id, of := range vfsOpenFiles {
-			if of == nil {
-				continue
-			}
-			if os.SameFile(info, of.info) {
-				of.nref++
-				_ = file.Close()
-				return uint32(id)
-			}
-		}
-	}
-
-	of := &vfsOpenFile{
-		file:   file,
-		info:   info,
-		nref:   1,
-		locker: vfsFileLocker{file: file},
-	}
 
 	// Find an empty slot.
 	for id, ptr := range vfsOpenFiles {
 		if ptr == nil {
-			vfsOpenFiles[id] = of
+			vfsOpenFiles[id] = file
 			return uint32(id)
 		}
 	}
 
 	// Add a new slot.
-	id := len(vfsOpenFiles)
-	vfsOpenFiles = append(vfsOpenFiles, of)
-	return uint32(id)
+	vfsOpenFiles = append(vfsOpenFiles, file)
+	return uint32(len(vfsOpenFiles) - 1)
 }
 
-func vfsReleaseOpenFile(id uint32) error {
+func vfsCloseFile(id uint32) error {
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
 
-	of := vfsOpenFiles[id]
-	if of.nref--; of.nref > 0 {
-		return nil
-	}
-	err := of.file.Close()
+	file := vfsOpenFiles[id]
 	vfsOpenFiles[id] = nil
-	return err
+	return file.Close()
 }
 
 type vfsFilePtr struct {
@@ -80,14 +47,7 @@ func (p vfsFilePtr) OSFile() *os.File {
 	id := p.ID()
 	vfsOpenFilesMtx.Lock()
 	defer vfsOpenFilesMtx.Unlock()
-	return vfsOpenFiles[id].file
-}
-
-func (p vfsFilePtr) Locker() *vfsFileLocker {
-	id := p.ID()
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
-	return &vfsOpenFiles[id].locker
+	return vfsOpenFiles[id]
 }
 
 func (p vfsFilePtr) ID() uint32 {

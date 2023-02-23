@@ -52,6 +52,10 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 	}
 }
 
+type vfsOSMethods bool
+
+const vfsOS vfsOSMethods = false
+
 func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
 	// Ensure other callers see the exit code.
 	_ = mod.CloseWithExitCode(ctx, exitCode)
@@ -220,20 +224,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 	}
 
 	if flags&OPEN_DELETEONCLOSE != 0 {
-		deleteOnClose(file)
+		vfsOS.DeleteOnClose(file)
 	}
 
-	var info fs.FileInfo
-	if flags&OPEN_MAIN_DB != 0 {
-		info, err = file.Stat()
-		if err != nil {
-			return uint32(CANTOPEN)
-		}
-		if info.IsDir() {
-			return uint32(CANTOPEN_ISDIR)
-		}
-	}
-	id := vfsGetOpenFileID(file, info)
+	id := vfsGetFileID(file)
 	vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)
 
 	if pOutFlags != 0 {
@@ -244,7 +238,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 	id := vfsFilePtr{mod, pFile}.ID()
-	err := vfsReleaseOpenFile(id)
+	err := vfsCloseFile(id)
 	if err != nil {
 		return uint32(IOERR_CLOSE)
 	}

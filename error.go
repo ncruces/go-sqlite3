@@ -73,6 +73,7 @@ const (
 	noGlobalErr = errorString("sqlite3: could not find global: ")
 	noFuncErr   = errorString("sqlite3: could not find function: ")
 	timeErr     = errorString("sqlite3: invalid time value")
+	notImplErr  = errorString("sqlite3: not implemented")
 )
 
 func assertErr() errorString {

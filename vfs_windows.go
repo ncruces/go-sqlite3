@@ -7,44 +7,29 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func deleteOnClose(f *os.File) {}
+func (vfsOSMethods) DeleteOnClose(file *os.File) {}
 
-func (l *vfsFileLocker) GetShared() xErrorCode {
-	// Acquire the SHARED lock.
-	return l.readLock(_SHARED_FIRST, _SHARED_SIZE)
-}
-
-func (l *vfsFileLocker) GetReserved() xErrorCode {
-	// Acquire the RESERVED lock.
-	return l.writeLock(_RESERVED_BYTE, 1)
-}
-
-func (l *vfsFileLocker) GetPending() xErrorCode {
-	// Acquire the PENDING lock.
-	return l.writeLock(_PENDING_BYTE, 1)
-}
-
-func (l *vfsFileLocker) GetExclusive() xErrorCode {
+func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
 	// Release the SHARED lock.
-	l.unlock(_SHARED_FIRST, _SHARED_SIZE)
+	vfsOS.unlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 	// Acquire the EXCLUSIVE lock.
-	rc := l.writeLock(_SHARED_FIRST, _SHARED_SIZE)
+	rc := vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 	// Reacquire the SHARED lock.
 	if rc != _OK {
-		l.readLock(_SHARED_FIRST, _SHARED_SIZE)
+		vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE)
 	}
 	return rc
 }
 
-func (l *vfsFileLocker) Downgrade() xErrorCode {
-	if l.state >= _EXCLUSIVE_LOCK {
+func (vfsOSMethods) DowngradeLock(file *os.File, state vfsLockState) xErrorCode {
+	if state >= _EXCLUSIVE_LOCK {
 		// Release the SHARED lock.
-		l.unlock(_SHARED_FIRST, _SHARED_SIZE)
+		vfsOS.unlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 		// Reacquire the SHARED lock.
-		if rc := l.readLock(_SHARED_FIRST, _SHARED_SIZE); rc != _OK {
+		if rc := vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE); rc != _OK {
 			// This should never happen.
 			// We should always be able to reacquire the read lock.
 			return IOERR_RDLOCK
@@ -52,49 +37,31 @@ func (l *vfsFileLocker) Downgrade() xErrorCode {
 	}
 
 	// Release the PENDING and RESERVED locks.
-	if l.state >= _RESERVED_LOCK {
-		l.unlock(_RESERVED_BYTE, 1)
+	if state >= _RESERVED_LOCK {
+		vfsOS.unlock(file, _RESERVED_BYTE, 1)
 	}
-	if l.state >= _PENDING_LOCK {
-		l.unlock(_PENDING_BYTE, 1)
+	if state >= _PENDING_LOCK {
+		vfsOS.unlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK
 }
 
-func (l *vfsFileLocker) Release() xErrorCode {
+func (vfsOSMethods) ReleaseLock(file *os.File, state vfsLockState) xErrorCode {
 	// Release all locks.
-	if l.state >= _RESERVED_LOCK {
-		l.unlock(_RESERVED_BYTE, 1)
+	if state >= _RESERVED_LOCK {
+		vfsOS.unlock(file, _RESERVED_BYTE, 1)
 	}
-	if l.state >= _SHARED_LOCK {
-		l.unlock(_SHARED_FIRST, _SHARED_SIZE)
+	if state >= _SHARED_LOCK {
+		vfsOS.unlock(file, _SHARED_FIRST, _SHARED_SIZE)
 	}
-	if l.state >= _PENDING_LOCK {
-		l.unlock(_PENDING_BYTE, 1)
+	if state >= _PENDING_LOCK {
+		vfsOS.unlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK
 }
 
-func (l *vfsFileLocker) CheckReserved() (bool, xErrorCode) {
-	// Test the RESERVED lock.
-	rc := l.readLock(_RESERVED_BYTE, 1)
-	if rc == _OK {
-		l.unlock(_RESERVED_BYTE, 1)
-	}
-	return rc != _OK, _OK
-}
-
-func (l *vfsFileLocker) CheckPending() (bool, xErrorCode) {
-	// Test the PENDING lock.
-	rc := l.readLock(_PENDING_BYTE, 1)
-	if rc == _OK {
-		l.unlock(_PENDING_BYTE, 1)
-	}
-	return rc != _OK, _OK
-}
-
-func (l *vfsFileLocker) unlock(start, len uint32) xErrorCode {
-	err := windows.UnlockFileEx(windows.Handle(l.file.Fd()),
+func (vfsOSMethods) unlock(file *os.File, start, len uint32) xErrorCode {
+	err := windows.UnlockFileEx(windows.Handle(file.Fd()),
 		0, len, 0, &windows.Overlapped{Offset: start})
 	if err != nil {
 		return IOERR_UNLOCK
@@ -102,21 +69,29 @@ func (l *vfsFileLocker) unlock(start, len uint32) xErrorCode {
 	return _OK
 }
 
-func (l *vfsFileLocker) readLock(start, len uint32) xErrorCode {
-	return l.errorCode(windows.LockFileEx(windows.Handle(l.file.Fd()),
+func (vfsOSMethods) readLock(file *os.File, start, len uint32) xErrorCode {
+	return vfsOS.lockErrorCode(windows.LockFileEx(windows.Handle(file.Fd()),
 		windows.LOCKFILE_FAIL_IMMEDIATELY,
 		0, len, 0, &windows.Overlapped{Offset: start}),
 		IOERR_RDLOCK)
 }
 
-func (l *vfsFileLocker) writeLock(start, len uint32) xErrorCode {
-	return l.errorCode(windows.LockFileEx(windows.Handle(l.file.Fd()),
+func (vfsOSMethods) writeLock(file *os.File, start, len uint32) xErrorCode {
+	return vfsOS.lockErrorCode(windows.LockFileEx(windows.Handle(file.Fd()),
 		windows.LOCKFILE_FAIL_IMMEDIATELY|windows.LOCKFILE_EXCLUSIVE_LOCK,
 		0, len, 0, &windows.Overlapped{Offset: start}),
 		IOERR_LOCK)
 }
 
-func (*vfsFileLocker) errorCode(err error, def xErrorCode) xErrorCode {
+func (vfsOSMethods) checkLock(file *os.File, start, len uint32) (bool, xErrorCode) {
+	rc := vfsOS.readLock(file, start, len)
+	if rc == _OK {
+		vfsOS.unlock(file, start, len)
+	}
+	return rc != _OK, _OK
+}
+
+func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK
 	}
