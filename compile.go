@@ -2,7 +2,9 @@ package sqlite3
 
 import (
 	"context"
+	"crypto/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -34,7 +36,10 @@ func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, err
 	}
 
 	cfg := wazero.NewModuleConfig().
-		WithName("sqlite3-" + strconv.FormatUint(s.instances.Add(1), 10))
+		WithName("sqlite3-" + strconv.FormatUint(s.instances.Add(1), 10)).
+		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
+		WithOsyield(runtime.Gosched).
+		WithRandSource(rand.Reader)
 	return s.runtime.InstantiateModule(ctx, s.compiled, cfg)
 }
 
