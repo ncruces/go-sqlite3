@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 )
@@ -61,7 +62,7 @@ func (conn *Conn) Savepoint() (release func(*error)) {
 
 		// Error path.
 		// Always ROLLBACK even if the connection has been interrupted.
-		old := conn.SetInterrupt(nil)
+		old := conn.SetInterrupt(context.Background())
 		defer conn.SetInterrupt(old)
 
 		err := conn.Exec(fmt.Sprintf("ROLLBACK TO %q;", name))

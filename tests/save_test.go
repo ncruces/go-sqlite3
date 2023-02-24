@@ -150,7 +150,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	db.SetInterrupt(ctx.Done())
+	db.SetInterrupt(ctx)
 
 	release1 := db.Savepoint()
 	err = db.Exec(`INSERT INTO test(col) VALUES(2)`)

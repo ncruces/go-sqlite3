@@ -77,7 +77,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	defer db.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	db.SetInterrupt(ctx.Done())
+	db.SetInterrupt(ctx)
 
 	// Interrupt doesn't interrupt this.
 	err = db.Exec(`SELECT 1`)
@@ -103,7 +103,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	db.SetInterrupt(ctx.Done())
+	db.SetInterrupt(ctx)
 	cancel()
 
 	var serr *sqlite3.Error
@@ -134,7 +134,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	db.SetInterrupt(ctx.Done())
+	db.SetInterrupt(ctx)
 
 	// Interrupting can be cleared.
 	err = db.Exec(`SELECT 1`)

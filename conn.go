@@ -14,10 +14,10 @@ type Conn struct {
 	mem    memory
 	handle uint32
 
-	arena   arena
-	pending *Stmt
-	waiter  chan struct{}
-	done    <-chan struct{}
+	arena     arena
+	interrupt context.Context
+	waiter    chan struct{}
+	pending   *Stmt
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
@@ -76,7 +76,7 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
-	c.SetInterrupt(nil)
+	c.SetInterrupt(context.Background())
 
 	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
 	if err != nil {
@@ -102,19 +102,21 @@ func (c *Conn) GetAutocommit() bool {
 	return r[0] != 0
 }
 
-// SetInterrupt interrupts a long-running query when done is closed.
+// SetInterrupt interrupts a long-running query when a context is done.
 //
 // Subsequent uses of the connection will return [INTERRUPT]
-// until done is reset by another call to SetInterrupt.
+// until the context is reset by another call to SetInterrupt.
 //
-// Typically, done is provided by [context.Context.Done]:
+// For example, a timeout can be associated with a connection:
 //
 //	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
-//	conn.SetInterrupt(ctx.Done())
+//	conn.SetInterrupt(ctx)
 //	defer cancel()
 //
+// SetInterrupt returns the old context assigned to the connection.
+//
 // https://www.sqlite.org/c3ref/interrupt.html
-func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
+func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// Is a waiter running?
 	if c.waiter != nil {
 		c.waiter <- struct{}{} // Cancel the waiter.
@@ -122,9 +124,9 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		c.waiter = nil
 	}
 
-	old = c.done
-	c.done = done
-	if done == nil {
+	old = c.interrupt
+	c.interrupt = ctx
+	if ctx == nil || ctx == context.Background() || ctx == context.TODO() || ctx.Done() == nil {
 		// Finalize the uncompleted SQL statement.
 		if c.pending != nil {
 			c.pending.Close()
@@ -155,7 +157,7 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		case <-waiter: // Waiter was cancelled.
 			break
 
-		case <-done: // Done was closed.
+		case <-ctx.Done(): // Done was closed.
 
 			// This is safe to call from a goroutine
 			// because it doesn't touch the C stack.
@@ -175,16 +177,14 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 }
 
 func (c *Conn) checkInterrupt() bool {
-	select {
-	case <-c.done: // Done was closed.
-		_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
-		if err != nil {
-			panic(err)
-		}
-		return true
-	default:
+	if c.interrupt == nil || c.interrupt.Err() == nil {
 		return false
 	}
+	_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
+	if err != nil {
+		panic(err)
+	}
+	return true
 }
 
 // Exec is a convenience function that allows an application to run

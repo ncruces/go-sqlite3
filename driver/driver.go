@@ -147,8 +147,8 @@ func (c conn) ExecContext(ctx context.Context, query string, args []driver.Named
 		return nil, driver.ErrSkip
 	}
 
-	ch := c.conn.SetInterrupt(ctx.Done())
-	defer c.conn.SetInterrupt(ch)
+	old := c.conn.SetInterrupt(ctx)
+	defer c.conn.SetInterrupt(old)
 
 	err := c.conn.Exec(query)
 	if err != nil {
@@ -307,8 +307,8 @@ func (r rows) Columns() []string {
 }
 
 func (r rows) Next(dest []driver.Value) error {
-	ch := r.conn.SetInterrupt(r.ctx.Done())
-	defer r.conn.SetInterrupt(ch)
+	old := r.conn.SetInterrupt(r.ctx)
+	defer r.conn.SetInterrupt(old)
 
 	if !r.stmt.Step() {
 		if err := r.stmt.Err(); err != nil {
