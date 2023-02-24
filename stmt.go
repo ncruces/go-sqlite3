@@ -445,3 +445,18 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 	mem := s.c.mem.view(ptr, uint32(r[0]))
 	return append(buf[0:0], mem...)
 }
+
+// Return true if stmt is an empty SQL statement.
+// This is used as an optimization.
+// It's OK to always return false here.
+func emptyStatement(stmt string) bool {
+	for _, b := range []byte(stmt) {
+		switch b {
+		case ' ', '\n', '\r', '\t', '\v', '\f':
+		case ';':
+		default:
+			return false
+		}
+	}
+	return true
+}
