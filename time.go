@@ -57,7 +57,7 @@ const (
 // Encode encodes a time value using this format.
 //
 // [TimeFormatDefault] and [TimeFormatAuto] encode using [time.RFC3339Nano],
-// with nanosecond accuracy, and preserving timezone.
+// with nanosecond accuracy, and preserving any timezone offset.
 //
 // Formats [TimeFormat1] through [TimeFormat10]
 // convert time values to UTC before encoding.
@@ -102,16 +102,20 @@ func (f TimeFormat) Encode(t time.Time) any {
 // The time value can be a string, an int64, or a float64.
 //
 // Formats [TimeFormat8] through [TimeFormat10]
+// (and [TimeFormat8TZ] through [TimeFormat10TZ])
 // assume a date of 2000-01-01.
 //
 // The timezone indicator and fractional seconds are always optional
-// for formats [TimeFormat2] through [TimeFormat10].
+// for formats [TimeFormat2] through [TimeFormat10]
+// (and [TimeFormat2TZ] through [TimeFormat10TZ]).
 //
 // [TimeFormatAuto] implements (and extends) the SQLite auto modifier.
-// The julian day number is safe to use for historical dates,
+// Julian day numbers are safe to use for historical dates,
 // from 4712BC through 9999AD.
 // Unix timestamps (expressed in seconds, milliseconds, microseconds, or nanoseconds),
 // are safe to use for current events, from 1980 through at least 2260.
+// Unix timestamps before 1980 may be misinterpreted as julian day numbers,
+// or have the wrong time unit.
 //
 // https://www.sqlite.org/lang_datefunc.html
 func (f TimeFormat) Decode(v any) (time.Time, error) {

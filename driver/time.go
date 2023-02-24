@@ -9,7 +9,7 @@ import (
 // if it roundtrips back to the same string.
 // This way times can be persisted to, and recovered from, the database,
 // but if a string is needed, [database/sql] will recover the same string.
-func maybeDate(text string) driver.Value {
+func maybeTime(text string) driver.Value {
 	// Weed out (some) values that can't possibly be
 	// [time.RFC3339Nano] timestamps.
 	if len(text) < len("2006-01-02T15:04:05Z") {

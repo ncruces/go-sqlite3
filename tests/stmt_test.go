@@ -400,7 +400,7 @@ func TestStmt_BindName(t *testing.T) {
 	}
 }
 
-func TestStmt_Time(t *testing.T) {
+func TestStmt_ColumnTime(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")
@@ -430,23 +430,23 @@ func TestStmt_Time(t *testing.T) {
 	}
 
 	if now := time.Now(); stmt.Step() {
-		if got := stmt.ColumnTime(0, sqlite3.TimeFormatAuto); !reference.Equal(got) {
+		if got := stmt.ColumnTime(0, sqlite3.TimeFormatAuto); !got.Equal(reference) {
 			t.Errorf("got %v, want %v", got, reference)
 		}
-		if got := stmt.ColumnTime(1, sqlite3.TimeFormatAuto); !reference.Equal(got) {
+		if got := stmt.ColumnTime(1, sqlite3.TimeFormatAuto); !got.Equal(reference) {
 			t.Errorf("got %v, want %v", got, reference)
 		}
-		if got := stmt.ColumnTime(2, sqlite3.TimeFormatAuto); reference.Sub(got) > time.Millisecond {
+		if got := stmt.ColumnTime(2, sqlite3.TimeFormatAuto); got.Sub(reference).Abs() > time.Millisecond {
 			t.Errorf("got %v, want %v", got, reference)
 		}
 
-		if got := stmt.ColumnTime(3, sqlite3.TimeFormatAuto); now.Sub(got) > time.Second {
+		if got := stmt.ColumnTime(3, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(4, sqlite3.TimeFormatAuto); now.Sub(got) > time.Second {
+		if got := stmt.ColumnTime(4, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second {
 			t.Errorf("got %v, want %v", got, now)
 		}
-		if got := stmt.ColumnTime(5, sqlite3.TimeFormatAuto); now.Sub(got) > time.Millisecond {
+		if got := stmt.ColumnTime(5, sqlite3.TimeFormatAuto); got.Sub(now).Abs() > time.Second/10 {
 			t.Errorf("got %v, want %v", got, now)
 		}
 

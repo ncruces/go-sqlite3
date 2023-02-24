@@ -324,7 +324,7 @@ func (r rows) Next(dest []driver.Value) error {
 		case sqlite3.FLOAT:
 			dest[i] = r.stmt.ColumnFloat(i)
 		case sqlite3.TEXT:
-			dest[i] = maybeDate(r.stmt.ColumnText(i))
+			dest[i] = maybeTime(r.stmt.ColumnText(i))
 		case sqlite3.BLOB:
 			buf, _ := dest[i].([]byte)
 			dest[i] = r.stmt.ColumnBlob(i, buf)
