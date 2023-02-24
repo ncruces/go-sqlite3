@@ -6,6 +6,20 @@ import (
 	"testing"
 )
 
+func TestConn_call_nil(t *testing.T) {
+	t.Parallel()
+
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	db.call(db.api.free)
+	t.Error("want panic")
+}
+
 func TestConn_new(t *testing.T) {
 	t.Parallel()
 

@@ -6,6 +6,8 @@ import (
 	"math"
 	"runtime"
 	"sync"
+
+	"github.com/tetratelabs/wazero/api"
 )
 
 // Conn is a database connection handle.
@@ -54,10 +56,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	connPtr := c.arena.new(ptrlen)
 	namePtr := c.arena.string(filename)
 
-	r, err := c.api.open.Call(c.ctx, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	c.handle = c.mem.readUint32(connPtr)
 	if err := c.error(r[0]); err != nil {
@@ -82,11 +81,7 @@ func (c *Conn) Close() error {
 
 	c.SetInterrupt(context.Background())
 
-	r, err := c.api.close.Call(c.ctx, uint64(c.handle))
-	if err != nil {
-		panic(err)
-	}
-
+	r := c.call(c.api.close, uint64(c.handle))
 	if err := c.error(r[0]); err != nil {
 		return err
 	}
@@ -104,10 +99,7 @@ func (c *Conn) Exec(sql string) error {
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 
-	r, err := c.api.exec.Call(c.ctx, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	return c.error(r[0])
 }
 
@@ -132,12 +124,9 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)
 
-	r, err := c.api.prepare.Call(c.ctx, uint64(c.handle),
+	r := c.call(c.api.prepare, uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
-	if err != nil {
-		panic(err)
-	}
 
 	stmt = &Stmt{c: c}
 	stmt.handle = c.mem.readUint32(stmtPtr)
@@ -157,10 +146,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 //
 // https://www.sqlite.org/c3ref/get_autocommit.html
 func (c *Conn) GetAutocommit() bool {
-	r, err := c.api.autocommit.Call(c.ctx, uint64(c.handle))
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.autocommit, uint64(c.handle))
 	return r[0] != 0
 }
 
@@ -169,10 +155,7 @@ func (c *Conn) GetAutocommit() bool {
 //
 // https://www.sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() uint64 {
-	r, err := c.api.lastRowid.Call(c.ctx, uint64(c.handle))
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.lastRowid, uint64(c.handle))
 	return r[0]
 }
 
@@ -182,10 +165,7 @@ func (c *Conn) LastInsertRowID() uint64 {
 //
 // https://www.sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() uint64 {
-	r, err := c.api.changes.Call(c.ctx, uint64(c.handle))
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.changes, uint64(c.handle))
 	return r[0]
 }
 
@@ -270,10 +250,7 @@ func (c *Conn) sendInterrupt() {
 	defer c.mtx.Unlock()
 	// This is safe to call from a goroutine
 	// because it doesn't touch the C stack.
-	_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
-	if err != nil {
-		panic(err)
-	}
+	c.call(c.api.interrupt, uint64(c.handle))
 }
 
 // Savepoint creates a named SQLite transaction using SAVEPOINT.
@@ -383,21 +360,23 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 	return &err
 }
 
+func (c *Conn) call(fn api.Function, params ...uint64) []uint64 {
+	r, err := fn.Call(c.ctx, params...)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
 func (c *Conn) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	_, err := c.api.free.Call(c.ctx, uint64(ptr))
-	if err != nil {
-		panic(err)
-	}
+	c.call(c.api.free, uint64(ptr))
 }
 
 func (c *Conn) new(size uint32) uint32 {
-	r, err := c.api.malloc.Call(c.ctx, uint64(size))
-	if err != nil {
-		panic(err)
-	}
+	r := c.call(c.api.malloc, uint64(size))
 	ptr := uint32(r[0])
 	if ptr == 0 && size != 0 {
 		panic(oomErr)
