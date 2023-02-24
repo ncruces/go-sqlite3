@@ -66,6 +66,7 @@ func (s *Stmt) ClearBindings() error {
 //
 // https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
+	s.c.checkInterrupt()
 	r, err := s.c.api.step.Call(s.c.ctx, uint64(s.handle))
 	if err != nil {
 		panic(err)

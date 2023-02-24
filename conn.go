@@ -91,6 +91,17 @@ func (c *Conn) Close() error {
 	return c.mem.mod.Close(c.ctx)
 }
 
+// GetAutocommit tests the connection for auto-commit mode.
+//
+// https://www.sqlite.org/c3ref/get_autocommit.html
+func (c *Conn) GetAutocommit() bool {
+	r, err := c.api.autocommit.Call(c.ctx, uint64(c.handle))
+	if err != nil {
+		panic(err)
+	}
+	return r[0] != 0
+}
+
 // SetInterrupt interrupts a long-running query when done is closed.
 //
 // Subsequent uses of the connection will return [INTERRUPT]
@@ -111,22 +122,31 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 		c.waiter = nil
 	}
 
-	// Finalize the uncompleted SQL statement.
-	if c.pending != nil {
-		c.pending.Close()
-		c.pending = nil
-	}
-
 	old = c.done
 	c.done = done
 	if done == nil {
+		// Finalize the uncompleted SQL statement.
+		if c.pending != nil {
+			c.pending.Close()
+			c.pending = nil
+		}
 		return old
 	}
 
 	// Creating an uncompleted SQL statement prevents SQLite from ignoring
 	// an interrupt that comes before any other statements are started.
-	c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
-	c.pending.Step()
+	if c.pending == nil {
+		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
+		c.pending.Step()
+	} else {
+		c.pending.Reset()
+	}
+
+	// Don't create the goroutine if we're already interrupted.
+	// This happens frequently while restoring to a previously interrupted state.
+	if c.checkInterrupt() {
+		return old
+	}
 
 	waiter := make(chan struct{})
 	c.waiter = waiter
@@ -154,11 +174,25 @@ func (c *Conn) SetInterrupt(done <-chan struct{}) (old <-chan struct{}) {
 	return old
 }
 
+func (c *Conn) checkInterrupt() bool {
+	select {
+	case <-c.done: // Done was closed.
+		_, err := c.api.interrupt.Call(c.ctx, uint64(c.handle))
+		if err != nil {
+			panic(err)
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 // Exec is a convenience function that allows an application to run
 // multiple statements of SQL without having to use a lot of code.
 //
 // https://www.sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
+	c.checkInterrupt()
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 
@@ -324,6 +358,15 @@ type arena struct {
 	next uint32
 	size uint32
 	ptrs []uint32
+}
+
+func (a *arena) free() {
+	if a.c == nil {
+		return
+	}
+	a.reset()
+	a.c.free(a.base)
+	a.c = nil
 }
 
 func (a *arena) reset() {

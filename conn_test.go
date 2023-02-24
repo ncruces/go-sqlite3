@@ -30,7 +30,7 @@ func TestConn_newArena(t *testing.T) {
 	defer db.Close()
 
 	arena := db.newArena(16)
-	defer arena.reset()
+	defer arena.free()
 
 	const title = "Lorem ipsum"
 
@@ -50,6 +50,7 @@ func TestConn_newArena(t *testing.T) {
 	if got := db.mem.readString(ptr, math.MaxUint32); got != body {
 		t.Errorf("got %q, want %q", got, body)
 	}
+	arena.free()
 }
 
 func TestConn_newBytes(t *testing.T) {

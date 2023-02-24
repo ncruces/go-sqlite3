@@ -103,40 +103,38 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	cancel()
 	db.SetInterrupt(ctx.Done())
+	cancel()
 
 	var serr *sqlite3.Error
 
 	// Interrupting works.
 	err = stmt.Exec()
-	if err != nil {
-		if !errors.As(err, &serr) {
-			t.Fatalf("got %T, want sqlite3.Error", err)
-		}
-		if rc := serr.Code(); rc != sqlite3.INTERRUPT {
-			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-		}
-		if got := err.Error(); got != `sqlite3: interrupted` {
-			t.Error("got message: ", got)
-		}
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != sqlite3.INTERRUPT {
+		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+	}
+	if got := err.Error(); got != `sqlite3: interrupted` {
+		t.Error("got message: ", got)
 	}
 
 	// Interrupting sticks.
 	err = db.Exec(`SELECT 1`)
-	if err != nil {
-		if !errors.As(err, &serr) {
-			t.Fatalf("got %T, want sqlite3.Error", err)
-		}
-		if rc := serr.Code(); rc != sqlite3.INTERRUPT {
-			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-		}
-		if got := err.Error(); got != `sqlite3: interrupted` {
-			t.Error("got message: ", got)
-		}
+	if !errors.As(err, &serr) {
+		t.Fatalf("got %T, want sqlite3.Error", err)
+	}
+	if rc := serr.Code(); rc != sqlite3.INTERRUPT {
+		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
+	}
+	if got := err.Error(); got != `sqlite3: interrupted` {
+		t.Error("got message: ", got)
 	}
 
-	db.SetInterrupt(nil)
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	db.SetInterrupt(ctx.Done())
 
 	// Interrupting can be cleared.
 	err = db.Exec(`SELECT 1`)

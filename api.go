@@ -62,6 +62,7 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			columnText:    getFun("sqlite3_column_text"),
 			columnBlob:    getFun("sqlite3_column_blob"),
 			columnBytes:   getFun("sqlite3_column_bytes"),
+			autocommit:    getFun("sqlite3_get_autocommit"),
 			lastRowid:     getFun("sqlite3_last_insert_rowid"),
 			changes:       getFun("sqlite3_changes64"),
 			interrupt:     getFun("sqlite3_interrupt"),
@@ -106,6 +107,7 @@ type sqliteAPI struct {
 	columnText    api.Function
 	columnBlob    api.Function
 	columnBytes   api.Function
+	autocommit    api.Function
 	lastRowid     api.Function
 	changes       api.Function
 	interrupt     api.Function

@@ -45,6 +45,7 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-Wl,--export=sqlite3_column_text \
 	-Wl,--export=sqlite3_column_blob \
 	-Wl,--export=sqlite3_column_bytes \
+	-Wl,--export=sqlite3_get_autocommit \
 	-Wl,--export=sqlite3_last_insert_rowid \
 	-Wl,--export=sqlite3_changes64 \
 	-Wl,--export=sqlite3_interrupt \

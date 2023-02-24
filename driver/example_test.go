@@ -31,7 +31,8 @@ func Example() {
 	defer db.Close()
 	defer os.Remove("./recordings.db")
 
-	err = createAlbumsTable()
+	// Create a table with some data in it.
+	err = albumsSetup()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func Example() {
 	// ID of added album: 5
 }
 
-func createAlbumsTable() error {
+func albumsSetup() error {
 	_, err := db.Exec(`
 		DROP TABLE IF EXISTS album;
 		CREATE TABLE album (
