@@ -225,3 +225,49 @@ func TestConn_Prepare_invalid(t *testing.T) {
 		t.Error("got message: ", got)
 	}
 }
+
+func TestConn_MustPrepare_empty(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	stmt := db.MustPrepare(``)
+	defer stmt.Close()
+
+	if stmt != nil {
+		t.Error("want nil")
+	}
+}
+
+func TestConn_MustPrepare_tail(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	_ = db.MustPrepare(`SELECT 1; -- HERE`)
+	t.Error("want panic")
+}
+
+func TestConn_MustPrepare_invalid(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	_ = db.MustPrepare(`SELECT`)
+	t.Error("want panic")
+}

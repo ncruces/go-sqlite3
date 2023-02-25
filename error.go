@@ -65,14 +65,15 @@ type errorString string
 func (e errorString) Error() string { return string(e) }
 
 const (
-	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
 	nilErr      = errorString("sqlite3: invalid memory address or null pointer dereference")
 	oomErr      = errorString("sqlite3: out of memory")
 	rangeErr    = errorString("sqlite3: index out of range")
 	noNulErr    = errorString("sqlite3: missing NUL terminator")
 	noGlobalErr = errorString("sqlite3: could not find global: ")
 	noFuncErr   = errorString("sqlite3: could not find function: ")
+	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
 	timeErr     = errorString("sqlite3: invalid time value")
+	tailErr     = errorString("sqlite3: non-empty tail")
 	notImplErr  = errorString("sqlite3: not implemented")
 )
 

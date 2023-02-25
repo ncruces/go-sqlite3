@@ -103,6 +103,19 @@ func (c *Conn) Exec(sql string) error {
 	return c.error(r[0])
 }
 
+// MustPrepare calls [Conn.Prepare] and panics on error,
+// or a non empty tail.
+func (c *Conn) MustPrepare(sql string) *Stmt {
+	s, tail, err := c.PrepareFlags(sql, 0)
+	if err != nil {
+		panic(err)
+	}
+	if !emptyStatement(tail) {
+		panic(tailErr)
+	}
+	return s
+}
+
 // Prepare calls [Conn.PrepareFlags] with no flags.
 func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 	return c.PrepareFlags(sql, 0)
@@ -205,7 +218,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// Creating an uncompleted SQL statement prevents SQLite from ignoring
 	// an interrupt that comes before any other statements are started.
 	if c.pending == nil {
-		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
+		c.pending = c.MustPrepare(`SELECT 1 UNION ALL SELECT 2`)
 		c.pending.Step()
 	} else {
 		c.pending.Reset()
