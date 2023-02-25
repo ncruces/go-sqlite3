@@ -340,6 +340,22 @@ func (conn *Conn) Savepoint() (release func(*error)) {
 	}
 }
 
+// Pragma executes a PRAGMA statement and returns any result as a string.
+//
+// https://www.sqlite.org/pragma.html
+func (c *Conn) Pragma(str string) string {
+	stmt := c.MustPrepare(`PRAGMA ` + str)
+	defer stmt.Close()
+
+	if stmt.Step() {
+		return stmt.ColumnText(0)
+	}
+	if err := stmt.Err(); err != nil {
+		panic(err)
+	}
+	return ""
+}
+
 func (c *Conn) error(rc uint64, sql ...string) error {
 	if rc == _OK {
 		return nil

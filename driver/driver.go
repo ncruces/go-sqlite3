@@ -62,9 +62,9 @@ func (sqlite) Open(name string) (driver.Conn, error) {
 }
 
 type conn struct {
-	conn       *sqlite3.Conn
-	txBegin    string
-	txReadOnly bool
+	conn     *sqlite3.Conn
+	txBegin  string
+	txCommit string
 }
 
 var (
@@ -90,13 +90,15 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 	}
 
 	txBegin := c.txBegin
+	c.txCommit = `COMMIT`
 	if opts.ReadOnly {
+		c.txCommit = `
+			ROLLBACK;
+			PRAGMA query_only=` + c.conn.Pragma("query_only")
 		txBegin = `
 			BEGIN deferred;
-			PRAGMA query_only=on;
-		`
+			PRAGMA query_only=on`
 	}
-	c.txReadOnly = opts.ReadOnly
 
 	err := c.conn.Exec(txBegin)
 	if err != nil {
@@ -106,10 +108,7 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 }
 
 func (c conn) Commit() error {
-	if c.txReadOnly {
-		return c.Rollback()
-	}
-	err := c.conn.Exec(`COMMIT`)
+	err := c.conn.Exec(c.txCommit)
 	if err != nil {
 		c.Rollback()
 	}
