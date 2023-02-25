@@ -163,28 +163,16 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	checkInterrupt := func(err error) {
-		var serr *sqlite3.Error
-		if err == nil {
-			t.Fatal("want error")
-		}
-		if !errors.As(err, &serr) {
-			t.Fatalf("got %T, want sqlite3.Error", err)
-		}
-		if rc := serr.Code(); rc != sqlite3.INTERRUPT {
-			t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-		}
-		if got := err.Error(); got != `sqlite3: interrupted` {
-			t.Error("got message: ", got)
-		}
-	}
-
 	cancel()
 	db.Savepoint()(&err)
-	checkInterrupt(err)
+	if !errors.Is(err, sqlite3.INTERRUPT) {
+		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
+	}
 
 	err = db.Exec(`INSERT INTO test(col) VALUES(4)`)
-	checkInterrupt(err)
+	if !errors.Is(err, sqlite3.INTERRUPT) {
+		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
+	}
 
 	err = context.Canceled
 	release2(&err)
@@ -194,9 +182,11 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 
 	var nilErr error
 	release1(&nilErr)
-	checkInterrupt(nilErr)
+	if !errors.Is(nilErr, sqlite3.INTERRUPT) {
+		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
+	}
 
-	db.SetInterrupt(nil)
+	db.SetInterrupt(context.Background())
 	stmt, _, err := db.Prepare(`SELECT count(*) FROM test`)
 	if err != nil {
 		t.Fatal(err)

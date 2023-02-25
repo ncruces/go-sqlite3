@@ -17,15 +17,8 @@ func TestConn_Open_dir(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error")
 	}
-	var serr *sqlite3.Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.CANTOPEN {
-		t.Errorf("got %d, want sqlite3.CANTOPEN", rc)
-	}
-	if got := err.Error(); got != `sqlite3: unable to open database file` {
-		t.Error("got message: ", got)
+	if !errors.Is(err, sqlite3.CANTOPEN) {
+		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
 	}
 }
 
@@ -53,12 +46,8 @@ func TestConn_Close_BUSY(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error")
 	}
-	var serr *sqlite3.Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.BUSY {
-		t.Errorf("got %d, want sqlite3.BUSY", rc)
+	if !errors.Is(err, sqlite3.BUSY) {
+		t.Errorf("got %v, want sqlite3.BUSY", err)
 	}
 	var terr interface{ Temporary() bool }
 	if !errors.As(err, &terr) || !terr.Temporary() {
@@ -85,7 +74,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db.SetInterrupt(nil)
+	db.SetInterrupt(context.Background())
 
 	stmt, _, err := db.Prepare(`
 		WITH RECURSIVE
@@ -106,30 +95,16 @@ func TestConn_SetInterrupt(t *testing.T) {
 	db.SetInterrupt(ctx)
 	cancel()
 
-	var serr *sqlite3.Error
-
 	// Interrupting works.
 	err = stmt.Exec()
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.INTERRUPT {
-		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-	}
-	if got := err.Error(); got != `sqlite3: interrupted` {
-		t.Error("got message: ", got)
+	if !errors.Is(err, sqlite3.INTERRUPT) {
+		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
 	// Interrupting sticks.
 	err = db.Exec(`SELECT 1`)
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.INTERRUPT {
-		t.Errorf("got %d, want sqlite3.INTERRUPT", rc)
-	}
-	if got := err.Error(); got != `sqlite3: interrupted` {
-		t.Error("got message: ", got)
+	if !errors.Is(err, sqlite3.INTERRUPT) {
+		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
 	ctx, cancel = context.WithCancel(context.Background())

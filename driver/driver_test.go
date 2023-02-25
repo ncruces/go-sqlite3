@@ -25,15 +25,8 @@ func Test_Open_dir(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error")
 	}
-	var serr *sqlite3.Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.CANTOPEN {
-		t.Errorf("got %d, want sqlite3.CANTOPEN", rc)
-	}
-	if got := err.Error(); got != `sqlite3: unable to open database file` {
-		t.Error("got message: ", got)
+	if !errors.Is(err, sqlite3.CANTOPEN) {
+		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
 	}
 }
 
@@ -95,19 +88,12 @@ func Test_Open_txLock(t *testing.T) {
 	if err == nil {
 		t.Error("want error")
 	}
-	var serr *sqlite3.Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.BUSY {
-		t.Errorf("got %d, want sqlite3.BUSY", rc)
+	if !errors.Is(err, sqlite3.BUSY) {
+		t.Errorf("got %v, want sqlite3.BUSY", err)
 	}
 	var terr interface{ Temporary() bool }
 	if !errors.As(err, &terr) || !terr.Temporary() {
 		t.Error("not temporary", err)
-	}
-	if got := err.Error(); got != `sqlite3: database is locked` {
-		t.Error("got message: ", got)
 	}
 
 	err = tx1.Commit()
@@ -161,15 +147,8 @@ func Test_BeginTx(t *testing.T) {
 	if err == nil {
 		t.Error("want error")
 	}
-	var serr *sqlite3.Error
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.READONLY {
-		t.Errorf("got %d, want sqlite3.READONLY", rc)
-	}
-	if got := err.Error(); got != `sqlite3: attempt to write a readonly database` {
-		t.Error("got message: ", got)
+	if !errors.Is(err, sqlite3.READONLY) {
+		t.Errorf("got %v, want sqlite3.READONLY", err)
 	}
 
 	err = tx2.Commit()

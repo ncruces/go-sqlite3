@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"runtime"
@@ -206,7 +207,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 
 	old = c.interrupt
 	c.interrupt = ctx
-	if ctx == nil || ctx == context.Background() || ctx == context.TODO() || ctx.Done() == nil {
+	if ctx == nil || ctx.Done() == nil {
 		// Finalize the uncompleted SQL statement.
 		if c.pending != nil {
 			c.pending.Close()
@@ -292,11 +293,14 @@ func (conn *Conn) Savepoint() (release func(*error)) {
 
 	err := conn.Exec(fmt.Sprintf("SAVEPOINT %q;", name))
 	if err != nil {
-		return func(errp *error) {
-			if *errp == nil {
-				*errp = err
+		if errors.Is(err, INTERRUPT) {
+			return func(errp *error) {
+				if *errp == nil {
+					*errp = err
+				}
 			}
 		}
+		panic(err)
 	}
 
 	return func(errp *error) {
