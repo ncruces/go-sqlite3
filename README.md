@@ -59,3 +59,4 @@ and WAL databases are not supported.
 - [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite)
 - [`crawshaw.io/sqlite`](https://pkg.go.dev/crawshaw.io/sqlite)
 - [`github.com/mattn/go-sqlite3`](https://pkg.go.dev/github.com/mattn/go-sqlite3)
+- [`github.com/zombiezen/go-sqlite`](https://pkg.go.dev/github.com/zombiezen/go-sqlite)
