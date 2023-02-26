@@ -94,7 +94,7 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 	if opts.ReadOnly {
 		c.txCommit = `
 			ROLLBACK;
-			PRAGMA query_only=` + c.conn.Pragma("query_only")
+			PRAGMA query_only=` + c.conn.Pragma("query_only")[0]
 		txBegin = `
 			BEGIN deferred;
 			PRAGMA query_only=on`

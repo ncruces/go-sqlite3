@@ -46,8 +46,9 @@ and WAL databases are not supported.
   - [x] nested transactions
   - [ ] incremental BLOB I/O
   - [ ] online backup
-  - [ ] session extension
   - [ ] snapshots
+  - [ ] session extension
+  - [ ] resumable bulk update
   - [ ] SQL functions
 - [ ] custom VFSes
   - [ ] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)

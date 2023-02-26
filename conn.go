@@ -267,17 +267,18 @@ func (c *Conn) sendInterrupt() {
 // Pragma executes a PRAGMA statement and returns any result as a string.
 //
 // https://www.sqlite.org/pragma.html
-func (c *Conn) Pragma(str string) string {
+func (c *Conn) Pragma(str string) []string {
 	stmt := c.MustPrepare(`PRAGMA ` + str)
 	defer stmt.Close()
 
-	if stmt.Step() {
-		return stmt.ColumnText(0)
+	var pragmas []string
+	for stmt.Step() {
+		pragmas = append(pragmas, stmt.ColumnText(0))
 	}
 	if err := stmt.Err(); err != nil {
 		panic(err)
 	}
-	return ""
+	return pragmas
 }
 
 func (c *Conn) error(rc uint64, sql ...string) error {
