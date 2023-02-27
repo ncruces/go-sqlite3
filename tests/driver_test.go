@@ -34,7 +34,7 @@ func TestDriver(t *testing.T) {
 	}
 
 	res, err := conn.ExecContext(ctx,
-		`INSERT INTO users(id, name) VALUES(0, 'go'), (1, 'zig'), (2, 'whatever')`)
+		`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		t.Fatal(err)
 	}

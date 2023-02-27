@@ -81,7 +81,7 @@ func testParallel(t *testing.T, name string, n int) {
 			return err
 		}
 
-		err = db.Exec(`INSERT INTO users(id, name) VALUES(0, 'go'), (1, 'zig'), (2, 'whatever')`)
+		err = db.Exec(`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 		if err != nil {
 			return err
 		}

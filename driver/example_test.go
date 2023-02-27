@@ -59,7 +59,6 @@ func Example() {
 		log.Fatal(err)
 	}
 	fmt.Printf("ID of added album: %v\n", albID)
-
 	// Output:
 	// Albums found: [{1 Blue Train John Coltrane 56.99} {2 Giant Steps John Coltrane 63.99}]
 	// Album found: {2 Giant Steps John Coltrane 63.99}

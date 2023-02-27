@@ -9,6 +9,8 @@ import (
 )
 
 func TestConn_Transaction_exec(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +77,8 @@ func TestConn_Transaction_exec(t *testing.T) {
 }
 
 func TestConn_Transaction_panic(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -130,6 +134,8 @@ func TestConn_Transaction_panic(t *testing.T) {
 }
 
 func TestConn_Transaction_interrupt(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +151,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.Exec(`INSERT INTO test(col) VALUES(1)`)
+	err = db.Exec(`INSERT INTO test VALUES (1)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +167,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.Exec(`INSERT INTO test(col) VALUES(2)`)
+	err = db.Exec(`INSERT INTO test VALUES (2)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +178,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	err = db.Exec(`INSERT INTO test(col) VALUES(3)`)
+	err = db.Exec(`INSERT INTO test VALUES (3)`)
 	if !errors.Is(err, sqlite3.INTERRUPT) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
@@ -203,6 +209,8 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 }
 
 func TestConn_Transaction_rollback(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -215,7 +223,7 @@ func TestConn_Transaction_rollback(t *testing.T) {
 	}
 
 	tx := db.Begin()
-	err = db.Exec(`INSERT INTO test(col) VALUES(1)`)
+	err = db.Exec(`INSERT INTO test VALUES (1)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,6 +255,8 @@ func TestConn_Transaction_rollback(t *testing.T) {
 }
 
 func TestConn_Savepoint_exec(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -312,6 +322,8 @@ func TestConn_Savepoint_exec(t *testing.T) {
 }
 
 func TestConn_Savepoint_panic(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -366,6 +378,8 @@ func TestConn_Savepoint_panic(t *testing.T) {
 }
 
 func TestConn_Savepoint_interrupt(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -378,7 +392,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 	}
 
 	release := db.Savepoint()
-	err = db.Exec(`INSERT INTO test(col) VALUES(1)`)
+	err = db.Exec(`INSERT INTO test VALUES (1)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,12 +405,12 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 	db.SetInterrupt(ctx)
 
 	release1 := db.Savepoint()
-	err = db.Exec(`INSERT INTO test(col) VALUES(2)`)
+	err = db.Exec(`INSERT INTO test VALUES (2)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	release2 := db.Savepoint()
-	err = db.Exec(`INSERT INTO test(col) VALUES(3)`)
+	err = db.Exec(`INSERT INTO test VALUES (3)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +421,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	err = db.Exec(`INSERT INTO test(col) VALUES(4)`)
+	err = db.Exec(`INSERT INTO test VALUES (4)`)
 	if !errors.Is(err, sqlite3.INTERRUPT) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
@@ -444,6 +458,8 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 }
 
 func TestConn_Savepoint_rollback(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -456,7 +472,7 @@ func TestConn_Savepoint_rollback(t *testing.T) {
 	}
 
 	release := db.Savepoint()
-	err = db.Exec(`INSERT INTO test(col) VALUES(1)`)
+	err = db.Exec(`INSERT INTO test VALUES (1)`)
 	if err != nil {
 		t.Fatal(err)
 	}

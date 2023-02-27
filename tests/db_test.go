@@ -30,7 +30,7 @@ func testDB(t *testing.T, name string) {
 		t.Fatal(err)
 	}
 
-	err = db.Exec(`INSERT INTO users(id, name) VALUES(0, 'go'), (1, 'zig'), (2, 'whatever')`)
+	err = db.Exec(`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		t.Fatal(err)
 	}

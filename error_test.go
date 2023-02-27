@@ -15,6 +15,8 @@ func Test_assertErr(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
+	t.Parallel()
+
 	err := Error{code: 0x8080}
 	if rc := err.Code(); rc != 0x80 {
 		t.Errorf("got %#x, want 0x80", rc)
@@ -37,6 +39,8 @@ func TestError(t *testing.T) {
 }
 
 func TestError_Temporary(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		code uint64
@@ -73,6 +77,8 @@ func TestError_Temporary(t *testing.T) {
 }
 
 func TestError_Timeout(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		code uint64
@@ -103,6 +109,8 @@ func TestError_Timeout(t *testing.T) {
 }
 
 func Test_ErrorCode_Error(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -125,6 +133,8 @@ func Test_ErrorCode_Error(t *testing.T) {
 }
 
 func Test_ExtendedErrorCode_Error(t *testing.T) {
+	t.Parallel()
+
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatal(err)

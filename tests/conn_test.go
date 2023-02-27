@@ -59,6 +59,8 @@ func TestConn_Close_BUSY(t *testing.T) {
 }
 
 func TestConn_SetInterrupt(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)

@@ -21,7 +21,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	err = db.Exec(`INSERT INTO users(id, name) VALUES(0, 'go'), (1, 'zig'), (2, 'whatever')`)
+	err = db.Exec(`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,7 +47,6 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	// Output:
 	// 0 go
 	// 1 zig

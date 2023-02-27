@@ -15,6 +15,8 @@ import (
 )
 
 func Test_Open_dir(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", ".")
 	if err != nil {
 		t.Fatal(err)
@@ -31,6 +33,8 @@ func Test_Open_dir(t *testing.T) {
 }
 
 func Test_Open_pragma(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", "file::memory:?_pragma=busy_timeout(1000)")
 	if err != nil {
 		t.Fatal(err)
@@ -48,6 +52,8 @@ func Test_Open_pragma(t *testing.T) {
 }
 
 func Test_Open_pragma_invalid(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", "file::memory:?_pragma=busy_timeout+1000")
 	if err != nil {
 		t.Fatal(err)
@@ -71,8 +77,10 @@ func Test_Open_pragma_invalid(t *testing.T) {
 }
 
 func Test_Open_txLock(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", "file:"+
-		filepath.Join(t.TempDir(), "test.db")+
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
 		"?_txlock=exclusive&_pragma=busy_timeout(0)")
 	if err != nil {
 		t.Fatal(err)
@@ -103,6 +111,8 @@ func Test_Open_txLock(t *testing.T) {
 }
 
 func Test_Open_txLock_invalid(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", "file::memory:?_txlock=xclusive")
 	if err != nil {
 		t.Fatal(err)
@@ -119,6 +129,8 @@ func Test_Open_txLock_invalid(t *testing.T) {
 }
 
 func Test_BeginTx(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -163,6 +175,8 @@ func Test_BeginTx(t *testing.T) {
 }
 
 func Test_Prepare(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -211,6 +225,8 @@ func Test_Prepare(t *testing.T) {
 }
 
 func Test_QueryRow_named(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -261,6 +277,8 @@ func Test_QueryRow_named(t *testing.T) {
 }
 
 func Test_QueryRow_blob_null(t *testing.T) {
+	t.Parallel()
+
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -291,6 +309,8 @@ func Test_QueryRow_blob_null(t *testing.T) {
 }
 
 func Test_ZeroBlob(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -311,7 +331,7 @@ func Test_ZeroBlob(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = conn.ExecContext(ctx, `INSERT INTO test(col) VALUES(?)`, sqlite3.ZeroBlob(4))
+	_, err = conn.ExecContext(ctx, `INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(4))
 	if err != nil {
 		t.Fatal(err)
 	}

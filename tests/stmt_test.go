@@ -22,7 +22,7 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`INSERT INTO test(col) VALUES(?)`)
+	stmt, _, err := db.Prepare(`INSERT INTO test VALUES (?)`)
 	if err != nil {
 		t.Fatal(err)
 	}
