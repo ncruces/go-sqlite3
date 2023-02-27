@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
@@ -111,7 +112,7 @@ func TestBlob_invalid(t *testing.T) {
 	}
 }
 
-func TestBlob_readonly(t *testing.T) {
+func TestBlob_Write_readonly(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")
@@ -142,7 +143,7 @@ func TestBlob_readonly(t *testing.T) {
 	}
 }
 
-func TestBlob_expired(t *testing.T) {
+func TestBlob_Read_expired(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")
@@ -224,5 +225,73 @@ func TestBlob_Seek(t *testing.T) {
 	_, err = blob.Write([]byte("data"))
 	if !errors.Is(err, sqlite3.ERROR) {
 		t.Fatal("want error")
+	}
+}
+
+func TestBlob_Reopen(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rowids []int64
+	for i := 0; i < 100; i++ {
+		err = db.Exec(`INSERT INTO test VALUES (zeroblob(10))`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rowids = append(rowids, db.LastInsertRowID())
+	}
+
+	var blob *sqlite3.Blob
+
+	for i, rowid := range rowids {
+		if i > 0 {
+			err = blob.Reopen(rowid)
+		} else {
+			blob, err = db.OpenBlob("main", "test", "col", rowid, true)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = fmt.Fprintf(blob, "blob %d\n", i)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := blob.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, rowid := range rowids {
+		if i > 0 {
+			err = blob.Reopen(rowid)
+		} else {
+			blob, err = db.OpenBlob("main", "test", "col", rowid, false)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var got int
+		_, err = fmt.Fscanf(blob, "blob %d\n", &got)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != i {
+			t.Errorf("got %d, want %d", got, i)
+		}
+	}
+	if err := blob.Close(); err != nil {
+		t.Fatal(err)
 	}
 }

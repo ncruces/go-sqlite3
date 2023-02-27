@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"database/sql/driver"
 	"math"
 	"sync"
 
@@ -165,9 +166,9 @@ func (c *Conn) GetAutocommit() bool {
 // on the database connection.
 //
 // https://www.sqlite.org/c3ref/last_insert_rowid.html
-func (c *Conn) LastInsertRowID() uint64 {
+func (c *Conn) LastInsertRowID() int64 {
 	r := c.call(c.api.lastRowid, uint64(c.handle))
-	return r[0]
+	return int64(r[0])
 }
 
 // Changes returns the number of rows modified, inserted or deleted
@@ -175,9 +176,9 @@ func (c *Conn) LastInsertRowID() uint64 {
 // on the database connection.
 //
 // https://www.sqlite.org/c3ref/changes.html
-func (c *Conn) Changes() uint64 {
+func (c *Conn) Changes() int64 {
 	r := c.call(c.api.changes, uint64(c.handle))
-	return r[0]
+	return int64(r[0])
 }
 
 // SetInterrupt interrupts a long-running query when a context is done.
@@ -408,4 +409,14 @@ func (a *arena) string(s string) uint32 {
 	ptr := a.new(uint64(len(s) + 1))
 	a.c.mem.writeString(ptr, s)
 	return ptr
+}
+
+// DriverConn is implemented by the SQLite database/sql driver connection.
+type DriverConn interface {
+	driver.ConnBeginTx
+	driver.ExecerContext
+	driver.ConnPrepareContext
+
+	Savepoint() (release func(*error))
+	OpenBlob(db, table, column string, row int64, write bool) (*Blob, error)
 }

@@ -71,6 +71,7 @@ var (
 	// Ensure these interfaces are implemented:
 	_ driver.ExecerContext = conn{}
 	_ driver.ConnBeginTx   = conn{}
+	_ sqlite3.DriverConn   = conn{}
 )
 
 func (c conn) Close() error {
@@ -140,6 +141,10 @@ func (c conn) Prepare(query string) (driver.Stmt, error) {
 	return stmt{s, c.conn}, nil
 }
 
+func (c conn) PrepareContext(_ context.Context, query string) (driver.Stmt, error) {
+	return c.Prepare(query)
+}
+
 func (c conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	if len(args) != 0 {
 		// Slow path.
@@ -155,9 +160,17 @@ func (c conn) ExecContext(ctx context.Context, query string, args []driver.Named
 	}
 
 	return result{
-		int64(c.conn.LastInsertRowID()),
-		int64(c.conn.Changes()),
+		c.conn.LastInsertRowID(),
+		c.conn.Changes(),
 	}, nil
+}
+
+func (c conn) Savepoint() (release func(*error)) {
+	return c.conn.Savepoint()
+}
+
+func (c conn) OpenBlob(db, table, column string, row int64, write bool) (*sqlite3.Blob, error) {
+	return c.conn.OpenBlob(db, table, column, row, write)
 }
 
 type stmt struct {

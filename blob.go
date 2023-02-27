@@ -22,7 +22,7 @@ var _ io.ReadWriteSeeker = &Blob{}
 // OpenBlob opens a BLOB for incremental I/O.
 //
 // https://www.sqlite.org/c3ref/blob_open.html
-func (c *Conn) OpenBlob(db, table, column string, row uint64, write bool) (*Blob, error) {
+func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob, error) {
 	defer c.arena.reset()
 	blobPtr := c.arena.new(ptrlen)
 	dbPtr := c.arena.string(db)
@@ -36,7 +36,7 @@ func (c *Conn) OpenBlob(db, table, column string, row uint64, write bool) (*Blob
 
 	r := c.call(c.api.blobOpen, uint64(c.handle),
 		uint64(dbPtr), uint64(tablePtr), uint64(columnPtr),
-		row, flags, uint64(blobPtr))
+		uint64(row), flags, uint64(blobPtr))
 
 	if err := c.error(r[0]); err != nil {
 		return nil, err
@@ -143,4 +143,14 @@ func (b *Blob) Seek(offset int64, whence int) (int64, error) {
 	}
 	b.offset = offset
 	return offset, nil
+}
+
+// Reopen moves a BLOB handle to a new row of the same database table.
+//
+// https://www.sqlite.org/c3ref/blob_reopen.html
+func (b *Blob) Reopen(row int64) error {
+	r := b.c.call(b.c.api.blobReopen, uint64(b.handle), uint64(row))
+	b.bytes = int64(b.c.call(b.c.api.blobBytes, uint64(b.handle))[0])
+	b.offset = 0
+	return b.c.error(r[0])
 }
