@@ -85,7 +85,7 @@ func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uin
 }
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
-	mem := memory{mod}.view(zByte, nByte)
+	mem := memory{mod}.view(zByte, uint64(nByte))
 	n, _ := rand.Reader.Read(mem)
 	return uint32(n)
 }
@@ -119,8 +119,8 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	// Or using [os.Readlink] to resolve a symbolic link (as the Unix VFS did).
 	// This might be buggy on Windows (the Windows VFS doesn't try).
 
-	size := uint32(len(abs) + 1)
-	if size > nFull {
+	size := uint64(len(abs) + 1)
+	if size > uint64(nFull) {
 		return uint32(CANTOPEN_FULLPATH)
 	}
 	mem := memory{mod}.view(zFull, size)
@@ -246,7 +246,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	buf := memory{mod}.view(zBuf, iAmt)
+	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	n, err := file.ReadAt(buf, int64(iOfst))
@@ -263,7 +263,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
-	buf := memory{mod}.view(zBuf, iAmt)
+	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
 	file := vfsFilePtr{mod, pFile}.OSFile()
 	_, err := file.WriteAt(buf, int64(iOfst))

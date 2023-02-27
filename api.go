@@ -30,8 +30,8 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 		ctx: ctx,
 		mem: memory{module},
 		api: sqliteAPI{
-			malloc:        getFun("malloc"),
 			free:          getFun("free"),
+			malloc:        getFun("malloc"),
 			destructor:    uint64(getPtr("malloc_destructor")),
 			errcode:       getFun("sqlite3_errcode"),
 			errstr:        getFun("sqlite3_errstr"),
@@ -66,6 +66,12 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			lastRowid:     getFun("sqlite3_last_insert_rowid"),
 			changes:       getFun("sqlite3_changes64"),
 			interrupt:     getFun("sqlite3_interrupt"),
+			blobOpen:      getFun("sqlite3_blob_open"),
+			blobClose:     getFun("sqlite3_blob_close"),
+			blobReopen:    getFun("sqlite3_blob_reopen"),
+			blobBytes:     getFun("sqlite3_blob_bytes"),
+			blobRead:      getFun("sqlite3_blob_read"),
+			blobWrite:     getFun("sqlite3_blob_write"),
 		},
 	}
 	if err != nil {
@@ -75,8 +81,8 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 }
 
 type sqliteAPI struct {
-	malloc        api.Function
 	free          api.Function
+	malloc        api.Function
 	destructor    uint64
 	errcode       api.Function
 	errstr        api.Function
@@ -111,4 +117,10 @@ type sqliteAPI struct {
 	lastRowid     api.Function
 	changes       api.Function
 	interrupt     api.Function
+	blobOpen      api.Function
+	blobClose     api.Function
+	blobReopen    api.Function
+	blobBytes     api.Function
+	blobRead      api.Function
+	blobWrite     api.Function
 }

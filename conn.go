@@ -333,8 +333,11 @@ func (c *Conn) free(ptr uint32) {
 	c.call(c.api.free, uint64(ptr))
 }
 
-func (c *Conn) new(size uint32) uint32 {
-	r := c.call(c.api.malloc, uint64(size))
+func (c *Conn) new(size uint64) uint32 {
+	if size > _MAX_ALLOCATION_SIZE {
+		panic(oomErr)
+	}
+	r := c.call(c.api.malloc, size)
 	ptr := uint32(r[0])
 	if ptr == 0 && size != 0 {
 		panic(oomErr)
@@ -346,22 +349,22 @@ func (c *Conn) newBytes(b []byte) uint32 {
 	if b == nil {
 		return 0
 	}
-	ptr := c.new(uint32(len(b)))
+	ptr := c.new(uint64(len(b)))
 	c.mem.writeBytes(ptr, b)
 	return ptr
 }
 
 func (c *Conn) newString(s string) uint32 {
-	ptr := c.new(uint32(len(s) + 1))
+	ptr := c.new(uint64(len(s) + 1))
 	c.mem.writeString(ptr, s)
 	return ptr
 }
 
-func (c *Conn) newArena(size uint32) arena {
+func (c *Conn) newArena(size uint64) arena {
 	return arena{
 		c:    c,
-		size: size,
 		base: c.new(size),
+		size: uint32(size),
 	}
 }
 
@@ -390,10 +393,10 @@ func (a *arena) reset() {
 	a.next = 0
 }
 
-func (a *arena) new(size uint32) uint32 {
-	if a.next+size <= a.size {
+func (a *arena) new(size uint64) uint32 {
+	if size <= uint64(a.size-a.next) {
 		ptr := a.base + a.next
-		a.next += size
+		a.next += uint32(size)
 		return ptr
 	}
 	ptr := a.c.new(size)
@@ -402,7 +405,7 @@ func (a *arena) new(size uint32) uint32 {
 }
 
 func (a *arena) string(s string) uint32 {
-	ptr := a.new(uint32(len(s) + 1))
+	ptr := a.new(uint64(len(s) + 1))
 	a.c.mem.writeString(ptr, s)
 	return ptr
 }

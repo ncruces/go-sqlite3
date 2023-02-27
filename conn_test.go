@@ -6,6 +6,20 @@ import (
 	"testing"
 )
 
+func TestConn_error_OOM(t *testing.T) {
+	t.Parallel()
+
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	db.error(uint64(NOMEM))
+	t.Error("want panic")
+}
+
 func TestConn_call_nil(t *testing.T) {
 	t.Parallel()
 
@@ -29,9 +43,14 @@ func TestConn_new(t *testing.T) {
 	}
 	defer db.Close()
 
-	defer func() { _ = recover() }()
-	db.new(math.MaxUint32)
-	t.Error("want panic")
+	testOOM := func(size uint64) {
+		defer func() { _ = recover() }()
+		db.new(size)
+		t.Error("want panic")
+	}
+
+	testOOM(math.MaxUint32)
+	testOOM(_MAX_ALLOCATION_SIZE)
 }
 
 func TestConn_newArena(t *testing.T) {
@@ -88,7 +107,7 @@ func TestConn_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := db.mem.view(ptr, uint32(len(want))); !bytes.Equal(got, want) {
+	if got := db.mem.view(ptr, uint64(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -114,7 +133,7 @@ func TestConn_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := db.mem.view(ptr, uint32(len(want))); string(got) != want {
+	if got := db.mem.view(ptr, uint64(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -19,6 +19,13 @@ func Test_memory_view_range(t *testing.T) {
 	t.Error("want panic")
 }
 
+func Test_memory_view_overflow(t *testing.T) {
+	defer func() { _ = recover() }()
+	mem := newMemory(128)
+	mem.view(1, math.MaxInt64)
+	t.Error("want panic")
+}
+
 func Test_memory_readUint32_nil(t *testing.T) {
 	defer func() { _ = recover() }()
 	mem := newMemory(128)

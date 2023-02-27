@@ -11,11 +11,14 @@ type memory struct {
 	mod api.Module
 }
 
-func (m memory) view(ptr, size uint32) []byte {
+func (m memory) view(ptr uint32, size uint64) []byte {
 	if ptr == 0 {
 		panic(nilErr)
 	}
-	buf, ok := m.mod.Memory().Read(ptr, size)
+	if size > math.MaxUint32 {
+		panic(rangeErr)
+	}
+	buf, ok := m.mod.Memory().Read(ptr, uint32(size))
 	if !ok {
 		panic(rangeErr)
 	}
@@ -100,12 +103,12 @@ func (m memory) readString(ptr, maxlen uint32) string {
 }
 
 func (m memory) writeBytes(ptr uint32, b []byte) {
-	buf := m.view(ptr, uint32(len(b)))
+	buf := m.view(ptr, uint64(len(b)))
 	copy(buf, b)
 }
 
 func (m memory) writeString(ptr uint32, s string) {
-	buf := m.view(ptr, uint32(len(s)+1))
+	buf := m.view(ptr, uint64(len(s)+1))
 	buf[len(s)] = 0
 	copy(buf, s)
 }

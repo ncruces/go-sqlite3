@@ -13,8 +13,8 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-D_HAVE_SQLITE_CONFIG_H \
-	-Wl,--export=malloc \
 	-Wl,--export=free \
+	-Wl,--export=malloc \
 	-Wl,--export=malloc_destructor \
 	-Wl,--export=sqlite3_errcode \
 	-Wl,--export=sqlite3_errstr \
@@ -45,6 +45,12 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-Wl,--export=sqlite3_column_text \
 	-Wl,--export=sqlite3_column_blob \
 	-Wl,--export=sqlite3_column_bytes \
+	-Wl,--export=sqlite3_blob_open \
+	-Wl,--export=sqlite3_blob_close \
+	-Wl,--export=sqlite3_blob_bytes \
+	-Wl,--export=sqlite3_blob_read \
+	-Wl,--export=sqlite3_blob_write \
+	-Wl,--export=sqlite3_blob_reopen \
 	-Wl,--export=sqlite3_get_autocommit \
 	-Wl,--export=sqlite3_last_insert_rowid \
 	-Wl,--export=sqlite3_changes64 \

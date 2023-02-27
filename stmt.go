@@ -347,7 +347,7 @@ func (s *Stmt) ColumnText(col int) string {
 	r = s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 
-	mem := s.c.mem.view(ptr, uint32(r[0]))
+	mem := s.c.mem.view(ptr, r[0])
 	return string(mem)
 }
 
@@ -370,7 +370,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 	r = s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 
-	mem := s.c.mem.view(ptr, uint32(r[0]))
+	mem := s.c.mem.view(ptr, r[0])
 	return append(buf[0:0], mem...)
 }
 

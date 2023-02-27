@@ -12,6 +12,8 @@ const (
 	_MAX_STRING   = 512 // Used for short strings: names, error messages…
 	_MAX_PATHNAME = 512
 
+	_MAX_ALLOCATION_SIZE = 0x7ffffeff
+
 	ptrlen = 4
 )
 
