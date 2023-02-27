@@ -44,7 +44,7 @@ and WAL databases are not supported.
 - [x] file locking, compatible with SQLite on macOS/Linux/Windows
 - [ ] advanced SQLite features
   - [x] nested transactions
-  - [ ] incremental BLOB I/O
+  - [x] incremental BLOB I/O
   - [ ] online backup
   - [ ] snapshots
   - [ ] session extension
