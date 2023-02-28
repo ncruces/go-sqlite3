@@ -1,4 +1,27 @@
 // Package driver provides a database/sql driver for SQLite.
+//
+// Importing package driver registers a [database/sql] driver named "sqlite3".
+// You may also need to import package embed.
+//
+//	import _ "github.com/ncruces/go-sqlite3/driver"
+//	import _ "github.com/ncruces/go-sqlite3/embed"
+//
+// The data source name for "sqlite3" databases can be a filename or a "file:" [URI].
+//
+// The [TRANSACTION] mode can be specified using "_txlock":
+//
+//	sql.Open("sqlite3", "file:demo.db?_txlock=immediate")
+//
+// [PRAGMA] statements can be specified using "_pragma":
+//
+//	sql.Open("sqlite3", "file:demo.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)")
+//
+// If no PRAGMAs are specifed, a busy timeout of 1 minute
+// and normal locking mode are used.
+//
+// [URI]: https://www.sqlite.org/uri.html
+// [PRAGMA]: https://www.sqlite.org/pragma.html
+// [TRANSACTION]: https://www.sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
 package driver
 
 import (

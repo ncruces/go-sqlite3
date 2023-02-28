@@ -11,11 +11,13 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
+const demo = "demo.db"
+
 func ExampleDriverConn() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", demo)
 	if err != nil {
 		log.Fatal(err)
 	}

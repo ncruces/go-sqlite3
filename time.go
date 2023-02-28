@@ -11,6 +11,9 @@ import (
 
 // TimeFormat specifies how to encode/decode time values.
 //
+// See the documentation for the [TimeFormatDefault] constant
+// for formats recognized by SQLite.
+//
 // https://www.sqlite.org/lang_datefunc.html
 type TimeFormat string
 
@@ -58,6 +61,14 @@ const (
 //
 // [TimeFormatDefault] and [TimeFormatAuto] encode using [time.RFC3339Nano],
 // with nanosecond accuracy, and preserving any timezone offset.
+//
+// This is the format used by the database/sql driver:
+// [database/sql.Row.Scan] is able to decode as [time.Time]
+// values encoded with [time.RFC3339Nano].
+//
+// Time values encoded with [time.RFC3339Nano] cannot be sorted as strings
+// to produce a time-ordered sequence.
+// Use [TimeFormat7TZ] for time-ordered encoding.
 //
 // Formats [TimeFormat1] through [TimeFormat10]
 // convert time values to UTC before encoding.

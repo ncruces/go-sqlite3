@@ -54,7 +54,7 @@ func TestConn_Close_BUSY(t *testing.T) {
 		t.Error("not temporary", err)
 	}
 	if got := err.Error(); got != `sqlite3: database is locked: unable to close due to unfinalized statements or unfinished backups` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 }
 
@@ -182,7 +182,7 @@ func TestConn_Prepare_invalid(t *testing.T) {
 		t.Errorf("got %d, want sqlite3.ERROR", rc)
 	}
 	if got := err.Error(); got != `sqlite3: SQL logic error: incomplete input` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 
 	_, _, err = db.Prepare(`SELECT * FRM sqlite_schema`)
@@ -196,10 +196,10 @@ func TestConn_Prepare_invalid(t *testing.T) {
 		t.Errorf("got %d, want sqlite3.ERROR", rc)
 	}
 	if got := serr.SQL(); got != `FRM sqlite_schema` {
-		t.Error("got SQL: ", got)
+		t.Error("got SQL:", got)
 	}
 	if got := serr.Error(); got != `sqlite3: SQL logic error: near "FRM": syntax error` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 }
 

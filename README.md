@@ -49,11 +49,13 @@ and WAL databases are not supported.
   - [ ] snapshots
   - [ ] session extension
   - [ ] resumable bulk update
-  - [ ] SQL functions
+  - [ ] shared cache mode
+- [ ] custom SQL functions
 - [ ] custom VFSes
   - [ ] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] in-memory VFS, wrapping a [`bytes.Buffer`](https://pkg.go.dev/bytes#Buffer)
-  - [ ] expose a custom VFS API
+  - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
+  - [ ] custom VFS API
   
 ### Alternatives
 

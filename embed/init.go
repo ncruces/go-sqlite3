@@ -1,5 +1,10 @@
 // Package embed embeds SQLite into your application.
 //
+// Importing package embed initializes the [sqlite3.Binary] variable
+// with an appropriate build of SQLite:
+//
+//	import _ "github.com/ncruces/go-sqlite3/embed"
+//
 // You can obtain this build of SQLite from:
 // https://github.com/ncruces/go-sqlite3/tree/main/embed
 package embed

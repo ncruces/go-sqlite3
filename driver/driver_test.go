@@ -72,7 +72,7 @@ func Test_Open_pragma_invalid(t *testing.T) {
 		t.Errorf("got %d, want sqlite3.ERROR", rc)
 	}
 	if got := err.Error(); got != `sqlite3: invalid _pragma: sqlite3: SQL logic error: near "1000": syntax error` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 }
 
@@ -124,7 +124,7 @@ func Test_Open_txLock_invalid(t *testing.T) {
 		t.Fatal("want error")
 	}
 	if got := err.Error(); got != `sqlite3: invalid _txlock: xclusive` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 }
 
@@ -201,7 +201,7 @@ func Test_Prepare(t *testing.T) {
 		t.Errorf("got %d, want sqlite3.ERROR", rc)
 	}
 	if got := err.Error(); got != `sqlite3: SQL logic error: incomplete input` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT`)
@@ -215,7 +215,7 @@ func Test_Prepare(t *testing.T) {
 		t.Errorf("got %d, want sqlite3.ERROR", rc)
 	}
 	if got := err.Error(); got != `sqlite3: SQL logic error: incomplete input` {
-		t.Error("got message: ", got)
+		t.Error("got message:", got)
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT 2`)
