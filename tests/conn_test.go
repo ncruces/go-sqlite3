@@ -248,3 +248,17 @@ func TestConn_MustPrepare_invalid(t *testing.T) {
 	_ = db.MustPrepare(`SELECT`)
 	t.Error("want panic")
 }
+
+func TestConn_Pragma(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	defer func() { _ = recover() }()
+	_ = db.Pragma("encoding=''")
+	t.Error("want panic")
+}

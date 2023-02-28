@@ -3,7 +3,10 @@ package sqlite3
 import (
 	"context"
 	"database/sql/driver"
+	"fmt"
 	"math"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/tetratelabs/wazero/api"
@@ -25,12 +28,16 @@ type Conn struct {
 	pending   *Stmt
 }
 
-// Open calls [OpenFlags] with [OPEN_READWRITE] and [OPEN_CREATE].
+// Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
 func Open(filename string) (conn *Conn, err error) {
-	return OpenFlags(filename, OPEN_READWRITE|OPEN_CREATE)
+	return OpenFlags(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
 }
 
 // OpenFlags opens an SQLite database file as specified by the filename argument.
+//
+// If a URI filename is used, PRAGMA statements to execute can be specified using "_pragma":
+//
+//	sqlite3.Open("file:demo.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)")
 //
 // https://www.sqlite.org/c3ref/open.html
 func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
@@ -60,6 +67,21 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	c.handle = c.mem.readUint32(connPtr)
 	if err := c.error(r[0]); err != nil {
 		return nil, err
+	}
+
+	if flags|OPEN_URI != 0 && strings.HasPrefix(filename, "file:") {
+		var pragmas strings.Builder
+		if _, after, ok := strings.Cut(filename, "?"); ok {
+			query, _ := url.ParseQuery(after)
+			for _, p := range query["_pragma"] {
+				pragmas.WriteString(`PRAGMA `)
+				pragmas.WriteString(p)
+				pragmas.WriteByte(';')
+			}
+		}
+		if err := c.Exec(pragmas.String()); err != nil {
+			return nil, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
+		}
 	}
 	return c, nil
 }
@@ -275,9 +297,6 @@ func (c *Conn) Pragma(str string) []string {
 	var pragmas []string
 	for stmt.Step() {
 		pragmas = append(pragmas, stmt.ColumnText(0))
-	}
-	if err := stmt.Err(); err != nil {
-		panic(err)
 	}
 	return pragmas
 }

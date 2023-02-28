@@ -43,41 +43,42 @@ func init() {
 
 type sqlite struct{}
 
-func (sqlite) Open(name string) (driver.Conn, error) {
+func (sqlite) Open(name string) (_ driver.Conn, err error) {
 	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI|sqlite3.OPEN_EXRESCODE)
 	if err != nil {
 		return nil, err
 	}
 
 	var txBegin string
-	var pragmas strings.Builder
-	if _, after, ok := strings.Cut(name, "?"); ok {
-		query, _ := url.ParseQuery(after)
+	var pragmas []string
+	if strings.HasPrefix(name, "file:") {
+		if _, after, ok := strings.Cut(name, "?"); ok {
+			query, _ := url.ParseQuery(after)
 
-		switch s := query.Get("_txlock"); s {
-		case "":
-			txBegin = "BEGIN"
-		case "deferred", "immediate", "exclusive":
-			txBegin = "BEGIN " + s
-		default:
-			return nil, fmt.Errorf("sqlite3: invalid _txlock: %s", s)
+			switch s := query.Get("_txlock"); s {
+			case "":
+				txBegin = "BEGIN"
+			case "deferred", "immediate", "exclusive":
+				txBegin = "BEGIN " + s
+			default:
+				c.Close()
+				return nil, fmt.Errorf("sqlite3: invalid _txlock: %s", s)
+			}
+
+			pragmas = query["_pragma"]
 		}
-
-		for _, p := range query["_pragma"] {
-			pragmas.WriteString(`PRAGMA `)
-			pragmas.WriteString(p)
-			pragmas.WriteByte(';')
+	}
+	if len(pragmas) == 0 {
+		err := c.Exec(`
+			PRAGMA busy_timeout=60000;
+			PRAGMA locking_mode=normal;
+		`)
+		if err != nil {
+			c.Close()
+			return nil, err
 		}
 	}
-	if pragmas.Len() == 0 {
-		pragmas.WriteString(`PRAGMA busy_timeout=60000;`)
-		pragmas.WriteString(`PRAGMA locking_mode=normal;`)
-	}
 
-	err = c.Exec(pragmas.String())
-	if err != nil {
-		return nil, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
-	}
 	return conn{
 		conn:    c,
 		txBegin: txBegin,
