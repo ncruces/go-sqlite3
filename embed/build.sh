@@ -8,7 +8,7 @@ cd -P -- "$(dirname -- "$0")"
 
 # build SQLite
 zig cc --target=wasm32-wasi -flto -g0 -Os \
-  -o sqlite3.wasm ../sqlite3/*.c \
+  -o sqlite3.wasm ../sqlite3/amalg.c \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
@@ -54,4 +54,10 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-Wl,--export=sqlite3_get_autocommit \
 	-Wl,--export=sqlite3_last_insert_rowid \
 	-Wl,--export=sqlite3_changes64 \
-	-Wl,--export=sqlite3_interrupt \
+	-Wl,--export=sqlite3_unlock_notify \
+	-Wl,--export=sqlite3_backup_init \
+	-Wl,--export=sqlite3_backup_step \
+	-Wl,--export=sqlite3_backup_finish \
+	-Wl,--export=sqlite3_backup_remaining \
+	-Wl,--export=sqlite3_backup_pagecount \
+	-Wl,--export=sqlite3_interrupt_offset \

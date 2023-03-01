@@ -17,7 +17,7 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 		return f
 	}
 
-	getPtr := func(name string) uint32 {
+	getVal := func(name string) uint32 {
 		global := module.ExportedGlobal(name)
 		if global == nil {
 			err = noGlobalErr + errorString(name)
@@ -32,7 +32,7 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 		api: sqliteAPI{
 			free:          getFun("free"),
 			malloc:        getFun("malloc"),
-			destructor:    uint64(getPtr("malloc_destructor")),
+			destructor:    uint64(getVal("malloc_destructor")),
 			errcode:       getFun("sqlite3_errcode"),
 			errstr:        getFun("sqlite3_errstr"),
 			errmsg:        getFun("sqlite3_errmsg"),
@@ -65,13 +65,13 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			autocommit:    getFun("sqlite3_get_autocommit"),
 			lastRowid:     getFun("sqlite3_last_insert_rowid"),
 			changes:       getFun("sqlite3_changes64"),
-			interrupt:     getFun("sqlite3_interrupt"),
 			blobOpen:      getFun("sqlite3_blob_open"),
 			blobClose:     getFun("sqlite3_blob_close"),
 			blobReopen:    getFun("sqlite3_blob_reopen"),
 			blobBytes:     getFun("sqlite3_blob_bytes"),
 			blobRead:      getFun("sqlite3_blob_read"),
 			blobWrite:     getFun("sqlite3_blob_write"),
+			interrupt:     getVal("sqlite3_interrupt_offset"),
 		},
 	}
 	if err != nil {
@@ -116,11 +116,11 @@ type sqliteAPI struct {
 	autocommit    api.Function
 	lastRowid     api.Function
 	changes       api.Function
-	interrupt     api.Function
 	blobOpen      api.Function
 	blobClose     api.Function
 	blobReopen    api.Function
 	blobBytes     api.Function
 	blobRead      api.Function
 	blobWrite     api.Function
+	interrupt     uint32
 }

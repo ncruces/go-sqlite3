@@ -1,44 +1,37 @@
-#include <stdbool.h>
-#include <stdlib.h>
 #include <time.h>
 
 #include "sqlite3.h"
 
-int main() {
-  int rc = sqlite3_initialize();
-  if (rc != SQLITE_OK) return 1;
-}
+int os_localtime(sqlite3_int64, struct tm *);
 
-int go_localtime(sqlite3_int64, struct tm *);
+int os_randomness(sqlite3_vfs *, int nByte, char *zOut);
+int os_sleep(sqlite3_vfs *, int microseconds);
+int os_current_time(sqlite3_vfs *, double *);
+int os_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
 
-int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
-int go_sleep(sqlite3_vfs *, int microseconds);
-int go_current_time(sqlite3_vfs *, double *);
-int go_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
-
-int go_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
+int os_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
             int *pOutFlags);
-int go_delete(sqlite3_vfs *, const char *zName, int syncDir);
-int go_access(sqlite3_vfs *, const char *zName, int flags, int *pResOut);
-int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
+int os_delete(sqlite3_vfs *, const char *zName, int syncDir);
+int os_access(sqlite3_vfs *, const char *zName, int flags, int *pResOut);
+int os_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
 
-struct go_file {
+struct os_file {
   sqlite3_file base;
   int id;
-  int eLock;
+  int lock;
 };
 
-int go_close(sqlite3_file *);
-int go_read(sqlite3_file *, void *, int iAmt, sqlite3_int64 iOfst);
-int go_write(sqlite3_file *, const void *, int iAmt, sqlite3_int64 iOfst);
-int go_truncate(sqlite3_file *, sqlite3_int64 size);
-int go_sync(sqlite3_file *, int flags);
-int go_file_size(sqlite3_file *, sqlite3_int64 *pSize);
-int go_file_control(sqlite3_file *pFile, int op, void *pArg);
+int os_close(sqlite3_file *);
+int os_read(sqlite3_file *, void *, int iAmt, sqlite3_int64 iOfst);
+int os_write(sqlite3_file *, const void *, int iAmt, sqlite3_int64 iOfst);
+int os_truncate(sqlite3_file *, sqlite3_int64 size);
+int os_sync(sqlite3_file *, int flags);
+int os_file_size(sqlite3_file *, sqlite3_int64 *pSize);
+int os_file_control(sqlite3_file *pFile, int op, void *pArg);
 
-int go_lock(sqlite3_file *pFile, int eLock);
-int go_unlock(sqlite3_file *pFile, int eLock);
-int go_check_reserved_lock(sqlite3_file *pFile, int *pResOut);
+int os_lock(sqlite3_file *pFile, int eLock);
+int os_unlock(sqlite3_file *pFile, int eLock);
+int os_check_reserved_lock(sqlite3_file *pFile, int *pResOut);
 
 static int no_lock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
 static int no_unlock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
@@ -54,48 +47,46 @@ static int no_sector_size(sqlite3_file *pFile) { return 0; }
 static int no_device_characteristics(sqlite3_file *pFile) { return 0; }
 
 int localtime_s(struct tm *const pTm, time_t const *const pTime) {
-  return go_localtime((sqlite3_int64)*pTime, pTm);
+  return os_localtime((sqlite3_int64)*pTime, pTm);
 }
 
-static int go_open_c(sqlite3_vfs *vfs, sqlite3_filename zName,
+static int os_open_w(sqlite3_vfs *vfs, sqlite3_filename zName,
                      sqlite3_file *file, int flags, int *pOutFlags) {
-  static const sqlite3_io_methods go_io = {
+  static const sqlite3_io_methods os_io = {
       .iVersion = 1,
-      .xClose = go_close,
-      .xRead = go_read,
-      .xWrite = go_write,
-      .xTruncate = go_truncate,
-      .xSync = go_sync,
-      .xFileSize = go_file_size,
-      .xLock = go_lock,
-      .xUnlock = go_unlock,
-      .xCheckReservedLock = go_check_reserved_lock,
+      .xClose = os_close,
+      .xRead = os_read,
+      .xWrite = os_write,
+      .xTruncate = os_truncate,
+      .xSync = os_sync,
+      .xFileSize = os_file_size,
+      .xLock = os_lock,
+      .xUnlock = os_unlock,
+      .xCheckReservedLock = os_check_reserved_lock,
       .xFileControl = no_file_control,
       .xDeviceCharacteristics = no_device_characteristics,
   };
-  int rc = go_open(vfs, zName, file, flags, pOutFlags);
-  file->pMethods = (char)rc == SQLITE_OK ? &go_io : NULL;
+  int rc = os_open(vfs, zName, file, flags, pOutFlags);
+  file->pMethods = (char)rc == SQLITE_OK ? &os_io : NULL;
   return rc;
 }
 
-int sqlite3_os_init() {
-  static sqlite3_vfs go_vfs = {
+sqlite3_vfs *os_vfs() {
+  static sqlite3_vfs os_vfs = {
       .iVersion = 2,
-      .szOsFile = sizeof(struct go_file),
+      .szOsFile = sizeof(struct os_file),
       .mxPathname = 512,
-      .zName = "go",
+      .zName = "os",
 
-      .xOpen = go_open_c,
-      .xDelete = go_delete,
-      .xAccess = go_access,
-      .xFullPathname = go_full_pathname,
+      .xOpen = os_open_w,
+      .xDelete = os_delete,
+      .xAccess = os_access,
+      .xFullPathname = os_full_pathname,
 
-      .xRandomness = go_randomness,
-      .xSleep = go_sleep,
-      .xCurrentTime = go_current_time,
-      .xCurrentTimeInt64 = go_current_time_64,
+      .xRandomness = os_randomness,
+      .xSleep = os_sleep,
+      .xCurrentTime = os_current_time,
+      .xCurrentTimeInt64 = os_current_time_64,
   };
-  return sqlite3_vfs_register(&go_vfs, /*default=*/true);
+  return &os_vfs;
 }
-
-sqlite3_destructor_type malloc_destructor = &free;

@@ -7,7 +7,8 @@ import (
 	"math"
 	"net/url"
 	"strings"
-	"sync"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -23,7 +24,6 @@ type Conn struct {
 	handle uint32
 
 	arena     arena
-	mtx       sync.Mutex
 	interrupt context.Context
 	waiter    chan struct{}
 	pending   *Stmt
@@ -263,8 +263,8 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 			break
 
 		case <-ctx.Done(): // Done was closed.
-
-			c.sendInterrupt()
+			buf := c.mem.view(c.handle+c.api.interrupt, 4)
+			(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 			// Wait for the next call to SetInterrupt.
 			<-waiter
 		}
@@ -279,16 +279,9 @@ func (c *Conn) checkInterrupt() bool {
 	if c.interrupt == nil || c.interrupt.Err() == nil {
 		return false
 	}
-	c.sendInterrupt()
+	buf := c.mem.view(c.handle+c.api.interrupt, 4)
+	(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 	return true
-}
-
-func (c *Conn) sendInterrupt() {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	// This is safe to call from a goroutine
-	// because it doesn't touch the C stack.
-	c.call(c.api.interrupt, uint64(c.handle))
 }
 
 // Pragma executes a PRAGMA statement and returns any results.

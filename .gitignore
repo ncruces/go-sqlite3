@@ -16,5 +16,4 @@
 tools
 
 # Project
-demo.db
 sqlite3/sqlite3*

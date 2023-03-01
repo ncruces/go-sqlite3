@@ -4,8 +4,6 @@
 [![Go Report](https://goreportcard.com/badge/github.com/ncruces/go-sqlite3)](https://goreportcard.com/report/github.com/ncruces/go-sqlite3)
 [![Go Coverage](https://github.com/ncruces/go-sqlite3/wiki/coverage.svg)](https://raw.githack.com/wiki/ncruces/go-sqlite3/coverage.html)
 
-### ⚠️ Work in Progress ⚠️
-
 Go module `github.com/ncruces/go-sqlite3` wraps a [WASM](https://webassembly.org/) build of [SQLite](https://sqlite.org/),
 and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
 
@@ -20,6 +18,8 @@ embeds a build of SQLite into your application.
 
 ### Caveats
 
+#### Write-Ahead Logging
+
 Because WASM does not support shared memory,
 [WAL](https://www.sqlite.org/wal.html) support is [limited](https://www.sqlite.org/wal.html#noshm).
 
@@ -32,6 +32,16 @@ For non-WAL databases, `NORMAL` locking mode can be activated with
 Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
 the `database/sql` driver defaults to `NORMAL` locking mode,
 and WAL databases are not supported.
+
+#### Open File Description Locks
+
+On Unix, this module uses [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
+to synchronize access to database files.
+
+POSIX advisory locks, which SQLite uses, are [broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
+OFD locks are fully compatible with process-associated POSIX advisory locks,
+and are supported on Linux, macOS and illumos.
+As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.org/uri.html).
 
 ### Roadmap
 
@@ -50,6 +60,7 @@ and WAL databases are not supported.
   - [ ] session extension
   - [ ] resumable bulk update
   - [ ] shared cache mode
+  - [ ] unlock-notify
 - [ ] custom SQL functions
 - [ ] custom VFSes
   - [ ] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)

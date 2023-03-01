@@ -9,12 +9,11 @@ import (
 )
 
 func Test_vfsLock(t *testing.T) {
-	// Other OSes lack open file descriptors locks.
 	switch runtime.GOOS {
 	case "linux", "darwin", "illumos", "windows":
 		break
 	default:
-		t.Skip()
+		t.Skip("OS lacks OFD locks")
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")

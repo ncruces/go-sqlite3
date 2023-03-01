@@ -21,7 +21,7 @@ func TestParallel(t *testing.T) {
 
 func TestMultiProcess(t *testing.T) {
 	if testing.Short() {
-		t.Skip()
+		t.Skip("skipping in short mode")
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
