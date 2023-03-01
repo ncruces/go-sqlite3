@@ -52,7 +52,7 @@ func (e *Error) Error() string {
 
 // Is tests whether this error matches a given [ErrorCode] or [ExtendedErrorCode].
 //
-// This makes it possible to do:
+// It makes it possible to do:
 //
 //	if errors.Is(err, sqlite3.BUSY) {
 //		// ... handle BUSY
@@ -201,6 +201,7 @@ const (
 	noFuncErr   = errorString("sqlite3: could not find function: ")
 	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
 	timeErr     = errorString("sqlite3: invalid time value")
+	emptyErr    = errorString("sqlite3: empty statement")
 	tailErr     = errorString("sqlite3: non-empty tail")
 	notImplErr  = errorString("sqlite3: not implemented")
 	whenceErr   = errorString("sqlite3: invalid whence")

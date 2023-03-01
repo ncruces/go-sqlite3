@@ -13,6 +13,7 @@ import (
 )
 
 // Conn is a database connection handle.
+// A Conn is not safe for concurrent use by multiple goroutines.
 //
 // https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
@@ -92,7 +93,7 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 // open blob handles, and/or unfinished backup objects,
 // Close will leave the database connection open and return [BUSY].
 //
-// It is safe to close a nil, zero or closed connection.
+// It is safe to close a nil, zero or closed Conn.
 //
 // https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
@@ -125,11 +126,14 @@ func (c *Conn) Exec(sql string) error {
 }
 
 // MustPrepare calls [Conn.Prepare] and panics on error,
-// or a non empty tail.
+// a nil Stmt, or a non-empty tail.
 func (c *Conn) MustPrepare(sql string) *Stmt {
 	s, tail, err := c.PrepareFlags(sql, 0)
 	if err != nil {
 		panic(err)
+	}
+	if s == nil {
+		panic(emptyErr)
 	}
 	if !emptyStatement(tail) {
 		panic(tailErr)
@@ -208,7 +212,7 @@ func (c *Conn) Changes() int64 {
 // Subsequent uses of the connection will return [INTERRUPT]
 // until the context is reset by another call to SetInterrupt.
 //
-// For example, a timeout can be associated with a connection:
+// To associate a timeout with a connection:
 //
 //	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Millisecond)
 //	conn.SetInterrupt(ctx)
@@ -287,7 +291,7 @@ func (c *Conn) sendInterrupt() {
 	c.call(c.api.interrupt, uint64(c.handle))
 }
 
-// Pragma executes a PRAGMA statement and returns any result as a string.
+// Pragma executes a PRAGMA statement and returns any results.
 //
 // https://www.sqlite.org/pragma.html
 func (c *Conn) Pragma(str string) []string {
@@ -430,7 +434,13 @@ func (a *arena) string(s string) uint32 {
 	return ptr
 }
 
-// DriverConn is implemented by the SQLite database/sql driver connection.
+// DriverConn is implemented by the SQLite [database/sql] driver connection.
+//
+// It can be used to access advanced SQLite features like
+// [savepoints] and [incremental BLOB I/O].
+//
+// [savepoints]: https://www.sqlite.org/lang_savepoint.html
+// [incremental BLOB I/O]: https://www.sqlite.org/c3ref/blob_open.html
 type DriverConn interface {
 	driver.ConnBeginTx
 	driver.ExecerContext

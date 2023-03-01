@@ -44,7 +44,7 @@ func (c *Conn) BeginExclusive() (Tx, error) {
 	return Tx{c}, nil
 }
 
-// End calls either [Commit] or [Rollback]
+// End calls either [Tx.Commit] or [Tx.Rollback]
 // depending on whether *error points to a nil or non-nil error.
 //
 // This is meant to be deferred:
@@ -56,7 +56,7 @@ func (c *Conn) BeginExclusive() (Tx, error) {
 //		// ... do work in the transaction
 //	}
 //
-// https://www.sqlite.org/lang_savepoint.html
+// https://www.sqlite.org/lang_transaction.html
 func (tx Tx) End(errp *error) {
 	recovered := recover()
 	if recovered != nil {
@@ -84,10 +84,16 @@ func (tx Tx) End(errp *error) {
 	}
 }
 
+// Commit commits the transaction.
+//
+// https://www.sqlite.org/lang_transaction.html
 func (tx Tx) Commit() error {
 	return tx.c.Exec(`COMMIT`)
 }
 
+// Rollback rollsback the transaction.
+//
+// https://www.sqlite.org/lang_transaction.html
 func (tx Tx) Rollback() error {
 	// ROLLBACK even if the connection has been interrupted.
 	old := tx.c.SetInterrupt(context.Background())

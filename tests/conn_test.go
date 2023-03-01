@@ -213,12 +213,8 @@ func TestConn_MustPrepare_empty(t *testing.T) {
 	defer db.Close()
 
 	defer func() { _ = recover() }()
-	stmt := db.MustPrepare(``)
-	defer stmt.Close()
-
-	if stmt != nil {
-		t.Error("want nil")
-	}
+	_ = db.MustPrepare(``)
+	t.Error("want panic")
 }
 
 func TestConn_MustPrepare_tail(t *testing.T) {

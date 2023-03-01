@@ -5,23 +5,25 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
-const demo = "demo.db"
+var db *sql.DB
 
 func ExampleDriverConn() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	db, err := sql.Open("sqlite3", demo)
+	var err error
+	db, err = sql.Open("sqlite3", "demo.db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	defer os.Remove("demo.db")
+
+	ctx := context.Background()
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
@@ -34,12 +36,12 @@ func ExampleDriverConn() {
 		log.Fatal(err)
 	}
 
-	r, err := conn.ExecContext(ctx, `INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(11))
+	res, err := conn.ExecContext(ctx, `INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(11))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	id, err := r.LastInsertId()
+	id, err := res.LastInsertId()
 	if err != nil {
 		log.Fatal(err)
 	}

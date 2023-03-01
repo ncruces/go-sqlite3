@@ -9,6 +9,8 @@ type ZeroBlob int64
 
 // Blob is a handle to an open BLOB.
 //
+// It implements [io.ReadWriteSeeker] for incremental BLOB I/O.
+//
 // https://www.sqlite.org/c3ref/blob.html
 type Blob struct {
 	c      *Conn
@@ -50,7 +52,7 @@ func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob,
 
 // Close closes a BLOB handle.
 //
-// It is safe to close a nil, zero or closed BLOB handle.
+// It is safe to close a nil, zero or closed Blob.
 //
 // https://www.sqlite.org/c3ref/blob_close.html
 func (b *Blob) Close() error {

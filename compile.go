@@ -13,9 +13,14 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-// Configure SQLite.
+// Configure SQLite WASM.
+//
+// Importing package embed initializes these
+// with an appropriate build of SQLite:
+//
+//	import _ "github.com/ncruces/go-sqlite3/embed"
 var (
-	Binary []byte // Binary to load.
+	Binary []byte // WASM binary to load.
 	Path   string // Path to load the binary from.
 )
 

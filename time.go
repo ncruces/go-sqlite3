@@ -68,7 +68,7 @@ const (
 //
 // Time values encoded with [time.RFC3339Nano] cannot be sorted as strings
 // to produce a time-ordered sequence.
-// Use [TimeFormat7TZ] for time-ordered encoding.
+// Use [TimeFormat7] for time-ordered encoding.
 //
 // Formats [TimeFormat1] through [TimeFormat10]
 // convert time values to UTC before encoding.
