@@ -14,8 +14,15 @@ import (
 )
 
 func TestParallel(t *testing.T) {
+	var iter int
+	if testing.Short() {
+		iter = 1000
+	} else {
+		iter = 5000
+	}
+
 	name := filepath.Join(t.TempDir(), "test.db")
-	testParallel(t, name, 1000)
+	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
 
@@ -135,7 +142,7 @@ func testParallel(t *testing.T, name string, n int) {
 	}
 
 	var group errgroup.Group
-	group.SetLimit(4)
+	group.SetLimit(6)
 	for i := 0; i < n; i++ {
 		if i&7 != 7 {
 			group.Go(reader)

@@ -7,6 +7,7 @@ import (
 	"runtime"
 )
 
+// Tx is an in-progress database transaction.
 type Tx struct {
 	c *Conn
 }
