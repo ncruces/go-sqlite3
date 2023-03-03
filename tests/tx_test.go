@@ -29,6 +29,7 @@ func TestConn_Transaction_exec(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer stmt.Close()
 		if stmt.Step() {
 			return stmt.ColumnInt(0)
 		}
@@ -117,6 +118,7 @@ func TestConn_Transaction_panic(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer stmt.Close()
 		if stmt.Step() {
 			got := stmt.ColumnInt(0)
 			if got != 1 {
@@ -275,6 +277,7 @@ func TestConn_Savepoint_exec(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer stmt.Close()
 		if stmt.Step() {
 			return stmt.ColumnInt(0)
 		}
@@ -361,6 +364,7 @@ func TestConn_Savepoint_panic(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer stmt.Close()
 		if stmt.Step() {
 			got := stmt.ColumnInt(0)
 			if got != 1 {

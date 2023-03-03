@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"unsafe"
@@ -30,8 +31,8 @@ type Conn struct {
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
-func Open(filename string) (conn *Conn, err error) {
-	return OpenFlags(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+func Open(filename string) (*Conn, error) {
+	return openFlags(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
 }
 
 // OpenFlags opens an SQLite database file as specified by the filename argument.
@@ -41,7 +42,11 @@ func Open(filename string) (conn *Conn, err error) {
 //	sqlite3.Open("file:demo.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)")
 //
 // https://www.sqlite.org/c3ref/open.html
-func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
+func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
+	return openFlags(filename, flags)
+}
+
+func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	ctx := context.Background()
 	module, err := sqlite3.instantiateModule(ctx)
 	if err != nil {
@@ -50,6 +55,8 @@ func OpenFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	defer func() {
 		if conn == nil {
 			module.Close(ctx)
+		} else {
+			runtime.SetFinalizer(conn, finalizer[Conn](3))
 		}
 	}()
 
@@ -109,6 +116,7 @@ func (c *Conn) Close() error {
 	}
 
 	c.handle = 0
+	runtime.SetFinalizer(c, nil)
 	return c.mem.mod.Close(c.ctx)
 }
 
@@ -133,9 +141,11 @@ func (c *Conn) MustPrepare(sql string) *Stmt {
 		panic(err)
 	}
 	if s == nil {
+		s.Close()
 		panic(emptyErr)
 	}
 	if !emptyStatement(tail) {
+		s.Close()
 		panic(tailErr)
 	}
 	return s

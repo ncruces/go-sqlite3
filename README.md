@@ -59,7 +59,7 @@ As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.o
   - [ ] snapshots
   - [ ] session extension
   - [ ] resumable bulk update
-  - [ ] shared cache mode
+  - [ ] shared-cache mode
   - [ ] unlock-notify
 - [ ] custom SQL functions
 - [ ] custom VFSes

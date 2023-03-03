@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -214,4 +215,12 @@ func assertErr() errorString {
 		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
 	}
 	return errorString(msg)
+}
+
+func finalizer[T any](skip int) func(*T) {
+	msg := fmt.Sprintf("sqlite3: %T not closed", new(T))
+	if _, file, line, ok := runtime.Caller(skip + 1); ok && skip >= 0 {
+		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
+	}
+	return func(*T) { panic(errorString(msg)) }
 }
