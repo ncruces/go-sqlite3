@@ -33,7 +33,7 @@ type Conn struct {
 
 // Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
 func Open(filename string) (*Conn, error) {
-	return openFlags(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+	return newConn(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
 }
 
 // OpenFlags opens an SQLite database file as specified by the filename argument.
@@ -44,10 +44,10 @@ func Open(filename string) (*Conn, error) {
 //
 // https://www.sqlite.org/c3ref/open.html
 func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
-	return openFlags(filename, flags)
+	return newConn(filename, flags)
 }
 
-func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
+func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 	ctx := context.Background()
 	mod, err := instantiateModule()
 	if err != nil {
@@ -68,16 +68,24 @@ func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 		mem: &mod.mem,
 	}
 	c.arena = c.newArena(1024)
+	c.handle, err = c.openDB(filename, flags)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
 
+func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	defer c.arena.reset()
 	connPtr := c.arena.new(ptrlen)
 	namePtr := c.arena.string(filename)
 
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
-	c.handle = c.mem.readUint32(connPtr)
-	if err := c.error(r[0]); err != nil {
-		return nil, err
+	handle := c.mem.readUint32(connPtr)
+	if err := c.mod.error(r[0], handle); err != nil {
+		c.closeDB(handle)
+		return 0, err
 	}
 
 	if flags|OPEN_URI != 0 && strings.HasPrefix(filename, "file:") {
@@ -90,11 +98,22 @@ func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 				pragmas.WriteByte(';')
 			}
 		}
-		if err := c.Exec(pragmas.String()); err != nil {
-			return nil, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
+
+		pragmaPtr := c.arena.string(pragmas.String())
+		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
+		if err := c.mod.error(r[0], handle, pragmas.String()); err != nil {
+			c.closeDB(handle)
+			return 0, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
 		}
 	}
-	return c, nil
+	return handle, nil
+}
+
+func (c *Conn) closeDB(handle uint32) {
+	r := c.call(c.api.closeZombie, uint64(c.handle))
+	if err := c.mod.error(r[0], handle); err != nil {
+		panic(err)
+	}
 }
 
 // Close closes the database connection.
@@ -312,6 +331,10 @@ func (c *Conn) Pragma(str string) []string {
 }
 
 func (c *Conn) error(rc uint64, sql ...string) error {
+	return c.mod.error(rc, c.handle, sql...)
+}
+
+func (c *module) error(rc uint64, handle uint32, sql ...string) error {
 	if rc == _OK {
 		return nil
 	}
@@ -329,13 +352,13 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 		err.str = c.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
-	r, _ = c.api.errmsg.Call(c.ctx, uint64(c.handle))
+	r, _ = c.api.errmsg.Call(c.ctx, uint64(handle))
 	if r != nil {
 		err.msg = c.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
 	if sql != nil {
-		r, _ = c.api.erroff.Call(c.ctx, uint64(c.handle))
+		r, _ = c.api.erroff.Call(c.ctx, uint64(handle))
 		if r != nil && r[0] != math.MaxUint32 {
 			err.sql = sql[0][r[0]:]
 		}

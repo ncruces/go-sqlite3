@@ -22,5 +22,4 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
 	-DHAVE_USLEEP -DSQLITE_NO_SYNC \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
-	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
-	$(awk '{print "-Wl,--export="$0}' ../../../sqlite3/exports.txt)
+	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid
