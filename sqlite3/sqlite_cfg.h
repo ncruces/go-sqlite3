@@ -33,7 +33,9 @@
 // We set the default locking mode to EXCLUSIVE instead.
 // https://www.sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
+#ifndef SQLITE_DEFAULT_LOCKING_MODE
 #define SQLITE_DEFAULT_LOCKING_MODE 1
+#endif
 
 // Recommended Extensions
 

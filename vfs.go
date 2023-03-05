@@ -26,6 +26,14 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 		panic(err)
 	}
 
+	env := vfsNewEnvModuleBuilder(r)
+	_, err = env.Instantiate(ctx)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	env := r.NewHostModuleBuilder("env")
 	env.NewFunctionBuilder().WithFunc(vfsLocaltime).Export("os_localtime")
 	env.NewFunctionBuilder().WithFunc(vfsRandomness).Export("os_randomness")
@@ -46,10 +54,7 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 	env.NewFunctionBuilder().WithFunc(vfsUnlock).Export("os_unlock")
 	env.NewFunctionBuilder().WithFunc(vfsCheckReservedLock).Export("os_check_reserved_lock")
 	env.NewFunctionBuilder().WithFunc(vfsFileControl).Export("os_file_control")
-	_, err = env.Instantiate(ctx)
-	if err != nil {
-		panic(err)
-	}
+	return env
 }
 
 type vfsOSMethods bool
