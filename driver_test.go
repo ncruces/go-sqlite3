@@ -20,8 +20,8 @@ func ExampleDriverConn() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 	defer os.Remove("demo.db")
+	defer db.Close()
 
 	ctx := context.Background()
 

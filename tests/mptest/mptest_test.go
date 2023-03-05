@@ -74,10 +74,7 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 
 	args := strings.Split(string(buf), " ")
 	for i := range args {
-		a, err := strconv.Unquote(args[i])
-		if err == nil {
-			args[i] = a
-		}
+		args[i] = strings.Trim(args[i], `"`)
 	}
 	args = args[:len(args)-1]
 
@@ -126,9 +123,6 @@ func Test_crash01(t *testing.T) {
 }
 
 func Test_multiwrite01(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip() // TODO: remove
-	}
 	log = &logger{T: t}
 	ctx := context.TODO()
 	name := filepath.Join(t.TempDir(), "test.db")

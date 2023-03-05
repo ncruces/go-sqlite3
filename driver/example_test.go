@@ -28,8 +28,8 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 	defer os.Remove("./recordings.db")
+	defer db.Close()
 
 	// Create a table with some data in it.
 	err = albumsSetup()
