@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"unsafe"
-
-	"github.com/tetratelabs/wazero/api"
 )
 
 // Conn is a database connection handle.
@@ -323,98 +321,6 @@ func (c *Conn) Pragma(str string) []string {
 
 func (c *Conn) error(rc uint64, sql ...string) error {
 	return c.module.error(rc, c.handle, sql...)
-}
-
-func (c *Conn) call(fn api.Function, params ...uint64) []uint64 {
-	r, err := fn.Call(c.ctx, params...)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}
-
-func (c *Conn) free(ptr uint32) {
-	if ptr == 0 {
-		return
-	}
-	c.call(c.api.free, uint64(ptr))
-}
-
-func (c *Conn) new(size uint64) uint32 {
-	if size > _MAX_ALLOCATION_SIZE {
-		panic(oomErr)
-	}
-	r := c.call(c.api.malloc, size)
-	ptr := uint32(r[0])
-	if ptr == 0 && size != 0 {
-		panic(oomErr)
-	}
-	return ptr
-}
-
-func (c *Conn) newBytes(b []byte) uint32 {
-	if b == nil {
-		return 0
-	}
-	ptr := c.new(uint64(len(b)))
-	c.mem.writeBytes(ptr, b)
-	return ptr
-}
-
-func (c *Conn) newString(s string) uint32 {
-	ptr := c.new(uint64(len(s) + 1))
-	c.mem.writeString(ptr, s)
-	return ptr
-}
-
-func (c *Conn) newArena(size uint64) arena {
-	return arena{
-		c:    c,
-		base: c.new(size),
-		size: uint32(size),
-	}
-}
-
-type arena struct {
-	c    *Conn
-	base uint32
-	next uint32
-	size uint32
-	ptrs []uint32
-}
-
-func (a *arena) free() {
-	if a.c == nil {
-		return
-	}
-	a.reset()
-	a.c.free(a.base)
-	a.c = nil
-}
-
-func (a *arena) reset() {
-	for _, ptr := range a.ptrs {
-		a.c.free(ptr)
-	}
-	a.ptrs = nil
-	a.next = 0
-}
-
-func (a *arena) new(size uint64) uint32 {
-	if size <= uint64(a.size-a.next) {
-		ptr := a.base + a.next
-		a.next += uint32(size)
-		return ptr
-	}
-	ptr := a.c.new(size)
-	a.ptrs = append(a.ptrs, ptr)
-	return ptr
-}
-
-func (a *arena) string(s string) uint32 {
-	ptr := a.new(uint64(len(s) + 1))
-	a.c.mem.writeString(ptr, s)
-	return ptr
 }
 
 // DriverConn is implemented by the SQLite [database/sql] driver connection.
