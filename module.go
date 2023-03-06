@@ -77,16 +77,18 @@ func compileModule() {
 }
 
 type module struct {
-	api.Module
-
 	ctx context.Context
 	mem memory
 	api sqliteAPI
 }
 
 func newModule(mod api.Module) (m *module, err error) {
+	m = &module{}
+	m.mem = memory{mod}
+	m.ctx = context.Background()
+
 	getFun := func(name string) api.Function {
-		f := m.ExportedFunction(name)
+		f := mod.ExportedFunction(name)
 		if f == nil {
 			err = noFuncErr + errorString(name)
 			return nil
@@ -95,7 +97,7 @@ func newModule(mod api.Module) (m *module, err error) {
 	}
 
 	getVal := func(name string) uint32 {
-		global := m.ExportedGlobal(name)
+		global := mod.ExportedGlobal(name)
 		if global == nil {
 			err = noGlobalErr + errorString(name)
 			return 0
@@ -103,11 +105,6 @@ func newModule(mod api.Module) (m *module, err error) {
 		return m.mem.readUint32(uint32(global.Get()))
 	}
 
-	m = &module{
-		Module: mod,
-		mem:    memory{mod},
-		ctx:    context.Background(),
-	}
 	m.api = sqliteAPI{
 		free:            getFun("free"),
 		malloc:          getFun("malloc"),
@@ -162,6 +159,10 @@ func newModule(mod api.Module) (m *module, err error) {
 		m = nil
 	}
 	return
+}
+
+func (m *module) close() error {
+	return m.mem.mod.Close(m.ctx)
 }
 
 func (m *module) error(rc uint64, handle uint32, sql ...string) error {

@@ -42,14 +42,13 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 }
 
 func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
-	ctx := context.Background()
 	mod, err := instantiateModule()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if conn == nil {
-			mod.Close(ctx)
+			mod.close()
 		} else {
 			runtime.SetFinalizer(conn, finalizer[Conn](3))
 		}
@@ -128,7 +127,7 @@ func (c *Conn) Close() error {
 
 	c.handle = 0
 	runtime.SetFinalizer(c, nil)
-	return c.mem.mod.Close(c.ctx)
+	return c.module.close()
 }
 
 // Exec is a convenience function that allows an application to run
