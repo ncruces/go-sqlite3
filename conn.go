@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql/driver"
 	"fmt"
-	"math"
 	"net/url"
 	"runtime"
 	"strings"
@@ -332,43 +331,6 @@ func (c *Conn) Pragma(str string) []string {
 
 func (c *Conn) error(rc uint64, sql ...string) error {
 	return c.mod.error(rc, c.handle, sql...)
-}
-
-func (c *module) error(rc uint64, handle uint32, sql ...string) error {
-	if rc == _OK {
-		return nil
-	}
-
-	err := Error{code: rc}
-
-	if err.Code() == NOMEM || err.ExtendedCode() == IOERR_NOMEM {
-		panic(oomErr)
-	}
-
-	var r []uint64
-
-	r, _ = c.api.errstr.Call(c.ctx, rc)
-	if r != nil {
-		err.str = c.mem.readString(uint32(r[0]), _MAX_STRING)
-	}
-
-	r, _ = c.api.errmsg.Call(c.ctx, uint64(handle))
-	if r != nil {
-		err.msg = c.mem.readString(uint32(r[0]), _MAX_STRING)
-	}
-
-	if sql != nil {
-		r, _ = c.api.erroff.Call(c.ctx, uint64(handle))
-		if r != nil && r[0] != math.MaxUint32 {
-			err.sql = sql[0][r[0]:]
-		}
-	}
-
-	switch err.msg {
-	case err.str, "not an error":
-		err.msg = ""
-	}
-	return &err
 }
 
 func (c *Conn) call(fn api.Function, params ...uint64) []uint64 {
