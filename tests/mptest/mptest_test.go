@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"embed"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"runtime"
@@ -35,9 +36,7 @@ func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder
 var (
 	rt        wazero.Runtime
 	module    wazero.CompiledModule
-	config    wazero.ModuleConfig
 	instances atomic.Uint64
-	log       *logger
 )
 
 func init() {
@@ -56,13 +55,18 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
 
+func config(ctx context.Context) wazero.ModuleConfig {
+	name := strconv.FormatUint(instances.Add(1), 10)
+	log := ctx.Value(logger{}).(io.Writer)
 	fs, err := fs.Sub(scripts, "testdata")
 	if err != nil {
 		panic(err)
 	}
 
-	config = wazero.NewModuleConfig().WithFS(fs).
+	return wazero.NewModuleConfig().
+		WithName(name).WithStdout(log).WithStderr(log).WithFS(fs).
 		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
 		WithOsyield(runtime.Gosched).
 		WithRandSource(rand.Reader)
@@ -78,18 +82,15 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 	}
 	args = args[:len(args)-1]
 
-	cfg := config.WithArgs(args...).
-		WithStdout(log).WithStderr(log).WithName(instanceName())
+	cfg := config(ctx).WithArgs(args...)
 	go rt.InstantiateModule(ctx, module, cfg)
 	return 0
 }
 
 func Test_config01(t *testing.T) {
-	log = &logger{T: t}
-	ctx := context.TODO()
+	ctx := newContext(t)
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config.WithArgs("mptest", name, "config01.test").
-		WithStdout(log).WithStderr(log).WithName(instanceName())
+	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
@@ -98,11 +99,9 @@ func Test_config01(t *testing.T) {
 
 func Test_config02(t *testing.T) {
 	t.Skip() // TODO: remove
-	log = &logger{T: t}
-	ctx := context.TODO()
+	ctx := newContext(t)
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config.WithArgs("mptest", name, "config02.test").
-		WithStdout(log).WithStderr(log).WithName(instanceName())
+	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
@@ -111,11 +110,9 @@ func Test_config02(t *testing.T) {
 
 func Test_crash01(t *testing.T) {
 	t.Skip() // TODO: remove
-	log = &logger{T: t}
-	ctx := context.TODO()
+	ctx := newContext(t)
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config.WithArgs("mptest", name, "crash01.test").
-		WithStdout(log).WithStderr(log).WithName(instanceName())
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
@@ -123,24 +120,32 @@ func Test_crash01(t *testing.T) {
 }
 
 func Test_multiwrite01(t *testing.T) {
-	log = &logger{T: t}
-	ctx := context.TODO()
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	ctx := newContext(t)
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config.WithArgs("mptest", name, "multiwrite01.test").
-		WithStdout(log).WithStderr(log).WithName(instanceName())
+	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-type logger struct {
+func newContext(t *testing.T) context.Context {
+	return context.WithValue(context.Background(), logger{}, &testWriter{T: t})
+}
+
+type logger struct{}
+
+type testWriter struct {
 	*testing.T
 	buf []byte
 	mtx sync.Mutex
 }
 
-func (l *logger) Write(p []byte) (n int, err error) {
+func (l *testWriter) Write(p []byte) (n int, err error) {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
 
@@ -153,8 +158,4 @@ func (l *logger) Write(p []byte) (n int, err error) {
 		l.Logf("%s", before)
 		l.buf = after
 	}
-}
-
-func instanceName() string {
-	return strconv.FormatUint(instances.Add(1), 10)
 }
