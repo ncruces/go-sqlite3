@@ -34,18 +34,37 @@ type sqlite3Runtime struct {
 	err       error
 }
 
-func (s *sqlite3Runtime) instantiateModule(ctx context.Context) (api.Module, error) {
-	s.once.Do(func() { s.compileModule(ctx) })
-	if s.err != nil {
-		return nil, s.err
+func instantiateModule() (m *module, err error) {
+	ctx := context.Background()
+
+	sqlite3.once.Do(func() { sqlite3.compileModule(ctx) })
+	if sqlite3.err != nil {
+		return nil, sqlite3.err
 	}
 
-	cfg := wazero.NewModuleConfig().
-		WithName("sqlite3-" + strconv.FormatUint(s.instances.Add(1), 10)).
+	name := "sqlite3-" + strconv.FormatUint(sqlite3.instances.Add(1), 10)
+
+	cfg := wazero.NewModuleConfig().WithName(name).
 		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
 		WithOsyield(runtime.Gosched).
 		WithRandSource(rand.Reader)
-	return s.runtime.InstantiateModule(ctx, s.compiled, cfg)
+
+	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	module := &module{
+		Module: mod,
+		ctx:    ctx,
+		mem:    memory{mod},
+	}
+
+	err = module.loadAPI()
+	if err != nil {
+		return nil, err
+	}
+	return module, nil
 }
 
 func (s *sqlite3Runtime) compileModule(ctx context.Context) {
@@ -65,4 +84,12 @@ func (s *sqlite3Runtime) compileModule(ctx context.Context) {
 	}
 
 	s.compiled, s.err = s.runtime.CompileModule(ctx, bin)
+}
+
+type module struct {
+	api.Module
+
+	ctx context.Context
+	mem memory
+	api sqliteAPI
 }

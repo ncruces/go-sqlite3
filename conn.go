@@ -19,9 +19,10 @@ import (
 //
 // https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
+	mod    *module
 	ctx    context.Context
-	api    sqliteAPI
-	mem    memory
+	api    *sqliteAPI
+	mem    *memory
 	handle uint32
 
 	arena     arena
@@ -48,21 +49,23 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 
 func openFlags(filename string, flags OpenFlag) (conn *Conn, err error) {
 	ctx := context.Background()
-	module, err := sqlite3.instantiateModule(ctx)
+	mod, err := instantiateModule()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if conn == nil {
-			module.Close(ctx)
+			mod.Close(ctx)
 		} else {
 			runtime.SetFinalizer(conn, finalizer[Conn](3))
 		}
 	}()
 
-	c, err := newConn(ctx, module)
-	if err != nil {
-		return nil, err
+	c := &Conn{
+		mod: mod,
+		ctx: mod.ctx,
+		api: &mod.api,
+		mem: &mod.mem,
 	}
 	c.arena = c.newArena(1024)
 

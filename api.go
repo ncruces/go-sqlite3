@@ -1,13 +1,9 @@
 // Package sqlite3 wraps the C SQLite API.
 package sqlite3
 
-import (
-	"context"
+import "github.com/tetratelabs/wazero/api"
 
-	"github.com/tetratelabs/wazero/api"
-)
-
-func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
+func (module *module) loadAPI() (err error) {
 	getFun := func(name string) api.Function {
 		f := module.ExportedFunction(name)
 		if f == nil {
@@ -23,13 +19,11 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			err = noGlobalErr + errorString(name)
 			return 0
 		}
-		return memory{module}.readUint32(uint32(global.Get()))
+		return module.mem.readUint32(uint32(global.Get()))
 	}
 
-	c := Conn{
-		ctx: ctx,
-		mem: memory{module},
-		api: sqliteAPI{
+	{
+		module.api = sqliteAPI{
 			free:          getFun("free"),
 			malloc:        getFun("malloc"),
 			destructor:    uint64(getVal("malloc_destructor")),
@@ -72,12 +66,9 @@ func newConn(ctx context.Context, module api.Module) (_ *Conn, err error) {
 			blobRead:      getFun("sqlite3_blob_read"),
 			blobWrite:     getFun("sqlite3_blob_write"),
 			interrupt:     getVal("sqlite3_interrupt_offset"),
-		},
+		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
+	return err
 }
 
 type sqliteAPI struct {
