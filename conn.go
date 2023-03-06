@@ -18,12 +18,9 @@ import (
 //
 // https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
-	mod    *module
-	ctx    context.Context
-	api    *sqliteAPI
-	mem    *memory
-	handle uint32
+	*module
 
+	handle    uint32
 	arena     arena
 	interrupt context.Context
 	waiter    chan struct{}
@@ -60,12 +57,7 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 		}
 	}()
 
-	c := &Conn{
-		mod: mod,
-		ctx: mod.ctx,
-		api: &mod.api,
-		mem: &mod.mem,
-	}
+	c := &Conn{module: mod}
 	c.arena = c.newArena(1024)
 	c.handle, err = c.openDB(filename, flags)
 	if err != nil {
@@ -82,7 +74,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	handle := c.mem.readUint32(connPtr)
-	if err := c.mod.error(r[0], handle); err != nil {
+	if err := c.module.error(r[0], handle); err != nil {
 		c.closeDB(handle)
 		return 0, err
 	}
@@ -100,7 +92,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 
 		pragmaPtr := c.arena.string(pragmas.String())
 		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
-		if err := c.mod.error(r[0], handle, pragmas.String()); err != nil {
+		if err := c.module.error(r[0], handle, pragmas.String()); err != nil {
 			c.closeDB(handle)
 			return 0, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
 		}
@@ -110,7 +102,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 
 func (c *Conn) closeDB(handle uint32) {
 	r := c.call(c.api.closeZombie, uint64(c.handle))
-	if err := c.mod.error(r[0], handle); err != nil {
+	if err := c.module.error(r[0], handle); err != nil {
 		panic(err)
 	}
 }
@@ -330,7 +322,7 @@ func (c *Conn) Pragma(str string) []string {
 }
 
 func (c *Conn) error(rc uint64, sql ...string) error {
-	return c.mod.error(rc, c.handle, sql...)
+	return c.module.error(rc, c.handle, sql...)
 }
 
 func (c *Conn) call(fn api.Function, params ...uint64) []uint64 {
