@@ -201,6 +201,98 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
+func (m *module) call(fn api.Function, params ...uint64) []uint64 {
+	r, err := fn.Call(m.ctx, params...)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
+func (m *module) free(ptr uint32) {
+	if ptr == 0 {
+		return
+	}
+	m.call(m.api.free, uint64(ptr))
+}
+
+func (m *module) new(size uint64) uint32 {
+	if size > _MAX_ALLOCATION_SIZE {
+		panic(oomErr)
+	}
+	r := m.call(m.api.malloc, size)
+	ptr := uint32(r[0])
+	if ptr == 0 && size != 0 {
+		panic(oomErr)
+	}
+	return ptr
+}
+
+func (m *module) newBytes(b []byte) uint32 {
+	if b == nil {
+		return 0
+	}
+	ptr := m.new(uint64(len(b)))
+	m.mem.writeBytes(ptr, b)
+	return ptr
+}
+
+func (m *module) newString(s string) uint32 {
+	ptr := m.new(uint64(len(s) + 1))
+	m.mem.writeString(ptr, s)
+	return ptr
+}
+
+func (m *module) newArena(size uint64) arena {
+	return arena{
+		m:    m,
+		base: m.new(size),
+		size: uint32(size),
+	}
+}
+
+type arena struct {
+	m    *module
+	base uint32
+	next uint32
+	size uint32
+	ptrs []uint32
+}
+
+func (a *arena) free() {
+	if a.m == nil {
+		return
+	}
+	a.reset()
+	a.m.free(a.base)
+	a.m = nil
+}
+
+func (a *arena) reset() {
+	for _, ptr := range a.ptrs {
+		a.m.free(ptr)
+	}
+	a.ptrs = nil
+	a.next = 0
+}
+
+func (a *arena) new(size uint64) uint32 {
+	if size <= uint64(a.size-a.next) {
+		ptr := a.base + a.next
+		a.next += uint32(size)
+		return ptr
+	}
+	ptr := a.m.new(size)
+	a.ptrs = append(a.ptrs, ptr)
+	return ptr
+}
+
+func (a *arena) string(s string) uint32 {
+	ptr := a.new(uint64(len(s) + 1))
+	a.m.mem.writeString(ptr, s)
+	return ptr
+}
+
 type sqliteAPI struct {
 	free            api.Function
 	malloc          api.Function
