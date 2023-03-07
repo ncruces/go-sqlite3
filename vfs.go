@@ -57,9 +57,36 @@ func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	return env
 }
 
-type vfsOSMethods bool
+// Poor man's namespaces.
+const (
+	vfsOS   vfsOSMethods   = false
+	vfsFile vfsFileMethods = false
+)
 
-const vfsOS vfsOSMethods = false
+type (
+	vfsOSMethods   bool
+	vfsFileMethods bool
+)
+
+type vfsKey struct{}
+type vfsState struct {
+	files []*os.File
+}
+
+func vfsContext(ctx context.Context) (context.Context, io.Closer) {
+	vfs := &vfsState{}
+	return context.WithValue(ctx, vfsKey{}, vfs), vfs
+}
+
+func (vfs *vfsState) Close() error {
+	for _, f := range vfs.files {
+		if f != nil {
+			f.Close()
+		}
+	}
+	vfs.files = nil
+	return nil
+}
 
 func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
 	// Ensure other callers see the exit code.
@@ -232,7 +259,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		vfsOS.DeleteOnClose(file)
 	}
 
-	vfsFileOpen(ctx, mod, pFile, file)
+	vfsFile.Open(ctx, mod, pFile, file)
 
 	if pOutFlags != 0 {
 		memory{mod}.writeUint32(pOutFlags, uint32(flags))
@@ -241,7 +268,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 }
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
-	err := vfsFileClose(ctx, mod, pFile)
+	err := vfsFile.Close(ctx, mod, pFile)
 	if err != nil {
 		return uint32(IOERR_CLOSE)
 	}
@@ -251,7 +278,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFile.GetOS(ctx, mod, pFile)
 	n, err := file.ReadAt(buf, int64(iOfst))
 	if n == int(iAmt) {
 		return _OK
@@ -268,7 +295,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFile.GetOS(ctx, mod, pFile)
 	_, err := file.WriteAt(buf, int64(iOfst))
 	if err != nil {
 		return uint32(IOERR_WRITE)
@@ -277,7 +304,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64) uint32 {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFile.GetOS(ctx, mod, pFile)
 	err := file.Truncate(int64(nByte))
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
@@ -286,7 +313,7 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64
 }
 
 func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFile.GetOS(ctx, mod, pFile)
 	err := file.Sync()
 	if err != nil {
 		return uint32(IOERR_FSYNC)
@@ -298,7 +325,7 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 	// This uses [os.File.Seek] because we don't care about the offset for reading/writing.
 	// But consider using [os.File.Stat] instead (as other VFSes do).
 
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFile.GetOS(ctx, mod, pFile)
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return uint32(IOERR_SEEK)
