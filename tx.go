@@ -92,7 +92,7 @@ func (tx Tx) Commit() error {
 	return tx.c.Exec(`COMMIT`)
 }
 
-// Rollback rollsback the transaction.
+// Rollback rolls back the transaction.
 //
 // https://www.sqlite.org/lang_transaction.html
 func (tx Tx) Rollback() error {

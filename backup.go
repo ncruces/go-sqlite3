@@ -11,7 +11,7 @@ type Backup struct {
 
 // Backup backs up srcDB on the src connection to the "main" database in dstURI.
 //
-// Backup calls [Conn.Open] to open the SQLite database file dstURI,
+// Backup calls [Open] to open the SQLite database file dstURI,
 // and blocks until the entire backup is complete.
 // Use [Conn.BackupInit] for incremental backup.
 //
@@ -28,7 +28,7 @@ func (src *Conn) Backup(srcDB, dstURI string) error {
 
 // Restore restores dstDB on the dst connection from the "main" database in srcURI.
 //
-// Restore calls [Conn.Open] to open the SQLite database file srcURI,
+// Restore calls [Open] to open the SQLite database file srcURI,
 // and blocks until the entire restore is complete.
 //
 // https://www.sqlite.org/backup.html
@@ -48,7 +48,7 @@ func (dst *Conn) Restore(dstDB, srcURI string) error {
 
 // BackupInit initializes a backup operation to copy the content of one database into another.
 //
-// BackupInit calls [Conn.Open] to open the SQLite database file dstURI,
+// BackupInit calls [Open] to open the SQLite database file dstURI,
 // then initializes a backup that copies the contents of srcDB on the src connection
 // to the "main" database in dstURI.
 //

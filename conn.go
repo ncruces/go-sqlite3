@@ -119,6 +119,8 @@ func (c *Conn) Close() error {
 	}
 
 	c.SetInterrupt(context.Background())
+	c.pending.Close()
+	c.pending = nil
 
 	r := c.call(c.api.close, uint64(c.handle))
 	if err := c.error(r[0]); err != nil {
@@ -247,15 +249,14 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 		<-c.waiter             // Wait for it to finish.
 		c.waiter = nil
 	}
+	// Reset the pending statement.
+	if c.pending != nil {
+		c.pending.Reset()
+	}
 
 	old = c.interrupt
 	c.interrupt = ctx
 	if ctx == nil || ctx.Done() == nil {
-		// Finalize the uncompleted SQL statement.
-		if c.pending != nil {
-			c.pending.Close()
-			c.pending = nil
-		}
 		return old
 	}
 
@@ -263,10 +264,8 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// an interrupt that comes before any other statements are started.
 	if c.pending == nil {
 		c.pending = c.MustPrepare(`SELECT 1 UNION ALL SELECT 2`)
-		c.pending.Step()
-	} else {
-		c.pending.Reset()
 	}
+	c.pending.Step()
 
 	// Don't create the goroutine if we're already interrupted.
 	// This happens frequently while restoring to a previously interrupted state.
