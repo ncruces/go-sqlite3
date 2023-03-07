@@ -6,20 +6,84 @@ package sqlite3
 type Backup struct {
 	c      *Conn
 	handle uint32
+	otherc uint32
+}
+
+// Backup backs up srcDB on the src connection to the "main" database in dstURI.
+//
+// Backup calls [Conn.Open] to open the SQLite database file dstURI,
+// and blocks until the entire backup is complete.
+// Use [Conn.BackupInit] for incremental backup.
+//
+// https://www.sqlite.org/backup.html
+func (src *Conn) Backup(srcDB, dstURI string) error {
+	b, err := src.BackupInit(srcDB, dstURI)
+	if err != nil {
+		return err
+	}
+	defer b.Close()
+	_, err = b.Step(-1)
+	return err
+}
+
+// Restore restores dstDB on the dst connection from the "main" database in srcURI.
+//
+// Restore calls [Conn.Open] to open the SQLite database file srcURI,
+// and blocks until the entire restore is complete.
+//
+// https://www.sqlite.org/backup.html
+func (dst *Conn) Restore(dstDB, srcURI string) error {
+	src, err := dst.openDB(srcURI, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+	if err != nil {
+		return err
+	}
+	b, err := dst.backupInit(dst.handle, dstDB, src, "main")
+	if err != nil {
+		return err
+	}
+	defer b.Close()
+	_, err = b.Step(-1)
+	return err
 }
 
 // BackupInit initializes a backup operation to copy the content of one database into another.
 //
 // BackupInit calls [Conn.Open] to open the SQLite database file dstURI,
-// then initializes a backup that copies the content of srcDB to the "main" database in dstURI.
+// then initializes a backup that copies the contents of srcDB on the src connection
+// to the "main" database in dstURI.
 //
 // https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupinit
-func (c *Conn) BackupInit(srcDB, dstURI string) (*Backup, error) {
-	return c.backupInit(srcDB, "main", 0)
+func (src *Conn) BackupInit(srcDB, dstURI string) (*Backup, error) {
+	dst, err := src.openDB(dstURI, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+	if err != nil {
+		return nil, err
+	}
+	return src.backupInit(dst, "main", src.handle, srcDB)
 }
 
-func (c *Conn) backupInit(srcDB, dstDB string, handle uint32) (*Backup, error) {
-	return nil, notImplErr
+func (c *Conn) backupInit(dst uint32, dstName string, src uint32, srcName string) (*Backup, error) {
+	defer c.arena.reset()
+	dstPtr := c.arena.string(dstName)
+	srcPtr := c.arena.string(srcName)
+
+	r := c.call(c.api.backupInit,
+		uint64(dst), uint64(dstPtr),
+		uint64(src), uint64(srcPtr))
+	if r[0] == 0 {
+		r = c.call(c.api.errcode, uint64(dst))
+		return nil, c.module.error(r[0], dst)
+	}
+
+	other := dst
+	if c.handle == dst {
+		other = src
+	}
+
+	return &Backup{
+		c:      c,
+		otherc: other,
+		handle: uint32(r[0]),
+	}, nil
 }
 
 // Close finishes a backup operation.
@@ -33,7 +97,7 @@ func (b *Backup) Close() error {
 	}
 
 	r := b.c.call(b.c.api.backupFinish, uint64(b.handle))
-
+	b.c.closeDB(b.otherc)
 	b.handle = 0
 	return b.c.error(r[0])
 }

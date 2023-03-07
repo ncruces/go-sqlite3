@@ -55,7 +55,7 @@ As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.o
 - [ ] advanced SQLite features
   - [x] nested transactions
   - [x] incremental BLOB I/O
-  - [ ] online backup
+  - [x] online backup
   - [ ] snapshots
   - [ ] session extension
   - [ ] resumable bulk update

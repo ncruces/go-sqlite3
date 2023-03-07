@@ -339,7 +339,7 @@ func (s *Stmt) ColumnText(col int) string {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		r = s.c.call(s.c.api.errcode, uint64(s.handle))
+		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
 		s.err = s.c.error(r[0])
 		return ""
 	}
@@ -362,7 +362,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		r = s.c.call(s.c.api.errcode, uint64(s.handle))
+		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
 		s.err = s.c.error(r[0])
 		return buf[0:0]
 	}

@@ -98,7 +98,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 }
 
 func (c *Conn) closeDB(handle uint32) {
-	r := c.call(c.api.closeZombie, uint64(c.handle))
+	r := c.call(c.api.closeZombie, uint64(handle))
 	if err := c.module.error(r[0], handle); err != nil {
 		panic(err)
 	}
