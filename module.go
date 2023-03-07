@@ -4,6 +4,7 @@ package sqlite3
 import (
 	"context"
 	"crypto/rand"
+	"io"
 	"math"
 	"os"
 	"runtime"
@@ -80,12 +81,13 @@ type module struct {
 	ctx context.Context
 	mem memory
 	api sqliteAPI
+	vfs io.Closer
 }
 
 func newModule(mod api.Module) (m *module, err error) {
 	m = &module{}
 	m.mem = memory{mod}
-	m.ctx = context.Background()
+	m.ctx, m.vfs = vfsContext(context.Background())
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
@@ -156,13 +158,15 @@ func newModule(mod api.Module) (m *module, err error) {
 		interrupt:       getVal("sqlite3_interrupt_offset"),
 	}
 	if err != nil {
-		m = nil
+		return nil, err
 	}
-	return
+	return m, nil
 }
 
 func (m *module) close() error {
-	return m.mem.mod.Close(m.ctx)
+	err := m.mem.mod.Close(m.ctx)
+	m.vfs.Close()
+	return err
 }
 
 func (m *module) error(rc uint64, handle uint32, sql ...string) error {
@@ -178,18 +182,18 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 
 	var r []uint64
 
-	r, _ = m.api.errstr.Call(m.ctx, rc)
+	r = m.call(m.api.errstr, rc)
 	if r != nil {
 		err.str = m.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
-	r, _ = m.api.errmsg.Call(m.ctx, uint64(handle))
+	r = m.call(m.api.errmsg, uint64(handle))
 	if r != nil {
 		err.msg = m.mem.readString(uint32(r[0]), _MAX_STRING)
 	}
 
 	if sql != nil {
-		r, _ = m.api.erroff.Call(m.ctx, uint64(handle))
+		r = m.call(m.api.erroff, uint64(handle))
 		if r != nil && r[0] != math.MaxUint32 {
 			err.sql = sql[0][r[0]:]
 		}
@@ -205,6 +209,7 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 func (m *module) call(fn api.Function, params ...uint64) []uint64 {
 	r, err := fn.Call(m.ctx, params...)
 	if err != nil {
+		m.vfs.Close()
 		panic(err)
 	}
 	return r

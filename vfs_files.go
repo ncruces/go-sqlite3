@@ -1,69 +1,79 @@
 package sqlite3
 
 import (
+	"context"
+	"io"
 	"os"
-	"sync"
 
 	"github.com/tetratelabs/wazero/api"
 )
 
-var (
-	vfsOpenFiles    []*os.File
-	vfsOpenFilesMtx sync.Mutex
-)
+type vfsKey struct{}
 
-func vfsGetFileID(file *os.File) uint32 {
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
+type vfsState struct {
+	files []*os.File
+}
+
+func (vfs *vfsState) Close() error {
+	for _, f := range vfs.files {
+		if f != nil {
+			f.Close()
+		}
+	}
+	vfs.files = nil
+	return nil
+}
+
+func vfsContext(ctx context.Context) (context.Context, io.Closer) {
+	vfs := &vfsState{}
+	return context.WithValue(ctx, vfsKey{}, vfs), vfs
+}
+
+func vfsFileNewID(ctx context.Context, file *os.File) uint32 {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
 
 	// Find an empty slot.
-	for id, ptr := range vfsOpenFiles {
+	for id, ptr := range vfs.files {
 		if ptr == nil {
-			vfsOpenFiles[id] = file
+			vfs.files[id] = file
 			return uint32(id)
 		}
 	}
 
 	// Add a new slot.
-	vfsOpenFiles = append(vfsOpenFiles, file)
-	return uint32(len(vfsOpenFiles) - 1)
+	vfs.files = append(vfs.files, file)
+	return uint32(len(vfs.files) - 1)
 }
 
-func vfsCloseFile(id uint32) error {
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
+func vfsFileOpen(ctx context.Context, mod api.Module, pFile uint32, file *os.File) {
+	mem := memory{mod}
+	id := vfsFileNewID(ctx, file)
+	mem.writeUint32(pFile+ptrlen, id)
+	mem.writeUint32(pFile+2*ptrlen, _NO_LOCK)
+}
 
-	file := vfsOpenFiles[id]
-	vfsOpenFiles[id] = nil
+func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {
+	mem := memory{mod}
+	id := mem.readUint32(pFile + ptrlen)
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	file := vfs.files[id]
+	vfs.files[id] = nil
 	return file.Close()
 }
 
-type vfsFilePtr struct {
-	api.Module
-	ptr uint32
+func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) *os.File {
+	mem := memory{mod}
+	id := mem.readUint32(pFile + ptrlen)
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	return vfs.files[id]
 }
 
-func (p vfsFilePtr) OSFile() *os.File {
-	id := p.ID()
-	vfsOpenFilesMtx.Lock()
-	defer vfsOpenFilesMtx.Unlock()
-	return vfsOpenFiles[id]
+func vfsFileLockState(ctx context.Context, mod api.Module, pFile uint32) vfsLockState {
+	mem := memory{mod}
+	return vfsLockState(mem.readUint32(pFile + 2*ptrlen))
 }
 
-func (p vfsFilePtr) ID() uint32 {
-	return memory{p}.readUint32(p.ptr + ptrlen)
-}
-
-func (p vfsFilePtr) Lock() vfsLockState {
-	return vfsLockState(memory{p}.readUint32(p.ptr + 2*ptrlen))
-}
-
-func (p vfsFilePtr) SetID(id uint32) vfsFilePtr {
-	memory{p}.writeUint32(p.ptr+ptrlen, id)
-	return p
-}
-
-func (p vfsFilePtr) SetLock(lock vfsLockState) vfsFilePtr {
-	memory{p}.writeUint32(p.ptr+2*ptrlen, uint32(lock))
-	return p
+func vfsFileSetLockState(ctx context.Context, mod api.Module, pFile uint32, lock vfsLockState) {
+	mem := memory{mod}
+	mem.writeUint32(pFile+2*ptrlen, uint32(lock))
 }

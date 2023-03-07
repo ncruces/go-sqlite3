@@ -16,15 +16,17 @@ import (
 
 func Test_vfsExit(t *testing.T) {
 	mem := newMemory(128)
+	ctx := context.TODO()
 	defer func() { _ = recover() }()
-	vfsExit(context.TODO(), mem.mod, 1)
+	vfsExit(ctx, mem.mod, 1)
 	t.Error("want panic")
 }
 
 func Test_vfsLocaltime(t *testing.T) {
 	mem := newMemory(128)
+	ctx := context.TODO()
 
-	rc := vfsLocaltime(context.TODO(), mem.mod, 0, 4)
+	rc := vfsLocaltime(ctx, mem.mod, 0, 4)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
@@ -71,24 +73,26 @@ func Test_vfsRandomness(t *testing.T) {
 }
 
 func Test_vfsSleep(t *testing.T) {
-	start := time.Now()
+	ctx := context.TODO()
 
-	rc := vfsSleep(context.TODO(), 0, 123456)
+	now := time.Now()
+	rc := vfsSleep(ctx, 0, 123456)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
 
 	want := 123456 * time.Microsecond
-	if got := time.Since(start); got < want {
+	if got := time.Since(now); got < want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
 
 func Test_vfsCurrentTime(t *testing.T) {
 	mem := newMemory(128)
+	ctx := context.TODO()
 
 	now := time.Now()
-	rc := vfsCurrentTime(context.TODO(), mem.mod, 0, 4)
+	rc := vfsCurrentTime(ctx, mem.mod, 0, 4)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
@@ -101,10 +105,11 @@ func Test_vfsCurrentTime(t *testing.T) {
 
 func Test_vfsCurrentTime64(t *testing.T) {
 	mem := newMemory(128)
+	ctx := context.TODO()
 
 	now := time.Now()
 	time.Sleep(time.Millisecond)
-	rc := vfsCurrentTime64(context.TODO(), mem.mod, 0, 4)
+	rc := vfsCurrentTime64(ctx, mem.mod, 0, 4)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
@@ -119,13 +124,14 @@ func Test_vfsCurrentTime64(t *testing.T) {
 func Test_vfsFullPathname(t *testing.T) {
 	mem := newMemory(128 + _MAX_PATHNAME)
 	mem.writeString(4, ".")
+	ctx := context.TODO()
 
-	rc := vfsFullPathname(context.TODO(), mem.mod, 0, 4, 0, 8)
+	rc := vfsFullPathname(ctx, mem.mod, 0, 4, 0, 8)
 	if rc != uint32(CANTOPEN_FULLPATH) {
 		t.Errorf("returned %d, want %d", rc, CANTOPEN_FULLPATH)
 	}
 
-	rc = vfsFullPathname(context.TODO(), mem.mod, 0, 4, _MAX_PATHNAME, 8)
+	rc = vfsFullPathname(ctx, mem.mod, 0, 4, _MAX_PATHNAME, 8)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -147,8 +153,9 @@ func Test_vfsDelete(t *testing.T) {
 
 	mem := newMemory(128 + _MAX_PATHNAME)
 	mem.writeString(4, name)
+	ctx := context.TODO()
 
-	rc := vfsDelete(context.TODO(), mem.mod, 0, 4, 1)
+	rc := vfsDelete(ctx, mem.mod, 0, 4, 1)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -157,7 +164,7 @@ func Test_vfsDelete(t *testing.T) {
 		t.Fatal("did not delete the file")
 	}
 
-	rc = vfsDelete(context.TODO(), mem.mod, 0, 4, 1)
+	rc = vfsDelete(ctx, mem.mod, 0, 4, 1)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -177,8 +184,9 @@ func Test_vfsAccess(t *testing.T) {
 
 	mem := newMemory(128 + _MAX_PATHNAME)
 	mem.writeString(8, dir)
+	ctx := context.TODO()
 
-	rc := vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_EXISTS, 4)
+	rc := vfsAccess(ctx, mem.mod, 0, 8, _ACCESS_EXISTS, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -186,7 +194,7 @@ func Test_vfsAccess(t *testing.T) {
 		t.Error("directory did not exist")
 	}
 
-	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_READWRITE, 4)
+	rc = vfsAccess(ctx, mem.mod, 0, 8, _ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -195,7 +203,7 @@ func Test_vfsAccess(t *testing.T) {
 	}
 
 	mem.writeString(8, file)
-	rc = vfsAccess(context.TODO(), mem.mod, 0, 8, _ACCESS_READWRITE, 4)
+	rc = vfsAccess(ctx, mem.mod, 0, 8, _ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -206,9 +214,11 @@ func Test_vfsAccess(t *testing.T) {
 
 func Test_vfsFile(t *testing.T) {
 	mem := newMemory(128)
+	ctx, vfs := vfsContext(context.TODO())
+	defer vfs.Close()
 
 	// Open a temporary file.
-	rc := vfsOpen(context.TODO(), mem.mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mem.mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -216,13 +226,13 @@ func Test_vfsFile(t *testing.T) {
 	// Write stuff.
 	text := "Hello world!"
 	mem.writeString(16, text)
-	rc = vfsWrite(context.TODO(), mem.mod, 4, 16, uint32(len(text)), 0)
+	rc = vfsWrite(ctx, mem.mod, 4, 16, uint32(len(text)), 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
 	// Check file size.
-	rc = vfsFileSize(context.TODO(), mem.mod, 4, 16)
+	rc = vfsFileSize(ctx, mem.mod, 4, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -231,7 +241,7 @@ func Test_vfsFile(t *testing.T) {
 	}
 
 	// Partial read at offset.
-	rc = vfsRead(context.TODO(), mem.mod, 4, 16, uint32(len(text)), 4)
+	rc = vfsRead(ctx, mem.mod, 4, 16, uint32(len(text)), 4)
 	if rc != uint32(IOERR_SHORT_READ) {
 		t.Fatal("returned", rc)
 	}
@@ -240,13 +250,13 @@ func Test_vfsFile(t *testing.T) {
 	}
 
 	// Truncate the file.
-	rc = vfsTruncate(context.TODO(), mem.mod, 4, 4)
+	rc = vfsTruncate(ctx, mem.mod, 4, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
 	// Check file size.
-	rc = vfsFileSize(context.TODO(), mem.mod, 4, 16)
+	rc = vfsFileSize(ctx, mem.mod, 4, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -255,7 +265,7 @@ func Test_vfsFile(t *testing.T) {
 	}
 
 	// Read at offset.
-	rc = vfsRead(context.TODO(), mem.mod, 4, 32, 4, 0)
+	rc = vfsRead(ctx, mem.mod, 4, 32, 4, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -264,7 +274,7 @@ func Test_vfsFile(t *testing.T) {
 	}
 
 	// Close the file.
-	rc = vfsClose(context.TODO(), mem.mod, 4)
+	rc = vfsClose(ctx, mem.mod, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

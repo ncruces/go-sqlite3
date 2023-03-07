@@ -7,6 +7,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -32,6 +33,9 @@ var scripts embed.FS
 
 //go:linkname vfsNewEnvModuleBuilder github.com/ncruces/go-sqlite3.vfsNewEnvModuleBuilder
 func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder
+
+//go:linkname vfsContext github.com/ncruces/go-sqlite3.vfsContext
+func vfsContext(ctx context.Context) (context.Context, io.Closer)
 
 var (
 	rt        wazero.Runtime
@@ -83,40 +87,56 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 	args = args[:len(args)-1]
 
 	cfg := config(ctx).WithArgs(args...)
-	go rt.InstantiateModule(ctx, module, cfg)
+	go func() {
+		ctx, vfs := vfsContext(ctx)
+		rt.InstantiateModule(ctx, module, cfg)
+		vfs.Close()
+	}()
 	return 0
 }
 
 func Test_config01(t *testing.T) {
-	ctx := newContext(t)
+	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
+	vfs.Close()
 }
 
 func Test_config02(t *testing.T) {
-	t.Skip() // TODO: remove
-	ctx := newContext(t)
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+
+	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
+	vfs.Close()
 }
 
 func Test_crash01(t *testing.T) {
-	t.Skip() // TODO: remove
-	ctx := newContext(t)
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
+	vfs.Close()
 }
 
 func Test_multiwrite01(t *testing.T) {
@@ -124,13 +144,14 @@ func Test_multiwrite01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx := newContext(t)
+	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	_, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
+	vfs.Close()
 }
 
 func newContext(t *testing.T) context.Context {

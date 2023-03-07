@@ -232,8 +232,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		vfsOS.DeleteOnClose(file)
 	}
 
-	id := vfsGetFileID(file)
-	vfsFilePtr{mod, pFile}.SetID(id).SetLock(_NO_LOCK)
+	vfsFileOpen(ctx, mod, pFile, file)
 
 	if pOutFlags != 0 {
 		memory{mod}.writeUint32(pOutFlags, uint32(flags))
@@ -242,8 +241,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 }
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
-	id := vfsFilePtr{mod, pFile}.ID()
-	err := vfsCloseFile(id)
+	err := vfsFileClose(ctx, mod, pFile)
 	if err != nil {
 		return uint32(IOERR_CLOSE)
 	}
@@ -253,7 +251,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
-	file := vfsFilePtr{mod, pFile}.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 	n, err := file.ReadAt(buf, int64(iOfst))
 	if n == int(iAmt) {
 		return _OK
@@ -270,7 +268,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
-	file := vfsFilePtr{mod, pFile}.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 	_, err := file.WriteAt(buf, int64(iOfst))
 	if err != nil {
 		return uint32(IOERR_WRITE)
@@ -279,7 +277,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64) uint32 {
-	file := vfsFilePtr{mod, pFile}.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Truncate(int64(nByte))
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
@@ -288,7 +286,7 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64
 }
 
 func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
-	file := vfsFilePtr{mod, pFile}.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Sync()
 	if err != nil {
 		return uint32(IOERR_FSYNC)
@@ -300,7 +298,7 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 	// This uses [os.File.Seek] because we don't care about the offset for reading/writing.
 	// But consider using [os.File.Stat] instead (as other VFSes do).
 
-	file := vfsFilePtr{mod, pFile}.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return uint32(IOERR_SEEK)

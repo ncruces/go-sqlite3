@@ -1,2 +1,2 @@
 mptest.wasm filter=lfs diff=lfs merge=lfs -text
-*.test* -crlf
+*.*test -crlf

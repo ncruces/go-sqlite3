@@ -61,9 +61,8 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		panic(assertErr())
 	}
 
-	ptr := vfsFilePtr{mod, pFile}
-	file := ptr.OSFile()
-	cLock := ptr.Lock()
+	file := vfsFileGet(ctx, mod, pFile)
+	cLock := vfsFileLockState(ctx, mod, pFile)
 
 	switch {
 	case cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK:
@@ -95,7 +94,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		if rc := vfsOS.GetSharedLock(file); rc != _OK {
 			return uint32(rc)
 		}
-		ptr.SetLock(_SHARED_LOCK)
+		vfsFileSetLockState(ctx, mod, pFile, _SHARED_LOCK)
 		return _OK
 
 	case _RESERVED_LOCK:
@@ -106,7 +105,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		if rc := vfsOS.GetReservedLock(file); rc != _OK {
 			return uint32(rc)
 		}
-		ptr.SetLock(_RESERVED_LOCK)
+		vfsFileSetLockState(ctx, mod, pFile, _RESERVED_LOCK)
 		return _OK
 
 	case _EXCLUSIVE_LOCK:
@@ -119,12 +118,12 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 			if rc := vfsOS.GetPendingLock(file); rc != _OK {
 				return uint32(rc)
 			}
-			ptr.SetLock(_PENDING_LOCK)
+			vfsFileSetLockState(ctx, mod, pFile, _PENDING_LOCK)
 		}
 		if rc := vfsOS.GetExclusiveLock(file); rc != _OK {
 			return uint32(rc)
 		}
-		ptr.SetLock(_EXCLUSIVE_LOCK)
+		vfsFileSetLockState(ctx, mod, pFile, _EXCLUSIVE_LOCK)
 		return _OK
 
 	default:
@@ -138,9 +137,8 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 		panic(assertErr())
 	}
 
-	ptr := vfsFilePtr{mod, pFile}
-	file := ptr.OSFile()
-	cLock := ptr.Lock()
+	file := vfsFileGet(ctx, mod, pFile)
+	cLock := vfsFileLockState(ctx, mod, pFile)
 
 	// Connection state check.
 	if cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK {
@@ -157,12 +155,12 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 		if rc := vfsOS.DowngradeLock(file, cLock); rc != _OK {
 			return uint32(rc)
 		}
-		ptr.SetLock(_SHARED_LOCK)
+		vfsFileSetLockState(ctx, mod, pFile, _SHARED_LOCK)
 		return _OK
 
 	case _NO_LOCK:
 		rc := vfsOS.ReleaseLock(file, cLock)
-		ptr.SetLock(_NO_LOCK)
+		vfsFileSetLockState(ctx, mod, pFile, _NO_LOCK)
 		return uint32(rc)
 
 	default:
@@ -171,14 +169,13 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
-	ptr := vfsFilePtr{mod, pFile}
-	cLock := ptr.Lock()
+	cLock := vfsFileLockState(ctx, mod, pFile)
 
 	if cLock > _SHARED_LOCK {
 		panic(assertErr())
 	}
 
-	file := ptr.OSFile()
+	file := vfsFileGet(ctx, mod, pFile)
 
 	locked, rc := vfsOS.CheckReservedLock(file)
 	var res uint32
