@@ -91,4 +91,37 @@ func TestBackup(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+
+	func() { // Errors.
+		db, err := sqlite3.Open(backupName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+
+		tx, err := db.BeginExclusive()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = db.Restore("main", backupName)
+		if err == nil {
+			t.Fatal("want error")
+		}
+
+		err = tx.Rollback()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = db.Restore("main", backupName)
+		if err == nil {
+			t.Fatal("want error")
+		}
+
+		err = db.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 }

@@ -209,6 +209,7 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 func (m *module) call(fn api.Function, params ...uint64) []uint64 {
 	r, err := fn.Call(m.ctx, params...)
 	if err != nil {
+		// The module closed or panicked; release resources.
 		m.vfs.Close()
 		panic(err)
 	}

@@ -66,17 +66,18 @@ func (c *Conn) backupInit(dst uint32, dstName string, src uint32, srcName string
 	dstPtr := c.arena.string(dstName)
 	srcPtr := c.arena.string(srcName)
 
+	other := dst
+	if c.handle == dst {
+		other = src
+	}
+
 	r := c.call(c.api.backupInit,
 		uint64(dst), uint64(dstPtr),
 		uint64(src), uint64(srcPtr))
 	if r[0] == 0 {
+		defer c.closeDB(other)
 		r = c.call(c.api.errcode, uint64(dst))
 		return nil, c.module.error(r[0], dst)
-	}
-
-	other := dst
-	if c.handle == dst {
-		other = src
 	}
 
 	return &Backup{

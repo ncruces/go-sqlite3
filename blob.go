@@ -8,6 +8,7 @@ import "io"
 type ZeroBlob int64
 
 // Blob is a handle to an open BLOB.
+//
 // It implements [io.ReadWriteSeeker] for incremental BLOB I/O.
 //
 // https://www.sqlite.org/c3ref/blob.html

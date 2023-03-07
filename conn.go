@@ -151,7 +151,6 @@ func (c *Conn) MustPrepare(sql string) *Stmt {
 		panic(err)
 	}
 	if s == nil {
-		s.Close()
 		panic(emptyErr)
 	}
 	if !emptyStatement(tail) {
