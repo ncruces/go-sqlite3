@@ -106,7 +106,7 @@ func (c conn) Begin() (driver.Tx, error) {
 	return c.BeginTx(context.Background(), driver.TxOptions{})
 }
 
-func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+func (c conn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	switch opts.Isolation {
 	default:
 		return nil, isolationErr
@@ -117,9 +117,13 @@ func (c conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, er
 	txBegin := c.txBegin
 	c.txCommit = `COMMIT`
 	if opts.ReadOnly {
+		query_only, err := c.conn.Pragma("query_only")
+		if err != nil {
+			return nil, err
+		}
 		c.txCommit = `
 			ROLLBACK;
-			PRAGMA query_only=` + c.conn.Pragma("query_only")[0]
+			PRAGMA query_only=` + query_only[0]
 		txBegin = `
 			BEGIN deferred;
 			PRAGMA query_only=on`

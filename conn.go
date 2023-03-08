@@ -87,6 +87,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 			}
 		}
 
+		c.arena.reset()
 		pragmaPtr := c.arena.string(pragmas.String())
 		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
 		if err := c.module.error(r[0], handle, pragmas.String()); err != nil {
@@ -143,23 +144,6 @@ func (c *Conn) Exec(sql string) error {
 
 	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	return c.error(r[0])
-}
-
-// MustPrepare calls [Conn.Prepare] and panics on error,
-// a nil Stmt, or a non-empty tail.
-func (c *Conn) MustPrepare(sql string) *Stmt {
-	s, tail, err := c.PrepareFlags(sql, 0)
-	if err != nil {
-		panic(err)
-	}
-	if s == nil {
-		panic(emptyErr)
-	}
-	if !emptyStatement(tail) {
-		s.Close()
-		panic(tailErr)
-	}
-	return s
 }
 
 // Prepare calls [Conn.PrepareFlags] with no flags.
@@ -263,7 +247,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// Creating an uncompleted SQL statement prevents SQLite from ignoring
 	// an interrupt that comes before any other statements are started.
 	if c.pending == nil {
-		c.pending = c.MustPrepare(`SELECT 1 UNION ALL SELECT 2`)
+		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
 	}
 	c.pending.Step()
 
@@ -305,15 +289,18 @@ func (c *Conn) checkInterrupt() bool {
 // Pragma executes a PRAGMA statement and returns any results.
 //
 // https://www.sqlite.org/pragma.html
-func (c *Conn) Pragma(str string) []string {
-	stmt := c.MustPrepare(`PRAGMA ` + str)
+func (c *Conn) Pragma(str string) ([]string, error) {
+	stmt, _, err := c.Prepare(`PRAGMA ` + str)
+	if err != nil {
+		return nil, err
+	}
 	defer stmt.Close()
 
 	var pragmas []string
 	for stmt.Step() {
 		pragmas = append(pragmas, stmt.ColumnText(0))
 	}
-	return pragmas
+	return pragmas, stmt.Close()
 }
 
 func (c *Conn) error(rc uint64, sql ...string) error {

@@ -202,8 +202,6 @@ const (
 	noFuncErr   = errorString("sqlite3: could not find function: ")
 	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
 	timeErr     = errorString("sqlite3: invalid time value")
-	emptyErr    = errorString("sqlite3: empty statement")
-	tailErr     = errorString("sqlite3: non-empty tail")
 	notImplErr  = errorString("sqlite3: not implemented")
 	whenceErr   = errorString("sqlite3: invalid whence")
 	offsetErr   = errorString("sqlite3: invalid offset")

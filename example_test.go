@@ -26,7 +26,11 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	stmt := db.MustPrepare(`SELECT id, name FROM users`)
+	stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
 
 	for stmt.Step() {
 		fmt.Println(stmt.ColumnInt(0), stmt.ColumnText(1))

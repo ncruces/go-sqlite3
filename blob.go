@@ -25,6 +25,7 @@ var _ io.ReadWriteSeeker = &Blob{}
 //
 // https://www.sqlite.org/c3ref/blob_open.html
 func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob, error) {
+	c.checkInterrupt()
 	defer c.arena.reset()
 	blobPtr := c.arena.new(ptrlen)
 	dbPtr := c.arena.string(db)
