@@ -5,6 +5,9 @@
 //
 //	import _ "github.com/ncruces/go-sqlite3/embed"
 //
+// The following optional features are compiled in:
+// math functions, JSON, FTS3/4/5, R*Tree, GeoPoly.
+//
 // You can obtain this build of SQLite from:
 // https://github.com/ncruces/go-sqlite3/tree/main/embed
 package embed

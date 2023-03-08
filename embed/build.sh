@@ -13,4 +13,4 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-D_HAVE_SQLITE_CONFIG_H \
-	$(awk '{print "-Wl,--export="$0}' ../sqlite3/exports.txt)
+	$(awk '{print "-Wl,--export="$0}' exports.txt)

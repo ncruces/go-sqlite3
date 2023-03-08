@@ -169,6 +169,8 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 		return _OK
 	}
 	if err != nil {
+		// TODO: fix windows.ERROR_SHARING_VIOLATION
+		// https://github.com/golang/go/issues/32088
 		return uint32(IOERR_DELETE)
 	}
 	if runtime.GOOS != "windows" && syncDir != 0 {

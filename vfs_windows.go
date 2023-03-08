@@ -63,6 +63,9 @@ func (vfsOSMethods) ReleaseLock(file *os.File, state vfsLockState) xErrorCode {
 func (vfsOSMethods) unlock(file *os.File, start, len uint32) xErrorCode {
 	err := windows.UnlockFileEx(windows.Handle(file.Fd()),
 		0, len, 0, &windows.Overlapped{Offset: start})
+	if err == windows.ERROR_NOT_LOCKED {
+		return _OK
+	}
 	if err != nil {
 		return IOERR_UNLOCK
 	}
@@ -95,8 +98,14 @@ func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK
 	}
-	if errno, _ := err.(syscall.Errno); errno == windows.ERROR_INVALID_HANDLE {
-		return def
+	if errno, ok := err.(syscall.Errno); ok {
+		// https://devblogs.microsoft.com/oldnewthing/20140905-00/?p=63
+		switch errno {
+		case
+			windows.ERROR_LOCK_VIOLATION,
+			windows.ERROR_IO_PENDING:
+			return xErrorCode(BUSY)
+		}
 	}
-	return xErrorCode(BUSY)
+	return def
 }
