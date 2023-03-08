@@ -48,7 +48,8 @@ func ExampleDriverConn() {
 
 	err = conn.Raw(func(driverConn any) error {
 		conn := driverConn.(sqlite3.DriverConn)
-		defer conn.Savepoint()(&err)
+		savept := conn.Savepoint()
+		defer savept.Release(&err)
 
 		blob, err := conn.OpenBlob("main", "test", "col", id, true)
 		if err != nil {

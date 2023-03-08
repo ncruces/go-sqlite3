@@ -189,7 +189,7 @@ func (c conn) ExecContext(ctx context.Context, query string, args []driver.Named
 	}, nil
 }
 
-func (c conn) Savepoint() (release func(*error)) {
+func (c conn) Savepoint() sqlite3.Savepoint {
 	return c.conn.Savepoint()
 }
 
