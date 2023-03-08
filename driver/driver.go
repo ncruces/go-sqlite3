@@ -86,9 +86,10 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 }
 
 type conn struct {
-	conn     *sqlite3.Conn
-	txBegin  string
-	txCommit string
+	conn       *sqlite3.Conn
+	txBegin    string
+	txCommit   string
+	txRollback string
 }
 
 var (
@@ -107,26 +108,39 @@ func (c conn) Begin() (driver.Tx, error) {
 }
 
 func (c conn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, error) {
-	switch opts.Isolation {
-	default:
-		return nil, isolationErr
-	case driver.IsolationLevel(sql.LevelDefault):
-	case driver.IsolationLevel(sql.LevelSerializable):
-	}
-
 	txBegin := c.txBegin
 	c.txCommit = `COMMIT`
+	c.txRollback = `ROLLBACK`
+
 	if opts.ReadOnly {
 		query_only, err := c.conn.Pragma("query_only")
 		if err != nil {
 			return nil, err
 		}
-		c.txCommit = `
-			ROLLBACK;
-			PRAGMA query_only=` + query_only[0]
 		txBegin = `
 			BEGIN deferred;
 			PRAGMA query_only=on`
+		c.txCommit = `
+			ROLLBACK;
+			PRAGMA query_only=` + query_only[0]
+		c.txRollback = c.txCommit
+	}
+
+	switch opts.Isolation {
+	default:
+		return nil, isolationErr
+	case
+		driver.IsolationLevel(sql.LevelDefault),
+		driver.IsolationLevel(sql.LevelSerializable):
+		break
+	case driver.IsolationLevel(sql.LevelReadUncommitted):
+		read_uncommitted, err := c.conn.Pragma("read_uncommitted")
+		if err != nil {
+			return nil, err
+		}
+		txBegin += `; PRAGMA read_uncommitted=on`
+		c.txCommit += `; PRAGMA read_uncommitted=` + read_uncommitted[0]
+		c.txRollback += `; PRAGMA read_uncommitted=` + read_uncommitted[0]
 	}
 
 	err := c.conn.Exec(txBegin)
@@ -138,14 +152,14 @@ func (c conn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, erro
 
 func (c conn) Commit() error {
 	err := c.conn.Exec(c.txCommit)
-	if err != nil {
+	if err != nil && !c.conn.GetAutocommit() {
 		c.Rollback()
 	}
 	return err
 }
 
 func (c conn) Rollback() error {
-	return c.conn.Exec(`ROLLBACK`)
+	return c.conn.Exec(c.txRollback)
 }
 
 func (c conn) Prepare(query string) (driver.Stmt, error) {

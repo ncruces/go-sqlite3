@@ -134,7 +134,9 @@ func Test_BeginTx(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "test.db"))
+	db, err := sql.Open("sqlite3", "file:"+
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
+		"?_txlock=exclusive&_pragma=busy_timeout(0)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +145,16 @@ func Test_BeginTx(t *testing.T) {
 	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err.Error() != string(isolationErr) {
 		t.Error("want isolationErr")
+	}
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadUncommitted})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tx.Rollback()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	tx1, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
