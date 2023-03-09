@@ -169,8 +169,6 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 		return _OK
 	}
 	if err != nil {
-		// TODO: fix windows.ERROR_SHARING_VIOLATION
-		// https://github.com/golang/go/issues/32088
 		return uint32(IOERR_DELETE)
 	}
 	if runtime.GOOS != "windows" && syncDir != 0 {
@@ -251,14 +249,14 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		file, err = os.CreateTemp("", "*.db")
 	} else {
 		name := memory{mod}.readString(zName, _MAX_PATHNAME)
-		file, err = os.OpenFile(name, oflags, 0600)
+		file, err = vfsOS.OpenFile(name, oflags, 0600)
 	}
 	if err != nil {
 		return uint32(CANTOPEN)
 	}
 
 	if flags&OPEN_DELETEONCLOSE != 0 {
-		vfsOS.DeleteOnClose(file)
+		os.Remove(file.Name())
 	}
 
 	vfsFile.Open(ctx, mod, pFile, file)

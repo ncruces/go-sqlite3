@@ -8,8 +8,8 @@ import (
 	"syscall"
 )
 
-func (vfsOSMethods) DeleteOnClose(file *os.File) {
-	_ = os.Remove(file.Name())
+func (vfsOSMethods) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+	return os.OpenFile(name, flag, perm)
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {

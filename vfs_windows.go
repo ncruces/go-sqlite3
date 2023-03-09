@@ -7,7 +7,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func (vfsOSMethods) DeleteOnClose(file *os.File) {}
+func (vfsOSMethods) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+	return osOpenFile(name, flag, perm)
+}
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
 	// Release the SHARED lock.
