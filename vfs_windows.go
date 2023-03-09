@@ -1,14 +1,52 @@
 package sqlite3
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"syscall"
 
 	"golang.org/x/sys/windows"
 )
 
-func (vfsOSMethods) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return osOpenFile(name, flag, perm)
+}
+
+func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
+	fi, err := os.Stat(path)
+
+	switch {
+	case flags == _ACCESS_EXISTS:
+		switch {
+		case err == nil:
+			return true, _OK
+		case errors.Is(err, fs.ErrNotExist):
+			return false, _OK
+		default:
+			return false, IOERR_ACCESS
+		}
+
+	case err == nil:
+		var want fs.FileMode = syscall.S_IRUSR
+		if flags == _ACCESS_READWRITE {
+			want |= syscall.S_IWUSR
+		}
+		if fi.IsDir() {
+			want |= syscall.S_IXUSR
+		}
+		if fi.Mode()&want == want {
+			return true, _OK
+		} else {
+			return false, _OK
+		}
+
+	case errors.Is(err, fs.ErrPermission):
+		return false, _OK
+
+	default:
+		return false, IOERR_ACCESS
+	}
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {

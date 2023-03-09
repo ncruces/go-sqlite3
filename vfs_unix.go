@@ -3,13 +3,31 @@
 package sqlite3
 
 import (
+	"io/fs"
 	"os"
 	"runtime"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
-func (vfsOSMethods) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.OpenFile(name, flag, perm)
+}
+
+func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
+	var access uint32 = unix.F_OK
+	switch flags {
+	case _ACCESS_READWRITE:
+		access = unix.R_OK | unix.W_OK
+	case _ACCESS_READ:
+		access = unix.R_OK
+	}
+
+	err := unix.Access(path, access)
+	if err == nil {
+		return true, _OK
+	}
+	return false, _OK
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
@@ -39,8 +57,8 @@ func (vfsOSMethods) ReleaseLock(file *os.File, _ vfsLockState) xErrorCode {
 }
 
 func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
-	err := vfsOS.fcntlSetLock(file, &syscall.Flock_t{
-		Type:  syscall.F_UNLCK,
+	err := vfsOS.fcntlSetLock(file, &unix.Flock_t{
+		Type:  unix.F_UNLCK,
 		Start: start,
 		Len:   len,
 	})
@@ -51,85 +69,85 @@ func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
 }
 
 func (vfsOSMethods) readLock(file *os.File, start, len int64) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &syscall.Flock_t{
-		Type:  syscall.F_RDLCK,
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &unix.Flock_t{
+		Type:  unix.F_RDLCK,
 		Start: start,
 		Len:   len,
 	}), IOERR_RDLOCK)
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len int64) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &syscall.Flock_t{
-		Type:  syscall.F_WRLCK,
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &unix.Flock_t{
+		Type:  unix.F_WRLCK,
 		Start: start,
 		Len:   len,
 	}), IOERR_LOCK)
 }
 
 func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {
-	lock := syscall.Flock_t{
-		Type:  syscall.F_RDLCK,
+	lock := unix.Flock_t{
+		Type:  unix.F_RDLCK,
 		Start: start,
 		Len:   len,
 	}
 	if vfsOS.fcntlGetLock(file, &lock) != nil {
 		return false, IOERR_CHECKRESERVEDLOCK
 	}
-	return lock.Type != syscall.F_UNLCK, _OK
+	return lock.Type != unix.F_UNLCK, _OK
 }
 
-func (vfsOSMethods) fcntlGetLock(file *os.File, lock *syscall.Flock_t) error {
+func (vfsOSMethods) fcntlGetLock(file *os.File, lock *unix.Flock_t) error {
 	var F_OFD_GETLK int
 	switch runtime.GOOS {
 	case "linux":
 		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-		F_OFD_GETLK = 36 // F_OFD_GETLK
+		F_OFD_GETLK = 36
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-		F_OFD_GETLK = 92 // F_OFD_GETLK
+		F_OFD_GETLK = 92
 	case "illumos":
 		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-		F_OFD_GETLK = 47 // F_OFD_GETLK
+		F_OFD_GETLK = 47
 	default:
 		return notImplErr
 	}
-	return syscall.FcntlFlock(file.Fd(), F_OFD_GETLK, lock)
+	return unix.FcntlFlock(file.Fd(), F_OFD_GETLK, lock)
 }
 
-func (vfsOSMethods) fcntlSetLock(file *os.File, lock *syscall.Flock_t) error {
+func (vfsOSMethods) fcntlSetLock(file *os.File, lock *unix.Flock_t) error {
 	var F_OFD_SETLK int
 	switch runtime.GOOS {
 	case "linux":
 		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-		F_OFD_SETLK = 37 // F_OFD_SETLK
+		F_OFD_SETLK = 37
 	case "darwin":
 		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-		F_OFD_SETLK = 90 // F_OFD_SETLK
+		F_OFD_SETLK = 90
 	case "illumos":
 		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-		F_OFD_SETLK = 48 // F_OFD_SETLK
+		F_OFD_SETLK = 48
 	default:
 		return notImplErr
 	}
-	return syscall.FcntlFlock(file.Fd(), F_OFD_SETLK, lock)
+	return unix.FcntlFlock(file.Fd(), F_OFD_SETLK, lock)
 }
 
 func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK
 	}
-	if errno, ok := err.(syscall.Errno); ok {
+	if errno, ok := err.(unix.Errno); ok {
 		switch errno {
 		case
-			syscall.EACCES,
-			syscall.EAGAIN,
-			syscall.EBUSY,
-			syscall.EINTR,
-			syscall.ENOLCK,
-			syscall.EDEADLK,
-			syscall.ETIMEDOUT:
+			unix.EACCES,
+			unix.EAGAIN,
+			unix.EBUSY,
+			unix.EINTR,
+			unix.ENOLCK,
+			unix.EDEADLK,
+			unix.ETIMEDOUT:
 			return xErrorCode(BUSY)
-		case syscall.EPERM:
+		case unix.EPERM:
 			return xErrorCode(PERM)
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/ncruces/julianday"
@@ -185,47 +184,14 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 }
 
 func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _AccessFlag, pResOut uint32) uint32 {
-	// Consider using [syscall.Access] for [ACCESS_READWRITE]/[ACCESS_READ]
-	// (as the Unix VFS does).
-
 	path := memory{mod}.readString(zPath, _MAX_PATHNAME)
-	fi, err := os.Stat(path)
-
+	ok, rc := vfsOS.Access(path, flags)
 	var res uint32
-	switch {
-	case flags == _ACCESS_EXISTS:
-		switch {
-		case err == nil:
-			res = 1
-		case errors.Is(err, fs.ErrNotExist):
-			res = 0
-		default:
-			return uint32(IOERR_ACCESS)
-		}
-
-	case err == nil:
-		var want fs.FileMode = syscall.S_IRUSR
-		if flags == _ACCESS_READWRITE {
-			want |= syscall.S_IWUSR
-		}
-		if fi.IsDir() {
-			want |= syscall.S_IXUSR
-		}
-		if fi.Mode()&want == want {
-			res = 1
-		} else {
-			res = 0
-		}
-
-	case errors.Is(err, fs.ErrPermission):
-		res = 0
-
-	default:
-		return uint32(IOERR_ACCESS)
+	if ok {
+		res = 1
 	}
-
 	memory{mod}.writeUint32(pResOut, res)
-	return _OK
+	return uint32(rc)
 }
 
 func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, flags OpenFlag, pOutFlags uint32) uint32 {
@@ -322,9 +288,6 @@ func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint32 {
-	// This uses [os.File.Seek] because we don't care about the offset for reading/writing.
-	// But consider using [os.File.Stat] instead (as other VFSes do).
-
 	file := vfsFile.GetOS(ctx, mod, pFile)
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
