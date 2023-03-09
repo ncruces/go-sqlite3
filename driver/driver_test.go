@@ -1,4 +1,3 @@
-// Package driver provides a database/sql driver for SQLite.
 package driver
 
 import (

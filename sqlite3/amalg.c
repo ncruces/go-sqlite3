@@ -3,6 +3,8 @@
 #include "main.c"
 #include "os.c"
 #include "qsort.c"
+#include "time.c"
+
 #include "sqlite3.c"
 
 sqlite3_destructor_type malloc_destructor = &free;

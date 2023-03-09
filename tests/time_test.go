@@ -40,7 +40,7 @@ func TestTimeFormat_Decode(t *testing.T) {
 	t.Parallel()
 
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
-	reftime := time.Date(2000, 1, 1, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
+	refnodate := time.Date(2000, 01, 1, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 
 	tests := []struct {
 		fmt       sqlite3.TimeFormat
@@ -89,14 +89,14 @@ func TestTimeFormat_Decode(t *testing.T) {
 		{sqlite3.TimeFormatAuto, "1381134199120000", reference, 0, false},
 		{sqlite3.TimeFormatAuto, "1381134199120000000", reference, 0, false},
 		{sqlite3.TimeFormatAuto, "2013-10-07 04:23:19.12-04:00", reference, 0, false},
-		{sqlite3.TimeFormatAuto, "04:23:19.12-04:00", reftime, 0, false},
+		{sqlite3.TimeFormatAuto, "04:23:19.12-04:00", refnodate, 0, false},
 		{sqlite3.TimeFormatAuto, "abc", time.Time{}, 0, true},
 		{sqlite3.TimeFormatAuto, false, time.Time{}, 0, true},
 
 		{sqlite3.TimeFormat3, "2013-10-07 04:23:19.12-04:00", reference, 0, false},
 		{sqlite3.TimeFormat3, "2013-10-07 08:23:19.12", reference, 0, false},
-		{sqlite3.TimeFormat9, "04:23:19.12-04:00", reftime, 0, false},
-		{sqlite3.TimeFormat9, "08:23:19.12", reftime, 0, false},
+		{sqlite3.TimeFormat9, "04:23:19.12-04:00", refnodate, 0, false},
+		{sqlite3.TimeFormat9, "08:23:19.12", refnodate, 0, false},
 		{sqlite3.TimeFormat3, false, time.Time{}, 0, true},
 		{sqlite3.TimeFormat9, false, time.Time{}, 0, true},
 

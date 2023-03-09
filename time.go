@@ -62,13 +62,18 @@ const (
 // [TimeFormatDefault] and [TimeFormatAuto] encode using [time.RFC3339Nano],
 // with nanosecond accuracy, and preserving any timezone offset.
 //
-// This is the format used by the database/sql driver:
-// [database/sql.Row.Scan] is able to decode as [time.Time]
+// This is the format used by the [database/sql] driver:
+// [database/sql.Row.Scan] will decode as [time.Time]
 // values encoded with [time.RFC3339Nano].
 //
 // Time values encoded with [time.RFC3339Nano] cannot be sorted as strings
 // to produce a time-ordered sequence.
-// Use [TimeFormat7] for time-ordered encoding.
+//
+// Assuming that the time zones of the time values are the same (e.g., all in UTC),
+// and expressed using the same string (e.g., all "Z" or all "+00:00"),
+// use the TIME [collating sequence] to produce a time-ordered sequence.
+//
+// Otherwise, use [TimeFormat7] for time-ordered encoding.
 //
 // Formats [TimeFormat1] through [TimeFormat10]
 // convert time values to UTC before encoding.
@@ -78,6 +83,8 @@ const (
 // or an int64 for the other numeric formats.
 //
 // https://www.sqlite.org/lang_datefunc.html
+//
+// [collating sequence]: https://www.sqlite.org/datatype3.html#collating_sequences
 func (f TimeFormat) Encode(t time.Time) any {
 	switch f {
 	// Numeric formats
@@ -123,9 +130,9 @@ func (f TimeFormat) Encode(t time.Time) any {
 // [TimeFormatAuto] implements (and extends) the SQLite auto modifier.
 // Julian day numbers are safe to use for historical dates,
 // from 4712BC through 9999AD.
-// Unix timestamps (expressed in seconds, milliseconds, microseconds, or nanoseconds),
-// are safe to use for current events, from 1980 through at least 2260.
-// Unix timestamps before 1980 may be misinterpreted as julian day numbers,
+// Unix timestamps (expressed in seconds, milliseconds, microseconds, or nanoseconds)
+// are safe to use for current events, from at least 1980 through at least 2260.
+// Unix timestamps before 1980 and after 9999 may be misinterpreted as julian day numbers,
 // or have the wrong time unit.
 //
 // https://www.sqlite.org/lang_datefunc.html
