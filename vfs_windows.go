@@ -25,7 +25,7 @@ func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File,
 	return os.NewFile(uintptr(r), name), nil
 }
 
-func (vfsOSMethods) Sync(file *os.File) error {
+func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
 	return file.Sync()
 }
 

@@ -165,7 +165,7 @@ func Test_vfsDelete(t *testing.T) {
 	}
 
 	rc = vfsDelete(ctx, mem.mod, 0, 4, 1)
-	if rc != _OK {
+	if rc != uint32(IOERR_DELETE_NOENT) {
 		t.Fatal("returned", rc)
 	}
 }

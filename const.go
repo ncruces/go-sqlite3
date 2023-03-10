@@ -133,6 +133,7 @@ const (
 	CONSTRAINT_DATATYPE     ExtendedErrorCode = xErrorCode(CONSTRAINT) | (12 << 8)
 	NOTICE_RECOVER_WAL      ExtendedErrorCode = xErrorCode(NOTICE) | (1 << 8)
 	NOTICE_RECOVER_ROLLBACK ExtendedErrorCode = xErrorCode(NOTICE) | (2 << 8)
+	NOTICE_RBU              ExtendedErrorCode = xErrorCode(NOTICE) | (3 << 8)
 	WARNING_AUTOINDEX       ExtendedErrorCode = xErrorCode(WARNING) | (1 << 8)
 	AUTH_USER               ExtendedErrorCode = xErrorCode(AUTH) | (1 << 8)
 )
@@ -165,14 +166,6 @@ const (
 	OPEN_WAL           OpenFlag = 0x00080000 /* VFS only */
 	OPEN_NOFOLLOW      OpenFlag = 0x01000000 /* Ok for sqlite3_open_v2() */
 	OPEN_EXRESCODE     OpenFlag = 0x02000000 /* Extended result codes */
-)
-
-type _AccessFlag uint32
-
-const (
-	_ACCESS_EXISTS    _AccessFlag = 0
-	_ACCESS_READWRITE _AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
-	_ACCESS_READ      _AccessFlag = 2 /* Unused */
 )
 
 // PrepareFlag is a flag that can be passed to [Conn.PrepareFlags].
@@ -216,3 +209,19 @@ func (t Datatype) String() string {
 	}
 	return strconv.FormatUint(uint64(t), 10)
 }
+
+type _AccessFlag uint32
+
+const (
+	_ACCESS_EXISTS    _AccessFlag = 0
+	_ACCESS_READWRITE _AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
+	_ACCESS_READ      _AccessFlag = 2 /* Unused */
+)
+
+type _SyncFlag uint32
+
+const (
+	_SYNC_NORMAL   _SyncFlag = 0x00002
+	_SYNC_FULL     _SyncFlag = 0x00003
+	_SYNC_DATAONLY _SyncFlag = 0x00010
+)

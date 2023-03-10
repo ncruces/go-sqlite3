@@ -165,19 +165,20 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 	path := memory{mod}.readString(zPath, _MAX_PATHNAME)
 	err := os.Remove(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return _OK
+		return uint32(IOERR_DELETE_NOENT)
 	}
 	if err != nil {
 		return uint32(IOERR_DELETE)
 	}
 	if runtime.GOOS != "windows" && syncDir != 0 {
 		f, err := os.Open(filepath.Dir(path))
-		if err == nil {
-			err = f.Sync()
-			f.Close()
-		}
 		if err != nil {
-			return uint32(IOERR_DELETE)
+			return _OK
+		}
+		defer f.Close()
+		err = vfsOS.Sync(f, false, false)
+		if err != nil {
+			return uint32(IOERR_DIR_FSYNC)
 		}
 	}
 	return _OK
@@ -278,9 +279,11 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64
 	return _OK
 }
 
-func vfsSync(ctx context.Context, mod api.Module, pFile, flags uint32) uint32 {
+func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags _SyncFlag) uint32 {
+	dataonly := (flags & _SYNC_DATAONLY) != 0
+	fullsync := (flags & 0x0f) == _SYNC_FULL
 	file := vfsFile.GetOS(ctx, mod, pFile)
-	err := file.Sync()
+	err := vfsOS.Sync(file, fullsync, dataonly)
 	if err != nil {
 		return uint32(IOERR_FSYNC)
 	}

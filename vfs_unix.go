@@ -30,6 +30,21 @@ func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
 	return false, _OK
 }
 
+func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
+	if runtime.GOOS == "darwin" && !fullsync {
+		return unix.Fsync(int(file.Fd()))
+	}
+	if runtime.GOOS == "linux" && dataonly {
+		//lint:ignore SA1019 OK on linux
+		_, _, err := unix.Syscall(unix.SYS_FDATASYNC, file.Fd(), 0, 0)
+		if err != 0 {
+			return err
+		}
+		return nil
+	}
+	return file.Sync()
+}
+
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
 	// Acquire the EXCLUSIVE lock.
 	return vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE)
