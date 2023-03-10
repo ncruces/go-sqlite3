@@ -155,6 +155,7 @@ func newModule(mod api.Module) (m *module, err error) {
 		backupFinish:    getFun("sqlite3_backup_finish"),
 		backupRemaining: getFun("sqlite3_backup_remaining"),
 		backupPageCount: getFun("sqlite3_backup_pagecount"),
+		timeCollation:   getFun("sqlite3_time_collation"),
 		interrupt:       getVal("sqlite3_interrupt_offset"),
 	}
 	if err != nil {
@@ -348,5 +349,6 @@ type sqliteAPI struct {
 	backupFinish    api.Function
 	backupRemaining api.Function
 	backupPageCount api.Function
+	timeCollation   api.Function
 	interrupt       uint32
 }

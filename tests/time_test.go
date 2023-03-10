@@ -118,3 +118,52 @@ func TestTimeFormat_Decode(t *testing.T) {
 		})
 	}
 }
+
+func TestDB_timeCollation(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS times (tstamp COLLATE TIME)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`INSERT INTO times VALUES (?), (?), (?)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	stmt.BindTime(1, time.Unix(0, 0).UTC(), sqlite3.TimeFormatDefault)
+	stmt.BindTime(2, time.Unix(0, -1).UTC(), sqlite3.TimeFormatDefault)
+	stmt.BindTime(3, time.Unix(0, +1).UTC(), sqlite3.TimeFormatDefault)
+	stmt.Step()
+
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err = db.Prepare(`SELECT tstamp FROM times ORDER BY tstamp`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var t0 time.Time
+	for stmt.Step() {
+		t1 := stmt.ColumnTime(0, sqlite3.TimeFormatAuto)
+		if t0.After(t1) {
+			t.Errorf("got %v after %v", t0, t1)
+		}
+		t0 = t1
+	}
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}

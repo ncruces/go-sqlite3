@@ -99,6 +99,8 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 			return 0, err
 		}
 	}
+
+	c.call(c.api.timeCollation, uint64(handle))
 	return handle, nil
 }
 

@@ -18,6 +18,10 @@ embeds a build of SQLite into your application.
 
 ### Caveats
 
+This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html) (aka VFS)
+with a pure Go implementation.
+This has numerous benefits, but also comes with some caveats.
+
 #### Write-Ahead Logging
 
 Because WASM does not support shared memory,
@@ -45,15 +49,14 @@ OFD locks are fully compatible with process-associated POSIX advisory locks,
 and are supported on Linux, macOS and illumos.
 As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.org/uri.html).
 
+#### Testing
+
+The pure Go VFS is stress tested by running an unmodified build of SQLite's
+[mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
+on Linux, macOS and Windows.
+
 ### Roadmap
 
-- [x] build SQLite using `zig cc --target=wasm32-wasi`
-- [x] `:memory:` databases
-- [x] port [`test_demovfs.c`](https://www.sqlite.org/src/doc/trunk/src/test_demovfs.c) to Go
-  - branch [`wasi`](https://github.com/ncruces/go-sqlite3/tree/wasi) uses `test_demovfs.c` directly
-- [x] design a nice API, enough for simple use cases
-- [x] provide a simple `database/sql` driver
-- [x] file locking, compatible with SQLite on macOS/Linux/Windows
 - [ ] advanced SQLite features
   - [x] nested transactions
   - [x] incremental BLOB I/O
