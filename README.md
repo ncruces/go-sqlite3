@@ -30,8 +30,10 @@ For non-WAL databases, `NORMAL` locking mode can be activated with
 [`PRAGMA locking_mode=NORMAL`](https://www.sqlite.org/pragma.html#pragma_locking_mode).
 
 Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
-the `database/sql` driver defaults to `NORMAL` locking mode,
-and WAL databases are not supported.
+the `database/sql` driver defaults to `NORMAL` locking mode.
+To open WAL databases, or use `EXCLUSIVE` locking mode,
+disable connection pooling by calling
+[`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 #### Open File Description Locks
 

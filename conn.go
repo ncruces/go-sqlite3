@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net/url"
 	"runtime"
@@ -91,8 +92,11 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 		pragmaPtr := c.arena.string(pragmas.String())
 		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
 		if err := c.module.error(r[0], handle, pragmas.String()); err != nil {
+			if errors.Is(err, ERROR) {
+				err = fmt.Errorf("sqlite3: invalid _pragma: %w", err)
+			}
 			c.closeDB(handle)
-			return 0, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
+			return 0, err
 		}
 	}
 	return handle, nil

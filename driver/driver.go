@@ -96,11 +96,17 @@ var (
 	// Ensure these interfaces are implemented:
 	_ driver.ExecerContext = conn{}
 	_ driver.ConnBeginTx   = conn{}
+	_ driver.Validator     = conn{}
 	_ sqlite3.DriverConn   = conn{}
 )
 
 func (c conn) Close() error {
 	return c.conn.Close()
+}
+
+func (c conn) IsValid() (valid bool) {
+	r, err := c.conn.Pragma("locking_mode")
+	return err == nil && len(r) == 1 && r[0] == "normal"
 }
 
 func (c conn) Begin() (driver.Tx, error) {
