@@ -33,6 +33,8 @@ int os_lock(sqlite3_file *pFile, int eLock);
 int os_unlock(sqlite3_file *pFile, int eLock);
 int os_check_reserved_lock(sqlite3_file *pFile, int *pResOut);
 
+void os_notify(void **apArg, int nArg);
+
 static int no_lock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
 static int no_unlock(sqlite3_file *pFile, int eLock) { return SQLITE_OK; }
 static int no_check_reserved_lock(sqlite3_file *pFile, int *pResOut) {

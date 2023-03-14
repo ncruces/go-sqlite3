@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/ncruces/julianday"
@@ -53,6 +54,7 @@ func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	env.NewFunctionBuilder().WithFunc(vfsUnlock).Export("os_unlock")
 	env.NewFunctionBuilder().WithFunc(vfsCheckReservedLock).Export("os_check_reserved_lock")
 	env.NewFunctionBuilder().WithFunc(vfsFileControl).Export("os_file_control")
+	env.NewFunctionBuilder().WithFunc(vfsNotifyWaiter).Export("os_notify")
 	return env
 }
 
@@ -70,6 +72,7 @@ type (
 type vfsKey struct{}
 type vfsState struct {
 	files []*os.File
+	waits []*sync.WaitGroup
 }
 
 func vfsContext(ctx context.Context) (context.Context, io.Closer) {
@@ -84,6 +87,12 @@ func (vfs *vfsState) Close() error {
 		}
 	}
 	vfs.files = nil
+	for _, w := range vfs.waits {
+		if w != nil {
+			w.Done()
+		}
+	}
+	vfs.waits = nil
 	return nil
 }
 
@@ -311,4 +320,39 @@ func vfsFileControl(ctx context.Context, pFile, op, pArg uint32) uint32 {
 	//  SQLITE_FCNTL_COMMIT_PHASETWO
 	//  SQLITE_FCNTL_PDB
 	return uint32(NOTFOUND)
+}
+
+func vfsNewWaiter(ctx context.Context) (*sync.WaitGroup, uint32) {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+
+	wait := new(sync.WaitGroup)
+	wait.Add(1)
+
+	// Find an empty slot.
+	for id, ptr := range vfs.waits {
+		if ptr == nil {
+			vfs.waits[id] = wait
+			return wait, uint32(id)
+		}
+	}
+
+	// Add a new slot.
+	vfs.waits = append(vfs.waits, wait)
+	return wait, uint32(len(vfs.waits) - 1)
+}
+
+func vfsFreeWaiter(ctx context.Context, id uint32) {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	vfs.waits[id] = nil
+}
+
+func vfsNotifyWaiter(ctx context.Context, mod api.Module, apArg, nArg uint32) {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	for i := uint32(0); i < nArg; i++ {
+		mem := memory{mod}
+		id := mem.readUint32(apArg + i*ptrlen)
+		wait := vfs.waits[id]
+		vfs.waits[id] = nil
+		wait.Done()
+	}
 }

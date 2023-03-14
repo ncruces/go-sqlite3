@@ -31,30 +31,30 @@ var sqlite3 struct {
 	once      sync.Once
 	runtime   wazero.Runtime
 	compiled  wazero.CompiledModule
+	config    wazero.ModuleConfig
 	instances atomic.Uint64
+	instance  *module
 	err       error
 }
 
-func instantiateModule() (*module, error) {
+func instantiateModule(shared bool) (*module, error) {
 	ctx := context.Background()
 
 	sqlite3.once.Do(compileModule)
 	if sqlite3.err != nil {
 		return nil, sqlite3.err
 	}
+	if shared {
+		return sqlite3.instance, nil
+	}
 
 	name := "sqlite3-" + strconv.FormatUint(sqlite3.instances.Add(1), 10)
-
-	cfg := wazero.NewModuleConfig().WithName(name).
-		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
-		WithOsyield(runtime.Gosched).
-		WithRandSource(rand.Reader)
-
-	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, cfg)
+	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled,
+		sqlite3.config.WithName(name))
 	if err != nil {
 		return nil, err
 	}
-	return newModule(mod)
+	return newModule(mod, nopLocker{})
 }
 
 func compileModule() {
@@ -75,17 +75,43 @@ func compileModule() {
 	}
 
 	sqlite3.compiled, sqlite3.err = sqlite3.runtime.CompileModule(ctx, bin)
+	if sqlite3.err != nil {
+		return
+	}
+
+	sqlite3.config = wazero.NewModuleConfig().WithName("sqlite3-shared").
+		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
+		WithOsyield(runtime.Gosched).
+		WithRandSource(rand.Reader)
+
+	var mod api.Module
+	mod, sqlite3.err = sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, sqlite3.config)
+	if sqlite3.err != nil {
+		return
+	}
+
+	sqlite3.instance, sqlite3.err = newModule(mod, new(sync.Mutex))
+	if sqlite3.err != nil {
+		return
+	}
 }
 
 type module struct {
 	ctx context.Context
+	mtx sync.Locker
 	mem memory
 	api sqliteAPI
 	vfs io.Closer
 }
 
-func newModule(mod api.Module) (m *module, err error) {
+type nopLocker struct{}
+
+func (nopLocker) Lock()   {}
+func (nopLocker) Unlock() {}
+
+func newModule(mod api.Module, mtx sync.Locker) (m *module, err error) {
 	m = &module{}
+	m.mtx = mtx
 	m.mem = memory{mod}
 	m.ctx, m.vfs = vfsContext(context.Background())
 
@@ -156,6 +182,7 @@ func newModule(mod api.Module) (m *module, err error) {
 		backupRemaining: getFun("sqlite3_backup_remaining"),
 		backupPageCount: getFun("sqlite3_backup_pagecount"),
 		timeCollation:   getFun("sqlite3_time_collation"),
+		unlockNotify:    getFun("sqlite3_unlock_os_notify"),
 		interrupt:       getVal("sqlite3_interrupt_offset"),
 	}
 	if err != nil {
@@ -165,6 +192,9 @@ func newModule(mod api.Module) (m *module, err error) {
 }
 
 func (m *module) close() error {
+	if m == sqlite3.instance {
+		return nil
+	}
 	err := m.mem.mod.Close(m.ctx)
 	m.vfs.Close()
 	return err
@@ -208,6 +238,8 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 }
 
 func (m *module) call(fn api.Function, params ...uint64) []uint64 {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 	r, err := fn.Call(m.ctx, params...)
 	if err != nil {
 		// The module closed or panicked; release resources.
@@ -350,5 +382,6 @@ type sqliteAPI struct {
 	backupRemaining api.Function
 	backupPageCount api.Function
 	timeCollation   api.Function
+	unlockNotify    api.Function
 	interrupt       uint32
 }

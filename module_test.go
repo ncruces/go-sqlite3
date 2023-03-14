@@ -9,7 +9,7 @@ import (
 func TestConn_error_OOM(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestConn_error_OOM(t *testing.T) {
 func TestConn_call_nil(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestConn_call_nil(t *testing.T) {
 func TestConn_new(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestConn_new(t *testing.T) {
 func TestConn_newArena(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestConn_newArena(t *testing.T) {
 func TestConn_newBytes(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestConn_newBytes(t *testing.T) {
 func TestConn_newString(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestConn_newString(t *testing.T) {
 func TestConn_getString(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestConn_getString(t *testing.T) {
 func TestConn_free(t *testing.T) {
 	t.Parallel()
 
-	m, err := instantiateModule()
+	m, err := instantiateModule(false)
 	if err != nil {
 		t.Fatal(err)
 	}

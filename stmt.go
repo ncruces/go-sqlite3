@@ -57,8 +57,17 @@ func (s *Stmt) ClearBindings() error {
 //
 // https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
-	s.c.checkInterrupt()
-	r := s.c.call(s.c.api.step, uint64(s.handle))
+	// See: sqlite3_blocking_step
+	// https://www.sqlite.org/unlock_notify.html
+	var r []uint64
+	for {
+		s.c.checkInterrupt()
+		r = s.c.call(s.c.api.step, uint64(s.handle))
+		if !s.c.waitForUnlockNotify(r) {
+			break
+		}
+		s.Reset()
+	}
 	if r[0] == _ROW {
 		return true
 	}

@@ -24,7 +24,7 @@
 #define SQLITE_OMIT_DECLTYPE
 #define SQLITE_OMIT_DEPRECATED
 #define SQLITE_OMIT_PROGRESS_CALLBACK
-#define SQLITE_OMIT_SHARED_CACHE
+// #define SQLITE_OMIT_SHARED_CACHE
 #define SQLITE_OMIT_AUTOINIT
 #define SQLITE_USE_ALLOCA
 
@@ -57,6 +57,8 @@
 
 // Resumable Bulk Update Extension
 // #define SQLITE_ENABLE_RBU 1
+
+#define SQLITE_ENABLE_UNLOCK_NOTIFY
 
 // Implemented in Go.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);

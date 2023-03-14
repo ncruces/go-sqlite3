@@ -43,7 +43,7 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 }
 
 func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
-	mod, err := instantiateModule()
+	mod, err := instantiateModule(flags&OPEN_SHAREDCACHE != 0)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +69,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	connPtr := c.arena.new(ptrlen)
 	namePtr := c.arena.string(filename)
 
+	flags |= OPEN_EXRESCODE
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	handle := c.mem.readUint32(connPtr)
@@ -145,11 +146,31 @@ func (c *Conn) Close() error {
 // https://www.sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
 	c.checkInterrupt()
+
+	if c.module == sqlite3.instance {
+		for sql != "" {
+			tail, err := c.execOne(sql)
+			if err != nil {
+				return err
+			}
+			sql = tail
+		}
+	}
+
 	defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 
 	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	return c.error(r[0])
+}
+
+func (c *Conn) execOne(sql string) (tail string, err error) {
+	stmt, tail, err := c.Prepare(sql)
+	if stmt != nil {
+		defer stmt.Close()
+		err = stmt.Exec()
+	}
+	return tail, err
 }
 
 // Prepare calls [Conn.PrepareFlags] with no flags.
@@ -173,9 +194,17 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)
 
-	r := c.call(c.api.prepare, uint64(c.handle),
-		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
-		uint64(stmtPtr), uint64(tailPtr))
+	// See: sqlite3_blocking_prepare_v2
+	// https://www.sqlite.org/unlock_notify.html
+	var r []uint64
+	for {
+		r = c.call(c.api.prepare, uint64(c.handle),
+			uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
+			uint64(stmtPtr), uint64(tailPtr))
+		if !c.waitForUnlockNotify(r) {
+			break
+		}
+	}
 
 	stmt = &Stmt{c: c}
 	stmt.handle = c.mem.readUint32(stmtPtr)
@@ -290,6 +319,19 @@ func (c *Conn) checkInterrupt() bool {
 	buf := c.mem.view(c.handle+c.api.interrupt, 4)
 	(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 	return true
+}
+
+func (c *Conn) waitForUnlockNotify(r []uint64) (retry bool) {
+	if r[0] == uint64(LOCKED_SHAREDCACHE) {
+		waiter, id := vfsNewWaiter(c.ctx)
+		r[0] = c.call(c.api.unlockNotify, uint64(c.handle), uint64(id))[0]
+		if r[0] == _OK {
+			waiter.Wait()
+			return true
+		}
+		vfsFreeWaiter(c.ctx, id)
+	}
+	return false
 }
 
 // Pragma executes a PRAGMA statement and returns any results.

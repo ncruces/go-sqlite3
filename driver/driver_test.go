@@ -95,12 +95,8 @@ func Test_Open_txLock(t *testing.T) {
 	if err == nil {
 		t.Error("want error")
 	}
-	if !errors.Is(err, sqlite3.BUSY) {
-		t.Errorf("got %v, want sqlite3.BUSY", err)
-	}
-	var terr interface{ Temporary() bool }
-	if !errors.As(err, &terr) || !terr.Temporary() {
-		t.Error("not temporary", err)
+	if !errors.Is(err, sqlite3.BUSY) && !errors.Is(err, sqlite3.LOCKED) {
+		t.Errorf("got %v, want sqlite3.BUSY or sqlite3.LOCKED", err)
 	}
 
 	err = tx1.Commit()
