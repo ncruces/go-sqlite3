@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"runtime"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -72,7 +73,7 @@ func (vfsOSMethods) ReleaseLock(file *os.File, _ vfsLockState) xErrorCode {
 }
 
 func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
-	err := vfsOS.fcntlSetLock(file, &unix.Flock_t{
+	err := vfsOS.fcntlSetLock(file, unix.Flock_t{
 		Type:  unix.F_UNLCK,
 		Start: start,
 		Len:   len,
@@ -84,7 +85,7 @@ func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
 }
 
 func (vfsOSMethods) readLock(file *os.File, start, len int64) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &unix.Flock_t{
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, unix.Flock_t{
 		Type:  unix.F_RDLCK,
 		Start: start,
 		Len:   len,
@@ -92,7 +93,8 @@ func (vfsOSMethods) readLock(file *os.File, start, len int64) xErrorCode {
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len int64) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, &unix.Flock_t{
+	// TODO: implement timeouts.
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, unix.Flock_t{
 		Type:  unix.F_WRLCK,
 		Start: start,
 		Len:   len,
@@ -115,36 +117,47 @@ func (vfsOSMethods) fcntlGetLock(file *os.File, lock *unix.Flock_t) error {
 	var F_OFD_GETLK int
 	switch runtime.GOOS {
 	case "linux":
-		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-		F_OFD_GETLK = 36
+		F_OFD_GETLK = 36 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 	case "darwin":
-		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-		F_OFD_GETLK = 92
+		F_OFD_GETLK = 92 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 	case "illumos":
-		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-		F_OFD_GETLK = 47
+		F_OFD_GETLK = 47 // https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
 	default:
 		return notImplErr
 	}
 	return unix.FcntlFlock(file.Fd(), F_OFD_GETLK, lock)
 }
 
-func (vfsOSMethods) fcntlSetLock(file *os.File, lock *unix.Flock_t) error {
+func (vfsOSMethods) fcntlSetLock(file *os.File, lock unix.Flock_t) error {
 	var F_OFD_SETLK int
 	switch runtime.GOOS {
 	case "linux":
-		// https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-		F_OFD_SETLK = 37
+		F_OFD_SETLK = 37 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
 	case "darwin":
-		// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-		F_OFD_SETLK = 90
+		F_OFD_SETLK = 90 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 	case "illumos":
-		// https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-		F_OFD_SETLK = 48
+		F_OFD_SETLK = 48 // https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
 	default:
 		return notImplErr
 	}
-	return unix.FcntlFlock(file.Fd(), F_OFD_SETLK, lock)
+	return unix.FcntlFlock(file.Fd(), F_OFD_SETLK, &lock)
+}
+
+func (vfsOSMethods) fcntlSetLockTimeout(timeout time.Duration, file *os.File, lock unix.Flock_t) error {
+	if runtime.GOOS != "darwin" || timeout == 0 {
+		return vfsOS.fcntlSetLock(file, lock)
+	}
+
+	const F_OFD_SETLKWTIMEOUT = 93 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
+	flocktimeout := &struct {
+		unix.Flock_t
+		unix.Timespec
+	}{
+		Flock_t:  lock,
+		Timespec: unix.NsecToTimespec(int64(timeout / time.Nanosecond)),
+	}
+
+	return unix.FcntlFlock(file.Fd(), F_OFD_SETLKWTIMEOUT, &flocktimeout.Flock_t)
 }
 
 func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
