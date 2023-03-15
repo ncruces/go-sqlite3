@@ -40,7 +40,6 @@ sqlite3_blob_reopen
 sqlite3_get_autocommit
 sqlite3_last_insert_rowid
 sqlite3_changes64
-sqlite3_unlock_notify
 sqlite3_backup_init
 sqlite3_backup_step
 sqlite3_backup_finish

@@ -24,3 +24,8 @@ zig cc --target=wasm32-wasi -flto -g0 -Os \
 	-DHAVE_USLEEP -DSQLITE_NO_SYNC \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid
+
+if which wasm-opt; then
+	wasm-opt -g -O -o mptest.tmp mptest.wasm
+	mv mptest.tmp mptest.wasm
+fi

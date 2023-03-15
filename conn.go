@@ -69,6 +69,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	connPtr := c.arena.new(ptrlen)
 	namePtr := c.arena.string(filename)
 
+	flags |= OPEN_EXRESCODE
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	handle := c.mem.readUint32(connPtr)
