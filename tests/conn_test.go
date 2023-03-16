@@ -13,7 +13,7 @@ import (
 func TestConn_Open_dir(t *testing.T) {
 	t.Parallel()
 
-	_, err := sqlite3.Open(".")
+	_, err := sqlite3.OpenFlags(".", 0)
 	if err == nil {
 		t.Fatal("want error")
 	}

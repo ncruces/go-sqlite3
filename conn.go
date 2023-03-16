@@ -26,19 +26,23 @@ type Conn struct {
 	pending   *Stmt
 }
 
-// Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
+// Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE], [OPEN_URI] and [OPEN_NOFOLLOW].
 func Open(filename string) (*Conn, error) {
-	return newConn(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+	return newConn(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI|OPEN_NOFOLLOW)
 }
 
 // OpenFlags opens an SQLite database file as specified by the filename argument.
 //
+// If none of the required flags is used, a combination of [OPEN_READWRITE] and [OPEN_CREATE] is used.
 // If a URI filename is used, PRAGMA statements to execute can be specified using "_pragma":
 //
 //	sqlite3.Open("file:demo.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)")
 //
 // https://www.sqlite.org/c3ref/open.html
 func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
+	if flags&(OPEN_READONLY|OPEN_READWRITE|OPEN_CREATE) == 0 {
+		flags |= OPEN_READWRITE | OPEN_CREATE
+	}
 	return newConn(filename, flags)
 }
 

@@ -44,7 +44,7 @@ func init() {
 type sqlite struct{}
 
 func (sqlite) Open(name string) (_ driver.Conn, err error) {
-	c, err := sqlite3.OpenFlags(name, sqlite3.OPEN_READWRITE|sqlite3.OPEN_CREATE|sqlite3.OPEN_URI|sqlite3.OPEN_EXRESCODE)
+	c, err := sqlite3.Open(name)
 	if err != nil {
 		return nil, err
 	}

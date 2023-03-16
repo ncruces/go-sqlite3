@@ -7,6 +7,8 @@ const (
 	_ROW  = 100 /* sqlite3_step() has another row ready */
 	_DONE = 101 /* sqlite3_step() has finished executing */
 
+	_OK_SYMLINK = (_OK | (2 << 8)) /* internal use only */
+
 	_UTF8 = 1
 
 	_MAX_STRING   = 512 // Used for short strings: names, error messages…

@@ -143,7 +143,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	rel := memory{mod}.readString(zRelative, _MAX_PATHNAME)
 	abs, err := filepath.Abs(rel)
 	if err != nil {
-		return uint32(IOERR)
+		return uint32(CANTOPEN_FULLPATH)
 	}
 
 	// Consider either using [filepath.EvalSymlinks] to canonicalize the path (as the Unix VFS does).
@@ -155,10 +155,18 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 		return uint32(CANTOPEN_FULLPATH)
 	}
 	mem := memory{mod}.view(zFull, size)
-
 	mem[len(abs)] = 0
 	copy(mem, abs)
-	return _OK
+
+	if fi, err := os.Lstat(abs); err == nil {
+		if fi.Mode()&fs.ModeSymlink != 0 {
+			return _OK_SYMLINK
+		}
+		return _OK
+	} else if errors.Is(err, fs.ErrNotExist) {
+		return _OK
+	}
+	return uint32(CANTOPEN_FULLPATH)
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) uint32 {

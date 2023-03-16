@@ -33,7 +33,7 @@ func (src *Conn) Backup(srcDB, dstURI string) error {
 //
 // https://www.sqlite.org/backup.html
 func (dst *Conn) Restore(dstDB, srcURI string) error {
-	src, err := dst.openDB(srcURI, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
+	src, err := dst.openDB(srcURI, OPEN_READONLY|OPEN_URI)
 	if err != nil {
 		return err
 	}
