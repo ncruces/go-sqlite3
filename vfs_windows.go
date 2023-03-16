@@ -136,9 +136,6 @@ func (vfsOSMethods) readLock(file *os.File, start, len uint32) xErrorCode {
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len uint32) xErrorCode {
-	// TODO: implement timeouts.
-	//	https://devblogs.microsoft.com/oldnewthing/20140905-00/?p=63
-	//	https://learn.microsoft.com/en-ie/windows/win32/api/winbase/nf-winbase-reopenfile
 	return vfsOS.lockErrorCode(windows.LockFileEx(windows.Handle(file.Fd()),
 		windows.LOCKFILE_FAIL_IMMEDIATELY|windows.LOCKFILE_EXCLUSIVE_LOCK,
 		0, len, 0, &windows.Overlapped{Offset: start}),
@@ -146,12 +143,17 @@ func (vfsOSMethods) writeLock(file *os.File, start, len uint32) xErrorCode {
 }
 
 func (vfsOSMethods) checkLock(file *os.File, start, len uint32) (bool, xErrorCode) {
-	// TODO: report errors.
-	rc := vfsOS.readLock(file, start, len)
+	rc := vfsOS.lockErrorCode(windows.LockFileEx(windows.Handle(file.Fd()),
+		windows.LOCKFILE_FAIL_IMMEDIATELY,
+		0, len, 0, &windows.Overlapped{Offset: start}),
+		IOERR_CHECKRESERVEDLOCK)
+	if rc == xErrorCode(BUSY) {
+		return true, _OK
+	}
 	if rc == _OK {
 		vfsOS.unlock(file, start, len)
 	}
-	return rc != _OK, _OK
+	return false, rc
 }
 
 func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
@@ -163,7 +165,8 @@ func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 		switch errno {
 		case
 			windows.ERROR_LOCK_VIOLATION,
-			windows.ERROR_IO_PENDING:
+			windows.ERROR_IO_PENDING,
+			windows.ERROR_OPERATION_ABORTED:
 			return xErrorCode(BUSY)
 		}
 	}

@@ -114,7 +114,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 			panic(assertErr())
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if cLock == _RESERVED_LOCK {
+		if cLock < _PENDING_LOCK {
 			if rc := vfsOS.GetPendingLock(file); rc != _OK {
 				return uint32(rc)
 			}
@@ -169,12 +169,6 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
-	cLock := vfsFile.GetLock(ctx, mod, pFile)
-
-	if cLock > _SHARED_LOCK {
-		panic(assertErr())
-	}
-
 	file := vfsFile.GetOS(ctx, mod, pFile)
 
 	locked, rc := vfsOS.CheckReservedLock(file)
