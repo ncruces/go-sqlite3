@@ -25,6 +25,27 @@ func (m memory) view(ptr uint32, size uint64) []byte {
 	return buf
 }
 
+func (m memory) readUint8(ptr uint32) uint8 {
+	if ptr == 0 {
+		panic(nilErr)
+	}
+	v, ok := m.mod.Memory().ReadByte(ptr)
+	if !ok {
+		panic(rangeErr)
+	}
+	return v
+}
+
+func (m memory) writeUint8(ptr uint32, v uint8) {
+	if ptr == 0 {
+		panic(nilErr)
+	}
+	ok := m.mod.Memory().WriteByte(ptr, v)
+	if !ok {
+		panic(rangeErr)
+	}
+}
+
 func (m memory) readUint32(ptr uint32) uint32 {
 	if ptr == 0 {
 		panic(nilErr)
@@ -36,7 +57,7 @@ func (m memory) readUint32(ptr uint32) uint32 {
 	return v
 }
 
-func (m memory) writeUint32(ptr, v uint32) {
+func (m memory) writeUint32(ptr uint32, v uint32) {
 	if ptr == 0 {
 		panic(nilErr)
 	}

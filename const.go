@@ -227,3 +227,49 @@ const (
 	_SYNC_FULL     _SyncFlag = 0x00003
 	_SYNC_DATAONLY _SyncFlag = 0x00010
 )
+
+type _FcntlOpcode uint32
+
+const (
+	_FCNTL_LOCKSTATE             = 1
+	_FCNTL_GET_LOCKPROXYFILE     = 2
+	_FCNTL_SET_LOCKPROXYFILE     = 3
+	_FCNTL_LAST_ERRNO            = 4
+	_FCNTL_SIZE_HINT             = 5
+	_FCNTL_CHUNK_SIZE            = 6
+	_FCNTL_FILE_POINTER          = 7
+	_FCNTL_SYNC_OMITTED          = 8
+	_FCNTL_WIN32_AV_RETRY        = 9
+	_FCNTL_PERSIST_WAL           = 10
+	_FCNTL_OVERWRITE             = 11
+	_FCNTL_VFSNAME               = 12
+	_FCNTL_POWERSAFE_OVERWRITE   = 13
+	_FCNTL_PRAGMA                = 14
+	_FCNTL_BUSYHANDLER           = 15
+	_FCNTL_TEMPFILENAME          = 16
+	_FCNTL_MMAP_SIZE             = 18
+	_FCNTL_TRACE                 = 19
+	_FCNTL_HAS_MOVED             = 20
+	_FCNTL_SYNC                  = 21
+	_FCNTL_COMMIT_PHASETWO       = 22
+	_FCNTL_WIN32_SET_HANDLE      = 23
+	_FCNTL_WAL_BLOCK             = 24
+	_FCNTL_ZIPVFS                = 25
+	_FCNTL_RBU                   = 26
+	_FCNTL_VFS_POINTER           = 27
+	_FCNTL_JOURNAL_POINTER       = 28
+	_FCNTL_WIN32_GET_HANDLE      = 29
+	_FCNTL_PDB                   = 30
+	_FCNTL_BEGIN_ATOMIC_WRITE    = 31
+	_FCNTL_COMMIT_ATOMIC_WRITE   = 32
+	_FCNTL_ROLLBACK_ATOMIC_WRITE = 33
+	_FCNTL_LOCK_TIMEOUT          = 34
+	_FCNTL_DATA_VERSION          = 35
+	_FCNTL_SIZE_LIMIT            = 36
+	_FCNTL_CKPT_DONE             = 37
+	_FCNTL_RESERVE_BYTES         = 38
+	_FCNTL_CKPT_START            = 39
+	_FCNTL_EXTERNAL_READER       = 40
+	_FCNTL_CKSM_FILE             = 41
+	_FCNTL_RESET_CACHE           = 42
+)

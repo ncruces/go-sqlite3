@@ -7,6 +7,13 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+const (
+	// These need to match the offsets asserted in os.c
+	vfsFileIDOffset          = 4
+	vfsFileLockOffset        = 8
+	vfsFileLockTimeoutOffset = 12
+)
+
 func (vfsFileMethods) NewID(ctx context.Context, file *os.File) uint32 {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 
@@ -26,13 +33,12 @@ func (vfsFileMethods) NewID(ctx context.Context, file *os.File) uint32 {
 func (vfsFileMethods) Open(ctx context.Context, mod api.Module, pFile uint32, file *os.File) {
 	mem := memory{mod}
 	id := vfsFile.NewID(ctx, file)
-	mem.writeUint32(pFile+ptrlen, id)
-	mem.writeUint32(pFile+2*ptrlen, _NO_LOCK)
+	mem.writeUint32(pFile+vfsFileIDOffset, id)
 }
 
 func (vfsFileMethods) Close(ctx context.Context, mod api.Module, pFile uint32) error {
 	mem := memory{mod}
-	id := mem.readUint32(pFile + ptrlen)
+	id := mem.readUint32(pFile + vfsFileIDOffset)
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 	file := vfs.files[id]
 	vfs.files[id] = nil
@@ -41,17 +47,17 @@ func (vfsFileMethods) Close(ctx context.Context, mod api.Module, pFile uint32) e
 
 func (vfsFileMethods) GetOS(ctx context.Context, mod api.Module, pFile uint32) *os.File {
 	mem := memory{mod}
-	id := mem.readUint32(pFile + ptrlen)
+	id := mem.readUint32(pFile + vfsFileIDOffset)
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 	return vfs.files[id]
 }
 
 func (vfsFileMethods) GetLock(ctx context.Context, mod api.Module, pFile uint32) vfsLockState {
 	mem := memory{mod}
-	return vfsLockState(mem.readUint32(pFile + 2*ptrlen))
+	return vfsLockState(mem.readUint8(pFile + vfsFileLockOffset))
 }
 
 func (vfsFileMethods) SetLock(ctx context.Context, mod api.Module, pFile uint32, lock vfsLockState) {
 	mem := memory{mod}
-	mem.writeUint32(pFile+2*ptrlen, uint32(lock))
+	mem.writeUint8(pFile+vfsFileLockOffset, uint8(lock))
 }

@@ -309,14 +309,12 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 	return _OK
 }
 
-func vfsFileControl(ctx context.Context, pFile, op, pArg uint32) uint32 {
-	// SQLite calls vfsFileControl with these opcodes:
-	//  SQLITE_FCNTL_SIZE_HINT
-	//  SQLITE_FCNTL_PRAGMA
-	//  SQLITE_FCNTL_BUSYHANDLER
-	//  SQLITE_FCNTL_HAS_MOVED
-	//  SQLITE_FCNTL_SYNC
-	//  SQLITE_FCNTL_COMMIT_PHASETWO
-	//  SQLITE_FCNTL_PDB
+func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) uint32 {
+	switch op {
+	case _FCNTL_SIZE_HINT:
+		//
+	case _FCNTL_HAS_MOVED:
+		//
+	}
 	return uint32(NOTFOUND)
 }

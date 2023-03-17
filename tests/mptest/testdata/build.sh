@@ -13,7 +13,7 @@ if [ ! -f "mptest.c" ]; then
 fi
 
 zig cc --target=wasm32-wasi -flto -g0 -Os \
-  -o mptest.wasm main.c test.c \
+  -o mptest.wasm main.c \
 	-I../../../sqlite3 \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \
