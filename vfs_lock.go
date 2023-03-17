@@ -56,7 +56,7 @@ const (
 type vfsLockState uint32
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) uint32 {
-	// Argument check. SQLite never explicitly requests a pendig lock.
+	// Argument check. SQLite never explicitly requests a pending lock.
 	if eLock != _SHARED_LOCK && eLock != _RESERVED_LOCK && eLock != _EXCLUSIVE_LOCK {
 		panic(assertErr())
 	}

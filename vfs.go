@@ -314,7 +314,25 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	case _FCNTL_SIZE_HINT:
 		//
 	case _FCNTL_HAS_MOVED:
-		//
+		return vfsFileMoved(ctx, mod, pFile, pArg)
 	}
 	return uint32(NOTFOUND)
+}
+
+func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
+	file := vfsFile.GetOS(ctx, mod, pFile)
+	fi, err := file.Stat()
+	if err != nil {
+		return uint32(IOERR_FSTAT)
+	}
+	pi, err := os.Stat(file.Name())
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return uint32(IOERR_FSTAT)
+	}
+	var res uint32
+	if !os.SameFile(fi, pi) {
+		res = 1
+	}
+	memory{mod}.writeUint32(pResOut, res)
+	return _OK
 }
