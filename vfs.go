@@ -194,11 +194,30 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 
 func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _AccessFlag, pResOut uint32) uint32 {
 	path := memory{mod}.readString(zPath, _MAX_PATHNAME)
-	ok, rc := vfsOS.Access(path, flags)
+	err := vfsOS.Access(path, flags)
+
 	var res uint32
-	if ok {
-		res = 1
+	var rc xErrorCode
+	if flags == _ACCESS_EXISTS {
+		switch {
+		case err == nil:
+			res = 1
+		case errors.Is(err, fs.ErrNotExist):
+			res = 0
+		default:
+			rc = IOERR_ACCESS
+		}
+	} else {
+		switch {
+		case err == nil:
+			res = 1
+		case errors.Is(err, fs.ErrPermission):
+			res = 0
+		default:
+			rc = IOERR_ACCESS
+		}
 	}
+
 	memory{mod}.writeUint32(pResOut, res)
 	return uint32(rc)
 }
@@ -312,11 +331,24 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) uint3
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) uint32 {
 	switch op {
 	case _FCNTL_SIZE_HINT:
-		//
+		return vfsSizeHint(ctx, mod, pFile, pArg)
 	case _FCNTL_HAS_MOVED:
 		return vfsFileMoved(ctx, mod, pFile, pArg)
 	}
 	return uint32(NOTFOUND)
+}
+
+func vfsSizeHint(ctx context.Context, mod api.Module, pFile, pArg uint32) uint32 {
+	file := vfsFile.GetOS(ctx, mod, pFile)
+	size := memory{mod}.readUint64(pArg)
+	err := vfsOS.Allocate(file, int64(size))
+	if err == notImplErr {
+		return uint32(NOTFOUND)
+	}
+	if err != nil {
+		return uint32(IOERR_TRUNCATE)
+	}
+	return _OK
 }
 
 func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {

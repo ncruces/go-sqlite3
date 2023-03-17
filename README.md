@@ -46,7 +46,7 @@ to synchronize access to database files.
 
 POSIX advisory locks, which SQLite uses, are [broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
 OFD locks are fully compatible with process-associated POSIX advisory locks,
-and are supported on Linux, macOS and illumos.
+and are supported on Linux and macOS.
 As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.org/uri.html).
 
 #### Testing

@@ -10,7 +10,7 @@ import (
 
 func Test_vfsLock(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "illumos", "windows":
+	case "linux", "darwin", "windows":
 		break
 	default:
 		t.Skip("OS lacks OFD locks")

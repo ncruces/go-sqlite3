@@ -5,8 +5,6 @@ package sqlite3
 import (
 	"io/fs"
 	"os"
-	"runtime"
-	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -15,7 +13,7 @@ func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File,
 	return os.OpenFile(name, flag, perm)
 }
 
-func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
+func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
 	var access uint32 = unix.F_OK
 	switch flags {
 	case _ACCESS_READWRITE:
@@ -23,27 +21,7 @@ func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
 	case _ACCESS_READ:
 		access = unix.R_OK
 	}
-
-	err := unix.Access(path, access)
-	if err == nil {
-		return true, _OK
-	}
-	return false, _OK
-}
-
-func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
-	if runtime.GOOS == "darwin" && !fullsync {
-		return unix.Fsync(int(file.Fd()))
-	}
-	if runtime.GOOS == "linux" && dataonly {
-		//lint:ignore SA1019 OK on linux
-		_, _, err := unix.Syscall(unix.SYS_FDATASYNC, file.Fd(), 0, 0)
-		if err != 0 {
-			return err
-		}
-		return nil
-	}
-	return file.Sync()
+	return unix.Access(path, access)
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
@@ -111,53 +89,6 @@ func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode
 		return false, IOERR_CHECKRESERVEDLOCK
 	}
 	return lock.Type != unix.F_UNLCK, _OK
-}
-
-func (vfsOSMethods) fcntlGetLock(file *os.File, lock *unix.Flock_t) error {
-	var F_OFD_GETLK int
-	switch runtime.GOOS {
-	case "linux":
-		F_OFD_GETLK = 36 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-	case "darwin":
-		F_OFD_GETLK = 92 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	case "illumos":
-		F_OFD_GETLK = 47 // https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-	default:
-		return notImplErr
-	}
-	return unix.FcntlFlock(file.Fd(), F_OFD_GETLK, lock)
-}
-
-func (vfsOSMethods) fcntlSetLock(file *os.File, lock unix.Flock_t) error {
-	var F_OFD_SETLK int
-	switch runtime.GOOS {
-	case "linux":
-		F_OFD_SETLK = 37 // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/fcntl.h
-	case "darwin":
-		F_OFD_SETLK = 90 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	case "illumos":
-		F_OFD_SETLK = 48 // https://github.com/illumos/illumos-gate/blob/master/usr/src/uts/common/sys/fcntl.h
-	default:
-		return notImplErr
-	}
-	return unix.FcntlFlock(file.Fd(), F_OFD_SETLK, &lock)
-}
-
-func (vfsOSMethods) fcntlSetLockTimeout(timeout time.Duration, file *os.File, lock unix.Flock_t) error {
-	if runtime.GOOS != "darwin" || timeout == 0 {
-		return vfsOS.fcntlSetLock(file, lock)
-	}
-
-	const F_OFD_SETLKWTIMEOUT = 93 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	flocktimeout := &struct {
-		unix.Flock_t
-		unix.Timespec
-	}{
-		Flock_t:  lock,
-		Timespec: unix.NsecToTimespec(int64(timeout / time.Nanosecond)),
-	}
-
-	return unix.FcntlFlock(file.Fd(), F_OFD_SETLKWTIMEOUT, &flocktimeout.Flock_t)
 }
 
 func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {

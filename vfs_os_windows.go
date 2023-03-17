@@ -1,7 +1,7 @@
 package sqlite3
 
 import (
-	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"syscall"
@@ -25,44 +25,41 @@ func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File,
 	return os.NewFile(uintptr(r), name), nil
 }
 
+func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if flags == _ACCESS_EXISTS {
+		return nil
+	}
+
+	var want fs.FileMode = windows.S_IRUSR
+	if flags == _ACCESS_READWRITE {
+		want |= windows.S_IWUSR
+	}
+	if fi.IsDir() {
+		want |= windows.S_IXUSR
+	}
+	if fi.Mode()&want != want {
+		return fs.ErrPermission
+	}
+	return nil
+}
+
 func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
 	return file.Sync()
 }
 
-func (vfsOSMethods) Access(path string, flags _AccessFlag) (bool, xErrorCode) {
-	fi, err := os.Stat(path)
-
-	switch {
-	case flags == _ACCESS_EXISTS:
-		switch {
-		case err == nil:
-			return true, _OK
-		case errors.Is(err, fs.ErrNotExist):
-			return false, _OK
-		default:
-			return false, IOERR_ACCESS
-		}
-
-	case err == nil:
-		var want fs.FileMode = syscall.S_IRUSR
-		if flags == _ACCESS_READWRITE {
-			want |= syscall.S_IWUSR
-		}
-		if fi.IsDir() {
-			want |= syscall.S_IXUSR
-		}
-		if fi.Mode()&want == want {
-			return true, _OK
-		} else {
-			return false, _OK
-		}
-
-	case errors.Is(err, fs.ErrPermission):
-		return false, _OK
-
-	default:
-		return false, IOERR_ACCESS
+func (vfsOSMethods) Allocate(file *os.File, size int64) error {
+	off, err := file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
 	}
+	if size > off {
+		return file.Truncate(size)
+	}
+	return nil
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
@@ -160,7 +157,7 @@ func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK
 	}
-	if errno, ok := err.(syscall.Errno); ok {
+	if errno, ok := err.(windows.Errno); ok {
 		// https://devblogs.microsoft.com/oldnewthing/20140905-00/?p=63
 		switch errno {
 		case
