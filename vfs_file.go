@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -60,4 +61,9 @@ func (vfsFileMethods) GetLock(ctx context.Context, mod api.Module, pFile uint32)
 func (vfsFileMethods) SetLock(ctx context.Context, mod api.Module, pFile uint32, lock vfsLockState) {
 	mem := memory{mod}
 	mem.writeUint8(pFile+vfsFileLockOffset, uint8(lock))
+}
+
+func (vfsFileMethods) GetLockTimeout(ctx context.Context, mod api.Module, pFile uint32) time.Duration {
+	mem := memory{mod}
+	return time.Duration(mem.readUint32(pFile+vfsFileLockTimeoutOffset)) * time.Millisecond
 }

@@ -34,6 +34,16 @@ func (vfsOSMethods) fcntlSetLock(file *os.File, lock unix.Flock_t) error {
 	return unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
 }
 
-func (vfsOSMethods) fcntlSetLockTimeout(timeout time.Duration, file *os.File, lock unix.Flock_t) error {
-	return vfsOS.fcntlSetLock(file, lock)
+func (vfsOSMethods) fcntlSetLockTimeout(file *os.File, lock unix.Flock_t, timeout time.Duration) error {
+	for {
+		err := unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
+			return err
+		}
+		if timeout < time.Millisecond {
+			return err
+		}
+		timeout -= time.Millisecond
+		time.Sleep(time.Millisecond)
+	}
 }

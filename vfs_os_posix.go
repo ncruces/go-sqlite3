@@ -25,6 +25,6 @@ func (vfsOSMethods) fcntlSetLock(file *os.File, lock unix.Flock_t) error {
 	return notImplErr
 }
 
-func (vfsOSMethods) fcntlSetLockTimeout(timeout time.Duration, file *os.File, lock unix.Flock_t) error {
+func (vfsOSMethods) fcntlSetLockTimeout(file *os.File, lock unix.Flock_t, timeout time.Duration) error {
 	return notImplErr
 }

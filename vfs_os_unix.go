@@ -5,6 +5,7 @@ package sqlite3
 import (
 	"io/fs"
 	"os"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -24,15 +25,19 @@ func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
 	return unix.Access(path, access)
 }
 
-func (vfsOSMethods) GetExclusiveLock(file *os.File) xErrorCode {
+func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErrorCode {
+	if timeout == 0 {
+		timeout = time.Millisecond
+	}
+
 	// Acquire the EXCLUSIVE lock.
-	return vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE)
+	return vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
 func (vfsOSMethods) DowngradeLock(file *os.File, state vfsLockState) xErrorCode {
 	if state >= _EXCLUSIVE_LOCK {
 		// Downgrade to a SHARED lock.
-		if rc := vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE); rc != _OK {
+		if rc := vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, 0); rc != _OK {
 			// In theory, the downgrade to a SHARED cannot fail because another
 			// process is holding an incompatible lock. If it does, this
 			// indicates that the other process is not following the locking
@@ -62,21 +67,21 @@ func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
 	return _OK
 }
 
-func (vfsOSMethods) readLock(file *os.File, start, len int64) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, unix.Flock_t{
+func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLockTimeout(file, unix.Flock_t{
 		Type:  unix.F_RDLCK,
 		Start: start,
 		Len:   len,
-	}), IOERR_RDLOCK)
+	}, timeout), IOERR_RDLOCK)
 }
 
-func (vfsOSMethods) writeLock(file *os.File, start, len int64) xErrorCode {
+func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
 	// TODO: implement timeouts.
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLock(file, unix.Flock_t{
+	return vfsOS.lockErrorCode(vfsOS.fcntlSetLockTimeout(file, unix.Flock_t{
 		Type:  unix.F_WRLCK,
 		Start: start,
 		Len:   len,
-	}), IOERR_LOCK)
+	}, timeout), IOERR_LOCK)
 }
 
 func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {

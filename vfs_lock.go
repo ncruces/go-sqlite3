@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -63,6 +64,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 
 	file := vfsFile.GetOS(ctx, mod, pFile)
 	cLock := vfsFile.GetLock(ctx, mod, pFile)
+	timeout := vfsFile.GetLockTimeout(ctx, mod, pFile)
 
 	switch {
 	case cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK:
@@ -91,7 +93,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		if locked, _ := vfsOS.CheckPendingLock(file); locked {
 			return uint32(BUSY)
 		}
-		if rc := vfsOS.GetSharedLock(file); rc != _OK {
+		if rc := vfsOS.GetSharedLock(file, timeout); rc != _OK {
 			return uint32(rc)
 		}
 		vfsFile.SetLock(ctx, mod, pFile, _SHARED_LOCK)
@@ -102,7 +104,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		if cLock != _SHARED_LOCK {
 			panic(assertErr())
 		}
-		if rc := vfsOS.GetReservedLock(file); rc != _OK {
+		if rc := vfsOS.GetReservedLock(file, timeout); rc != _OK {
 			return uint32(rc)
 		}
 		vfsFile.SetLock(ctx, mod, pFile, _RESERVED_LOCK)
@@ -120,7 +122,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 			}
 			vfsFile.SetLock(ctx, mod, pFile, _PENDING_LOCK)
 		}
-		if rc := vfsOS.GetExclusiveLock(file); rc != _OK {
+		if rc := vfsOS.GetExclusiveLock(file, timeout); rc != _OK {
 			return uint32(rc)
 		}
 		vfsFile.SetLock(ctx, mod, pFile, _EXCLUSIVE_LOCK)
@@ -180,19 +182,19 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	return uint32(rc)
 }
 
-func (vfsOSMethods) GetSharedLock(file *os.File) xErrorCode {
+func (vfsOSMethods) GetSharedLock(file *os.File, timeout time.Duration) xErrorCode {
 	// Acquire the SHARED lock.
-	return vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE)
+	return vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
-func (vfsOSMethods) GetReservedLock(file *os.File) xErrorCode {
+func (vfsOSMethods) GetReservedLock(file *os.File, timeout time.Duration) xErrorCode {
 	// Acquire the RESERVED lock.
-	return vfsOS.writeLock(file, _RESERVED_BYTE, 1)
+	return vfsOS.writeLock(file, _RESERVED_BYTE, 1, timeout)
 }
 
 func (vfsOSMethods) GetPendingLock(file *os.File) xErrorCode {
 	// Acquire the PENDING lock.
-	return vfsOS.writeLock(file, _PENDING_BYTE, 1)
+	return vfsOS.writeLock(file, _PENDING_BYTE, 1, 0)
 }
 
 func (vfsOSMethods) CheckReservedLock(file *os.File) (bool, xErrorCode) {
