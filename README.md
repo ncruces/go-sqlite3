@@ -20,7 +20,7 @@ embeds a build of SQLite into your application.
 
 This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html) (aka VFS)
 with a pure Go implementation.
-This has numerous benefits, but also comes with some caveats.
+This has numerous benefits, but also comes with some drawbacks.
 
 #### Write-Ahead Logging
 
@@ -54,6 +54,9 @@ As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.o
 The pure Go VFS is stress tested by running an unmodified build of SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
 on Linux, macOS and Windows.
+
+Performance is tested by running
+[speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
 ### Roadmap
 

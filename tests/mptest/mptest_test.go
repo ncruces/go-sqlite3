@@ -99,11 +99,12 @@ func Test_config01(t *testing.T) {
 	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
-	_, err := rt.InstantiateModule(ctx, module, cfg)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
 	vfs.Close()
+	mod.Close(ctx)
 }
 
 func Test_config02(t *testing.T) {
@@ -117,11 +118,12 @@ func Test_config02(t *testing.T) {
 	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
-	_, err := rt.InstantiateModule(ctx, module, cfg)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
 	vfs.Close()
+	mod.Close(ctx)
 }
 
 func Test_crash01(t *testing.T) {
@@ -132,11 +134,12 @@ func Test_crash01(t *testing.T) {
 	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
-	_, err := rt.InstantiateModule(ctx, module, cfg)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
 	vfs.Close()
+	mod.Close(ctx)
 }
 
 func Test_multiwrite01(t *testing.T) {
@@ -147,11 +150,12 @@ func Test_multiwrite01(t *testing.T) {
 	ctx, vfs := vfsContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
-	_, err := rt.InstantiateModule(ctx, module, cfg)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
 	}
 	vfs.Close()
+	mod.Close(ctx)
 }
 
 func newContext(t *testing.T) context.Context {
