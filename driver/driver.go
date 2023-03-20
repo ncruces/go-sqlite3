@@ -386,8 +386,7 @@ func (r rows) Next(dest []driver.Value) error {
 		case sqlite3.TEXT:
 			dest[i] = maybeTime(r.stmt.ColumnText(i))
 		case sqlite3.BLOB:
-			buf, _ := dest[i].([]byte)
-			dest[i] = r.stmt.ColumnBlob(i, buf)
+			dest[i] = r.stmt.ColumnRawBlob(i)
 		case sqlite3.NULL:
 			if buf, ok := dest[i].([]byte); ok {
 				dest[i] = buf[0:0]

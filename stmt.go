@@ -334,21 +334,7 @@ func (s *Stmt) ColumnTime(col int, format TimeFormat) time.Time {
 //
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnText(col int) string {
-	r := s.c.call(s.c.api.columnText,
-		uint64(s.handle), uint64(col))
-
-	ptr := uint32(r[0])
-	if ptr == 0 {
-		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
-		s.err = s.c.error(r[0])
-		return ""
-	}
-
-	r = s.c.call(s.c.api.columnBytes,
-		uint64(s.handle), uint64(col))
-
-	mem := s.c.mem.view(ptr, r[0])
-	return string(mem)
+	return string(s.ColumnRawText(col))
 }
 
 // ColumnBlob appends to buf and returns
@@ -357,6 +343,39 @@ func (s *Stmt) ColumnText(col int) string {
 //
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
+	return append(buf, s.ColumnRawBlob(col)...)
+}
+
+// ColumnRawText returns the value of the result column as a []byte.
+// The []byte is owned by SQLite and may be invalidated by
+// subsequent calls to [Stmt] methods.
+// The leftmost column of the result set has the index 0.
+//
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnRawText(col int) []byte {
+	r := s.c.call(s.c.api.columnText,
+		uint64(s.handle), uint64(col))
+
+	ptr := uint32(r[0])
+	if ptr == 0 {
+		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
+		s.err = s.c.error(r[0])
+		return nil
+	}
+
+	r = s.c.call(s.c.api.columnBytes,
+		uint64(s.handle), uint64(col))
+
+	return s.c.mem.view(ptr, r[0])
+}
+
+// ColumnRawBlob returns the value of the result column as a []byte.
+// The []byte is owned by SQLite and may be invalidated by
+// subsequent calls to [Stmt] methods.
+// The leftmost column of the result set has the index 0.
+//
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnRawBlob(col int) []byte {
 	r := s.c.call(s.c.api.columnBlob,
 		uint64(s.handle), uint64(col))
 
@@ -364,14 +383,13 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 	if ptr == 0 {
 		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
 		s.err = s.c.error(r[0])
-		return buf[0:0]
+		return nil
 	}
 
 	r = s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 
-	mem := s.c.mem.view(ptr, r[0])
-	return append(buf[0:0], mem...)
+	return s.c.mem.view(ptr, r[0])
 }
 
 // Return true if stmt is an empty SQL statement.

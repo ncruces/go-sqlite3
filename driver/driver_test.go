@@ -308,7 +308,7 @@ func Test_QueryRow_blob_null(t *testing.T) {
 
 	want := [][]byte{nil, {0xca, 0xfe}, {0xba, 0xbe}, nil}
 	for i := 0; rows.Next(); i++ {
-		var buf []byte
+		var buf sql.RawBytes
 		err = rows.Scan(&buf)
 		if err != nil {
 			t.Fatal(err)
