@@ -3,9 +3,6 @@ set -eo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-# download SQLite
-../sqlite3/download.sh
-
 # build SQLite
 zig cc --target=wasm32-wasi -flto -g0 -Os \
   -o sqlite3.wasm ../sqlite3/main.c \

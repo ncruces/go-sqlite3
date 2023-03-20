@@ -3,15 +3,6 @@ set -eo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-if [ ! -f "mptest.c" ]; then
-	curl -sOL	"https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/mptest.c"
-	curl -sOL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/config01.test"
-  curl -sOL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/config02.test"
-  curl -sOL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/crash01.test"
-  curl -sOL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/crash02.subtest"
-  curl -sOL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/multiwrite01.test"
-fi
-
 zig cc --target=wasm32-wasi -flto -g0 -Os \
   -o mptest.wasm main.c \
 	-I../../../sqlite3 \

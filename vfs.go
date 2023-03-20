@@ -146,10 +146,6 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 		return uint32(CANTOPEN_FULLPATH)
 	}
 
-	// Consider either using [filepath.EvalSymlinks] to canonicalize the path (as the Unix VFS does).
-	// Or using [os.Readlink] to resolve a symbolic link (as the Unix VFS did).
-	// This might be buggy on Windows (the Windows VFS doesn't try).
-
 	size := uint64(len(abs) + 1)
 	if size > uint64(nFull) {
 		return uint32(CANTOPEN_FULLPATH)

@@ -3,11 +3,20 @@ set -eo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-if [ ! -f "sqlite3.c" ]; then
-	url="https://sqlite.org/2023/sqlite-amalgamation-3410100.zip"
-	curl "$url" > sqlite.zip
-	unzip -d . sqlite.zip
-	mv sqlite-amalgamation-*/sqlite3* .
-	rm -rf sqlite-amalgamation-*
-	rm sqlite.zip
-fi
+curl -#OL "https://sqlite.org/2023/sqlite-amalgamation-3410100.zip"
+unzip -d . sqlite-amalgamation-*.zip
+mv sqlite-amalgamation-*/sqlite3* .
+rm -rf sqlite-amalgamation-*
+
+cd ../tests/mptest/testdata/
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/mptest.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/config01.test"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/config02.test"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/crash01.test"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/crash02.subtest"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/multiwrite01.test"
+cd ~-
+
+cd ../tests/speedtest1/testdata/
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/test/speedtest1.c"
+cd ~-
