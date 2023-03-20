@@ -60,8 +60,9 @@ func Test_vfsLocaltime(t *testing.T) {
 
 func Test_vfsRandomness(t *testing.T) {
 	mem := newMemory(128)
+	ctx := context.TODO()
 
-	rc := vfsRandomness(context.TODO(), mem.mod, 0, 16, 4)
+	rc := vfsRandomness(ctx, mem.mod, 0, 16, 4)
 	if rc != 16 {
 		t.Fatal("returned", rc)
 	}
@@ -73,10 +74,11 @@ func Test_vfsRandomness(t *testing.T) {
 }
 
 func Test_vfsSleep(t *testing.T) {
+	mem := newMemory(128)
 	ctx := context.TODO()
 
 	now := time.Now()
-	rc := vfsSleep(ctx, 0, 123456)
+	rc := vfsSleep(ctx, mem.mod, 0, 123456)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}

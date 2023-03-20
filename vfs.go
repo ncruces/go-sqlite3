@@ -19,7 +19,7 @@ import (
 
 func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 	wasi := r.NewHostModuleBuilder("wasi_snapshot_preview1")
-	wasi.NewFunctionBuilder().WithFunc(vfsExit).Export("proc_exit")
+	vfsRegisterFunc(wasi, "proc_exit", vfsExit)
 	_, err := wasi.Instantiate(ctx)
 	if err != nil {
 		panic(err)
@@ -34,25 +34,25 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 
 func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	env := r.NewHostModuleBuilder("env")
-	env.NewFunctionBuilder().WithFunc(vfsLocaltime).Export("os_localtime")
-	env.NewFunctionBuilder().WithFunc(vfsRandomness).Export("os_randomness")
-	env.NewFunctionBuilder().WithFunc(vfsSleep).Export("os_sleep")
-	env.NewFunctionBuilder().WithFunc(vfsCurrentTime).Export("os_current_time")
-	env.NewFunctionBuilder().WithFunc(vfsCurrentTime64).Export("os_current_time_64")
-	env.NewFunctionBuilder().WithFunc(vfsFullPathname).Export("os_full_pathname")
-	env.NewFunctionBuilder().WithFunc(vfsDelete).Export("os_delete")
-	env.NewFunctionBuilder().WithFunc(vfsAccess).Export("os_access")
-	env.NewFunctionBuilder().WithFunc(vfsOpen).Export("os_open")
-	env.NewFunctionBuilder().WithFunc(vfsClose).Export("os_close")
-	env.NewFunctionBuilder().WithFunc(vfsRead).Export("os_read")
-	env.NewFunctionBuilder().WithFunc(vfsWrite).Export("os_write")
-	env.NewFunctionBuilder().WithFunc(vfsTruncate).Export("os_truncate")
-	env.NewFunctionBuilder().WithFunc(vfsSync).Export("os_sync")
-	env.NewFunctionBuilder().WithFunc(vfsFileSize).Export("os_file_size")
-	env.NewFunctionBuilder().WithFunc(vfsLock).Export("os_lock")
-	env.NewFunctionBuilder().WithFunc(vfsUnlock).Export("os_unlock")
-	env.NewFunctionBuilder().WithFunc(vfsCheckReservedLock).Export("os_check_reserved_lock")
-	env.NewFunctionBuilder().WithFunc(vfsFileControl).Export("os_file_control")
+	vfsRegisterFunc(env, "os_localtime", vfsLocaltime)
+	vfsRegisterFunc3(env, "os_randomness", vfsRandomness)
+	vfsRegisterFunc2(env, "os_sleep", vfsSleep)
+	vfsRegisterFunc2(env, "os_current_time", vfsCurrentTime)
+	vfsRegisterFunc2(env, "os_current_time_64", vfsCurrentTime64)
+	vfsRegisterFunc4(env, "os_full_pathname", vfsFullPathname)
+	vfsRegisterFunc3(env, "os_delete", vfsDelete)
+	vfsRegisterFunc4(env, "os_access", vfsAccess)
+	vfsRegisterFunc5(env, "os_open", vfsOpen)
+	vfsRegisterFunc1(env, "os_close", vfsClose)
+	vfsRegisterFuncRW(env, "os_read", vfsRead)
+	vfsRegisterFuncRW(env, "os_write", vfsWrite)
+	vfsRegisterFunc(env, "os_truncate", vfsTruncate)
+	vfsRegisterFunc2(env, "os_sync", vfsSync)
+	vfsRegisterFunc2(env, "os_file_size", vfsFileSize)
+	vfsRegisterFunc2(env, "os_lock", vfsLock)
+	vfsRegisterFunc2(env, "os_unlock", vfsUnlock)
+	vfsRegisterFunc2(env, "os_check_reserved_lock", vfsCheckReservedLock)
+	vfsRegisterFunc3(env, "os_file_control", vfsFileControl)
 	return env
 }
 
@@ -121,7 +121,7 @@ func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint3
 	return uint32(n)
 }
 
-func vfsSleep(ctx context.Context, pVfs, nMicro uint32) uint32 {
+func vfsSleep(ctx context.Context, mod api.Module, pVfs, nMicro uint32) uint32 {
 	time.Sleep(time.Duration(nMicro) * time.Microsecond)
 	return _OK
 }
@@ -367,4 +367,68 @@ func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) ui
 	}
 	memory{mod}.writeUint32(pResOut, res)
 	return _OK
+}
+
+func vfsRegisterFunc(mod wazero.HostModuleBuilder, name string, fn any) {
+	mod.NewFunctionBuilder().WithFunc(fn).Export(name)
+}
+
+func vfsRegisterFunc1(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ uint32) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, uint32(stack[0])))
+			}),
+			[]api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFunc2[T0, T1 ~uint32](mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ T0, _ T1) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1])))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFunc3[T0, T1, T2 ~uint32](mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ T0, _ T1, _ T2) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2])))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFunc4[T0, T1, T2, T3 ~uint32](mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ T0, _ T1, _ T2, _ T3) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2]), T3(stack[3])))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFunc5[T0, T1, T2, T3, T4 ~uint32](mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ T0, _ T1, _ T2, _ T3, _ T4) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2]), T3(stack[3]), T4(stack[4])))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFuncRW(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _, _, _ uint32, _ uint64) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), uint32(stack[1]), uint32(stack[2]), stack[3]))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
 }
