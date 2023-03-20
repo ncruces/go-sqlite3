@@ -14,7 +14,5 @@ int sqlite3_os_init() {
   return sqlite3_vfs_register(os_vfs(), /*default=*/true);
 }
 
-__attribute__((constructor)) void premain() { sqlite3_initialize(); }
-
 #define randomFunc(args...) randomFunc2(args)
 #include "speedtest1.c"
