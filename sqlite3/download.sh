@@ -8,6 +8,15 @@ unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3* .
 rm -rf sqlite-amalgamation-*
 
+cd ext/
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/decimal.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/uint.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/uuid.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/base64.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/regexp.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/ext/misc/series.c"
+cd ~-
+
 cd ../tests/mptest/testdata/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/mptest.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.1/mptest/config01.test"

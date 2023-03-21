@@ -26,6 +26,7 @@ static int time_collation(void *pArg, int nKey1, const void *pKey1, int nKey2,
   return rc;
 }
 
-int sqlite3_time_collation(sqlite3 *db) {
-  return sqlite3_create_collation(db, "TIME", SQLITE_UTF8, 0, time_collation);
+int sqlite3_time_init(sqlite3 *db, char **pzErrMsg,
+                      const sqlite3_api_routines *pApi) {
+  return sqlite3_create_collation(db, "time", SQLITE_UTF8, 0, time_collation);
 }

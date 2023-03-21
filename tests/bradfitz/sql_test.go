@@ -126,7 +126,7 @@ func testTxQuery(t params) {
 		if r.Err() != nil {
 			t.Fatal(err)
 		}
-		t.Fatal("expected one rows")
+		t.Fatal("expected one row")
 	}
 
 	var name string
