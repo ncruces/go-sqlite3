@@ -1,3 +1,5 @@
+//go:build !sqlite3_bsd
+
 package sqlite3
 
 import (

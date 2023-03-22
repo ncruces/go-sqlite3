@@ -18,11 +18,27 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
+    - name: Set up
+      uses: actions/setup-go@v4
       with:
         go-version: stable
-        cache: true
+
+    - name: Format
+      run: gofmt -s -w . && git diff --exit-code
+      if: matrix.os != 'windows-latest'
+
+    - name: Tidy
+      run: go mod tidy && git diff --exit-code
+
+    - name: Download
+      run: go mod download
+
+    - name: Verify
+      run: go mod verify
+
+    - name: Vet
+      run: go vet ./...
+      continue-on-error: true
 
     - name: Build
       run: go build -v ./...
@@ -34,10 +50,15 @@ jobs:
       run: go test -v -race ./...
       if: matrix.os == 'ubuntu-latest'
 
-    - name: Update coverage report
+    - name: Test BSD locks
+      run: go test -v -tags sqlite3_bsd ./...
+      if: matrix.os == 'macos-latest'
+
+    - name: Coverage report
       uses: ncruces/go-coverage-report@main
       with:
         chart: 'true'
+        amend: 'true'
       if: |
         matrix.os == 'ubuntu-latest' &&
         github.event_name == 'push'

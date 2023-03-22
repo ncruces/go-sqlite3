@@ -1,4 +1,4 @@
-//go:build !windows && !linux && !darwin
+//go:build unix && !linux && (!darwin || sqlite3_bsd)
 
 package sqlite3
 
