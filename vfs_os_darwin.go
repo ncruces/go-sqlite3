@@ -1,11 +1,25 @@
 package sqlite3
 
 import (
+	"io"
 	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
+
+const (
+	// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
+	_F_OFD_SETLK         = 90
+	_F_OFD_SETLKW        = 91
+	_F_OFD_GETLK         = 92
+	_F_OFD_SETLKWTIMEOUT = 93
+)
+
+type flocktimeout_t struct {
+	fl      unix.Flock_t
+	timeout unix.Timespec
+}
 
 func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
 	if !fullsync {
@@ -15,6 +29,14 @@ func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
 }
 
 func (vfsOSMethods) Allocate(file *os.File, size int64) error {
+	off, err := file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+	if size <= off {
+		return nil
+	}
+
 	// https://stackoverflow.com/a/11497568/867786
 	store := unix.Fstore_t{
 		Flags:   unix.F_ALLOCATECONTIG,
@@ -24,37 +46,67 @@ func (vfsOSMethods) Allocate(file *os.File, size int64) error {
 	}
 
 	// Try to get a continous chunk of disk space.
-	err := unix.FcntlFstore(file.Fd(), unix.F_PREALLOCATE, &store)
+	err = unix.FcntlFstore(file.Fd(), unix.F_PREALLOCATE, &store)
 	if err != nil {
 		// OK, perhaps we are too fragmented, allocate non-continuous.
 		store.Flags = unix.F_ALLOCATEALL
-		return unix.FcntlFstore(file.Fd(), unix.F_PREALLOCATE, &store)
+		unix.FcntlFstore(file.Fd(), unix.F_PREALLOCATE, &store)
 	}
-	return nil
+	return file.Truncate(size)
 }
 
-func (vfsOSMethods) fcntlGetLock(file *os.File, lock *unix.Flock_t) error {
-	const F_OFD_GETLK = 92 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	return unix.FcntlFlock(file.Fd(), F_OFD_GETLK, lock)
+func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
+	err := unix.FcntlFlock(file.Fd(), _F_OFD_SETLK, &unix.Flock_t{
+		Type:  unix.F_UNLCK,
+		Start: start,
+		Len:   len,
+	})
+	if err != nil {
+		return IOERR_UNLOCK
+	}
+	return _OK
 }
 
-func (vfsOSMethods) fcntlSetLock(file *os.File, lock unix.Flock_t) error {
-	const F_OFD_SETLK = 90 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	return unix.FcntlFlock(file.Fd(), F_OFD_SETLK, &lock)
-}
-
-func (vfsOSMethods) fcntlSetLockTimeout(file *os.File, lock unix.Flock_t, timeout time.Duration) error {
+func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+	lock := flocktimeout_t{fl: unix.Flock_t{
+		Type:  unix.F_RDLCK,
+		Start: start,
+		Len:   len,
+	}}
+	var err error
 	if timeout == 0 {
-		return vfsOS.fcntlSetLock(file, lock)
+		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLK, &lock.fl)
+	} else {
+		lock.timeout = unix.NsecToTimespec(int64(timeout / time.Nanosecond))
+		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLKWTIMEOUT, &lock.fl)
 	}
+	return vfsOS.lockErrorCode(err, IOERR_RDLOCK)
+}
 
-	const F_OFD_SETLKWTIMEOUT = 93 // https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
-	flocktimeout := &struct {
-		unix.Flock_t
-		unix.Timespec
-	}{
-		Flock_t:  lock,
-		Timespec: unix.NsecToTimespec(int64(timeout / time.Nanosecond)),
+func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+	lock := flocktimeout_t{fl: unix.Flock_t{
+		Type:  unix.F_WRLCK,
+		Start: start,
+		Len:   len,
+	}}
+	var err error
+	if timeout == 0 {
+		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLK, &lock.fl)
+	} else {
+		lock.timeout = unix.NsecToTimespec(int64(timeout / time.Nanosecond))
+		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLKWTIMEOUT, &lock.fl)
 	}
-	return unix.FcntlFlock(file.Fd(), F_OFD_SETLKWTIMEOUT, &flocktimeout.Flock_t)
+	return vfsOS.lockErrorCode(err, IOERR_LOCK)
+}
+
+func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {
+	lock := unix.Flock_t{
+		Type:  unix.F_RDLCK,
+		Start: start,
+		Len:   len,
+	}
+	if unix.FcntlFlock(file.Fd(), _F_OFD_GETLK, &lock) != nil {
+		return false, IOERR_CHECKRESERVEDLOCK
+	}
+	return lock.Type != unix.F_UNLCK, _OK
 }

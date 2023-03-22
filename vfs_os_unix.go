@@ -55,47 +55,6 @@ func (vfsOSMethods) ReleaseLock(file *os.File, _ vfsLockState) xErrorCode {
 	return vfsOS.unlock(file, 0, 0)
 }
 
-func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
-	err := vfsOS.fcntlSetLock(file, unix.Flock_t{
-		Type:  unix.F_UNLCK,
-		Start: start,
-		Len:   len,
-	})
-	if err != nil {
-		return IOERR_UNLOCK
-	}
-	return _OK
-}
-
-func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLockTimeout(file, unix.Flock_t{
-		Type:  unix.F_RDLCK,
-		Start: start,
-		Len:   len,
-	}, timeout), IOERR_RDLOCK)
-}
-
-func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	// TODO: implement timeouts.
-	return vfsOS.lockErrorCode(vfsOS.fcntlSetLockTimeout(file, unix.Flock_t{
-		Type:  unix.F_WRLCK,
-		Start: start,
-		Len:   len,
-	}, timeout), IOERR_LOCK)
-}
-
-func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {
-	lock := unix.Flock_t{
-		Type:  unix.F_RDLCK,
-		Start: start,
-		Len:   len,
-	}
-	if vfsOS.fcntlGetLock(file, &lock) != nil {
-		return false, IOERR_CHECKRESERVEDLOCK
-	}
-	return lock.Type != unix.F_UNLCK, _OK
-}
-
 func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 	if err == nil {
 		return _OK

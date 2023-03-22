@@ -338,9 +338,6 @@ func vfsSizeHint(ctx context.Context, mod api.Module, pFile, pArg uint32) uint32
 	file := vfsFile.GetOS(ctx, mod, pFile)
 	size := memory{mod}.readUint64(pArg)
 	err := vfsOS.Allocate(file, int64(size))
-	if err == notImplErr {
-		return uint32(NOTFOUND)
-	}
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
 	}

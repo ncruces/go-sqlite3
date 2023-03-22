@@ -57,10 +57,10 @@ func (vfsOSMethods) Allocate(file *os.File, size int64) error {
 	if err != nil {
 		return err
 	}
-	if size > off {
-		return file.Truncate(size)
+	if size <= off {
+		return nil
 	}
-	return nil
+	return file.Truncate(size)
 }
 
 func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErrorCode {

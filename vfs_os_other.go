@@ -1,6 +1,9 @@
+//go:build !windows && !linux && !darwin
+
 package sqlite3
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -8,44 +11,34 @@ import (
 )
 
 func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
-	if dataonly {
-		_, _, err := unix.Syscall(unix.SYS_FDATASYNC, file.Fd(), 0, 0)
-		if err != 0 {
-			return err
-		}
-		return nil
-	}
 	return file.Sync()
 }
 
 func (vfsOSMethods) Allocate(file *os.File, size int64) error {
-	if size == 0 {
+	off, err := file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+	if size <= off {
 		return nil
 	}
-	return unix.Fallocate(int(file.Fd()), 0, 0, size)
+	return file.Truncate(size)
 }
 
 func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
-	err := unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &unix.Flock_t{
-		Type:  unix.F_UNLCK,
-		Start: start,
-		Len:   len,
-	})
-	if err != nil {
-		return IOERR_UNLOCK
+	if start == 0 && len == 0 {
+		err := unix.Flock(int(file.Fd()), unix.LOCK_UN)
+		if err != nil {
+			return IOERR_UNLOCK
+		}
 	}
 	return _OK
 }
 
 func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	lock := unix.Flock_t{
-		Type:  unix.F_RDLCK,
-		Start: start,
-		Len:   len,
-	}
 	var err error
 	for {
-		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+		err = unix.Flock(int(file.Fd()), unix.LOCK_SH|unix.LOCK_NB)
 		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 			break
 		}
@@ -59,14 +52,9 @@ func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Durat
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	lock := unix.Flock_t{
-		Type:  unix.F_WRLCK,
-		Start: start,
-		Len:   len,
-	}
 	var err error
 	for {
-		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+		err = unix.Flock(int(file.Fd()), unix.LOCK_EX|unix.LOCK_NB)
 		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 			break
 		}
@@ -85,7 +73,7 @@ func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode
 		Start: start,
 		Len:   len,
 	}
-	if unix.FcntlFlock(file.Fd(), unix.F_OFD_GETLK, &lock) != nil {
+	if unix.FcntlFlock(file.Fd(), unix.F_GETLK, &lock) != nil {
 		return false, IOERR_CHECKRESERVEDLOCK
 	}
 	return lock.Type != unix.F_UNLCK, _OK

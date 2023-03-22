@@ -41,13 +41,14 @@ disable connection pooling by calling
 
 #### Open File Description Locks
 
-On Unix, this module uses [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
-to synchronize access to database files.
-
 POSIX advisory locks, which SQLite uses, are [broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
-OFD locks are fully compatible with process-associated POSIX advisory locks,
-and are supported on Linux and macOS.
-As a work around for other Unixes, you can use [`nolock=1`](https://www.sqlite.org/uri.html).
+
+On Linux and macOS, this module uses [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
+to synchronize access to database files.
+OFD locks are fully compatible with process-associated POSIX advisory locks.
+
+On other Unixes, this module uses [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
+BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
 
 #### Testing
 
