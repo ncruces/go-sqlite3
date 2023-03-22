@@ -7,10 +7,55 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        lfs: 'true'
+
+    - name: Set up
+      uses: actions/setup-go@v4
+      with:
+        go-version: oldstable
+
+    - name: Format
+      run: gofmt -s -w . && git diff --exit-code
+
+    - name: Vet
+      run: go vet ./...
+      continue-on-error: true
+
+    - name: Tidy
+      run: go mod tidy && git diff --exit-code
+
+    - name: Download
+      run: go mod download
+
+    - name: Verify
+      run: go mod verify
+
+    - name: Build
+      run: go build -o /dev/null ./...
+
+    - name: Test
+      run: go test -v -shuffle=on ./...
+
+    - name: Test races
+      run: go test -v -shuffle=on -race ./...
+
+    - name: Coverage
+      uses: ncruces/go-coverage-report@main
+      with:
+        chart: 'true'
+      if: github.event_name == 'push'
+      continue-on-error: true
+
+  native:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -18,27 +63,55 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
+    - name: Set up
+      uses: actions/setup-go@v4
       with:
-        go-version: stable
-        cache: true
+        go-version: oldstable
 
     - name: Build
-      run: go build -v ./...
+      run: go build -o /dev/null ./...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -v -shuffle=on ./...
 
-    - name: Test data races
-      run: go test -v -race ./...
-      if: matrix.os == 'ubuntu-latest'
+  bsd:
+    strategy:
+      matrix:
+        os:
+          - name: freebsd
+            architecture: x86-64
+            version: '13.1'
+            host: macos-12
 
-    - name: Update coverage report
-      uses: ncruces/go-coverage-report@main
+          - name: openbsd
+            architecture: x86-64
+            version: '7.2'
+            host: macos-12
+
+          - name: netbsd
+            architecture: x86-64
+            version: '9.2'
+            host: macos-12
+    runs-on: ${{ matrix.os.host }}
+
+    steps:
+    - uses: actions/checkout@v3
       with:
-        chart: 'true'
-      if: |
-        matrix.os == 'ubuntu-latest' &&
-        github.event_name == 'push'
-      continue-on-error: true
+        lfs: 'true'
+
+    - name: Set up
+      uses: actions/setup-go@v4
+      with:
+        go-version: oldstable
+
+    - name: Build
+      run: GOOS=${{ matrix.os.name }} for i in $(go list ./...); do go test -c $i; done
+
+    - name: Test
+      uses: cross-platform-actions/action@v0.10.0
+      with:
+        operating_system: ${{ matrix.os.name }}
+        architecture: ${{ matrix.os.architecture }}
+        version: ${{ matrix.os.version }}
+        shell: bash
+        run: for i in $(ls *.test); do ./$i -test.v -test.shuffle=on; done
