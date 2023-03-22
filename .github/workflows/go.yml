@@ -18,7 +18,7 @@ jobs:
     - name: Set up
       uses: actions/setup-go@v4
       with:
-        go-version: oldstable
+        go-version: stable
 
     - name: Format
       run: gofmt -s -w . && git diff --exit-code
@@ -66,7 +66,7 @@ jobs:
     - name: Set up
       uses: actions/setup-go@v4
       with:
-        go-version: oldstable
+        go-version: stable
 
     - name: Build
       run: go build -o /dev/null ./...
@@ -102,10 +102,12 @@ jobs:
     - name: Set up
       uses: actions/setup-go@v4
       with:
-        go-version: oldstable
+        go-version: stable
 
     - name: Build
-      run: GOOS=${{ matrix.os.name }} for i in $(go list ./...); do go test -c $i; done
+      run: for i in $(go list ./...); do go test -c $i; done
+      env:
+        GOOS: ${{ matrix.os.name }}
 
     - name: Test
       uses: cross-platform-actions/action@v0.10.0
