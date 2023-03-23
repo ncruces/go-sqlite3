@@ -25,6 +25,15 @@ func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
 	return unix.Access(path, access)
 }
 
+func (vfsOSMethods) GetSharedLock(file *os.File, timeout time.Duration) xErrorCode {
+	// Test the PENDING lock before acquiring a new SHARED lock.
+	if pending, _ := vfsOS.checkLock(file, _PENDING_BYTE, 1); pending {
+		return xErrorCode(BUSY)
+	}
+	// Acquire the SHARED lock.
+	return vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+}
+
 func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErrorCode {
 	if timeout == 0 {
 		timeout = time.Millisecond

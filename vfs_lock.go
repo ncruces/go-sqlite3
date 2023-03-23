@@ -89,10 +89,6 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 		if cLock != _NO_LOCK {
 			panic(assertErr())
 		}
-		// Test the PENDING lock before acquiring a new SHARED lock.
-		if locked, _ := vfsOS.CheckPendingLock(file); locked {
-			return uint32(BUSY)
-		}
 		if rc := vfsOS.GetSharedLock(file, timeout); rc != _OK {
 			return uint32(rc)
 		}
@@ -195,11 +191,6 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	return uint32(rc)
 }
 
-func (vfsOSMethods) GetSharedLock(file *os.File, timeout time.Duration) xErrorCode {
-	// Acquire the SHARED lock.
-	return vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
-}
-
 func (vfsOSMethods) GetReservedLock(file *os.File, timeout time.Duration) xErrorCode {
 	// Acquire the RESERVED lock.
 	return vfsOS.writeLock(file, _RESERVED_BYTE, 1, timeout)
@@ -213,9 +204,4 @@ func (vfsOSMethods) GetPendingLock(file *os.File) xErrorCode {
 func (vfsOSMethods) CheckReservedLock(file *os.File) (bool, xErrorCode) {
 	// Test the RESERVED lock.
 	return vfsOS.checkLock(file, _RESERVED_BYTE, 1)
-}
-
-func (vfsOSMethods) CheckPendingLock(file *os.File) (bool, xErrorCode) {
-	// Test the PENDING lock.
-	return vfsOS.checkLock(file, _PENDING_BYTE, 1)
 }

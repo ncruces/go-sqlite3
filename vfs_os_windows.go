@@ -63,6 +63,20 @@ func (vfsOSMethods) Allocate(file *os.File, size int64) error {
 	return file.Truncate(size)
 }
 
+func (vfsOSMethods) GetSharedLock(file *os.File, timeout time.Duration) xErrorCode {
+	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
+	rc := vfsOS.readLock(file, _PENDING_BYTE, 1, timeout)
+
+	if rc == _OK {
+		// Acquire the SHARED lock.
+		rc = vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, 0)
+
+		// Release the PENDING lock.
+		vfsOS.unlock(file, _PENDING_BYTE, 1)
+	}
+	return rc
+}
+
 func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErrorCode {
 	if timeout == 0 {
 		timeout = time.Millisecond
@@ -74,8 +88,8 @@ func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErro
 	// Acquire the EXCLUSIVE lock.
 	rc := vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 
-	// Reacquire the SHARED lock.
 	if rc != _OK {
+		// Reacquire the SHARED lock.
 		vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, 0)
 	}
 	return rc
