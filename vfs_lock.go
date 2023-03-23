@@ -172,8 +172,21 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) uint32 {
 	file := vfsFile.GetOS(ctx, mod, pFile)
+	cLock := vfsFile.GetLock(ctx, mod, pFile)
 
-	locked, rc := vfsOS.CheckReservedLock(file)
+	// Connection state check.
+	if cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK {
+		panic(assertErr())
+	}
+
+	var locked bool
+	var rc xErrorCode
+	if cLock >= _RESERVED_LOCK {
+		locked = true
+	} else {
+		locked, rc = vfsOS.CheckReservedLock(file)
+	}
+
 	var res uint32
 	if locked {
 		res = 1
