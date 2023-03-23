@@ -25,24 +25,11 @@ int main() {
   int rc = sqlite3_initialize();
   if (rc != SQLITE_OK) return 1;
 
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_base_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_decimal_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_regexp_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_series_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_uint_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_uuid_init);
-  if (rc != SQLITE_OK) return 1;
-
-  rc = sqlite3_auto_extension((void (*)(void))sqlite3_time_init);
-  if (rc != SQLITE_OK) return 1;
+  sqlite3_auto_extension((void (*)(void))sqlite3_base_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_decimal_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_regexp_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_series_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_uint_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_uuid_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_time_init);
 }
