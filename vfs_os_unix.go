@@ -15,7 +15,7 @@ func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File,
 }
 
 func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
-	var access uint32 = unix.F_OK
+	var access uint32 // unix.F_OK
 	switch flags {
 	case _ACCESS_READWRITE:
 		access = unix.R_OK | unix.W_OK

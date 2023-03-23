@@ -39,15 +39,18 @@ To open WAL databases, or use `EXCLUSIVE` locking mode,
 disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
-#### Open File Description Locks
+#### POSIX Advisory Locks
 
-POSIX advisory locks, which SQLite uses, are [broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
+POSIX advisory locks, which SQLite uses, are
+[broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
 
-On Linux and macOS, this module uses [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
+On Linux, macOS and illumos, this module uses
+[OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
 OFD locks are fully compatible with process-associated POSIX advisory locks.
 
-On other Unixes, this module uses [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
+On BSD Unixes, this module uses
+[BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
 BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
 
 #### Testing
@@ -55,7 +58,6 @@ BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
 The pure Go VFS is stress tested by running an unmodified build of SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
 on Linux, macOS and Windows.
-
 Performance is tested by running
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
