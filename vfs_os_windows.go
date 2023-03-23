@@ -131,18 +131,20 @@ func (vfsOSMethods) unlock(file *os.File, start, len uint32) xErrorCode {
 }
 
 func (vfsOSMethods) lock(file *os.File, flags, start, len uint32, timeout time.Duration, def xErrorCode) xErrorCode {
+	var err error
 	for {
-		err := windows.LockFileEx(windows.Handle(file.Fd()), flags,
+		err = windows.LockFileEx(windows.Handle(file.Fd()), flags,
 			0, len, 0, &windows.Overlapped{Offset: start})
 		if errno, _ := err.(windows.Errno); errno != windows.ERROR_LOCK_VIOLATION {
-			return vfsOS.lockErrorCode(err, def)
+			break
 		}
 		if timeout < time.Millisecond {
-			return vfsOS.lockErrorCode(err, def)
+			break
 		}
 		timeout -= time.Millisecond
 		time.Sleep(time.Millisecond)
 	}
+	return vfsOS.lockErrorCode(err, def)
 }
 
 func (vfsOSMethods) readLock(file *os.File, start, len uint32, timeout time.Duration) xErrorCode {

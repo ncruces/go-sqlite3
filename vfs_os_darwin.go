@@ -24,10 +24,10 @@ type flocktimeout_t struct {
 }
 
 func (vfsOSMethods) Sync(file *os.File, fullsync, dataonly bool) error {
-	if !fullsync {
-		return unix.Fsync(int(file.Fd()))
+	if fullsync {
+		return file.Sync()
 	}
-	return file.Sync()
+	return unix.Fsync(int(file.Fd()))
 }
 
 func (vfsOSMethods) Allocate(file *os.File, size int64) error {
@@ -69,9 +69,9 @@ func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
 	return _OK
 }
 
-func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+func (vfsOSMethods) lock(file *os.File, typ int16, start, len int64, timeout time.Duration, def xErrorCode) xErrorCode {
 	lock := flocktimeout_t{fl: unix.Flock_t{
-		Type:  unix.F_RDLCK,
+		Type:  typ,
 		Start: start,
 		Len:   len,
 	}}
@@ -82,23 +82,15 @@ func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Durat
 		lock.timeout = unix.NsecToTimespec(int64(timeout / time.Nanosecond))
 		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLKWTIMEOUT, &lock.fl)
 	}
-	return vfsOS.lockErrorCode(err, IOERR_RDLOCK)
+	return vfsOS.lockErrorCode(err, def)
+}
+
+func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+	return vfsOS.lock(file, unix.F_RDLCK, start, len, timeout, IOERR_RDLOCK)
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	lock := flocktimeout_t{fl: unix.Flock_t{
-		Type:  unix.F_WRLCK,
-		Start: start,
-		Len:   len,
-	}}
-	var err error
-	if timeout == 0 {
-		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLK, &lock.fl)
-	} else {
-		lock.timeout = unix.NsecToTimespec(int64(timeout / time.Nanosecond))
-		err = unix.FcntlFlock(file.Fd(), _F_OFD_SETLKWTIMEOUT, &lock.fl)
-	}
-	return vfsOS.lockErrorCode(err, IOERR_LOCK)
+	return vfsOS.lock(file, unix.F_WRLCK, start, len, timeout, IOERR_LOCK)
 }
 
 func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {

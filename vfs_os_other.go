@@ -35,10 +35,10 @@ func (vfsOSMethods) unlock(file *os.File, start, len int64) xErrorCode {
 	return _OK
 }
 
-func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+func (vfsOSMethods) lock(file *os.File, how int, timeout time.Duration, def xErrorCode) xErrorCode {
 	var err error
 	for {
-		err = unix.Flock(int(file.Fd()), unix.LOCK_SH|unix.LOCK_NB)
+		err = unix.Flock(int(file.Fd()), how)
 		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 			break
 		}
@@ -48,23 +48,15 @@ func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Durat
 		timeout -= time.Millisecond
 		time.Sleep(time.Millisecond)
 	}
-	return vfsOS.lockErrorCode(err, IOERR_RDLOCK)
+	return vfsOS.lockErrorCode(err, def)
+}
+
+func (vfsOSMethods) readLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
+	return vfsOS.lock(file, unix.LOCK_SH|unix.LOCK_NB, timeout, IOERR_RDLOCK)
 }
 
 func (vfsOSMethods) writeLock(file *os.File, start, len int64, timeout time.Duration) xErrorCode {
-	var err error
-	for {
-		err = unix.Flock(int(file.Fd()), unix.LOCK_EX|unix.LOCK_NB)
-		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
-			break
-		}
-		if timeout < time.Millisecond {
-			break
-		}
-		timeout -= time.Millisecond
-		time.Sleep(time.Millisecond)
-	}
-	return vfsOS.lockErrorCode(err, IOERR_RDLOCK)
+	return vfsOS.lock(file, unix.LOCK_EX|unix.LOCK_NB, timeout, IOERR_LOCK)
 }
 
 func (vfsOSMethods) checkLock(file *os.File, start, len int64) (bool, xErrorCode) {
