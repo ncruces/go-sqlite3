@@ -67,18 +67,14 @@ Performance is tested by running
   - [x] nested transactions
   - [x] incremental BLOB I/O
   - [x] online backup
-  - [ ] snapshots
   - [ ] session extension
-  - [ ] resumable bulk update
-  - [ ] shared-cache mode
-  - [ ] unlock-notify
 - [ ] custom SQL functions
 - [ ] custom VFSes
+  - [ ] in-memory VFS
   - [ ] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
-  - [ ] in-memory VFS, wrapping a [`bytes.Buffer`](https://pkg.go.dev/bytes#Buffer)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
   - [ ] custom VFS API
-  
+
 ### Alternatives
 
 - [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite)

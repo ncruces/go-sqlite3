@@ -14,19 +14,11 @@ import (
 	"github.com/ncruces/julianday"
 )
 
-func Test_vfsExit(t *testing.T) {
-	mem := newMemory(128)
-	ctx := context.TODO()
-	defer func() { _ = recover() }()
-	vfsExit(ctx, mem.mod, 1)
-	t.Error("want panic")
-}
-
 func Test_vfsLocaltime(t *testing.T) {
 	mem := newMemory(128)
 	ctx := context.TODO()
 
-	rc := vfsLocaltime(ctx, mem.mod, 0, 4)
+	rc := vfsLocaltime(ctx, mem.mod, 4, 0)
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}

@@ -2,7 +2,7 @@
 
 #include "sqlite3.h"
 
-int os_localtime(sqlite3_int64, struct tm *);
+int os_localtime(struct tm *, sqlite3_int64);
 
 int os_randomness(sqlite3_vfs *, int nByte, char *zOut);
 int os_sleep(sqlite3_vfs *, int microseconds);
@@ -140,5 +140,5 @@ sqlite3_vfs *os_vfs() {
 }
 
 int localtime_s(struct tm *const pTm, time_t const *const pTime) {
-  return os_localtime((sqlite3_int64)*pTime, pTm);
+  return os_localtime(pTm, (sqlite3_int64)*pTime);
 }

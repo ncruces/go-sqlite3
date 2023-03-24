@@ -14,19 +14,11 @@ import (
 	"github.com/ncruces/julianday"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/sys"
 )
 
 func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
-	wasi := r.NewHostModuleBuilder("wasi_snapshot_preview1")
-	vfsRegisterFunc(wasi, "proc_exit", vfsExit)
-	_, err := wasi.Instantiate(ctx)
-	if err != nil {
-		panic(err)
-	}
-
 	env := vfsNewEnvModuleBuilder(r)
-	_, err = env.Instantiate(ctx)
+	_, err := env.Instantiate(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +26,7 @@ func vfsInstantiate(ctx context.Context, r wazero.Runtime) {
 
 func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	env := r.NewHostModuleBuilder("env")
-	vfsRegisterFunc(env, "os_localtime", vfsLocaltime)
+	vfsRegisterFuncT(env, "os_localtime", vfsLocaltime)
 	vfsRegisterFunc3(env, "os_randomness", vfsRandomness)
 	vfsRegisterFunc2(env, "os_sleep", vfsSleep)
 	vfsRegisterFunc2(env, "os_current_time", vfsCurrentTime)
@@ -46,7 +38,7 @@ func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
 	vfsRegisterFunc1(env, "os_close", vfsClose)
 	vfsRegisterFuncRW(env, "os_read", vfsRead)
 	vfsRegisterFuncRW(env, "os_write", vfsWrite)
-	vfsRegisterFunc(env, "os_truncate", vfsTruncate)
+	vfsRegisterFuncT(env, "os_truncate", vfsTruncate)
 	vfsRegisterFunc2(env, "os_sync", vfsSync)
 	vfsRegisterFunc2(env, "os_file_size", vfsFileSize)
 	vfsRegisterFunc2(env, "os_lock", vfsLock)
@@ -87,14 +79,7 @@ func (vfs *vfsState) Close() error {
 	return nil
 }
 
-func vfsExit(ctx context.Context, mod api.Module, exitCode uint32) {
-	// Ensure other callers see the exit code.
-	_ = mod.CloseWithExitCode(ctx, exitCode)
-	// Prevent any code from executing after this function.
-	panic(sys.NewExitError(mod.Name(), exitCode))
-}
-
-func vfsLocaltime(ctx context.Context, mod api.Module, t uint64, pTm uint32) uint32 {
+func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t uint64) uint32 {
 	tm := time.Unix(int64(t), 0)
 	var isdst int
 	if tm.IsDST() {
@@ -362,10 +347,6 @@ func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) ui
 	return _OK
 }
 
-func vfsRegisterFunc(mod wazero.HostModuleBuilder, name string, fn any) {
-	mod.NewFunctionBuilder().WithFunc(fn).Export(name)
-}
-
 func vfsRegisterFunc1(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ uint32) uint32) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(api.GoModuleFunc(
@@ -423,5 +404,15 @@ func vfsRegisterFuncRW(mod wazero.HostModuleBuilder, name string, fn func(ctx co
 				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), uint32(stack[1]), uint32(stack[2]), stack[3]))
 			}),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+func vfsRegisterFuncT(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ uint32, _ uint64) uint32) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(api.GoModuleFunc(
+			func(ctx context.Context, mod api.Module, stack []uint64) {
+				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), stack[1]))
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
 		Export(name)
 }

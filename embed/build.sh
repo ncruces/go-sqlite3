@@ -10,5 +10,6 @@ zig cc --target=wasm32-wasi -flto -g0 -O2 \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
+	-mexec-model=reactor \
 	-D_HAVE_SQLITE_CONFIG_H \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)

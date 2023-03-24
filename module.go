@@ -3,14 +3,10 @@ package sqlite3
 
 import (
 	"context"
-	"crypto/rand"
 	"io"
 	"math"
 	"os"
-	"runtime"
-	"strconv"
 	"sync"
-	"sync/atomic"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -28,11 +24,10 @@ var (
 )
 
 var sqlite3 struct {
-	once      sync.Once
-	runtime   wazero.Runtime
-	compiled  wazero.CompiledModule
-	instances atomic.Uint64
-	err       error
+	once     sync.Once
+	runtime  wazero.Runtime
+	compiled wazero.CompiledModule
+	err      error
 }
 
 func instantiateModule() (*module, error) {
@@ -43,12 +38,7 @@ func instantiateModule() (*module, error) {
 		return nil, sqlite3.err
 	}
 
-	name := "sqlite3-" + strconv.FormatUint(sqlite3.instances.Add(1), 10)
-
-	cfg := wazero.NewModuleConfig().WithName(name).
-		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
-		WithOsyield(runtime.Gosched).
-		WithRandSource(rand.Reader)
+	cfg := wazero.NewModuleConfig().WithStartFunctions("_initialize")
 
 	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, cfg)
 	if err != nil {
