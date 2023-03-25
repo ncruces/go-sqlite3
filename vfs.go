@@ -79,8 +79,8 @@ func (vfs *vfsState) Close() error {
 	return nil
 }
 
-func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t uint64) uint32 {
-	tm := time.Unix(int64(t), 0)
+func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t int64) uint32 {
+	tm := time.Unix(t, 0)
 	var isdst int
 	if tm.IsDST() {
 		isdst = 1
@@ -224,7 +224,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		file, err = os.CreateTemp("", "*.db")
 	} else {
 		name := memory{mod}.readString(zName, _MAX_PATHNAME)
-		file, err = vfsOS.OpenFile(name, oflags, 0600)
+		file, err = vfsOS.OpenFile(name, oflags, 0666)
 	}
 	if err != nil {
 		return uint32(CANTOPEN)
@@ -235,6 +235,12 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 	}
 
 	vfsFile.Open(ctx, mod, pFile, file)
+
+	if runtime.GOOS != "windows" &&
+		flags&(OPEN_CREATE) != 0 &&
+		flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0 {
+		vfsFile.SetSyncDir(ctx, mod, pFile, true)
+	}
 
 	if pOutFlags != 0 {
 		memory{mod}.writeUint32(pOutFlags, uint32(flags))
@@ -250,11 +256,11 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 	return _OK
 }
 
-func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
+func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
 	file := vfsFile.GetOS(ctx, mod, pFile)
-	n, err := file.ReadAt(buf, int64(iOfst))
+	n, err := file.ReadAt(buf, iOfst)
 	if n == int(iAmt) {
 		return _OK
 	}
@@ -267,20 +273,20 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 	return uint32(IOERR_SHORT_READ)
 }
 
-func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst uint64) uint32 {
+func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) uint32 {
 	buf := memory{mod}.view(zBuf, uint64(iAmt))
 
 	file := vfsFile.GetOS(ctx, mod, pFile)
-	_, err := file.WriteAt(buf, int64(iOfst))
+	_, err := file.WriteAt(buf, iOfst)
 	if err != nil {
 		return uint32(IOERR_WRITE)
 	}
 	return _OK
 }
 
-func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64) uint32 {
+func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64) uint32 {
 	file := vfsFile.GetOS(ctx, mod, pFile)
-	err := file.Truncate(int64(nByte))
+	err := file.Truncate(nByte)
 	if err != nil {
 		return uint32(IOERR_TRUNCATE)
 	}
@@ -290,10 +296,23 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte uint64
 func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags _SyncFlag) uint32 {
 	dataonly := (flags & _SYNC_DATAONLY) != 0
 	fullsync := (flags & 0x0f) == _SYNC_FULL
+
 	file := vfsFile.GetOS(ctx, mod, pFile)
 	err := vfsOS.Sync(file, fullsync, dataonly)
 	if err != nil {
 		return uint32(IOERR_FSYNC)
+	}
+	if runtime.GOOS != "windows" && vfsFile.GetSyncDir(ctx, mod, pFile) {
+		vfsFile.SetSyncDir(ctx, mod, pFile, false)
+		f, err := os.Open(filepath.Dir(file.Name()))
+		if err != nil {
+			return _OK
+		}
+		defer f.Close()
+		err = vfsOS.Sync(f, false, false)
+		if err != nil {
+			return uint32(IOERR_DIR_FSYNC)
+		}
 	}
 	return _OK
 }
@@ -397,21 +416,21 @@ func vfsRegisterFunc5[T0, T1, T2, T3, T4 ~uint32](mod wazero.HostModuleBuilder, 
 		Export(name)
 }
 
-func vfsRegisterFuncRW(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _, _, _ uint32, _ uint64) uint32) {
+func vfsRegisterFuncRW(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _, _, _ uint32, _ int64) uint32) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(api.GoModuleFunc(
 			func(ctx context.Context, mod api.Module, stack []uint64) {
-				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), uint32(stack[1]), uint32(stack[2]), stack[3]))
+				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), uint32(stack[1]), uint32(stack[2]), int64(stack[3])))
 			}),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
 		Export(name)
 }
 
-func vfsRegisterFuncT(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ uint32, _ uint64) uint32) {
+func vfsRegisterFuncT(mod wazero.HostModuleBuilder, name string, fn func(ctx context.Context, mod api.Module, _ uint32, _ int64) uint32) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(api.GoModuleFunc(
 			func(ctx context.Context, mod api.Module, stack []uint64) {
-				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), stack[1]))
+				stack[0] = uint64(fn(ctx, mod, uint32(stack[0]), int64(stack[1])))
 			}),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
 		Export(name)

@@ -12,6 +12,7 @@ const (
 	// These need to match the offsets asserted in os.c
 	vfsFileIDOffset          = 4
 	vfsFileLockOffset        = 8
+	vfsFileSyncDirOffset     = 10
 	vfsFileLockTimeoutOffset = 12
 )
 
@@ -66,4 +67,21 @@ func (vfsFileMethods) SetLock(ctx context.Context, mod api.Module, pFile uint32,
 func (vfsFileMethods) GetLockTimeout(ctx context.Context, mod api.Module, pFile uint32) time.Duration {
 	mem := memory{mod}
 	return time.Duration(mem.readUint32(pFile+vfsFileLockTimeoutOffset)) * time.Millisecond
+}
+
+func (vfsFileMethods) GetSyncDir(ctx context.Context, mod api.Module, pFile uint32) bool {
+	mem := memory{mod}
+	if b := mem.readUint8(pFile + vfsFileSyncDirOffset); b != 0 {
+		return true
+	}
+	return false
+}
+
+func (vfsFileMethods) SetSyncDir(ctx context.Context, mod api.Module, pFile uint32, state bool) {
+	mem := memory{mod}
+	var b uint8
+	if state {
+		b = 1
+	}
+	mem.writeUint8(pFile+vfsFileSyncDirOffset, b)
 }

@@ -18,34 +18,34 @@ func Test_vfsLocaltime(t *testing.T) {
 	mem := newMemory(128)
 	ctx := context.TODO()
 
-	rc := vfsLocaltime(ctx, mem.mod, 4, 0)
+	tm := time.Now()
+	rc := vfsLocaltime(ctx, mem.mod, 4, tm.Unix())
 	if rc != 0 {
 		t.Fatal("returned", rc)
 	}
 
-	epoch := time.Unix(0, 0)
-	if s := mem.readUint32(4 + 0*4); int(s) != epoch.Second() {
+	if s := mem.readUint32(4 + 0*4); int(s) != tm.Second() {
 		t.Error("wrong second")
 	}
-	if m := mem.readUint32(4 + 1*4); int(m) != epoch.Minute() {
+	if m := mem.readUint32(4 + 1*4); int(m) != tm.Minute() {
 		t.Error("wrong minute")
 	}
-	if h := mem.readUint32(4 + 2*4); int(h) != epoch.Hour() {
+	if h := mem.readUint32(4 + 2*4); int(h) != tm.Hour() {
 		t.Error("wrong hour")
 	}
-	if d := mem.readUint32(4 + 3*4); int(d) != epoch.Day() {
+	if d := mem.readUint32(4 + 3*4); int(d) != tm.Day() {
 		t.Error("wrong day")
 	}
-	if m := mem.readUint32(4 + 4*4); time.Month(1+m) != epoch.Month() {
+	if m := mem.readUint32(4 + 4*4); time.Month(1+m) != tm.Month() {
 		t.Error("wrong month")
 	}
-	if y := mem.readUint32(4 + 5*4); 1900+int(y) != epoch.Year() {
+	if y := mem.readUint32(4 + 5*4); 1900+int(y) != tm.Year() {
 		t.Error("wrong year")
 	}
-	if w := mem.readUint32(4 + 6*4); time.Weekday(w) != epoch.Weekday() {
+	if w := mem.readUint32(4 + 6*4); time.Weekday(w) != tm.Weekday() {
 		t.Error("wrong weekday")
 	}
-	if d := mem.readUint32(4 + 7*4); int(d) != epoch.YearDay()-1 {
+	if d := mem.readUint32(4 + 7*4); int(d) != tm.YearDay()-1 {
 		t.Error("wrong yearday")
 	}
 }
