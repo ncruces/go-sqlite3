@@ -13,6 +13,7 @@ const (
 	vfsFileIDOffset          = 4
 	vfsFileLockOffset        = 8
 	vfsFileSyncDirOffset     = 10
+	vfsFileReadOnlyOffset    = 11
 	vfsFileLockTimeoutOffset = 12
 )
 
@@ -71,17 +72,20 @@ func (vfsFileMethods) GetLockTimeout(ctx context.Context, mod api.Module, pFile 
 
 func (vfsFileMethods) GetSyncDir(ctx context.Context, mod api.Module, pFile uint32) bool {
 	mem := memory{mod}
-	if b := mem.readUint8(pFile + vfsFileSyncDirOffset); b != 0 {
-		return true
-	}
-	return false
+	return mem.readBool8(pFile + vfsFileSyncDirOffset)
 }
 
-func (vfsFileMethods) SetSyncDir(ctx context.Context, mod api.Module, pFile uint32, state bool) {
+func (vfsFileMethods) SetSyncDir(ctx context.Context, mod api.Module, pFile uint32, val bool) {
 	mem := memory{mod}
-	var b uint8
-	if state {
-		b = 1
-	}
-	mem.writeUint8(pFile+vfsFileSyncDirOffset, b)
+	mem.writeBool8(pFile+vfsFileSyncDirOffset, val)
+}
+
+func (vfsFileMethods) GetReadOnly(ctx context.Context, mod api.Module, pFile uint32) bool {
+	mem := memory{mod}
+	return mem.readBool8(pFile + vfsFileReadOnlyOffset)
+}
+
+func (vfsFileMethods) SetReadOnly(ctx context.Context, mod api.Module, pFile uint32, val bool) {
+	mem := memory{mod}
+	mem.writeBool8(pFile+vfsFileReadOnlyOffset, val)
 }

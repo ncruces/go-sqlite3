@@ -65,6 +65,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	file := vfsFile.GetOS(ctx, mod, pFile)
 	cLock := vfsFile.GetLock(ctx, mod, pFile)
 	timeout := vfsFile.GetLockTimeout(ctx, mod, pFile)
+	readOnly := vfsFile.GetReadOnly(ctx, mod, pFile)
 
 	switch {
 	case cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK:
@@ -81,6 +82,11 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	// If we already have an equal or more restrictive lock, do nothing.
 	if cLock >= eLock {
 		return _OK
+	}
+
+	// Do not allow any kind of write-lock on a read-only database.
+	if readOnly && eLock > _RESERVED_LOCK {
+		return uint32(IOERR_LOCK)
 	}
 
 	switch eLock {

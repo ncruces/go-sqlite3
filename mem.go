@@ -88,6 +88,22 @@ func (m memory) writeUint64(ptr uint32, v uint64) {
 	}
 }
 
+func (m memory) readBool8(ptr uint32) bool {
+	v := m.readUint8(ptr)
+	if v != 0 {
+		return true
+	}
+	return false
+}
+
+func (m memory) writeBool8(ptr uint32, v bool) {
+	var b uint8
+	if v {
+		b = 1
+	}
+	m.writeUint8(ptr, b)
+}
+
 func (m memory) readFloat64(ptr uint32) float64 {
 	return math.Float64frombits(m.readUint64(ptr))
 }

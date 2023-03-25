@@ -21,6 +21,7 @@ struct os_file {
   char lock;
   char psow;
   char syncDir;
+  char readOnly;
   int lockTimeout;
 };
 
@@ -28,6 +29,7 @@ static_assert(offsetof(struct os_file, id) == 4, "Unexpected offset");
 static_assert(offsetof(struct os_file, lock) == 8, "Unexpected offset");
 static_assert(offsetof(struct os_file, psow) == 9, "Unexpected offset");
 static_assert(offsetof(struct os_file, syncDir) == 10, "Unexpected offset");
+static_assert(offsetof(struct os_file, readOnly) == 11, "Unexpected offset");
 static_assert(offsetof(struct os_file, lockTimeout) == 12, "Unexpected offset");
 
 int os_close(sqlite3_file *);

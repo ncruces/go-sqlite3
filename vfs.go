@@ -236,6 +236,9 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 
 	vfsFile.Open(ctx, mod, pFile, file)
 
+	if flags&OPEN_READONLY != 0 {
+		vfsFile.SetReadOnly(ctx, mod, pFile, true)
+	}
 	if runtime.GOOS != "windows" &&
 		flags&(OPEN_CREATE) != 0 &&
 		flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0 {
