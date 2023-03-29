@@ -3,6 +3,8 @@ package sqlite3
 import (
 	"math"
 	"time"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Stmt is a prepared statement object.
@@ -119,7 +121,7 @@ func (s *Stmt) BindName(param int) string {
 	if ptr == 0 {
 		return ""
 	}
-	return s.c.mem.readString(ptr, _MAX_STRING)
+	return util.ReadString(s.c.mod, ptr, _MAX_STRING)
 }
 
 // BindBool binds a bool to the prepared statement.
@@ -223,7 +225,7 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 	case float64:
 		s.BindFloat(param, v)
 	default:
-		panic(assertErr())
+		panic(util.AssertErr())
 	}
 	return nil
 }
@@ -247,9 +249,9 @@ func (s *Stmt) ColumnName(col int) string {
 
 	ptr := uint32(r[0])
 	if ptr == 0 {
-		panic(oomErr)
+		panic(util.OOMErr)
 	}
-	return s.c.mem.readString(ptr, _MAX_STRING)
+	return util.ReadString(s.c.mod, ptr, _MAX_STRING)
 }
 
 // ColumnType returns the initial [Datatype] of the result column.
@@ -320,7 +322,7 @@ func (s *Stmt) ColumnTime(col int, format TimeFormat) time.Time {
 	case NULL:
 		return time.Time{}
 	default:
-		panic(assertErr())
+		panic(util.AssertErr())
 	}
 	t, err := format.Decode(v)
 	if err != nil {
@@ -366,7 +368,7 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 	r = s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 
-	return s.c.mem.view(ptr, r[0])
+	return util.View(s.c.mod, ptr, r[0])
 }
 
 // ColumnRawBlob returns the value of the result column as a []byte.
@@ -389,7 +391,7 @@ func (s *Stmt) ColumnRawBlob(col int) []byte {
 	r = s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 
-	return s.c.mem.view(ptr, r[0])
+	return util.View(s.c.mod, ptr, r[0])
 }
 
 // Return true if stmt is an empty SQL statement.

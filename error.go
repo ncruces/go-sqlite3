@@ -1,8 +1,6 @@
 package sqlite3
 
 import (
-	"fmt"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -187,37 +185,4 @@ func (e ExtendedErrorCode) Temporary() bool {
 // Timeout returns true for [BUSY_TIMEOUT] errors.
 func (e ExtendedErrorCode) Timeout() bool {
 	return e == BUSY_TIMEOUT
-}
-
-type errorString string
-
-func (e errorString) Error() string { return string(e) }
-
-const (
-	nilErr      = errorString("sqlite3: invalid memory address or null pointer dereference")
-	oomErr      = errorString("sqlite3: out of memory")
-	rangeErr    = errorString("sqlite3: index out of range")
-	noNulErr    = errorString("sqlite3: missing NUL terminator")
-	noGlobalErr = errorString("sqlite3: could not find global: ")
-	noFuncErr   = errorString("sqlite3: could not find function: ")
-	binaryErr   = errorString("sqlite3: no SQLite binary embed/set/loaded")
-	timeErr     = errorString("sqlite3: invalid time value")
-	whenceErr   = errorString("sqlite3: invalid whence")
-	offsetErr   = errorString("sqlite3: invalid offset")
-)
-
-func assertErr() errorString {
-	msg := "sqlite3: assertion failed"
-	if _, file, line, ok := runtime.Caller(1); ok {
-		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
-	}
-	return errorString(msg)
-}
-
-func finalizer[T any](skip int) func(*T) {
-	msg := fmt.Sprintf("sqlite3: %T not closed", new(T))
-	if _, file, line, ok := runtime.Caller(skip + 1); ok && skip >= 0 {
-		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
-	}
-	return func(*T) { panic(errorString(msg)) }
 }

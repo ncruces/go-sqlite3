@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func Test_Open_dir(t *testing.T) {
@@ -142,7 +143,7 @@ func Test_BeginTx(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err.Error() != string(isolationErr) {
+	if err.Error() != string(util.IsolationErr) {
 		t.Error("want isolationErr")
 	}
 
@@ -230,7 +231,7 @@ func Test_Prepare(t *testing.T) {
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT 2`)
-	if err.Error() != string(tailErr) {
+	if err.Error() != string(util.TailErr) {
 		t.Error("want tailErr")
 	}
 }

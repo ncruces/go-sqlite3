@@ -19,16 +19,11 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	_ "github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/vfs"
 )
 
 //go:embed testdata/speedtest1.wasm
 var binary []byte
-
-//go:linkname vfsNewEnvModuleBuilder github.com/ncruces/go-sqlite3.vfsNewEnvModuleBuilder
-func vfsNewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder
-
-//go:linkname vfsContext github.com/ncruces/go-sqlite3.vfsContext
-func vfsContext(ctx context.Context) (context.Context, io.Closer)
 
 var (
 	rt      wazero.Runtime
@@ -42,7 +37,7 @@ func init() {
 
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
-	env := vfsNewEnvModuleBuilder(rt)
+	env := vfs.NewEnvModuleBuilder(rt)
 	_, err := env.Instantiate(ctx)
 	if err != nil {
 		panic(err)
@@ -74,7 +69,7 @@ func TestMain(m *testing.M) {
 
 func Benchmark_speedtest1(b *testing.B) {
 	output.Reset()
-	ctx, vfs := vfsContext(context.Background())
+	ctx, vfs := vfs.Context(context.Background())
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().

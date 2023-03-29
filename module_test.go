@@ -4,7 +4,13 @@ import (
 	"bytes"
 	"math"
 	"testing"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
+
+func init() {
+	Path = "./embed/sqlite3.wasm"
+}
 
 func TestConn_error_OOM(t *testing.T) {
 	t.Parallel()
@@ -71,7 +77,7 @@ func TestConn_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := m.mem.readString(ptr, math.MaxUint32); got != title {
+	if got := util.ReadString(m.mod, ptr, math.MaxUint32); got != title {
 		t.Errorf("got %q, want %q", got, title)
 	}
 
@@ -80,7 +86,7 @@ func TestConn_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := m.mem.readString(ptr, math.MaxUint32); got != body {
+	if got := util.ReadString(m.mod, ptr, math.MaxUint32); got != body {
 		t.Errorf("got %q, want %q", got, body)
 	}
 	arena.free()
@@ -107,7 +113,7 @@ func TestConn_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := m.mem.view(ptr, uint64(len(want))); !bytes.Equal(got, want) {
+	if got := util.View(m.mod, ptr, uint64(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -133,7 +139,7 @@ func TestConn_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := m.mem.view(ptr, uint64(len(want))); string(got) != want {
+	if got := util.View(m.mod, ptr, uint64(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -159,22 +165,22 @@ func TestConn_getString(t *testing.T) {
 	}
 
 	want := "sqlite3"
-	if got := m.mem.readString(ptr, math.MaxUint32); got != want {
+	if got := util.ReadString(m.mod, ptr, math.MaxUint32); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
-	if got := m.mem.readString(ptr, 0); got != "" {
+	if got := util.ReadString(m.mod, ptr, 0); got != "" {
 		t.Errorf("got %q, want empty", got)
 	}
 
 	func() {
 		defer func() { _ = recover() }()
-		m.mem.readString(ptr, uint32(len(want)/2))
+		util.ReadString(m.mod, ptr, uint32(len(want)/2))
 		t.Error("want panic")
 	}()
 
 	func() {
 		defer func() { _ = recover() }()
-		m.mem.readString(0, math.MaxUint32)
+		util.ReadString(m.mod, 0, math.MaxUint32)
 		t.Error("want panic")
 	}()
 }

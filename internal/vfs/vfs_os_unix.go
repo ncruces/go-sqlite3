@@ -1,6 +1,6 @@
 //go:build unix
 
-package sqlite3
+package vfs
 
 import (
 	"io/fs"
@@ -10,11 +10,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (vfsOSMethods) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
+func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.OpenFile(name, flag, perm)
 }
 
-func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
+func osAccess(path string, flags _AccessFlag) error {
 	var access uint32 // unix.F_OK
 	switch flags {
 	case _ACCESS_READWRITE:
@@ -25,46 +25,46 @@ func (vfsOSMethods) Access(path string, flags _AccessFlag) error {
 	return unix.Access(path, access)
 }
 
-func (vfsOSMethods) GetSharedLock(file *os.File, timeout time.Duration) xErrorCode {
+func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
 	// Test the PENDING lock before acquiring a new SHARED lock.
-	if pending, _ := vfsOS.checkLock(file, _PENDING_BYTE, 1); pending {
-		return xErrorCode(BUSY)
+	if pending, _ := osCheckLock(file, _PENDING_BYTE, 1); pending {
+		return _ErrorCode(_BUSY)
 	}
 	// Acquire the SHARED lock.
-	return vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+	return osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
-func (vfsOSMethods) GetExclusiveLock(file *os.File, timeout time.Duration) xErrorCode {
+func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
 	if timeout == 0 {
 		timeout = time.Millisecond
 	}
 
 	// Acquire the EXCLUSIVE lock.
-	return vfsOS.writeLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
-func (vfsOSMethods) DowngradeLock(file *os.File, state vfsLockState) xErrorCode {
+func osDowngradeLock(file *os.File, state vfsLockState) _ErrorCode {
 	if state >= _EXCLUSIVE_LOCK {
 		// Downgrade to a SHARED lock.
-		if rc := vfsOS.readLock(file, _SHARED_FIRST, _SHARED_SIZE, 0); rc != _OK {
+		if rc := osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, 0); rc != _OK {
 			// In theory, the downgrade to a SHARED cannot fail because another
 			// process is holding an incompatible lock. If it does, this
 			// indicates that the other process is not following the locking
-			// protocol. If this happens, return IOERR_RDLOCK. Returning
+			// protocol. If this happens, return _IOERR_RDLOCK. Returning
 			// BUSY would confuse the upper layer.
-			return IOERR_RDLOCK
+			return _IOERR_RDLOCK
 		}
 	}
 	// Release the PENDING and RESERVED locks.
-	return vfsOS.unlock(file, _PENDING_BYTE, 2)
+	return osUnlock(file, _PENDING_BYTE, 2)
 }
 
-func (vfsOSMethods) ReleaseLock(file *os.File, _ vfsLockState) xErrorCode {
+func osReleaseLock(file *os.File, _ vfsLockState) _ErrorCode {
 	// Release all locks.
-	return vfsOS.unlock(file, 0, 0)
+	return osUnlock(file, 0, 0)
 }
 
-func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
+func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 	if err == nil {
 		return _OK
 	}
@@ -78,9 +78,9 @@ func (vfsOSMethods) lockErrorCode(err error, def xErrorCode) xErrorCode {
 			unix.ENOLCK,
 			unix.EDEADLK,
 			unix.ETIMEDOUT:
-			return xErrorCode(BUSY)
+			return _ErrorCode(_BUSY)
 		case unix.EPERM:
-			return xErrorCode(PERM)
+			return _ErrorCode(_PERM)
 		}
 	}
 	return def

@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/vfs"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -50,7 +52,7 @@ func instantiateModule() (*module, error) {
 func compileModule() {
 	ctx := context.Background()
 	sqlite3.runtime = wazero.NewRuntime(ctx)
-	vfsInstantiate(ctx, sqlite3.runtime)
+	vfs.Instantiate(ctx, sqlite3.runtime)
 
 	bin := Binary
 	if bin == nil && Path != "" {
@@ -60,7 +62,7 @@ func compileModule() {
 		}
 	}
 	if bin == nil {
-		sqlite3.err = binaryErr
+		sqlite3.err = util.BinaryErr
 		return
 	}
 
@@ -69,20 +71,20 @@ func compileModule() {
 
 type module struct {
 	ctx context.Context
-	mem memory
+	mod api.Module
 	api sqliteAPI
 	vfs io.Closer
 }
 
 func newModule(mod api.Module) (m *module, err error) {
 	m = &module{}
-	m.mem = memory{mod}
-	m.ctx, m.vfs = vfsContext(context.Background())
+	m.mod = mod
+	m.ctx, m.vfs = vfs.Context(context.Background())
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
 		if f == nil {
-			err = noFuncErr + errorString(name)
+			err = util.NoFuncErr + util.ErrorString(name)
 			return nil
 		}
 		return f
@@ -91,10 +93,10 @@ func newModule(mod api.Module) (m *module, err error) {
 	getVal := func(name string) uint32 {
 		global := mod.ExportedGlobal(name)
 		if global == nil {
-			err = noGlobalErr + errorString(name)
+			err = util.NoGlobalErr + util.ErrorString(name)
 			return 0
 		}
-		return m.mem.readUint32(uint32(global.Get()))
+		return util.ReadUint32(mod, uint32(global.Get()))
 	}
 
 	m.api = sqliteAPI{
@@ -154,7 +156,7 @@ func newModule(mod api.Module) (m *module, err error) {
 }
 
 func (m *module) close() error {
-	err := m.mem.mod.Close(m.ctx)
+	err := m.mod.Close(m.ctx)
 	m.vfs.Close()
 	return err
 }
@@ -167,19 +169,19 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 	err := Error{code: rc}
 
 	if err.Code() == NOMEM || err.ExtendedCode() == IOERR_NOMEM {
-		panic(oomErr)
+		panic(util.OOMErr)
 	}
 
 	var r []uint64
 
 	r = m.call(m.api.errstr, rc)
 	if r != nil {
-		err.str = m.mem.readString(uint32(r[0]), _MAX_STRING)
+		err.str = util.ReadString(m.mod, uint32(r[0]), _MAX_STRING)
 	}
 
 	r = m.call(m.api.errmsg, uint64(handle))
 	if r != nil {
-		err.msg = m.mem.readString(uint32(r[0]), _MAX_STRING)
+		err.msg = util.ReadString(m.mod, uint32(r[0]), _MAX_STRING)
 	}
 
 	if sql != nil {
@@ -215,12 +217,12 @@ func (m *module) free(ptr uint32) {
 
 func (m *module) new(size uint64) uint32 {
 	if size > _MAX_ALLOCATION_SIZE {
-		panic(oomErr)
+		panic(util.OOMErr)
 	}
 	r := m.call(m.api.malloc, size)
 	ptr := uint32(r[0])
 	if ptr == 0 && size != 0 {
-		panic(oomErr)
+		panic(util.OOMErr)
 	}
 	return ptr
 }
@@ -230,13 +232,13 @@ func (m *module) newBytes(b []byte) uint32 {
 		return 0
 	}
 	ptr := m.new(uint64(len(b)))
-	m.mem.writeBytes(ptr, b)
+	util.WriteBytes(m.mod, ptr, b)
 	return ptr
 }
 
 func (m *module) newString(s string) uint32 {
 	ptr := m.new(uint64(len(s) + 1))
-	m.mem.writeString(ptr, s)
+	util.WriteString(m.mod, ptr, s)
 	return ptr
 }
 
@@ -286,7 +288,7 @@ func (a *arena) new(size uint64) uint32 {
 
 func (a *arena) string(s string) uint32 {
 	ptr := a.new(uint64(len(s) + 1))
-	a.m.mem.writeString(ptr, s)
+	util.WriteString(a.m.mod, ptr, s)
 	return ptr
 }
 

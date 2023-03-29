@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Conn is a database connection handle.
@@ -55,7 +57,7 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 		if conn == nil {
 			mod.close()
 		} else {
-			runtime.SetFinalizer(conn, finalizer[Conn](3))
+			runtime.SetFinalizer(conn, util.Finalizer[Conn](3))
 		}
 	}()
 
@@ -76,7 +78,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	flags |= OPEN_EXRESCODE
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
-	handle := c.mem.readUint32(connPtr)
+	handle := util.ReadUint32(c.mod, connPtr)
 	if err := c.module.error(r[0], handle); err != nil {
 		c.closeDB(handle)
 		return 0, err
@@ -182,8 +184,8 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 		uint64(stmtPtr), uint64(tailPtr))
 
 	stmt = &Stmt{c: c}
-	stmt.handle = c.mem.readUint32(stmtPtr)
-	i := c.mem.readUint32(tailPtr)
+	stmt.handle = util.ReadUint32(c.mod, stmtPtr)
+	i := util.ReadUint32(c.mod, tailPtr)
 	tail = sql[i-sqlPtr:]
 
 	if err := c.error(r[0], sql); err != nil {
@@ -275,7 +277,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 			break
 
 		case <-ctx.Done(): // Done was closed.
-			buf := c.mem.view(c.handle+c.api.interrupt, 4)
+			buf := util.View(c.mod, c.handle+c.api.interrupt, 4)
 			(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 			// Wait for the next call to SetInterrupt.
 			<-waiter
@@ -291,7 +293,7 @@ func (c *Conn) checkInterrupt() bool {
 	if c.interrupt == nil || c.interrupt.Err() == nil {
 		return false
 	}
-	buf := c.mem.view(c.handle+c.api.interrupt, 4)
+	buf := util.View(c.mod, c.handle+c.api.interrupt, 4)
 	(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 	return true
 }

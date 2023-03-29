@@ -1,4 +1,4 @@
-package sqlite3
+package util
 
 import (
 	"context"
@@ -8,13 +8,9 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-func init() {
-	Path = "./embed/sqlite3.wasm"
-}
-
-func newMemory(size uint32) memory {
+func NewMockModule(size uint32) api.Module {
 	mem := make(mockMemory, size)
-	return memory{mockModule{&mem}}
+	return mockModule{&mem}
 }
 
 type mockModule struct {

@@ -4,11 +4,13 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func Test_assertErr(t *testing.T) {
-	err := assertErr()
-	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:10)") {
+	err := util.AssertErr()
+	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:12)") {
 		t.Errorf("got %q", s)
 	}
 }
@@ -120,7 +122,7 @@ func Test_ErrorCode_Error(t *testing.T) {
 	for i := 0; i == int(ErrorCode(i)); i++ {
 		want := "sqlite3: "
 		r := db.call(db.api.errstr, uint64(i))
-		want += db.mem.readString(uint32(r[0]), _MAX_STRING)
+		want += util.ReadString(db.mod, uint32(r[0]), _MAX_STRING)
 
 		got := ErrorCode(i).Error()
 		if got != want {
@@ -142,7 +144,7 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	for i := 0; i == int(ExtendedErrorCode(i)); i++ {
 		want := "sqlite3: "
 		r := db.call(db.api.errstr, uint64(i))
-		want += db.mem.readString(uint32(r[0]), _MAX_STRING)
+		want += util.ReadString(db.mod, uint32(r[0]), _MAX_STRING)
 
 		got := ExtendedErrorCode(i).Error()
 		if got != want {

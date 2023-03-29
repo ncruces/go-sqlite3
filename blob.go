@@ -1,6 +1,10 @@
 package sqlite3
 
-import "io"
+import (
+	"io"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
+)
 
 // ZeroBlob represents a zero-filled, length n BLOB
 // that can be used as an argument to
@@ -46,7 +50,7 @@ func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob,
 	}
 
 	blob := Blob{c: c}
-	blob.handle = c.mem.readUint32(blobPtr)
+	blob.handle = util.ReadUint32(c.mod, blobPtr)
 	blob.bytes = int64(c.call(c.api.blobBytes, uint64(blob.handle))[0])
 	return &blob, nil
 }
@@ -98,7 +102,7 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		return 0, err
 	}
 
-	mem := b.c.mem.view(ptr, uint64(want))
+	mem := util.View(b.c.mod, ptr, uint64(want))
 	copy(p, mem)
 	b.offset += want
 	if b.offset >= b.bytes {
@@ -133,7 +137,7 @@ func (b *Blob) Write(p []byte) (n int, err error) {
 func (b *Blob) Seek(offset int64, whence int) (int64, error) {
 	switch whence {
 	default:
-		return 0, whenceErr
+		return 0, util.WhenceErr
 	case io.SeekStart:
 		break
 	case io.SeekCurrent:
@@ -142,7 +146,7 @@ func (b *Blob) Seek(offset int64, whence int) (int64, error) {
 		offset += b.bytes
 	}
 	if offset < 0 {
-		return 0, offsetErr
+		return 0, util.OffsetErr
 	}
 	b.offset = offset
 	return offset, nil

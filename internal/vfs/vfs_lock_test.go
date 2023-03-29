@@ -1,4 +1,4 @@
-package sqlite3
+package vfs
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func Test_vfsLock(t *testing.T) {
@@ -37,133 +39,133 @@ func Test_vfsLock(t *testing.T) {
 		pFile2  = 16
 		pOutput = 32
 	)
-	mem := newMemory(128)
-	ctx, vfs := vfsContext(context.TODO())
+	mod := util.NewMockModule(128)
+	ctx, vfs := Context(context.TODO())
 	defer vfs.Close()
 
-	vfsFile.Open(ctx, mem.mod, pFile1, file1)
-	vfsFile.Open(ctx, mem.mod, pFile2, file2)
+	openFile(ctx, mod, pFile1, file1)
+	openFile(ctx, mod, pFile2, file2)
 
-	rc := vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
+	rc := vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got != 0 {
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
 	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got != 0 {
-		t.Error("file was locked")
-	}
-
-	rc = vfsLock(ctx, mem.mod, pFile2, _SHARED_LOCK)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-	if got := mem.readUint32(pOutput); got != 0 {
-		t.Error("file was locked")
-	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-	if got := mem.readUint32(pOutput); got != 0 {
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(ctx, mem.mod, pFile2, _RESERVED_LOCK)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-	rc = vfsLock(ctx, mem.mod, pFile2, _SHARED_LOCK)
+	rc = vfsLock(ctx, mod, pFile2, _SHARED_LOCK)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
+		t.Error("file was locked")
+	}
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
+		t.Error("file was locked")
+	}
+
+	rc = vfsLock(ctx, mod, pFile2, _RESERVED_LOCK)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	rc = vfsLock(ctx, mod, pFile2, _SHARED_LOCK)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
 
-	rc = vfsLock(ctx, mem.mod, pFile2, _EXCLUSIVE_LOCK)
+	rc = vfsLock(ctx, mod, pFile2, _EXCLUSIVE_LOCK)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
 
-	rc = vfsLock(ctx, mem.mod, pFile1, _SHARED_LOCK)
+	rc = vfsLock(ctx, mod, pFile1, _SHARED_LOCK)
 	if rc == _OK {
 		t.Fatal("returned", rc)
 	}
 
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got == 0 {
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
 
-	rc = vfsUnlock(ctx, mem.mod, pFile2, _SHARED_LOCK)
+	rc = vfsUnlock(ctx, mod, pFile2, _SHARED_LOCK)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile1, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got != 0 {
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
 	}
-	rc = vfsCheckReservedLock(ctx, mem.mod, pFile2, pOutput)
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := mem.readUint32(pOutput); got != 0 {
+	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(ctx, mem.mod, pFile1, _SHARED_LOCK)
+	rc = vfsLock(ctx, mod, pFile1, _SHARED_LOCK)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

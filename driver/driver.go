@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func init() {
@@ -134,7 +135,7 @@ func (c conn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, erro
 
 	switch opts.Isolation {
 	default:
-		return nil, isolationErr
+		return nil, util.IsolationErr
 	case
 		driver.IsolationLevel(sql.LevelDefault),
 		driver.IsolationLevel(sql.LevelSerializable):
@@ -183,7 +184,7 @@ func (c conn) Prepare(query string) (driver.Stmt, error) {
 		if st != nil {
 			s.Close()
 			st.Close()
-			return nil, tailErr
+			return nil, util.TailErr
 		}
 	}
 	return stmt{s, c.conn}, nil
@@ -316,7 +317,7 @@ func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (drive
 			case nil:
 				err = s.stmt.BindNull(id)
 			default:
-				panic(assertErr)
+				panic(util.AssertErr())
 			}
 		}
 		if err != nil {
@@ -394,7 +395,7 @@ func (r rows) Next(dest []driver.Value) error {
 				dest[i] = nil
 			}
 		default:
-			panic(assertErr)
+			panic(util.AssertErr())
 		}
 	}
 
