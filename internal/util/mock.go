@@ -148,10 +148,6 @@ func (m *mockMemory) Grow(delta uint32) (result uint32, ok bool) {
 	return uint32(prev), true
 }
 
-func (m mockMemory) PageSize() (result uint32) {
-	return uint32(len(m) / 65536)
-}
-
 func (m mockMemory) hasSize(offset uint32, byteCount uint32) bool {
 	return uint64(offset)+uint64(byteCount) <= uint64(len(m))
 }
