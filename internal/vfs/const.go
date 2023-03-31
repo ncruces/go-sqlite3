@@ -1,11 +1,8 @@
 package vfs
 
-const (
-	_MAX_PATHNAME = 512
+const _MAX_PATHNAME = 512
 
-	ptrlen = 4
-)
-
+// https://www.sqlite.org/rescode.html
 type _ErrorCode uint32
 
 const (
@@ -55,9 +52,10 @@ const (
 	_CANTOPEN_CONVPATH       = _CANTOPEN | (4 << 8)
 	_CANTOPEN_DIRTYWAL       = _CANTOPEN | (5 << 8) /* Not Used */
 	_CANTOPEN_SYMLINK        = _CANTOPEN | (6 << 8)
-	_OK_SYMLINK              = (_OK | (2 << 8)) /* internal use only */
+	_OK_SYMLINK              = _OK | (2 << 8) /* internal use only */
 )
 
+// https://www.sqlite.org/c3ref/c_open_autoproxy.html
 type _OpenFlag uint32
 
 const (
@@ -85,6 +83,7 @@ const (
 	_OPEN_EXRESCODE     _OpenFlag = 0x02000000 /* Extended result codes */
 )
 
+// https://www.sqlite.org/c3ref/c_access_exists.html
 type _AccessFlag uint32
 
 const (
@@ -93,6 +92,7 @@ const (
 	_ACCESS_READ      _AccessFlag = 2 /* Unused */
 )
 
+// https://www.sqlite.org/c3ref/c_sync_dataonly.html
 type _SyncFlag uint32
 
 const (
@@ -101,6 +101,51 @@ const (
 	_SYNC_DATAONLY _SyncFlag = 0x00010
 )
 
+// https://www.sqlite.org/c3ref/c_lock_exclusive.html
+type _LockLevel uint32
+
+const (
+	// No locks are held on the database.
+	// The database may be neither read nor written.
+	// Any internally cached data is considered suspect and subject to
+	// verification against the database file before being used.
+	// Other processes can read or write the database as their own locking
+	// states permit.
+	// This is the default state.
+	_LOCK_NONE _LockLevel = 0 /* xUnlock() only */
+
+	// The database may be read but not written.
+	// Any number of processes can hold SHARED locks at the same time,
+	// hence there can be many simultaneous readers.
+	// But no other thread or process is allowed to write to the database file
+	// while one or more SHARED locks are active.
+	_LOCK_SHARED _LockLevel = 1 /* xLock() or xUnlock() */
+
+	// A RESERVED lock means that the process is planning on writing to the
+	// database file at some point in the future but that it is currently just
+	// reading from the file.
+	// Only a single RESERVED lock may be active at one time,
+	// though multiple SHARED locks can coexist with a single RESERVED lock.
+	// RESERVED differs from PENDING in that new SHARED locks can be acquired
+	// while there is a RESERVED lock.
+	_LOCK_RESERVED _LockLevel = 2 /* xLock() only */
+
+	// A PENDING lock means that the process holding the lock wants to write to
+	// the database as soon as possible and is just waiting on all current
+	// SHARED locks to clear so that it can get an EXCLUSIVE lock.
+	// No new SHARED locks are permitted against the database if a PENDING lock
+	// is active, though existing SHARED locks are allowed to continue.
+	_LOCK_PENDING _LockLevel = 3 /* internal use only */
+
+	// An EXCLUSIVE lock is needed in order to write to the database file.
+	// Only one EXCLUSIVE lock is allowed on the file and no other locks of any
+	// kind are allowed to coexist with an EXCLUSIVE lock.
+	// In order to maximize concurrency, SQLite works to minimize the amount of
+	// time that EXCLUSIVE locks are held.
+	_LOCK_EXCLUSIVE _LockLevel = 4 /* xLock() only */
+)
+
+// https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
 type _FcntlOpcode uint32
 
 const (

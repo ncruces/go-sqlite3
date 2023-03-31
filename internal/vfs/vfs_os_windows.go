@@ -79,8 +79,8 @@ func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
 	return rc
 }
 
-func osDowngradeLock(file *os.File, state vfsLockState) _ErrorCode {
-	if state >= _EXCLUSIVE_LOCK {
+func osDowngradeLock(file *os.File, state _LockLevel) _ErrorCode {
+	if state >= _LOCK_EXCLUSIVE {
 		// Release the SHARED lock.
 		osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
@@ -93,24 +93,24 @@ func osDowngradeLock(file *os.File, state vfsLockState) _ErrorCode {
 	}
 
 	// Release the PENDING and RESERVED locks.
-	if state >= _RESERVED_LOCK {
+	if state >= _LOCK_RESERVED {
 		osUnlock(file, _RESERVED_BYTE, 1)
 	}
-	if state >= _PENDING_LOCK {
+	if state >= _LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK
 }
 
-func osReleaseLock(file *os.File, state vfsLockState) _ErrorCode {
+func osReleaseLock(file *os.File, state _LockLevel) _ErrorCode {
 	// Release all locks.
-	if state >= _RESERVED_LOCK {
+	if state >= _LOCK_RESERVED {
 		osUnlock(file, _RESERVED_BYTE, 1)
 	}
-	if state >= _SHARED_LOCK {
+	if state >= _LOCK_SHARED {
 		osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 	}
-	if state >= _PENDING_LOCK {
+	if state >= _LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK

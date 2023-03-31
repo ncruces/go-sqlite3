@@ -10,56 +10,15 @@ import (
 )
 
 const (
-	// No locks are held on the database.
-	// The database may be neither read nor written.
-	// Any internally cached data is considered suspect and subject to
-	// verification against the database file before being used.
-	// Other processes can read or write the database as their own locking
-	// states permit.
-	// This is the default state.
-	_NO_LOCK = 0
-
-	// The database may be read but not written.
-	// Any number of processes can hold SHARED locks at the same time,
-	// hence there can be many simultaneous readers.
-	// But no other thread or process is allowed to write to the database file
-	// while one or more SHARED locks are active.
-	_SHARED_LOCK = 1
-
-	// A RESERVED lock means that the process is planning on writing to the
-	// database file at some point in the future but that it is currently just
-	// reading from the file.
-	// Only a single RESERVED lock may be active at one time,
-	// though multiple SHARED locks can coexist with a single RESERVED lock.
-	// RESERVED differs from PENDING in that new SHARED locks can be acquired
-	// while there is a RESERVED lock.
-	_RESERVED_LOCK = 2
-
-	// A PENDING lock means that the process holding the lock wants to write to
-	// the database as soon as possible and is just waiting on all current
-	// SHARED locks to clear so that it can get an EXCLUSIVE lock.
-	// No new SHARED locks are permitted against the database if a PENDING lock
-	// is active, though existing SHARED locks are allowed to continue.
-	_PENDING_LOCK = 3
-
-	// An EXCLUSIVE lock is needed in order to write to the database file.
-	// Only one EXCLUSIVE lock is allowed on the file and no other locks of any
-	// kind are allowed to coexist with an EXCLUSIVE lock.
-	// In order to maximize concurrency, SQLite works to minimize the amount of
-	// time that EXCLUSIVE locks are held.
-	_EXCLUSIVE_LOCK = 4
-
 	_PENDING_BYTE  = 0x40000000
 	_RESERVED_BYTE = (_PENDING_BYTE + 1)
 	_SHARED_FIRST  = (_PENDING_BYTE + 2)
 	_SHARED_SIZE   = 510
 )
 
-type vfsLockState uint32
-
-func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) _ErrorCode {
+func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
 	// Argument check. SQLite never explicitly requests a pending lock.
-	if eLock != _SHARED_LOCK && eLock != _RESERVED_LOCK && eLock != _EXCLUSIVE_LOCK {
+	if eLock != _LOCK_SHARED && eLock != _LOCK_RESERVED && eLock != _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
@@ -69,13 +28,13 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	readOnly := getFileReadOnly(ctx, mod, pFile)
 
 	switch {
-	case cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK:
+	case cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE:
 		// Connection state check.
 		panic(util.AssertErr())
-	case cLock == _NO_LOCK && eLock > _SHARED_LOCK:
+	case cLock == _LOCK_NONE && eLock > _LOCK_SHARED:
 		// We never move from unlocked to anything higher than a shared lock.
 		panic(util.AssertErr())
-	case cLock != _SHARED_LOCK && eLock == _RESERVED_LOCK:
+	case cLock != _LOCK_SHARED && eLock == _LOCK_RESERVED:
 		// A shared lock is always held when a reserved lock is requested.
 		panic(util.AssertErr())
 	}
@@ -86,49 +45,49 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	}
 
 	// Do not allow any kind of write-lock on a read-only database.
-	if readOnly && eLock > _RESERVED_LOCK {
+	if readOnly && eLock > _LOCK_RESERVED {
 		return _IOERR_LOCK
 	}
 
 	switch eLock {
-	case _SHARED_LOCK:
+	case _LOCK_SHARED:
 		// Must be unlocked to get SHARED.
-		if cLock != _NO_LOCK {
+		if cLock != _LOCK_NONE {
 			panic(util.AssertErr())
 		}
 		if rc := osGetSharedLock(file, timeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _SHARED_LOCK)
+		setFileLock(ctx, mod, pFile, _LOCK_SHARED)
 		return _OK
 
-	case _RESERVED_LOCK:
+	case _LOCK_RESERVED:
 		// Must be SHARED to get RESERVED.
-		if cLock != _SHARED_LOCK {
+		if cLock != _LOCK_SHARED {
 			panic(util.AssertErr())
 		}
 		if rc := osGetReservedLock(file, timeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _RESERVED_LOCK)
+		setFileLock(ctx, mod, pFile, _LOCK_RESERVED)
 		return _OK
 
-	case _EXCLUSIVE_LOCK:
+	case _LOCK_EXCLUSIVE:
 		// Must be SHARED, RESERVED or PENDING to get EXCLUSIVE.
-		if cLock <= _NO_LOCK || cLock >= _EXCLUSIVE_LOCK {
+		if cLock <= _LOCK_NONE || cLock >= _LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if cLock < _PENDING_LOCK {
+		if cLock < _LOCK_PENDING {
 			if rc := osGetPendingLock(file); rc != _OK {
 				return rc
 			}
-			setFileLock(ctx, mod, pFile, _PENDING_LOCK)
+			setFileLock(ctx, mod, pFile, _LOCK_PENDING)
 		}
 		if rc := osGetExclusiveLock(file, timeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _EXCLUSIVE_LOCK)
+		setFileLock(ctx, mod, pFile, _LOCK_EXCLUSIVE)
 		return _OK
 
 	default:
@@ -136,9 +95,9 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockSta
 	}
 }
 
-func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockState) _ErrorCode {
+func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
 	// Argument check.
-	if eLock != _NO_LOCK && eLock != _SHARED_LOCK {
+	if eLock != _LOCK_NONE && eLock != _LOCK_SHARED {
 		panic(util.AssertErr())
 	}
 
@@ -146,7 +105,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 	cLock := getFileLock(ctx, mod, pFile)
 
 	// Connection state check.
-	if cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK {
+	if cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
@@ -156,16 +115,16 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock vfsLockS
 	}
 
 	switch eLock {
-	case _SHARED_LOCK:
+	case _LOCK_SHARED:
 		if rc := osDowngradeLock(file, cLock); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _SHARED_LOCK)
+		setFileLock(ctx, mod, pFile, _LOCK_SHARED)
 		return _OK
 
-	case _NO_LOCK:
+	case _LOCK_NONE:
 		rc := osReleaseLock(file, cLock)
-		setFileLock(ctx, mod, pFile, _NO_LOCK)
+		setFileLock(ctx, mod, pFile, _LOCK_NONE)
 		return rc
 
 	default:
@@ -178,13 +137,13 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	cLock := getFileLock(ctx, mod, pFile)
 
 	// Connection state check.
-	if cLock < _NO_LOCK || cLock > _EXCLUSIVE_LOCK {
+	if cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	var locked bool
 	var rc _ErrorCode
-	if cLock >= _RESERVED_LOCK {
+	if cLock >= _LOCK_RESERVED {
 		locked = true
 	} else {
 		locked, rc = osCheckReservedLock(file)

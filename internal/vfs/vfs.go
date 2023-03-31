@@ -76,16 +76,17 @@ func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t int64) _Err
 		isdst = 1
 	}
 
+	const size = 32 / 8
 	// https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
-	util.WriteUint32(mod, pTm+0*ptrlen, uint32(tm.Second()))
-	util.WriteUint32(mod, pTm+1*ptrlen, uint32(tm.Minute()))
-	util.WriteUint32(mod, pTm+2*ptrlen, uint32(tm.Hour()))
-	util.WriteUint32(mod, pTm+3*ptrlen, uint32(tm.Day()))
-	util.WriteUint32(mod, pTm+4*ptrlen, uint32(tm.Month()-time.January))
-	util.WriteUint32(mod, pTm+5*ptrlen, uint32(tm.Year()-1900))
-	util.WriteUint32(mod, pTm+6*ptrlen, uint32(tm.Weekday()-time.Sunday))
-	util.WriteUint32(mod, pTm+7*ptrlen, uint32(tm.YearDay()-1))
-	util.WriteUint32(mod, pTm+8*ptrlen, uint32(isdst))
+	util.WriteUint32(mod, pTm+0*size, uint32(tm.Second()))
+	util.WriteUint32(mod, pTm+1*size, uint32(tm.Minute()))
+	util.WriteUint32(mod, pTm+2*size, uint32(tm.Hour()))
+	util.WriteUint32(mod, pTm+3*size, uint32(tm.Day()))
+	util.WriteUint32(mod, pTm+4*size, uint32(tm.Month()-time.January))
+	util.WriteUint32(mod, pTm+5*size, uint32(tm.Year()-1900))
+	util.WriteUint32(mod, pTm+6*size, uint32(tm.Weekday()-time.Sunday))
+	util.WriteUint32(mod, pTm+7*size, uint32(tm.YearDay()-1))
+	util.WriteUint32(mod, pTm+8*size, uint32(isdst))
 	return _OK
 }
 

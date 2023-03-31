@@ -13,12 +13,10 @@ import (
 	"testing"
 
 	_ "embed"
-	_ "unsafe"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
-	_ "github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/vfs"
 )
 

@@ -53,11 +53,11 @@ func getOSFile(ctx context.Context, mod api.Module, pFile uint32) *os.File {
 	return vfs.files[id]
 }
 
-func getFileLock(ctx context.Context, mod api.Module, pFile uint32) vfsLockState {
-	return vfsLockState(util.ReadUint8(mod, pFile+vfsFileLockOffset))
+func getFileLock(ctx context.Context, mod api.Module, pFile uint32) _LockLevel {
+	return _LockLevel(util.ReadUint8(mod, pFile+vfsFileLockOffset))
 }
 
-func setFileLock(ctx context.Context, mod api.Module, pFile uint32, lock vfsLockState) {
+func setFileLock(ctx context.Context, mod api.Module, pFile uint32, lock _LockLevel) {
 	util.WriteUint8(mod, pFile+vfsFileLockOffset, uint8(lock))
 }
 
