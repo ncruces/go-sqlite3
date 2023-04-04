@@ -40,7 +40,7 @@ func instantiateModule() (*module, error) {
 		return nil, sqlite3.err
 	}
 
-	cfg := wazero.NewModuleConfig().WithStartFunctions("_initialize")
+	cfg := wazero.NewModuleConfig()
 
 	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, cfg)
 	if err != nil {

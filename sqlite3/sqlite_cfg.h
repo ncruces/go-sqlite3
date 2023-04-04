@@ -29,7 +29,7 @@
 #define SQLITE_USE_ALLOCA
 
 // Because WASM does not support shared memory,
-// SQLite disables it for WASM builds.
+// SQLite disables WAL for WASM builds.
 // We set the default locking mode to EXCLUSIVE instead.
 // https://www.sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
@@ -48,15 +48,9 @@
 #define SQLITE_ENABLE_RTREE 1
 #define SQLITE_ENABLE_GEOPOLY 1
 
-// Snapshot
-// #define SQLITE_ENABLE_SNAPSHOT 1
-
 // Session Extension
 // #define SQLITE_ENABLE_SESSION 1
 // #define SQLITE_ENABLE_PREUPDATE_HOOK 1
-
-// Resumable Bulk Update Extension
-// #define SQLITE_ENABLE_RBU 1
 
 // Implemented in Go.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);

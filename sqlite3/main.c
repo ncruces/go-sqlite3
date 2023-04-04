@@ -21,7 +21,7 @@ int sqlite3_os_init() {
   return sqlite3_vfs_register(os_vfs(), /*default=*/true);
 }
 
-__attribute__((constructor)) void premain() {
+__attribute__((constructor)) void init() {
   sqlite3_initialize();
   sqlite3_auto_extension((void (*)(void))sqlite3_base_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_decimal_init);
