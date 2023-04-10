@@ -22,72 +22,69 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 		panic(util.AssertErr())
 	}
 
-	file := getOSFile(ctx, mod, pFile)
-	cLock := getFileLock(ctx, mod, pFile)
-	timeout := getFileLockTimeout(ctx, mod, pFile)
-	readOnly := getFileReadOnly(ctx, mod, pFile)
+	file := getVFSFile(ctx, mod, pFile)
 
 	switch {
-	case cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE:
+	case file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE:
 		// Connection state check.
 		panic(util.AssertErr())
-	case cLock == _LOCK_NONE && eLock > _LOCK_SHARED:
+	case file.lock == _LOCK_NONE && eLock > _LOCK_SHARED:
 		// We never move from unlocked to anything higher than a shared lock.
 		panic(util.AssertErr())
-	case cLock != _LOCK_SHARED && eLock == _LOCK_RESERVED:
+	case file.lock != _LOCK_SHARED && eLock == _LOCK_RESERVED:
 		// A shared lock is always held when a reserved lock is requested.
 		panic(util.AssertErr())
 	}
 
 	// If we already have an equal or more restrictive lock, do nothing.
-	if cLock >= eLock {
+	if file.lock >= eLock {
 		return _OK
 	}
 
 	// Do not allow any kind of write-lock on a read-only database.
-	if readOnly && eLock > _LOCK_RESERVED {
+	if file.readOnly && eLock >= _LOCK_RESERVED {
 		return _IOERR_LOCK
 	}
 
 	switch eLock {
 	case _LOCK_SHARED:
 		// Must be unlocked to get SHARED.
-		if cLock != _LOCK_NONE {
+		if file.lock != _LOCK_NONE {
 			panic(util.AssertErr())
 		}
-		if rc := osGetSharedLock(file, timeout); rc != _OK {
+		if rc := osGetSharedLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _LOCK_SHARED)
+		file.lock = _LOCK_SHARED
 		return _OK
 
 	case _LOCK_RESERVED:
 		// Must be SHARED to get RESERVED.
-		if cLock != _LOCK_SHARED {
+		if file.lock != _LOCK_SHARED {
 			panic(util.AssertErr())
 		}
-		if rc := osGetReservedLock(file, timeout); rc != _OK {
+		if rc := osGetReservedLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _LOCK_RESERVED)
+		file.lock = _LOCK_RESERVED
 		return _OK
 
 	case _LOCK_EXCLUSIVE:
 		// Must be SHARED, RESERVED or PENDING to get EXCLUSIVE.
-		if cLock <= _LOCK_NONE || cLock >= _LOCK_EXCLUSIVE {
+		if file.lock <= _LOCK_NONE || file.lock >= _LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if cLock < _LOCK_PENDING {
-			if rc := osGetPendingLock(file); rc != _OK {
+		if file.lock < _LOCK_PENDING {
+			if rc := osGetPendingLock(file.File); rc != _OK {
 				return rc
 			}
-			setFileLock(ctx, mod, pFile, _LOCK_PENDING)
+			file.lock = _LOCK_PENDING
 		}
-		if rc := osGetExclusiveLock(file, timeout); rc != _OK {
+		if rc := osGetExclusiveLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _LOCK_EXCLUSIVE)
+		file.lock = _LOCK_EXCLUSIVE
 		return _OK
 
 	default:
@@ -101,30 +98,29 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 		panic(util.AssertErr())
 	}
 
-	file := getOSFile(ctx, mod, pFile)
-	cLock := getFileLock(ctx, mod, pFile)
+	file := getVFSFile(ctx, mod, pFile)
 
 	// Connection state check.
-	if cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE {
+	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	// If we don't have a more restrictive lock, do nothing.
-	if cLock <= eLock {
+	if file.lock <= eLock {
 		return _OK
 	}
 
 	switch eLock {
 	case _LOCK_SHARED:
-		if rc := osDowngradeLock(file, cLock); rc != _OK {
+		if rc := osDowngradeLock(file.File, file.lock); rc != _OK {
 			return rc
 		}
-		setFileLock(ctx, mod, pFile, _LOCK_SHARED)
+		file.lock = _LOCK_SHARED
 		return _OK
 
 	case _LOCK_NONE:
-		rc := osReleaseLock(file, cLock)
-		setFileLock(ctx, mod, pFile, _LOCK_NONE)
+		rc := osReleaseLock(file.File, file.lock)
+		file.lock = _LOCK_NONE
 		return rc
 
 	default:
@@ -133,20 +129,19 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file := getOSFile(ctx, mod, pFile)
-	cLock := getFileLock(ctx, mod, pFile)
+	file := getVFSFile(ctx, mod, pFile)
 
 	// Connection state check.
-	if cLock < _LOCK_NONE || cLock > _LOCK_EXCLUSIVE {
+	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	var locked bool
 	var rc _ErrorCode
-	if cLock >= _LOCK_RESERVED {
+	if file.lock >= _LOCK_RESERVED {
 		locked = true
 	} else {
-		locked, rc = osCheckReservedLock(file)
+		locked, rc = osCheckReservedLock(file.File)
 	}
 
 	var res uint32

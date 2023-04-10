@@ -5,7 +5,7 @@ cd -P -- "$(dirname -- "$0")"
 
 zig cc --target=wasm32-wasi -flto -g0 -O2 \
   -o mptest.wasm main.c \
-	-I../../../sqlite3/ \
+	-I../../../../../sqlite3/ \
 	-mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \

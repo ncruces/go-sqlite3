@@ -43,8 +43,8 @@ func Test_vfsLock(t *testing.T) {
 	ctx, vfs := Context(context.TODO())
 	defer vfs.Close()
 
-	openFile(ctx, mod, pFile1, file1)
-	openFile(ctx, mod, pFile2, file2)
+	openVFSFile(ctx, mod, pFile1, file1)
+	openVFSFile(ctx, mod, pFile2, file2)
 
 	rc := vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
 	if rc != _OK {

@@ -9,74 +9,46 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-const (
-	// These need to match the offsets asserted in os.c
-	vfsFileIDOffset          = 4
-	vfsFileLockOffset        = 8
-	vfsFileSyncDirOffset     = 10
-	vfsFileReadOnlyOffset    = 11
-	vfsFileLockTimeoutOffset = 12
-)
+type vfsFile struct {
+	*os.File
+	lock        _LockLevel
+	lockTimeout time.Duration
+	psow        bool
+	syncDir     bool
+	readOnly    bool
+}
 
-func newFileID(ctx context.Context, file *os.File) uint32 {
-	vfs := ctx.Value(vfsKey{}).(*vfsState)
-
+func newVFSFile(vfs *vfsState, file *os.File) uint32 {
 	// Find an empty slot.
-	for id, ptr := range vfs.files {
-		if ptr == nil {
-			vfs.files[id] = file
+	for id, f := range vfs.files {
+		if f.File == nil {
+			vfs.files[id] = vfsFile{File: file}
 			return uint32(id)
 		}
 	}
 
 	// Add a new slot.
-	vfs.files = append(vfs.files, file)
+	vfs.files = append(vfs.files, vfsFile{File: file})
 	return uint32(len(vfs.files) - 1)
 }
 
-func openFile(ctx context.Context, mod api.Module, pFile uint32, file *os.File) {
-	id := newFileID(ctx, file)
-	util.WriteUint32(mod, pFile+vfsFileIDOffset, id)
+func getVFSFile(ctx context.Context, mod api.Module, pFile uint32) *vfsFile {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	id := util.ReadUint32(mod, pFile+4)
+	return &vfs.files[id]
 }
 
-func closeFile(ctx context.Context, mod api.Module, pFile uint32) error {
-	id := util.ReadUint32(mod, pFile+vfsFileIDOffset)
+func openVFSFile(ctx context.Context, mod api.Module, pFile uint32, file *os.File) *vfsFile {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	id := newVFSFile(vfs, file)
+	util.WriteUint32(mod, pFile+4, id)
+	return &vfs.files[id]
+}
+
+func closeVFSFile(ctx context.Context, mod api.Module, pFile uint32) error {
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	id := util.ReadUint32(mod, pFile+4)
 	file := vfs.files[id]
-	vfs.files[id] = nil
+	vfs.files[id] = vfsFile{}
 	return file.Close()
-}
-
-func getOSFile(ctx context.Context, mod api.Module, pFile uint32) *os.File {
-	id := util.ReadUint32(mod, pFile+vfsFileIDOffset)
-	vfs := ctx.Value(vfsKey{}).(*vfsState)
-	return vfs.files[id]
-}
-
-func getFileLock(ctx context.Context, mod api.Module, pFile uint32) _LockLevel {
-	return _LockLevel(util.ReadUint8(mod, pFile+vfsFileLockOffset))
-}
-
-func setFileLock(ctx context.Context, mod api.Module, pFile uint32, lock _LockLevel) {
-	util.WriteUint8(mod, pFile+vfsFileLockOffset, uint8(lock))
-}
-
-func getFileLockTimeout(ctx context.Context, mod api.Module, pFile uint32) time.Duration {
-	return time.Duration(util.ReadUint32(mod, pFile+vfsFileLockTimeoutOffset)) * time.Millisecond
-}
-
-func getFileSyncDir(ctx context.Context, mod api.Module, pFile uint32) bool {
-	return util.ReadBool8(mod, pFile+vfsFileSyncDirOffset)
-}
-
-func setFileSyncDir(ctx context.Context, mod api.Module, pFile uint32, val bool) {
-	util.WriteBool8(mod, pFile+vfsFileSyncDirOffset, val)
-}
-
-func getFileReadOnly(ctx context.Context, mod api.Module, pFile uint32) bool {
-	return util.ReadBool8(mod, pFile+vfsFileReadOnlyOffset)
-}
-
-func setFileReadOnly(ctx context.Context, mod api.Module, pFile uint32, val bool) {
-	util.WriteBool8(mod, pFile+vfsFileReadOnlyOffset, val)
 }

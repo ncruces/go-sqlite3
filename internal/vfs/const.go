@@ -1,6 +1,9 @@
 package vfs
 
-const _MAX_PATHNAME = 512
+const (
+	_MAX_PATHNAME        = 512
+	_DEFAULT_SECTOR_SIZE = 4096
+)
 
 // https://www.sqlite.org/rescode.html
 type _ErrorCode uint32
@@ -149,45 +152,66 @@ const (
 type _FcntlOpcode uint32
 
 const (
-	_FCNTL_LOCKSTATE             = 1
-	_FCNTL_GET_LOCKPROXYFILE     = 2
-	_FCNTL_SET_LOCKPROXYFILE     = 3
-	_FCNTL_LAST_ERRNO            = 4
-	_FCNTL_SIZE_HINT             = 5
-	_FCNTL_CHUNK_SIZE            = 6
-	_FCNTL_FILE_POINTER          = 7
-	_FCNTL_SYNC_OMITTED          = 8
-	_FCNTL_WIN32_AV_RETRY        = 9
-	_FCNTL_PERSIST_WAL           = 10
-	_FCNTL_OVERWRITE             = 11
-	_FCNTL_VFSNAME               = 12
-	_FCNTL_POWERSAFE_OVERWRITE   = 13
-	_FCNTL_PRAGMA                = 14
-	_FCNTL_BUSYHANDLER           = 15
-	_FCNTL_TEMPFILENAME          = 16
-	_FCNTL_MMAP_SIZE             = 18
-	_FCNTL_TRACE                 = 19
-	_FCNTL_HAS_MOVED             = 20
-	_FCNTL_SYNC                  = 21
-	_FCNTL_COMMIT_PHASETWO       = 22
-	_FCNTL_WIN32_SET_HANDLE      = 23
-	_FCNTL_WAL_BLOCK             = 24
-	_FCNTL_ZIPVFS                = 25
-	_FCNTL_RBU                   = 26
-	_FCNTL_VFS_POINTER           = 27
-	_FCNTL_JOURNAL_POINTER       = 28
-	_FCNTL_WIN32_GET_HANDLE      = 29
-	_FCNTL_PDB                   = 30
-	_FCNTL_BEGIN_ATOMIC_WRITE    = 31
-	_FCNTL_COMMIT_ATOMIC_WRITE   = 32
-	_FCNTL_ROLLBACK_ATOMIC_WRITE = 33
-	_FCNTL_LOCK_TIMEOUT          = 34
-	_FCNTL_DATA_VERSION          = 35
-	_FCNTL_SIZE_LIMIT            = 36
-	_FCNTL_CKPT_DONE             = 37
-	_FCNTL_RESERVE_BYTES         = 38
-	_FCNTL_CKPT_START            = 39
-	_FCNTL_EXTERNAL_READER       = 40
-	_FCNTL_CKSM_FILE             = 41
-	_FCNTL_RESET_CACHE           = 42
+	_FCNTL_LOCKSTATE             _FcntlOpcode = 1
+	_FCNTL_GET_LOCKPROXYFILE     _FcntlOpcode = 2
+	_FCNTL_SET_LOCKPROXYFILE     _FcntlOpcode = 3
+	_FCNTL_LAST_ERRNO            _FcntlOpcode = 4
+	_FCNTL_SIZE_HINT             _FcntlOpcode = 5
+	_FCNTL_CHUNK_SIZE            _FcntlOpcode = 6
+	_FCNTL_FILE_POINTER          _FcntlOpcode = 7
+	_FCNTL_SYNC_OMITTED          _FcntlOpcode = 8
+	_FCNTL_WIN32_AV_RETRY        _FcntlOpcode = 9
+	_FCNTL_PERSIST_WAL           _FcntlOpcode = 10
+	_FCNTL_OVERWRITE             _FcntlOpcode = 11
+	_FCNTL_VFSNAME               _FcntlOpcode = 12
+	_FCNTL_POWERSAFE_OVERWRITE   _FcntlOpcode = 13
+	_FCNTL_PRAGMA                _FcntlOpcode = 14
+	_FCNTL_BUSYHANDLER           _FcntlOpcode = 15
+	_FCNTL_TEMPFILENAME          _FcntlOpcode = 16
+	_FCNTL_MMAP_SIZE             _FcntlOpcode = 18
+	_FCNTL_TRACE                 _FcntlOpcode = 19
+	_FCNTL_HAS_MOVED             _FcntlOpcode = 20
+	_FCNTL_SYNC                  _FcntlOpcode = 21
+	_FCNTL_COMMIT_PHASETWO       _FcntlOpcode = 22
+	_FCNTL_WIN32_SET_HANDLE      _FcntlOpcode = 23
+	_FCNTL_WAL_BLOCK             _FcntlOpcode = 24
+	_FCNTL_ZIPVFS                _FcntlOpcode = 25
+	_FCNTL_RBU                   _FcntlOpcode = 26
+	_FCNTL_VFS_POINTER           _FcntlOpcode = 27
+	_FCNTL_JOURNAL_POINTER       _FcntlOpcode = 28
+	_FCNTL_WIN32_GET_HANDLE      _FcntlOpcode = 29
+	_FCNTL_PDB                   _FcntlOpcode = 30
+	_FCNTL_BEGIN_ATOMIC_WRITE    _FcntlOpcode = 31
+	_FCNTL_COMMIT_ATOMIC_WRITE   _FcntlOpcode = 32
+	_FCNTL_ROLLBACK_ATOMIC_WRITE _FcntlOpcode = 33
+	_FCNTL_LOCK_TIMEOUT          _FcntlOpcode = 34
+	_FCNTL_DATA_VERSION          _FcntlOpcode = 35
+	_FCNTL_SIZE_LIMIT            _FcntlOpcode = 36
+	_FCNTL_CKPT_DONE             _FcntlOpcode = 37
+	_FCNTL_RESERVE_BYTES         _FcntlOpcode = 38
+	_FCNTL_CKPT_START            _FcntlOpcode = 39
+	_FCNTL_EXTERNAL_READER       _FcntlOpcode = 40
+	_FCNTL_CKSM_FILE             _FcntlOpcode = 41
+	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
+)
+
+// https://www.sqlite.org/c3ref/c_iocap_atomic.html
+type _DeviceChars uint32
+
+const (
+	_IOCAP_ATOMIC                _DeviceChars = 0x00000001
+	_IOCAP_ATOMIC512             _DeviceChars = 0x00000002
+	_IOCAP_ATOMIC1K              _DeviceChars = 0x00000004
+	_IOCAP_ATOMIC2K              _DeviceChars = 0x00000008
+	_IOCAP_ATOMIC4K              _DeviceChars = 0x00000010
+	_IOCAP_ATOMIC8K              _DeviceChars = 0x00000020
+	_IOCAP_ATOMIC16K             _DeviceChars = 0x00000040
+	_IOCAP_ATOMIC32K             _DeviceChars = 0x00000080
+	_IOCAP_ATOMIC64K             _DeviceChars = 0x00000100
+	_IOCAP_SAFE_APPEND           _DeviceChars = 0x00000200
+	_IOCAP_SEQUENTIAL            _DeviceChars = 0x00000400
+	_IOCAP_UNDELETABLE_WHEN_OPEN _DeviceChars = 0x00000800
+	_IOCAP_POWERSAFE_OVERWRITE   _DeviceChars = 0x00001000
+	_IOCAP_IMMUTABLE             _DeviceChars = 0x00002000
+	_IOCAP_BATCH_ATOMIC          _DeviceChars = 0x00004000
 )
