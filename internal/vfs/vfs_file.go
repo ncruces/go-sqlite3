@@ -11,8 +11,8 @@ import (
 
 type vfsFile struct {
 	*os.File
-	lock        _LockLevel
 	lockTimeout time.Duration
+	lock        _LockLevel
 	psow        bool
 	syncDir     bool
 	readOnly    bool

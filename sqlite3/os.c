@@ -39,8 +39,8 @@ int os_check_reserved_lock(sqlite3_file *, int *pResOut);
 static int os_file_control_w(sqlite3_file *file, int op, void *pArg) {
   struct os_file *pFile = (struct os_file *)file;
   if (op == SQLITE_FCNTL_VFSNAME) {
-      *(char **)pArg = sqlite3_mprintf("%s", "os");
-      return SQLITE_OK;
+    *(char **)pArg = sqlite3_mprintf("%s", "os");
+    return SQLITE_OK;
   }
   return os_file_control(file, op, pArg);
 }

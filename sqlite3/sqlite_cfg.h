@@ -28,6 +28,9 @@
 #define SQLITE_OMIT_AUTOINIT
 #define SQLITE_USE_ALLOCA
 
+// Other Options
+// #define SQLITE_ALLOW_URI_AUTHORITY
+
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.
 // We set the default locking mode to EXCLUSIVE instead.

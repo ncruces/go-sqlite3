@@ -26,10 +26,10 @@ var (
 )
 
 var sqlite3 struct {
-	once     sync.Once
 	runtime  wazero.Runtime
 	compiled wazero.CompiledModule
 	err      error
+	once     sync.Once
 }
 
 func instantiateModule() (*module, error) {
@@ -72,8 +72,9 @@ func compileModule() {
 type module struct {
 	ctx context.Context
 	mod api.Module
-	api sqliteAPI
 	vfs io.Closer
+	api sqliteAPI
+	arg []uint64
 }
 
 func newModule(mod api.Module) (m *module, err error) {
@@ -91,18 +92,18 @@ func newModule(mod api.Module) (m *module, err error) {
 	}
 
 	getVal := func(name string) uint32 {
-		global := mod.ExportedGlobal(name)
-		if global == nil {
+		g := mod.ExportedGlobal(name)
+		if g == nil {
 			err = util.NoGlobalErr + util.ErrorString(name)
 			return 0
 		}
-		return util.ReadUint32(mod, uint32(global.Get()))
+		return util.ReadUint32(mod, uint32(g.Get()))
 	}
 
 	m.api = sqliteAPI{
 		free:            getFun("free"),
 		malloc:          getFun("malloc"),
-		destructor:      uint64(getVal("malloc_destructor")),
+		destructor:      getVal("malloc_destructor"),
 		errcode:         getFun("sqlite3_errcode"),
 		errstr:          getFun("sqlite3_errstr"),
 		errmsg:          getFun("sqlite3_errmsg"),
@@ -199,7 +200,8 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 }
 
 func (m *module) call(fn api.Function, params ...uint64) []uint64 {
-	r, err := fn.Call(m.ctx, params...)
+	m.arg = append(m.arg[:0], params...)
+	r, err := fn.Call(m.ctx, m.arg...)
 	if err != nil {
 		// The module closed or panicked; release resources.
 		m.vfs.Close()
@@ -252,10 +254,10 @@ func (m *module) newArena(size uint64) arena {
 
 type arena struct {
 	m    *module
+	ptrs []uint32
 	base uint32
 	next uint32
 	size uint32
-	ptrs []uint32
 }
 
 func (a *arena) free() {
@@ -295,7 +297,6 @@ func (a *arena) string(s string) uint32 {
 type sqliteAPI struct {
 	free            api.Function
 	malloc          api.Function
-	destructor      uint64
 	errcode         api.Function
 	errstr          api.Function
 	errmsg          api.Function
@@ -340,5 +341,6 @@ type sqliteAPI struct {
 	backupFinish    api.Function
 	backupRemaining api.Function
 	backupPageCount api.Function
+	destructor      uint32
 	interrupt       uint32
 }

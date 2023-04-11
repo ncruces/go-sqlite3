@@ -21,11 +21,12 @@ import (
 type Conn struct {
 	*module
 
-	handle    uint32
-	arena     arena
 	interrupt context.Context
 	waiter    chan struct{}
 	pending   *Stmt
+	arena     arena
+
+	handle uint32
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE], [OPEN_URI] and [OPEN_NOFOLLOW].

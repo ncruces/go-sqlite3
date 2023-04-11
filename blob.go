@@ -18,9 +18,9 @@ type ZeroBlob int64
 // https://www.sqlite.org/c3ref/blob.html
 type Blob struct {
 	c      *Conn
-	handle uint32
 	bytes  int64
 	offset int64
+	handle uint32
 }
 
 var _ io.ReadWriteSeeker = &Blob{}

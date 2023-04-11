@@ -12,8 +12,8 @@ import (
 // https://www.sqlite.org/c3ref/stmt.html
 type Stmt struct {
 	c      *Conn
-	handle uint32
 	err    error
+	handle uint32
 }
 
 // Close destroys the prepared statement object.
@@ -174,7 +174,7 @@ func (s *Stmt) BindText(param int, value string) error {
 	r := s.c.call(s.c.api.bindText,
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
-		s.c.api.destructor, _UTF8)
+		uint64(s.c.api.destructor), _UTF8)
 	return s.c.error(r[0])
 }
 
@@ -188,7 +188,7 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 	r := s.c.call(s.c.api.bindBlob,
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
-		s.c.api.destructor)
+		uint64(s.c.api.destructor))
 	return s.c.error(r[0])
 }
 

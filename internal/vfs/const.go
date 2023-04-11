@@ -196,22 +196,22 @@ const (
 )
 
 // https://www.sqlite.org/c3ref/c_iocap_atomic.html
-type _DeviceChars uint32
+type _DeviceCharacteristic uint32
 
 const (
-	_IOCAP_ATOMIC                _DeviceChars = 0x00000001
-	_IOCAP_ATOMIC512             _DeviceChars = 0x00000002
-	_IOCAP_ATOMIC1K              _DeviceChars = 0x00000004
-	_IOCAP_ATOMIC2K              _DeviceChars = 0x00000008
-	_IOCAP_ATOMIC4K              _DeviceChars = 0x00000010
-	_IOCAP_ATOMIC8K              _DeviceChars = 0x00000020
-	_IOCAP_ATOMIC16K             _DeviceChars = 0x00000040
-	_IOCAP_ATOMIC32K             _DeviceChars = 0x00000080
-	_IOCAP_ATOMIC64K             _DeviceChars = 0x00000100
-	_IOCAP_SAFE_APPEND           _DeviceChars = 0x00000200
-	_IOCAP_SEQUENTIAL            _DeviceChars = 0x00000400
-	_IOCAP_UNDELETABLE_WHEN_OPEN _DeviceChars = 0x00000800
-	_IOCAP_POWERSAFE_OVERWRITE   _DeviceChars = 0x00001000
-	_IOCAP_IMMUTABLE             _DeviceChars = 0x00002000
-	_IOCAP_BATCH_ATOMIC          _DeviceChars = 0x00004000
+	_IOCAP_ATOMIC                _DeviceCharacteristic = 0x00000001
+	_IOCAP_ATOMIC512             _DeviceCharacteristic = 0x00000002
+	_IOCAP_ATOMIC1K              _DeviceCharacteristic = 0x00000004
+	_IOCAP_ATOMIC2K              _DeviceCharacteristic = 0x00000008
+	_IOCAP_ATOMIC4K              _DeviceCharacteristic = 0x00000010
+	_IOCAP_ATOMIC8K              _DeviceCharacteristic = 0x00000020
+	_IOCAP_ATOMIC16K             _DeviceCharacteristic = 0x00000040
+	_IOCAP_ATOMIC32K             _DeviceCharacteristic = 0x00000080
+	_IOCAP_ATOMIC64K             _DeviceCharacteristic = 0x00000100
+	_IOCAP_SAFE_APPEND           _DeviceCharacteristic = 0x00000200
+	_IOCAP_SEQUENTIAL            _DeviceCharacteristic = 0x00000400
+	_IOCAP_UNDELETABLE_WHEN_OPEN _DeviceCharacteristic = 0x00000800
+	_IOCAP_POWERSAFE_OVERWRITE   _DeviceCharacteristic = 0x00001000
+	_IOCAP_IMMUTABLE             _DeviceCharacteristic = 0x00002000
+	_IOCAP_BATCH_ATOMIC          _DeviceCharacteristic = 0x00004000
 )

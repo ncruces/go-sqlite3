@@ -9,10 +9,10 @@ import (
 //
 // https://www.sqlite.org/c3ref/errcode.html
 type Error struct {
-	code uint64
 	str  string
 	msg  string
 	sql  string
+	code uint64
 }
 
 // Code returns the primary error code for this error.

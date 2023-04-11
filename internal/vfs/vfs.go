@@ -362,7 +362,7 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 	return _DEFAULT_SECTOR_SIZE
 }
 
-func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) _DeviceChars {
+func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) _DeviceCharacteristic {
 	file := getVFSFile(ctx, mod, pFile)
 	if file.psow {
 		return _IOCAP_POWERSAFE_OVERWRITE
