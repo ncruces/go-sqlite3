@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
@@ -17,7 +17,7 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/ext/misc/regexp.c
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/ext/misc/series.c"
 cd ~-
 
-cd ../tests/mptest/testdata/
+cd ../internal/vfs/tests/mptest/testdata/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/mptest/mptest.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/mptest/config01.test"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/mptest/config02.test"
@@ -26,6 +26,6 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/mptest/crash02.su
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/mptest/multiwrite01.test"
 cd ~-
 
-cd ../tests/speedtest1/testdata/
+cd ../internal/vfs/tests/speedtest1/testdata/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.41.2/test/speedtest1.c"
 cd ~-

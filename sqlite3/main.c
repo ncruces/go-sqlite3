@@ -4,7 +4,6 @@
 #include "sqlite3.c"
 //
 #include "os.c"
-#include "qsort.c"
 //
 #include "ext/base64.c"
 #include "ext/decimal.c"

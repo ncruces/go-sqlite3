@@ -49,14 +49,18 @@ func TestConn_new(t *testing.T) {
 	}
 	defer m.close()
 
-	testOOM := func(size uint64) {
+	t.Run("MaxUint32", func(t *testing.T) {
 		defer func() { _ = recover() }()
-		m.new(size)
+		m.new(math.MaxUint32)
 		t.Error("want panic")
-	}
+	})
 
-	testOOM(math.MaxUint32)
-	testOOM(_MAX_ALLOCATION_SIZE)
+	t.Run("_MAX_ALLOCATION_SIZE", func(t *testing.T) {
+		defer func() { _ = recover() }()
+		m.new(_MAX_ALLOCATION_SIZE)
+		m.new(_MAX_ALLOCATION_SIZE)
+		t.Error("want panic")
+	})
 }
 
 func TestConn_newArena(t *testing.T) {

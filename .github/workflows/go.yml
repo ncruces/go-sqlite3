@@ -55,7 +55,7 @@ jobs:
       if: matrix.os == 'macos-latest'
 
     - name: Coverage report
-      uses: ncruces/go-coverage-report@main
+      uses: ncruces/go-coverage-report@v0
       with:
         chart: 'true'
         amend: 'true'

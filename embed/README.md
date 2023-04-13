@@ -19,4 +19,5 @@ The following optional features are compiled in:
 
 See the [configuration options](../sqlite3/sqlite_cfg.h).
 
-Built using [`zig`](https://ziglang.org/) version 0.10.1.
+Built using [`wasi-sdk`](https://github.com/WebAssembly/wasi-sdk),
+and [`binaryen`](https://github.com/WebAssembly/binaryen).
