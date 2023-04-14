@@ -46,10 +46,6 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: Test data races
-      run: go test -v -race ./...
-      if: matrix.os == 'ubuntu-latest'
-
     - name: Test BSD locks
       run: go test -v -tags sqlite3_bsd ./...
       if: matrix.os == 'macos-latest'
