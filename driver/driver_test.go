@@ -147,16 +147,6 @@ func Test_BeginTx(t *testing.T) {
 		t.Error("want isolationErr")
 	}
 
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadUncommitted})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = tx.Rollback()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tx1, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
