@@ -318,7 +318,7 @@ func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (drive
 			case sqlite3.ZeroBlob:
 				err = s.stmt.BindZeroBlob(id, int64(a))
 			case time.Time:
-				err = s.stmt.BindText(id, a.Format(time.RFC3339Nano))
+				err = s.stmt.BindTime(id, a, sqlite3.TimeFormatDefault)
 			case nil:
 				err = s.stmt.BindNull(id)
 			default:
@@ -389,10 +389,10 @@ func (r rows) Next(dest []driver.Value) error {
 			dest[i] = r.stmt.ColumnInt64(i)
 		case sqlite3.FLOAT:
 			dest[i] = r.stmt.ColumnFloat(i)
-		case sqlite3.TEXT:
-			dest[i] = maybeTime(r.stmt.ColumnText(i))
 		case sqlite3.BLOB:
 			dest[i] = r.stmt.ColumnRawBlob(i)
+		case sqlite3.TEXT:
+			dest[i] = stringOrTime(r.stmt.ColumnRawText(i))
 		case sqlite3.NULL:
 			if buf, ok := dest[i].([]byte); ok {
 				dest[i] = buf[0:0]

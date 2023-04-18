@@ -217,6 +217,9 @@ func (s *Stmt) BindNull(param int) error {
 //
 // https://www.sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
+	if format == TimeFormatDefault {
+		return s.bindRFC3339Nano(param, value)
+	}
 	switch v := format.Encode(value).(type) {
 	case string:
 		s.BindText(param, v)
@@ -228,6 +231,20 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 		panic(util.AssertErr())
 	}
 	return nil
+}
+
+func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
+	const maxlen = uint64(len(time.RFC3339Nano))
+
+	ptr := s.c.new(maxlen)
+	buf := util.View(s.c.mod, ptr, maxlen)
+	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
+
+	r := s.c.call(s.c.api.bindText,
+		uint64(s.handle), uint64(param),
+		uint64(ptr), uint64(len(buf)),
+		uint64(s.c.api.destructor), _UTF8)
+	return s.c.error(r[0])
 }
 
 // ColumnCount returns the number of columns in a result set.

@@ -6,7 +6,7 @@ import (
 )
 
 // This checks that any string can be recovered as the same string.
-func Fuzz_maybeTime_1(f *testing.F) {
+func Fuzz_stringOrTime_1(f *testing.F) {
 	f.Add("")
 	f.Add(" ")
 	f.Add("SQLite")
@@ -22,7 +22,7 @@ func Fuzz_maybeTime_1(f *testing.F) {
 	f.Add("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
 	f.Fuzz(func(t *testing.T, str string) {
-		value := maybeTime(str)
+		value := stringOrTime([]byte(str))
 
 		switch v := value.(type) {
 		case time.Time:
@@ -48,7 +48,7 @@ func Fuzz_maybeTime_1(f *testing.F) {
 
 // This checks that any [time.Time] can be recovered as a [time.Time],
 // with nanosecond accuracy, and preserving any timezone offset.
-func Fuzz_maybeTime_2(f *testing.F) {
+func Fuzz_stringOrTime_2(f *testing.F) {
 	f.Add(0, 0)
 	f.Add(0, 1)
 	f.Add(0, -1)
@@ -59,7 +59,7 @@ func Fuzz_maybeTime_2(f *testing.F) {
 	f.Add(-763421161058, 222_222_222) // twosday, year 22222BC
 
 	checkTime := func(t *testing.T, date time.Time) {
-		value := maybeTime(date.Format(time.RFC3339Nano))
+		value := stringOrTime([]byte(date.Format(time.RFC3339Nano)))
 
 		switch v := value.(type) {
 		case time.Time:
