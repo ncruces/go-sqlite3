@@ -288,6 +288,15 @@ func (a *arena) new(size uint64) uint32 {
 	return ptr
 }
 
+func (a *arena) bytes(b []byte) uint32 {
+	if b == nil {
+		return 0
+	}
+	ptr := a.new(uint64(len(b)))
+	util.WriteBytes(a.m.mod, ptr, b)
+	return ptr
+}
+
 func (a *arena) string(s string) uint32 {
 	ptr := a.new(uint64(len(s) + 1))
 	util.WriteString(a.m.mod, ptr, s)
