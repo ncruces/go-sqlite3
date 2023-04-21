@@ -86,14 +86,14 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	want := int64(len(p))
 	avail := b.bytes - b.offset
+	want := int64(len(p))
 	if want > avail {
 		want = avail
 	}
 
-	ptr := b.c.new(uint64(want))
-	defer b.c.free(ptr)
+	defer b.c.arena.reset()
+	ptr := b.c.arena.new(uint64(want))
 
 	r := b.c.call(b.c.api.blobRead, uint64(b.handle),
 		uint64(ptr), uint64(want), uint64(b.offset))
@@ -101,36 +101,120 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
-
-	mem := util.View(b.c.mod, ptr, uint64(want))
-	copy(p, mem)
 	b.offset += want
 	if b.offset >= b.bytes {
 		err = io.EOF
 	}
+
+	copy(p, util.View(b.c.mod, ptr, uint64(want)))
 	return int(want), err
+}
+
+// WriteTo implements the [io.WriterTo] interface.
+//
+// https://www.sqlite.org/c3ref/blob_read.html
+func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
+	if b.offset >= b.bytes {
+		return 0, nil
+	}
+
+	avail := b.bytes - b.offset
+	want := int64(65536)
+	if want > avail {
+		want = avail
+	}
+
+	ptr := b.c.new(uint64(want))
+	defer b.c.free(ptr)
+
+	for want > 0 {
+		r := b.c.call(b.c.api.blobRead, uint64(b.handle),
+			uint64(ptr), uint64(want), uint64(b.offset))
+		err = b.c.error(r[0])
+		if err != nil {
+			return n, err
+		}
+
+		mem := util.View(b.c.mod, ptr, uint64(want))
+		m, err := w.Write(mem[:want])
+		b.offset += int64(m)
+		n += int64(m)
+		if err != nil {
+			return n, err
+		}
+		if int64(m) != want {
+			return n, io.ErrShortWrite
+		}
+
+		avail = b.bytes - b.offset
+		if want > avail {
+			want = avail
+		}
+	}
+	return n, nil
 }
 
 // Write implements the [io.Writer] interface.
 //
 // https://www.sqlite.org/c3ref/blob_write.html
 func (b *Blob) Write(p []byte) (n int, err error) {
-	offset := b.offset
-	if offset > b.bytes {
-		offset = b.bytes
-	}
-
-	ptr := b.c.newBytes(p)
-	defer b.c.free(ptr)
+	defer b.c.arena.reset()
+	ptr := b.c.arena.bytes(p)
 
 	r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
-		uint64(ptr), uint64(len(p)), uint64(offset))
+		uint64(ptr), uint64(len(p)), uint64(b.offset))
 	err = b.c.error(r[0])
 	if err != nil {
 		return 0, err
 	}
 	b.offset += int64(len(p))
 	return len(p), nil
+}
+
+// ReadFrom implements the [io.ReaderFrom] interface.
+//
+// https://www.sqlite.org/c3ref/blob_write.html
+func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
+	avail := b.bytes - b.offset
+	want := int64(65536)
+	if want > avail {
+		want = avail
+	}
+	if want < 1 {
+		want = 1
+	}
+
+	ptr := b.c.new(uint64(want))
+	defer b.c.free(ptr)
+
+	for {
+		mem := util.View(b.c.mod, ptr, uint64(want))
+		m, err := r.Read(mem[:want])
+		if m > 0 {
+			r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
+				uint64(ptr), uint64(m), uint64(b.offset))
+			err := b.c.error(r[0])
+			if err != nil {
+				return n, err
+			}
+			b.offset += int64(m)
+			n += int64(m)
+		}
+		if err == io.EOF {
+			return n, nil
+		}
+		if err != nil {
+			return n, err
+		}
+
+		avail = b.bytes - b.offset
+		if want > avail {
+			want = avail
+		}
+		if want < 1 {
+			want = 1
+		}
+	}
 }
 
 // Seek implements the [io.Seeker] interface.
