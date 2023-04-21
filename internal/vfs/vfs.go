@@ -17,37 +17,28 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-func Instantiate(ctx context.Context, r wazero.Runtime) {
-	env := NewEnvModuleBuilder(r)
-	_, err := env.Instantiate(ctx)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func NewEnvModuleBuilder(r wazero.Runtime) wazero.HostModuleBuilder {
-	env := r.NewHostModuleBuilder("env")
-	registerFuncT(env, "os_localtime", vfsLocaltime)
-	registerFunc3(env, "os_randomness", vfsRandomness)
-	registerFunc2(env, "os_sleep", vfsSleep)
-	registerFunc2(env, "os_current_time", vfsCurrentTime)
-	registerFunc2(env, "os_current_time_64", vfsCurrentTime64)
-	registerFunc4(env, "os_full_pathname", vfsFullPathname)
-	registerFunc3(env, "os_delete", vfsDelete)
-	registerFunc4(env, "os_access", vfsAccess)
-	registerFunc5(env, "os_open", vfsOpen)
-	registerFunc1(env, "os_close", vfsClose)
-	registerFuncRW(env, "os_read", vfsRead)
-	registerFuncRW(env, "os_write", vfsWrite)
-	registerFuncT(env, "os_truncate", vfsTruncate)
-	registerFunc2(env, "os_sync", vfsSync)
-	registerFunc2(env, "os_file_size", vfsFileSize)
-	registerFunc3(env, "os_file_control", vfsFileControl)
-	registerFunc1(env, "os_sector_size", vfsSectorSize)
-	registerFunc1(env, "os_device_characteristics", vfsDeviceCharacteristics)
-	registerFunc2(env, "os_lock", vfsLock)
-	registerFunc2(env, "os_unlock", vfsUnlock)
-	registerFunc2(env, "os_check_reserved_lock", vfsCheckReservedLock)
+func Export(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+	util.RegisterFuncIIJ(env, "os_localtime", vfsLocaltime)
+	util.RegisterFuncIIII(env, "os_randomness", vfsRandomness)
+	util.RegisterFuncIII(env, "os_sleep", vfsSleep)
+	util.RegisterFuncIII(env, "os_current_time", vfsCurrentTime)
+	util.RegisterFuncIII(env, "os_current_time_64", vfsCurrentTime64)
+	util.RegisterFuncIIIII(env, "os_full_pathname", vfsFullPathname)
+	util.RegisterFuncIIII(env, "os_delete", vfsDelete)
+	util.RegisterFuncIIIII(env, "os_access", vfsAccess)
+	util.RegisterFuncIIIIII(env, "os_open", vfsOpen)
+	util.RegisterFuncII(env, "os_close", vfsClose)
+	util.RegisterFuncIIIIJ(env, "os_read", vfsRead)
+	util.RegisterFuncIIIIJ(env, "os_write", vfsWrite)
+	util.RegisterFuncIIJ(env, "os_truncate", vfsTruncate)
+	util.RegisterFuncIII(env, "os_sync", vfsSync)
+	util.RegisterFuncIII(env, "os_file_size", vfsFileSize)
+	util.RegisterFuncIIII(env, "os_file_control", vfsFileControl)
+	util.RegisterFuncII(env, "os_sector_size", vfsSectorSize)
+	util.RegisterFuncII(env, "os_device_characteristics", vfsDeviceCharacteristics)
+	util.RegisterFuncIII(env, "os_lock", vfsLock)
+	util.RegisterFuncIII(env, "os_unlock", vfsUnlock)
+	util.RegisterFuncIII(env, "os_check_reserved_lock", vfsCheckReservedLock)
 	return env
 }
 

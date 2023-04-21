@@ -40,7 +40,8 @@ func init() {
 
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
-	env := vfs.NewEnvModuleBuilder(rt)
+
+	env := vfs.Export(rt.NewHostModuleBuilder("env"))
 	env.NewFunctionBuilder().WithFunc(system).Export("system")
 	_, err := env.Instantiate(ctx)
 	if err != nil {

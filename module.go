@@ -52,7 +52,12 @@ func instantiateModule() (*module, error) {
 func compileModule() {
 	ctx := context.Background()
 	sqlite3.runtime = wazero.NewRuntime(ctx)
-	vfs.Instantiate(ctx, sqlite3.runtime)
+
+	env := vfs.Export(sqlite3.runtime.NewHostModuleBuilder("env"))
+	_, sqlite3.err = env.Instantiate(ctx)
+	if sqlite3.err != nil {
+		return
+	}
 
 	bin := Binary
 	if bin == nil && Path != "" {
