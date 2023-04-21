@@ -126,7 +126,6 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 
 	ptr := b.c.new(uint64(want))
 	defer b.c.free(ptr)
-	mem := util.View(b.c.mod, ptr, uint64(want))
 
 	for want > 0 {
 		r := b.c.call(b.c.api.blobRead, uint64(b.handle),
@@ -136,6 +135,7 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 			return n, err
 		}
 
+		mem := util.View(b.c.mod, ptr, uint64(want))
 		m, err := w.Write(mem[:want])
 		b.offset += int64(m)
 		n += int64(m)
@@ -186,9 +186,9 @@ func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
 
 	ptr := b.c.new(uint64(want))
 	defer b.c.free(ptr)
-	mem := util.View(b.c.mod, ptr, uint64(want))
 
 	for {
+		mem := util.View(b.c.mod, ptr, uint64(want))
 		m, err := r.Read(mem[:want])
 		if m > 0 {
 			r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
