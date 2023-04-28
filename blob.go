@@ -240,8 +240,8 @@ func (b *Blob) Seek(offset int64, whence int) (int64, error) {
 //
 // https://www.sqlite.org/c3ref/blob_reopen.html
 func (b *Blob) Reopen(row int64) error {
-	r := b.c.call(b.c.api.blobReopen, uint64(b.handle), uint64(row))
+	err := b.c.error(b.c.call(b.c.api.blobReopen, uint64(b.handle), uint64(row))[0])
 	b.bytes = int64(b.c.call(b.c.api.blobBytes, uint64(b.handle))[0])
 	b.offset = 0
-	return b.c.error(r[0])
+	return err
 }
