@@ -79,7 +79,7 @@ type module struct {
 	mod api.Module
 	vfs io.Closer
 	api sqliteAPI
-	arg []uint64
+	arg [8]uint64
 }
 
 func newModule(mod api.Module) (m *module, err error) {
@@ -205,14 +205,14 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 }
 
 func (m *module) call(fn api.Function, params ...uint64) []uint64 {
-	m.arg = append(m.arg[:0], params...)
-	r, err := fn.Call(m.ctx, m.arg...)
+	copy(m.arg[:], params)
+	err := fn.CallWithStack(m.ctx, m.arg[:])
 	if err != nil {
 		// The module closed or panicked; release resources.
 		m.vfs.Close()
 		panic(err)
 	}
-	return r
+	return m.arg[:]
 }
 
 func (m *module) free(ptr uint32) {

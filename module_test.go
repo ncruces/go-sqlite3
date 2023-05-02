@@ -26,14 +26,14 @@ func TestConn_error_OOM(t *testing.T) {
 	t.Error("want panic")
 }
 
-func TestConn_call_nil(t *testing.T) {
+func TestConn_call_closed(t *testing.T) {
 	t.Parallel()
 
 	m, err := instantiateModule()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer m.close()
+	m.close()
 
 	defer func() { _ = recover() }()
 	m.call(m.api.free)
