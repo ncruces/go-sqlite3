@@ -213,10 +213,7 @@ func (c conn) ExecContext(ctx context.Context, query string, args []driver.Named
 		return nil, err
 	}
 
-	return result{
-		c.conn.LastInsertRowID(),
-		c.conn.Changes(),
-	}, nil
+	return newResult(c.conn), nil
 }
 
 func (c conn) Savepoint() sqlite3.Savepoint {
@@ -276,10 +273,7 @@ func (s stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver
 		return nil, err
 	}
 
-	return result{
-		int64(s.conn.LastInsertRowID()),
-		int64(s.conn.Changes()),
-	}, nil
+	return newResult(s.conn), nil
 }
 
 func (s stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
@@ -343,6 +337,17 @@ func (s stmt) CheckNamedValue(arg *driver.NamedValue) error {
 	}
 }
 
+func newResult(c *sqlite3.Conn) driver.Result {
+	rows := c.Changes()
+	if rows != 0 {
+		id := c.LastInsertRowID()
+		if id != 0 {
+			return result{id, rows}
+		}
+	}
+	return resultRowsAffected(rows)
+}
+
 type result struct{ lastInsertId, rowsAffected int64 }
 
 func (r result) LastInsertId() (int64, error) {
@@ -351,6 +356,16 @@ func (r result) LastInsertId() (int64, error) {
 
 func (r result) RowsAffected() (int64, error) {
 	return r.rowsAffected, nil
+}
+
+type resultRowsAffected int64
+
+func (r resultRowsAffected) LastInsertId() (int64, error) {
+	return 0, nil
+}
+
+func (r resultRowsAffected) RowsAffected() (int64, error) {
+	return int64(r), nil
 }
 
 type rows struct {
