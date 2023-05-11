@@ -1,6 +1,6 @@
 package sqlite3
 
-// Backup is a handle to an open BLOB.
+// Backup is an handle to an ongoing online backup operation.
 //
 // https://www.sqlite.org/c3ref/backup.html
 type Backup struct {

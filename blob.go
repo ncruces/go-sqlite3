@@ -11,7 +11,7 @@ import (
 // [database/sql.DB.Exec] and similar methods.
 type ZeroBlob int64
 
-// Blob is a handle to an open BLOB.
+// Blob is an handle to an open BLOB.
 //
 // It implements [io.ReadWriteSeeker] for incremental BLOB I/O.
 //

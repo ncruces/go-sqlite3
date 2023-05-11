@@ -55,5 +55,5 @@
 // #define SQLITE_ENABLE_SESSION 1
 // #define SQLITE_ENABLE_PREUPDATE_HOOK 1
 
-// Implemented in Go.
+// Implemented in os.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
