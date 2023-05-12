@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/tetratelabs/wazero/experimental/wazerotest"
 )
 
 func Test_vfsLock(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_vfsLock(t *testing.T) {
 		pFile2  = 16
 		pOutput = 32
 	)
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx, vfs := NewContext(context.TODO())
 	defer vfs.Close()
 
