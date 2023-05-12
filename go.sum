@@ -4,8 +4,8 @@ github.com/ncruces/julianday v0.1.5 h1:hDJ9ejiMp3DHsoZ5KW4c1lwfMjbARS7u/gbYcd0FB
 github.com/ncruces/julianday v0.1.5/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
 github.com/psanford/httpreadat v0.1.0 h1:VleW1HS2zO7/4c7c7zNl33fO6oYACSagjJIyMIwZLUE=
 github.com/psanford/httpreadat v0.1.0/go.mod h1:Zg7P+TlBm3bYbyHTKv/EdtSJZn3qwbPwpfZ/I9GKCRE=
-github.com/stealthrocket/wzprof v0.1.1 h1:/qhSauOzXda4W5rEm+Gj2o2cKRZQqtGBPAulPflRwWk=
-github.com/stealthrocket/wzprof v0.1.1/go.mod h1:UxCYAWsxjUKpIzJV8Pl5Yyo2QkQwsL29GdaoA38cXKU=
+github.com/stealthrocket/wzprof v0.1.3 h1:zG1W2AuyvKHe+0YGYS8o9WNYsaaadZhQYHGbFrgfYAs=
+github.com/stealthrocket/wzprof v0.1.3/go.mod h1:UxCYAWsxjUKpIzJV8Pl5Yyo2QkQwsL29GdaoA38cXKU=
 github.com/tetratelabs/wazero v1.1.1-0.20230511035210-78c35acd6e1c h1:3vKw5AyUv+16qm9tIVfvm205aDIpDmrjxPydJ87GBKY=
 github.com/tetratelabs/wazero v1.1.1-0.20230511035210-78c35acd6e1c/go.mod h1:wYx2gNRg8/WihJfSDxA1TIL8H+GkfLYm+bIfbblu9VQ=
 golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 h1:5llv2sWeaMSnA3w2kS57ouQQ4pudlXrR0dCgw51QK9o=
