@@ -35,8 +35,6 @@ var (
 	memprof string
 )
 
-const defaultSampleRate = 1.0 / 19
-
 func TestMain(m *testing.M) {
 	initFlags()
 
@@ -101,12 +99,12 @@ func setupProfiling(ctx context.Context) (context.Context, *wzprof.CPUProfiler, 
 	var listeners []experimental.FunctionListenerFactory
 	if cpuprof != "" {
 		cpu = wzprof.NewCPUProfiler()
-		listeners = append(listeners, wzprof.Sample(defaultSampleRate, cpu))
+		listeners = append(listeners, cpu)
 		cpu.StartProfile()
 	}
 	if memprof != "" {
 		mem = wzprof.NewMemoryProfiler()
-		listeners = append(listeners, wzprof.Sample(defaultSampleRate, mem))
+		listeners = append(listeners, mem)
 	}
 	if listeners != nil {
 		ctx = context.WithValue(ctx,
@@ -127,7 +125,7 @@ func saveProfiles(module wazero.CompiledModule, cpu *wzprof.CPUProfiler, mem *wz
 	}
 
 	if cpu != nil {
-		prof := cpu.StopProfile(defaultSampleRate, symbols)
+		prof := cpu.StopProfile(1, symbols)
 		err := wzprof.WriteProfile(cpuprof, prof)
 		if err != nil {
 			panic(err)
@@ -135,7 +133,7 @@ func saveProfiles(module wazero.CompiledModule, cpu *wzprof.CPUProfiler, mem *wz
 	}
 
 	if mem != nil {
-		prof := mem.NewProfile(defaultSampleRate, symbols)
+		prof := mem.NewProfile(1, symbols)
 		err := wzprof.WriteProfile(memprof, prof)
 		if err != nil {
 			panic(err)
