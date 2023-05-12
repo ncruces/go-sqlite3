@@ -14,10 +14,11 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/julianday"
+	"github.com/tetratelabs/wazero/experimental/wazerotest"
 )
 
 func Test_vfsLocaltime(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()
 
 	tm := time.Now()
@@ -53,7 +54,7 @@ func Test_vfsLocaltime(t *testing.T) {
 }
 
 func Test_vfsRandomness(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()
 
 	rc := vfsRandomness(ctx, mod, 0, 16, 4)
@@ -68,7 +69,7 @@ func Test_vfsRandomness(t *testing.T) {
 }
 
 func Test_vfsSleep(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()
 
 	now := time.Now()
@@ -84,7 +85,7 @@ func Test_vfsSleep(t *testing.T) {
 }
 
 func Test_vfsCurrentTime(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()
 
 	now := time.Now()
@@ -100,7 +101,7 @@ func Test_vfsCurrentTime(t *testing.T) {
 }
 
 func Test_vfsCurrentTime64(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()
 
 	now := time.Now()
@@ -118,7 +119,7 @@ func Test_vfsCurrentTime64(t *testing.T) {
 }
 
 func Test_vfsFullPathname(t *testing.T) {
-	mod := util.NewMockModule(128 + _MAX_PATHNAME)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	util.WriteString(mod, 4, ".")
 	ctx := context.TODO()
 
@@ -147,7 +148,7 @@ func Test_vfsDelete(t *testing.T) {
 	}
 	file.Close()
 
-	mod := util.NewMockModule(128 + _MAX_PATHNAME)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	util.WriteString(mod, 4, name)
 	ctx := context.TODO()
 
@@ -178,7 +179,7 @@ func Test_vfsAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mod := util.NewMockModule(128 + _MAX_PATHNAME)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	util.WriteString(mod, 8, dir)
 	ctx := context.TODO()
 
@@ -218,7 +219,7 @@ func Test_vfsAccess(t *testing.T) {
 }
 
 func Test_vfsFile(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx, vfs := NewContext(context.TODO())
 	defer vfs.Close()
 
@@ -291,7 +292,7 @@ func Test_vfsFile(t *testing.T) {
 }
 
 func Test_vfsFile_psow(t *testing.T) {
-	mod := util.NewMockModule(128)
+	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx, vfs := NewContext(context.TODO())
 	defer vfs.Close()
 
