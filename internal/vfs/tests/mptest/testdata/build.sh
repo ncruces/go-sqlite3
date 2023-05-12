@@ -15,7 +15,6 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	-mnontrapping-fptoint -msign-ext \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
-	-D_HAVE_SQLITE_CONFIG_H \
 	-DSQLITE_DEFAULT_SYNCHRONOUS=0 \
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
 	-DHAVE_USLEEP -DSQLITE_NO_SYNC \

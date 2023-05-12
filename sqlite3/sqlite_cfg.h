@@ -29,7 +29,7 @@
 #define SQLITE_USE_ALLOCA
 
 // Other Options
-// #define SQLITE_ALLOW_URI_AUTHORITY
+#define SQLITE_ALLOW_URI_AUTHORITY
 
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.
@@ -52,8 +52,8 @@
 #define SQLITE_ENABLE_GEOPOLY 1
 
 // Session Extension
-// #define SQLITE_ENABLE_SESSION 1
-// #define SQLITE_ENABLE_PREUPDATE_HOOK 1
+// #define SQLITE_ENABLE_SESSION
+// #define SQLITE_ENABLE_PREUPDATE_HOOK
 
 // Implemented in os.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);

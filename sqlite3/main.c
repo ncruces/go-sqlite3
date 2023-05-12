@@ -1,6 +1,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "sqlite_cfg.h"
+//
 #include "sqlite3.c"
 //
 #include "os.c"
