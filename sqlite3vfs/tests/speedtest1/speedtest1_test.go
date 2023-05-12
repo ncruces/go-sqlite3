@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,7 +15,9 @@ import (
 
 	_ "embed"
 
+	"github.com/stealthrocket/wzprof"
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"github.com/ncruces/go-sqlite3/sqlite3vfs"
@@ -28,10 +31,17 @@ var (
 	module  wazero.CompiledModule
 	output  bytes.Buffer
 	options []string
+	cpuprof string
+	memprof string
 )
 
-func init() {
-	ctx := context.TODO()
+const defaultSampleRate = 1.0 / 19
+
+func TestMain(m *testing.M) {
+	initFlags()
+
+	ctx := context.Background()
+	ctx, cpu, mem := setupProfiling(ctx)
 
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
@@ -45,24 +55,92 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	code := m.Run()
+	defer os.Exit(code)
+	io.Copy(os.Stderr, &output)
+	saveProfiles(module, cpu, mem)
 }
 
-func TestMain(m *testing.M) {
+func initFlags() {
 	i := 1
+	wzprof := false
 	options = append(options, "speedtest1")
 	for _, arg := range os.Args[1:] {
-		if strings.HasPrefix(arg, "-test.") {
+		switch {
+		case strings.HasPrefix(arg, "-test."):
+			// keep test flags
 			os.Args[i] = arg
 			i++
-		} else {
+		case arg == "-wzprof":
+			// collect guest profile
+			wzprof = true
+		default:
+			// collect everything else
 			options = append(options, arg)
 		}
 	}
 	os.Args = os.Args[:i]
+	flag.Parse()
 
-	code := m.Run()
-	io.Copy(os.Stderr, &output)
-	os.Exit(code)
+	if wzprof {
+		var f *flag.Flag
+		f = flag.Lookup("test.cpuprofile")
+		cpuprof = f.Value.String()
+		f.Value.Set("")
+		f = flag.Lookup("test.memprofile")
+		memprof = f.Value.String()
+		f.Value.Set("")
+	}
+}
+
+func setupProfiling(ctx context.Context) (context.Context, *wzprof.CPUProfiler, *wzprof.MemoryProfiler) {
+	var cpu *wzprof.CPUProfiler
+	var mem *wzprof.MemoryProfiler
+
+	var listeners []experimental.FunctionListenerFactory
+	if cpuprof != "" {
+		cpu = wzprof.NewCPUProfiler()
+		listeners = append(listeners, wzprof.Sample(defaultSampleRate, cpu))
+		cpu.StartProfile()
+	}
+	if memprof != "" {
+		mem = wzprof.NewMemoryProfiler()
+		listeners = append(listeners, wzprof.Sample(defaultSampleRate, mem))
+	}
+	if listeners != nil {
+		ctx = context.WithValue(ctx,
+			experimental.FunctionListenerFactoryKey{},
+			experimental.MultiFunctionListenerFactory(listeners...))
+	}
+	return ctx, cpu, mem
+}
+
+func saveProfiles(module wazero.CompiledModule, cpu *wzprof.CPUProfiler, mem *wzprof.MemoryProfiler) {
+	if cpu == nil && mem == nil {
+		return
+	}
+
+	symbols, err := wzprof.BuildDwarfSymbolizer(module)
+	if err != nil {
+		panic(err)
+	}
+
+	if cpu != nil {
+		prof := cpu.StopProfile(defaultSampleRate, symbols)
+		err := wzprof.WriteProfile(cpuprof, prof)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if mem != nil {
+		prof := mem.NewProfile(defaultSampleRate, symbols)
+		err := wzprof.WriteProfile(memprof, prof)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func Benchmark_speedtest1(b *testing.B) {
