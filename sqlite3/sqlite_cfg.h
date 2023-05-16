@@ -56,12 +56,12 @@
 // #define SQLITE_ENABLE_PREUPDATE_HOOK
 
 // https://stackoverflow.com/a/50616684
-#define SECOND(...) SECOND_I(__VA_ARGS__,,)
-#define SECOND_I(A,B,...) B
-#define GLUE(A,B) GLUE_I(A,B)
-#define GLUE_I(A,B) A##B
+#define SECOND(...) SECOND_I(__VA_ARGS__, , )
+#define SECOND_I(A, B, ...) B
+#define GLUE(A, B) GLUE_I(A, B)
+#define GLUE_I(A, B) A##B
 #define REPLACE_DEFAULT(a, prefix) SECOND(GLUE(prefix, __LINE__), a)
-#define REPLACE_AT_LINE(a) ,a
+#define REPLACE_AT_LINE(a) , a
 
 // Implemented in vfs.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
