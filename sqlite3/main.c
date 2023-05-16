@@ -1,12 +1,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Configuration
 #include "sqlite_cfg.h"
-//
+// Amalgamation
 #include "sqlite3.c"
-//
-#include "os.c"
-//
+// VFS
+#include "vfs.c"
+// Extensions
 #include "ext/base64.c"
 #include "ext/decimal.c"
 #include "ext/regexp.c"

@@ -1,11 +1,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Configuration
 #include "sqlite_cfg.h"
-//
+// Amalgamation
 #include "sqlite3.c"
-//
-#include "os.c"
+// VFS
+#include "vfs.c"
 
 sqlite3_destructor_type malloc_destructor = &free;
 size_t sqlite3_interrupt_offset = offsetof(sqlite3, u1.isInterrupted);
