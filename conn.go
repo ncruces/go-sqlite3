@@ -334,4 +334,6 @@ type DriverConn interface {
 
 	Savepoint() Savepoint
 	OpenBlob(db, table, column string, row int64, write bool) (*Blob, error)
+
+	SetInterrupt(ctx context.Context) (old context.Context)
 }

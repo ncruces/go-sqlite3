@@ -224,6 +224,10 @@ func (c conn) OpenBlob(db, table, column string, row int64, write bool) (*sqlite
 	return c.conn.OpenBlob(db, table, column, row, write)
 }
 
+func (c conn) SetInterrupt(ctx context.Context) (old context.Context) {
+	return c.conn.SetInterrupt(ctx)
+}
+
 type stmt struct {
 	stmt *sqlite3.Stmt
 	conn *sqlite3.Conn
