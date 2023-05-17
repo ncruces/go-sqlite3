@@ -1,6 +1,9 @@
 package vfs
 
+import "github.com/ncruces/go-sqlite3/sqlite3vfs"
+
 const (
+	_MAX_STRING          = 512 // Used for short strings: names, error messages…
 	_MAX_PATHNAME        = 512
 	_DEFAULT_SECTOR_SIZE = 4096
 )
@@ -59,93 +62,59 @@ const (
 )
 
 // https://www.sqlite.org/c3ref/c_open_autoproxy.html
-type _OpenFlag uint32
+type _OpenFlag = sqlite3vfs.OpenFlag
 
 const (
-	_OPEN_READONLY      _OpenFlag = 0x00000001 /* Ok for sqlite3_open_v2() */
-	_OPEN_READWRITE     _OpenFlag = 0x00000002 /* Ok for sqlite3_open_v2() */
-	_OPEN_CREATE        _OpenFlag = 0x00000004 /* Ok for sqlite3_open_v2() */
-	_OPEN_DELETEONCLOSE _OpenFlag = 0x00000008 /* VFS only */
-	_OPEN_EXCLUSIVE     _OpenFlag = 0x00000010 /* VFS only */
-	_OPEN_AUTOPROXY     _OpenFlag = 0x00000020 /* VFS only */
-	_OPEN_URI           _OpenFlag = 0x00000040 /* Ok for sqlite3_open_v2() */
-	_OPEN_MEMORY        _OpenFlag = 0x00000080 /* Ok for sqlite3_open_v2() */
-	_OPEN_MAIN_DB       _OpenFlag = 0x00000100 /* VFS only */
-	_OPEN_TEMP_DB       _OpenFlag = 0x00000200 /* VFS only */
-	_OPEN_TRANSIENT_DB  _OpenFlag = 0x00000400 /* VFS only */
-	_OPEN_MAIN_JOURNAL  _OpenFlag = 0x00000800 /* VFS only */
-	_OPEN_TEMP_JOURNAL  _OpenFlag = 0x00001000 /* VFS only */
-	_OPEN_SUBJOURNAL    _OpenFlag = 0x00002000 /* VFS only */
-	_OPEN_SUPER_JOURNAL _OpenFlag = 0x00004000 /* VFS only */
-	_OPEN_NOMUTEX       _OpenFlag = 0x00008000 /* Ok for sqlite3_open_v2() */
-	_OPEN_FULLMUTEX     _OpenFlag = 0x00010000 /* Ok for sqlite3_open_v2() */
-	_OPEN_SHAREDCACHE   _OpenFlag = 0x00020000 /* Ok for sqlite3_open_v2() */
-	_OPEN_PRIVATECACHE  _OpenFlag = 0x00040000 /* Ok for sqlite3_open_v2() */
-	_OPEN_WAL           _OpenFlag = 0x00080000 /* VFS only */
-	_OPEN_NOFOLLOW      _OpenFlag = 0x01000000 /* Ok for sqlite3_open_v2() */
-	_OPEN_EXRESCODE     _OpenFlag = 0x02000000 /* Extended result codes */
+	_OPEN_READONLY      = sqlite3vfs.OPEN_READONLY
+	_OPEN_READWRITE     = sqlite3vfs.OPEN_READWRITE
+	_OPEN_CREATE        = sqlite3vfs.OPEN_CREATE
+	_OPEN_DELETEONCLOSE = sqlite3vfs.OPEN_DELETEONCLOSE
+	_OPEN_EXCLUSIVE     = sqlite3vfs.OPEN_EXCLUSIVE
+	_OPEN_AUTOPROXY     = sqlite3vfs.OPEN_AUTOPROXY
+	_OPEN_URI           = sqlite3vfs.OPEN_URI
+	_OPEN_MEMORY        = sqlite3vfs.OPEN_MEMORY
+	_OPEN_MAIN_DB       = sqlite3vfs.OPEN_MAIN_DB
+	_OPEN_TEMP_DB       = sqlite3vfs.OPEN_TEMP_DB
+	_OPEN_TRANSIENT_DB  = sqlite3vfs.OPEN_TRANSIENT_DB
+	_OPEN_MAIN_JOURNAL  = sqlite3vfs.OPEN_MAIN_JOURNAL
+	_OPEN_TEMP_JOURNAL  = sqlite3vfs.OPEN_TEMP_JOURNAL
+	_OPEN_SUBJOURNAL    = sqlite3vfs.OPEN_SUBJOURNAL
+	_OPEN_SUPER_JOURNAL = sqlite3vfs.OPEN_SUPER_JOURNAL
+	_OPEN_NOMUTEX       = sqlite3vfs.OPEN_NOMUTEX
+	_OPEN_FULLMUTEX     = sqlite3vfs.OPEN_FULLMUTEX
+	_OPEN_SHAREDCACHE   = sqlite3vfs.OPEN_SHAREDCACHE
+	_OPEN_PRIVATECACHE  = sqlite3vfs.OPEN_PRIVATECACHE
+	_OPEN_WAL           = sqlite3vfs.OPEN_WAL
+	_OPEN_NOFOLLOW      = sqlite3vfs.OPEN_NOFOLLOW
 )
 
 // https://www.sqlite.org/c3ref/c_access_exists.html
-type _AccessFlag uint32
+type _AccessFlag = sqlite3vfs.AccessFlag
 
 const (
-	_ACCESS_EXISTS    _AccessFlag = 0
-	_ACCESS_READWRITE _AccessFlag = 1 /* Used by PRAGMA temp_store_directory */
-	_ACCESS_READ      _AccessFlag = 2 /* Unused */
+	_ACCESS_EXISTS    = sqlite3vfs.ACCESS_EXISTS
+	_ACCESS_READWRITE = sqlite3vfs.ACCESS_READWRITE
+	_ACCESS_READ      = sqlite3vfs.ACCESS_READ
 )
 
 // https://www.sqlite.org/c3ref/c_sync_dataonly.html
-type _SyncFlag uint32
+type _SyncFlag = sqlite3vfs.SyncFlag
 
 const (
-	_SYNC_NORMAL   _SyncFlag = 0x00002
-	_SYNC_FULL     _SyncFlag = 0x00003
-	_SYNC_DATAONLY _SyncFlag = 0x00010
+	_SYNC_NORMAL   = sqlite3vfs.SYNC_NORMAL
+	_SYNC_FULL     = sqlite3vfs.SYNC_FULL
+	_SYNC_DATAONLY = sqlite3vfs.SYNC_DATAONLY
 )
 
 // https://www.sqlite.org/c3ref/c_lock_exclusive.html
-type _LockLevel uint32
+type _LockLevel = sqlite3vfs.LockLevel
 
 const (
-	// No locks are held on the database.
-	// The database may be neither read nor written.
-	// Any internally cached data is considered suspect and subject to
-	// verification against the database file before being used.
-	// Other processes can read or write the database as their own locking
-	// states permit.
-	// This is the default state.
-	_LOCK_NONE _LockLevel = 0 /* xUnlock() only */
-
-	// The database may be read but not written.
-	// Any number of processes can hold SHARED locks at the same time,
-	// hence there can be many simultaneous readers.
-	// But no other thread or process is allowed to write to the database file
-	// while one or more SHARED locks are active.
-	_LOCK_SHARED _LockLevel = 1 /* xLock() or xUnlock() */
-
-	// A RESERVED lock means that the process is planning on writing to the
-	// database file at some point in the future but that it is currently just
-	// reading from the file.
-	// Only a single RESERVED lock may be active at one time,
-	// though multiple SHARED locks can coexist with a single RESERVED lock.
-	// RESERVED differs from PENDING in that new SHARED locks can be acquired
-	// while there is a RESERVED lock.
-	_LOCK_RESERVED _LockLevel = 2 /* xLock() only */
-
-	// A PENDING lock means that the process holding the lock wants to write to
-	// the database as soon as possible and is just waiting on all current
-	// SHARED locks to clear so that it can get an EXCLUSIVE lock.
-	// No new SHARED locks are permitted against the database if a PENDING lock
-	// is active, though existing SHARED locks are allowed to continue.
-	_LOCK_PENDING _LockLevel = 3 /* internal use only */
-
-	// An EXCLUSIVE lock is needed in order to write to the database file.
-	// Only one EXCLUSIVE lock is allowed on the file and no other locks of any
-	// kind are allowed to coexist with an EXCLUSIVE lock.
-	// In order to maximize concurrency, SQLite works to minimize the amount of
-	// time that EXCLUSIVE locks are held.
-	_LOCK_EXCLUSIVE _LockLevel = 4 /* xLock() only */
+	_LOCK_NONE      = sqlite3vfs.LOCK_NONE
+	_LOCK_SHARED    = sqlite3vfs.LOCK_SHARED
+	_LOCK_RESERVED  = sqlite3vfs.LOCK_RESERVED
+	_LOCK_PENDING   = sqlite3vfs.LOCK_PENDING
+	_LOCK_EXCLUSIVE = sqlite3vfs.LOCK_EXCLUSIVE
 )
 
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html

@@ -143,28 +143,17 @@ const (
 type OpenFlag uint32
 
 const (
-	OPEN_READONLY      OpenFlag = 0x00000001 /* Ok for sqlite3_open_v2() */
-	OPEN_READWRITE     OpenFlag = 0x00000002 /* Ok for sqlite3_open_v2() */
-	OPEN_CREATE        OpenFlag = 0x00000004 /* Ok for sqlite3_open_v2() */
-	OPEN_DELETEONCLOSE OpenFlag = 0x00000008 /* VFS only */
-	OPEN_EXCLUSIVE     OpenFlag = 0x00000010 /* VFS only */
-	OPEN_AUTOPROXY     OpenFlag = 0x00000020 /* VFS only */
-	OPEN_URI           OpenFlag = 0x00000040 /* Ok for sqlite3_open_v2() */
-	OPEN_MEMORY        OpenFlag = 0x00000080 /* Ok for sqlite3_open_v2() */
-	OPEN_MAIN_DB       OpenFlag = 0x00000100 /* VFS only */
-	OPEN_TEMP_DB       OpenFlag = 0x00000200 /* VFS only */
-	OPEN_TRANSIENT_DB  OpenFlag = 0x00000400 /* VFS only */
-	OPEN_MAIN_JOURNAL  OpenFlag = 0x00000800 /* VFS only */
-	OPEN_TEMP_JOURNAL  OpenFlag = 0x00001000 /* VFS only */
-	OPEN_SUBJOURNAL    OpenFlag = 0x00002000 /* VFS only */
-	OPEN_SUPER_JOURNAL OpenFlag = 0x00004000 /* VFS only */
-	OPEN_NOMUTEX       OpenFlag = 0x00008000 /* Ok for sqlite3_open_v2() */
-	OPEN_FULLMUTEX     OpenFlag = 0x00010000 /* Ok for sqlite3_open_v2() */
-	OPEN_SHAREDCACHE   OpenFlag = 0x00020000 /* Ok for sqlite3_open_v2() */
-	OPEN_PRIVATECACHE  OpenFlag = 0x00040000 /* Ok for sqlite3_open_v2() */
-	OPEN_WAL           OpenFlag = 0x00080000 /* VFS only */
-	OPEN_NOFOLLOW      OpenFlag = 0x01000000 /* Ok for sqlite3_open_v2() */
-	OPEN_EXRESCODE     OpenFlag = 0x02000000 /* Extended result codes */
+	OPEN_READONLY     OpenFlag = 0x00000001 /* Ok for sqlite3_open_v2() */
+	OPEN_READWRITE    OpenFlag = 0x00000002 /* Ok for sqlite3_open_v2() */
+	OPEN_CREATE       OpenFlag = 0x00000004 /* Ok for sqlite3_open_v2() */
+	OPEN_URI          OpenFlag = 0x00000040 /* Ok for sqlite3_open_v2() */
+	OPEN_MEMORY       OpenFlag = 0x00000080 /* Ok for sqlite3_open_v2() */
+	OPEN_NOMUTEX      OpenFlag = 0x00008000 /* Ok for sqlite3_open_v2() */
+	OPEN_FULLMUTEX    OpenFlag = 0x00010000 /* Ok for sqlite3_open_v2() */
+	OPEN_SHAREDCACHE  OpenFlag = 0x00020000 /* Ok for sqlite3_open_v2() */
+	OPEN_PRIVATECACHE OpenFlag = 0x00040000 /* Ok for sqlite3_open_v2() */
+	OPEN_NOFOLLOW     OpenFlag = 0x01000000 /* Ok for sqlite3_open_v2() */
+	OPEN_EXRESCODE    OpenFlag = 0x02000000 /* Extended result codes */
 )
 
 // PrepareFlag is a flag that can be passed to [Conn.PrepareFlags].

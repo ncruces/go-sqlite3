@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 	"github.com/ncruces/julianday"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -64,6 +65,10 @@ func (vfs *vfsState) Close() error {
 }
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName uint32) uint32 {
+	name := util.ReadString(mod, zVfsName, _MAX_STRING)
+	if sqlite3vfs.Find(name) != nil {
+		return 1
+	}
 	return 0
 }
 
@@ -113,10 +118,29 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) _
 }
 
 func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) _ErrorCode {
+	vfs := getVFS(mod, pVfs)
 	rel := util.ReadString(mod, zRelative, _MAX_PATHNAME)
-	abs, err := filepath.Abs(rel)
-	if err != nil {
-		return _CANTOPEN_FULLPATH
+
+	var abs string
+	var symlink bool
+	if vfs != nil {
+		p, err := vfs.FullPathname(rel)
+		if err != nil {
+			return _CANTOPEN_FULLPATH
+		}
+		abs = p
+	} else {
+		p, err := filepath.Abs(rel)
+		if err != nil {
+			return _CANTOPEN_FULLPATH
+		}
+		s, err := os.Lstat(p)
+		if err == nil {
+			symlink = s.Mode()&fs.ModeSymlink != 0
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return _CANTOPEN_FULLPATH
+		}
+		abs = p
 	}
 
 	size := uint64(len(abs) + 1)
@@ -127,15 +151,10 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	mem[len(abs)] = 0
 	copy(mem, abs)
 
-	if fi, err := os.Lstat(abs); err == nil {
-		if fi.Mode()&fs.ModeSymlink != 0 {
-			return _OK_SYMLINK
-		}
-		return _OK
-	} else if errors.Is(err, fs.ErrNotExist) {
-		return _OK
+	if symlink {
+		return _OK_SYMLINK
 	}
-	return _CANTOPEN_FULLPATH
+	return _OK
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) _ErrorCode {
@@ -192,6 +211,8 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _A
 }
 
 func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, flags _OpenFlag, pOutFlags uint32) _ErrorCode {
+	vfs := getVFS(mod, pVfs)
+
 	var oflags int
 	if flags&_OPEN_EXCLUSIVE != 0 {
 		oflags |= os.O_EXCL
@@ -207,11 +228,17 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 	}
 
 	var err error
+	var name string
 	var f *os.File
-	if zName == 0 {
+	if zName != 0 {
+		name = util.ReadString(mod, zName, _MAX_PATHNAME)
+	}
+	switch {
+	case vfs != nil:
+		_, flags, err = vfs.Open(name, flags)
+	case name == "":
 		f, err = os.CreateTemp("", "*.db")
-	} else {
-		name := util.ReadString(mod, zName, _MAX_PATHNAME)
+	default:
 		f, err = osOpenFile(name, oflags, 0666)
 	}
 	if err != nil {
@@ -392,4 +419,12 @@ func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) _E
 	}
 	util.WriteUint32(mod, pResOut, res)
 	return _OK
+}
+
+func getVFS(mod api.Module, pVfs uint32) sqlite3vfs.VFS {
+	if pVfs == 0 {
+		return nil
+	}
+	name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
+	return sqlite3vfs.Find(name)
 }
