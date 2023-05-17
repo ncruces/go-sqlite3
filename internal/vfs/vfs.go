@@ -18,6 +18,7 @@ import (
 )
 
 func Export(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+	util.RegisterFuncII(env, "go_vfs_find", vfsFind)
 	util.RegisterFuncIIJ(env, "go_localtime", vfsLocaltime)
 	util.RegisterFuncIIII(env, "go_randomness", vfsRandomness)
 	util.RegisterFuncIII(env, "go_sleep", vfsSleep)
@@ -60,6 +61,10 @@ func (vfs *vfsState) Close() error {
 	}
 	vfs.files = nil
 	return nil
+}
+
+func vfsFind(ctx context.Context, mod api.Module, zVfsName uint32) uint32 {
+	return 0
 }
 
 func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t int64) _ErrorCode {

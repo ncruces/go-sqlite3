@@ -45,4 +45,3 @@ sqlite3_backup_step
 sqlite3_backup_finish
 sqlite3_backup_remaining
 sqlite3_backup_pagecount
-sqlite3_interrupt_offset

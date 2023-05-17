@@ -3,6 +3,7 @@
 #include "sqlite3.h"
 
 int go_localtime(struct tm *, sqlite3_int64);
+int go_vfs_find(const char *zVfsName);
 
 int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
 int go_sleep(sqlite3_vfs *, int microseconds);
@@ -60,9 +61,7 @@ struct go_file {
   int handle;
 };
 
-static_assert(offsetof(struct go_file, handle) == 4, "Unexpected offset");
-
-sqlite3_vfs *os_vfs() {
+int sqlite3_os_init() {
   static sqlite3_vfs os_vfs = {
       .iVersion = 2,
       .szOsFile = sizeof(struct go_file),
@@ -79,9 +78,61 @@ sqlite3_vfs *os_vfs() {
       .xCurrentTime = go_current_time,
       .xCurrentTimeInt64 = go_current_time_64,
   };
-  return &os_vfs;
+  return sqlite3_vfs_register(&os_vfs, /*default=*/true);
 }
+
+sqlite3_destructor_type malloc_destructor = &free;
 
 int localtime_s(struct tm *const pTm, time_t const *const pTime) {
   return go_localtime(pTm, (sqlite3_int64)*pTime);
 }
+
+#undef sqlite3_vfs_find
+sqlite3_vfs *sqlite3_vfs_find_wrapper(const char *zVfsName) {
+  if (zVfsName) {
+    static sqlite3_vfs *go_vfs_list;
+    sqlite3_vfs *found = NULL;
+    for (sqlite3_vfs **next = &go_vfs_list; *next;) {
+      sqlite3_vfs *it = *next;
+      if (go_vfs_find(it->zName)) {
+        if (!strcmp(zVfsName, it->zName)) found = it;
+        next = &it->pNext;
+      } else {
+        *next = it->pNext;
+        free(it);
+      }
+    }
+    if (found) {
+      return found;
+    }
+    if (go_vfs_find(zVfsName)) {
+      sqlite3_vfs *prev = go_vfs_list;
+      go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
+      char *name = (char *)(go_vfs_list + 1);
+      strcpy(name, zVfsName);
+      *go_vfs_list = (sqlite3_vfs){
+          .iVersion = 2,
+          .szOsFile = sizeof(struct go_file),
+          .mxPathname = 512,
+          .zName = name,
+          .pNext = prev,
+
+          .xOpen = go_open_wrapper,
+          .xDelete = go_delete,
+          .xAccess = go_access,
+          .xFullPathname = go_full_pathname,
+
+          .xRandomness = go_randomness,
+          .xSleep = go_sleep,
+          .xCurrentTime = go_current_time,
+          .xCurrentTimeInt64 = go_current_time_64,
+      };
+      return go_vfs_list;
+    }
+  }
+  return sqlite3_vfs_find(zVfsName);
+}
+
+static_assert(offsetof(struct go_file, handle) == 4, "Unexpected offset");
+static_assert(offsetof(sqlite3_vfs, zName) == 16, "Unexpected offset");
+static_assert(offsetof(sqlite3, u1.isInterrupted) == 280, "Unexpected offset");
