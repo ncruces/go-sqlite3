@@ -22,7 +22,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 		panic(util.AssertErr())
 	}
 
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 
 	switch {
 	case file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE:
@@ -98,7 +98,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 		panic(util.AssertErr())
 	}
 
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 
 	// Connection state check.
 	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
@@ -129,7 +129,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 
 	// Connection state check.
 	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {

@@ -18,7 +18,7 @@ type vfsFile struct {
 	readOnly    bool
 }
 
-func newVFSFile(vfs *vfsState, file *os.File) uint32 {
+func vfsFileNew(vfs *vfsState, file *os.File) uint32 {
 	// Find an empty slot.
 	for id, f := range vfs.files {
 		if f.File == nil {
@@ -32,20 +32,20 @@ func newVFSFile(vfs *vfsState, file *os.File) uint32 {
 	return uint32(len(vfs.files) - 1)
 }
 
-func getVFSFile(ctx context.Context, mod api.Module, pFile uint32) *vfsFile {
+func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) *vfsFile {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 	id := util.ReadUint32(mod, pFile+4)
 	return &vfs.files[id]
 }
 
-func openVFSFile(ctx context.Context, mod api.Module, pFile uint32, file *os.File) *vfsFile {
+func vfsFileOpen(ctx context.Context, mod api.Module, pFile uint32, file *os.File) *vfsFile {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
-	id := newVFSFile(vfs, file)
+	id := vfsFileNew(vfs, file)
 	util.WriteUint32(mod, pFile+4, id)
 	return &vfs.files[id]
 }
 
-func closeVFSFile(ctx context.Context, mod api.Module, pFile uint32) error {
+func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 	id := util.ReadUint32(mod, pFile+4)
 	file := vfs.files[id]

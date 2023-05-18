@@ -118,7 +118,7 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) _
 }
 
 func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) _ErrorCode {
-	vfs := getVFS(mod, pVfs)
+	vfs := vfsAPIGet(mod, pVfs)
 	rel := util.ReadString(mod, zRelative, _MAX_PATHNAME)
 
 	var abs string
@@ -126,7 +126,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	if vfs != nil {
 		p, err := vfs.FullPathname(rel)
 		if err != nil {
-			return _CANTOPEN_FULLPATH
+			return vfsAPIErrorCode(err, _CANTOPEN_FULLPATH)
 		}
 		abs = p
 	} else {
@@ -158,7 +158,14 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) _ErrorCode {
+	vfs := vfsAPIGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
+
+	if vfs != nil {
+		err := vfs.Delete(path, syncDir != 0)
+		return vfsAPIErrorCode(err, _IOERR_DELETE)
+	}
+
 	err := os.Remove(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return _IOERR_DELETE_NOENT
@@ -181,28 +188,39 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 }
 
 func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _AccessFlag, pResOut uint32) _ErrorCode {
+	vfs := vfsAPIGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
-	err := osAccess(path, flags)
 
 	var res uint32
 	var rc _ErrorCode
-	if flags == _ACCESS_EXISTS {
-		switch {
-		case err == nil:
+	if vfs != nil {
+		ok, err := vfs.Access(path, flags)
+		if ok {
 			res = 1
-		case errors.Is(err, fs.ErrNotExist):
+		} else {
 			res = 0
-		default:
-			rc = _IOERR_ACCESS
 		}
+		rc = vfsAPIErrorCode(err, _IOERR_ACCESS)
 	} else {
-		switch {
-		case err == nil:
-			res = 1
-		case errors.Is(err, fs.ErrPermission):
-			res = 0
-		default:
-			rc = _IOERR_ACCESS
+		err := osAccess(path, flags)
+		if flags == _ACCESS_EXISTS {
+			switch {
+			case err == nil:
+				res = 1
+			case errors.Is(err, fs.ErrNotExist):
+				res = 0
+			default:
+				rc = _IOERR_ACCESS
+			}
+		} else {
+			switch {
+			case err == nil:
+				res = 1
+			case errors.Is(err, fs.ErrPermission):
+				res = 0
+			default:
+				rc = _IOERR_ACCESS
+			}
 		}
 	}
 
@@ -211,7 +229,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _A
 }
 
 func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, flags _OpenFlag, pOutFlags uint32) _ErrorCode {
-	vfs := getVFS(mod, pVfs)
+	vfs := vfsAPIGet(mod, pVfs)
 
 	var oflags int
 	if flags&_OPEN_EXCLUSIVE != 0 {
@@ -249,7 +267,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 		os.Remove(f.Name())
 	}
 
-	file := openVFSFile(ctx, mod, pFile, f)
+	file := vfsFileOpen(ctx, mod, pFile, f)
 	file.psow = true
 	file.readOnly = flags&_OPEN_READONLY != 0
 	file.syncDir = runtime.GOOS != "windows" &&
@@ -263,7 +281,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zName, pFile uint32, fla
 }
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) _ErrorCode {
-	err := closeVFSFile(ctx, mod, pFile)
+	err := vfsFileClose(ctx, mod, pFile)
 	if err != nil {
 		return _IOERR_CLOSE
 	}
@@ -273,7 +291,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) _ErrorCode {
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) _ErrorCode {
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	n, err := file.ReadAt(buf, iOfst)
 	if n == int(iAmt) {
 		return _OK
@@ -290,7 +308,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) _ErrorCode {
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	_, err := file.WriteAt(buf, iOfst)
 	if err != nil {
 		return _IOERR_WRITE
@@ -299,7 +317,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64) _ErrorCode {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Truncate(nByte)
 	if err != nil {
 		return _IOERR_TRUNCATE
@@ -311,7 +329,7 @@ func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags _SyncFlag)
 	dataonly := (flags & _SYNC_DATAONLY) != 0
 	fullsync := (flags & 0x0f) == _SYNC_FULL
 
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	err := osSync(file.File, fullsync, dataonly)
 	if err != nil {
 		return _IOERR_FSYNC
@@ -332,7 +350,7 @@ func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags _SyncFlag)
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _ErrorCode {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return _IOERR_SEEK
@@ -345,16 +363,16 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _Erro
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) _ErrorCode {
 	switch op {
 	case _FCNTL_LOCKSTATE:
-		util.WriteUint32(mod, pArg, uint32(getVFSFile(ctx, mod, pFile).lock))
+		util.WriteUint32(mod, pArg, uint32(vfsFileGet(ctx, mod, pFile).lock))
 		return _OK
 	case _FCNTL_LOCK_TIMEOUT:
-		file := getVFSFile(ctx, mod, pFile)
+		file := vfsFileGet(ctx, mod, pFile)
 		millis := file.lockTimeout.Milliseconds()
 		file.lockTimeout = time.Duration(util.ReadUint32(mod, pArg)) * time.Millisecond
 		util.WriteUint32(mod, pArg, uint32(millis))
 		return _OK
 	case _FCNTL_POWERSAFE_OVERWRITE:
-		file := getVFSFile(ctx, mod, pFile)
+		file := vfsFileGet(ctx, mod, pFile)
 		switch util.ReadUint32(mod, pArg) {
 		case 0:
 			file.psow = false
@@ -386,7 +404,7 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 }
 
 func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) _DeviceCharacteristic {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	if file.psow {
 		return _IOCAP_POWERSAFE_OVERWRITE
 	}
@@ -394,7 +412,7 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 }
 
 func vfsSizeHint(ctx context.Context, mod api.Module, pFile, pArg uint32) _ErrorCode {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	size := util.ReadUint64(mod, pArg)
 	err := osAllocate(file.File, int64(size))
 	if err != nil {
@@ -404,7 +422,7 @@ func vfsSizeHint(ctx context.Context, mod api.Module, pFile, pArg uint32) _Error
 }
 
 func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file := getVFSFile(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile)
 	fi, err := file.Stat()
 	if err != nil {
 		return _IOERR_FSTAT
@@ -419,12 +437,4 @@ func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) _E
 	}
 	util.WriteUint32(mod, pResOut, res)
 	return _OK
-}
-
-func getVFS(mod api.Module, pVfs uint32) sqlite3vfs.VFS {
-	if pVfs == 0 {
-		return nil
-	}
-	name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
-	return sqlite3vfs.Find(name)
 }

@@ -4,7 +4,7 @@ import "sync"
 
 type VFS interface {
 	Open(name string, flags OpenFlag) (File, OpenFlag, error)
-	Delete(name string, dirSync bool) error
+	Delete(name string, syncDir bool) error
 	Access(name string, flags AccessFlag) (bool, error)
 	FullPathname(name string) (string, error)
 }
@@ -14,10 +14,10 @@ type File interface {
 	ReadAt(p []byte, off int64) (n int, err error)
 	WriteAt(p []byte, off int64) (n int, err error)
 	Truncate(size int64) error
-	Sync(flag SyncFlag) error
+	Sync(flags SyncFlag) error
 	FileSize() (int64, error)
-	Lock(elock LockLevel) error
-	Unlock(elock LockLevel) error
+	Lock(lock LockLevel) error
+	Unlock(lock LockLevel) error
 	CheckReservedLock() (bool, error)
 	SectorSize() int64
 }

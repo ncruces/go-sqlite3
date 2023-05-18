@@ -18,12 +18,14 @@ func (t testVFS) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, 
 	return nil, flags, nil
 }
 
-func (testVFS) Delete(name string, dirSync bool) error {
-	panic("unimplemented")
+func (t testVFS) Delete(name string, dirSync bool) error {
+	t.Log("Delete", name, dirSync)
+	return nil
 }
 
-func (testVFS) Access(name string, flags sqlite3vfs.AccessFlag) (bool, error) {
-	panic("unimplemented")
+func (t testVFS) Access(name string, flags sqlite3vfs.AccessFlag) (bool, error) {
+	t.Log("Access", name, flags)
+	return true, nil
 }
 
 func (t testVFS) FullPathname(name string) (string, error) {
