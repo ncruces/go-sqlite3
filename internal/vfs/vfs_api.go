@@ -8,12 +8,15 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-func vfsAPIGet(mod api.Module, pVfs uint32) sqlite3vfs.VFS {
-	if pVfs == 0 {
-		return nil
+func vfsAPIGet(mod api.Module, pVfs uint32) (vfs sqlite3vfs.VFS) {
+	if pVfs != 0 {
+		name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
+		vfs = sqlite3vfs.Find(name)
 	}
-	name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
-	return sqlite3vfs.Find(name)
+	if vfs == nil {
+		vfs = vfsOS
+	}
+	return
 }
 
 func vfsAPIErrorCode(err error, def _ErrorCode) _ErrorCode {

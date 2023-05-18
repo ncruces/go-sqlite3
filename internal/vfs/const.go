@@ -1,6 +1,9 @@
 package vfs
 
-import "github.com/ncruces/go-sqlite3/sqlite3vfs"
+import (
+	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+)
 
 const (
 	_MAX_STRING          = 512 // Used for short strings: names, error messages…
@@ -11,54 +14,35 @@ const (
 // https://www.sqlite.org/rescode.html
 type _ErrorCode uint32
 
-const (
-	_OK       _ErrorCode = 0  /* Successful result */
-	_PERM     _ErrorCode = 3  /* Access permission denied */
-	_BUSY     _ErrorCode = 5  /* The database file is locked */
-	_IOERR    _ErrorCode = 10 /* Some kind of disk I/O error occurred */
-	_NOTFOUND _ErrorCode = 12 /* Unknown opcode in sqlite3_file_control() */
-	_CANTOPEN _ErrorCode = 14 /* Unable to open the database file */
+func (e _ErrorCode) Error() string {
+	return util.ErrorCodeString(uint32(e))
+}
 
-	_IOERR_READ              = _IOERR | (1 << 8)
-	_IOERR_SHORT_READ        = _IOERR | (2 << 8)
-	_IOERR_WRITE             = _IOERR | (3 << 8)
-	_IOERR_FSYNC             = _IOERR | (4 << 8)
-	_IOERR_DIR_FSYNC         = _IOERR | (5 << 8)
-	_IOERR_TRUNCATE          = _IOERR | (6 << 8)
-	_IOERR_FSTAT             = _IOERR | (7 << 8)
-	_IOERR_UNLOCK            = _IOERR | (8 << 8)
-	_IOERR_RDLOCK            = _IOERR | (9 << 8)
-	_IOERR_DELETE            = _IOERR | (10 << 8)
-	_IOERR_BLOCKED           = _IOERR | (11 << 8)
-	_IOERR_NOMEM             = _IOERR | (12 << 8)
-	_IOERR_ACCESS            = _IOERR | (13 << 8)
-	_IOERR_CHECKRESERVEDLOCK = _IOERR | (14 << 8)
-	_IOERR_LOCK              = _IOERR | (15 << 8)
-	_IOERR_CLOSE             = _IOERR | (16 << 8)
-	_IOERR_DIR_CLOSE         = _IOERR | (17 << 8)
-	_IOERR_SHMOPEN           = _IOERR | (18 << 8)
-	_IOERR_SHMSIZE           = _IOERR | (19 << 8)
-	_IOERR_SHMLOCK           = _IOERR | (20 << 8)
-	_IOERR_SHMMAP            = _IOERR | (21 << 8)
-	_IOERR_SEEK              = _IOERR | (22 << 8)
-	_IOERR_DELETE_NOENT      = _IOERR | (23 << 8)
-	_IOERR_MMAP              = _IOERR | (24 << 8)
-	_IOERR_GETTEMPPATH       = _IOERR | (25 << 8)
-	_IOERR_CONVPATH          = _IOERR | (26 << 8)
-	_IOERR_VNODE             = _IOERR | (27 << 8)
-	_IOERR_AUTH              = _IOERR | (28 << 8)
-	_IOERR_BEGIN_ATOMIC      = _IOERR | (29 << 8)
-	_IOERR_COMMIT_ATOMIC     = _IOERR | (30 << 8)
-	_IOERR_ROLLBACK_ATOMIC   = _IOERR | (31 << 8)
-	_IOERR_DATA              = _IOERR | (32 << 8)
-	_IOERR_CORRUPTFS         = _IOERR | (33 << 8)
-	_CANTOPEN_NOTEMPDIR      = _CANTOPEN | (1 << 8)
-	_CANTOPEN_ISDIR          = _CANTOPEN | (2 << 8)
-	_CANTOPEN_FULLPATH       = _CANTOPEN | (3 << 8)
-	_CANTOPEN_CONVPATH       = _CANTOPEN | (4 << 8)
-	_CANTOPEN_DIRTYWAL       = _CANTOPEN | (5 << 8) /* Not Used */
-	_CANTOPEN_SYMLINK        = _CANTOPEN | (6 << 8)
-	_OK_SYMLINK              = _OK | (2 << 8) /* internal use only */
+const (
+	_OK                      _ErrorCode = util.OK
+	_PERM                    _ErrorCode = util.PERM
+	_BUSY                    _ErrorCode = util.BUSY
+	_IOERR                   _ErrorCode = util.IOERR
+	_NOTFOUND                _ErrorCode = util.NOTFOUND
+	_CANTOPEN                _ErrorCode = util.CANTOPEN
+	_IOERR_READ              _ErrorCode = util.IOERR_READ
+	_IOERR_SHORT_READ        _ErrorCode = util.IOERR_SHORT_READ
+	_IOERR_WRITE             _ErrorCode = util.IOERR_WRITE
+	_IOERR_FSYNC             _ErrorCode = util.IOERR_FSYNC
+	_IOERR_DIR_FSYNC         _ErrorCode = util.IOERR_DIR_FSYNC
+	_IOERR_TRUNCATE          _ErrorCode = util.IOERR_TRUNCATE
+	_IOERR_FSTAT             _ErrorCode = util.IOERR_FSTAT
+	_IOERR_UNLOCK            _ErrorCode = util.IOERR_UNLOCK
+	_IOERR_RDLOCK            _ErrorCode = util.IOERR_RDLOCK
+	_IOERR_DELETE            _ErrorCode = util.IOERR_DELETE
+	_IOERR_ACCESS            _ErrorCode = util.IOERR_ACCESS
+	_IOERR_CHECKRESERVEDLOCK _ErrorCode = util.IOERR_CHECKRESERVEDLOCK
+	_IOERR_LOCK              _ErrorCode = util.IOERR_LOCK
+	_IOERR_CLOSE             _ErrorCode = util.IOERR_CLOSE
+	_IOERR_SEEK              _ErrorCode = util.IOERR_SEEK
+	_IOERR_DELETE_NOENT      _ErrorCode = util.IOERR_DELETE_NOENT
+	_CANTOPEN_FULLPATH       _ErrorCode = util.CANTOPEN_FULLPATH
+	_OK_SYMLINK              _ErrorCode = util.OK_SYMLINK
 )
 
 // https://www.sqlite.org/c3ref/c_open_autoproxy.html

@@ -19,7 +19,7 @@ type File interface {
 	Lock(lock LockLevel) error
 	Unlock(lock LockLevel) error
 	CheckReservedLock() (bool, error)
-	SectorSize() int64
+	SectorSize() int
 }
 
 var (

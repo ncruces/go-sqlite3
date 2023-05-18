@@ -18,8 +18,8 @@ func (t testVFS) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, 
 	return nil, flags, nil
 }
 
-func (t testVFS) Delete(name string, dirSync bool) error {
-	t.Log("Delete", name, dirSync)
+func (t testVFS) Delete(name string, syncDir bool) error {
+	t.Log("Delete", name, syncDir)
 	return nil
 }
 
@@ -38,11 +38,11 @@ func TestRegister(t *testing.T) {
 	sqlite3vfs.Register("foo", vfs)
 	defer sqlite3vfs.Unregister("foo")
 
-	defer func() { _ = recover() }()
-
 	conn, err := sqlite3.Open("file:file.db?vfs=foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
+
+	t.Error("want skip")
 }

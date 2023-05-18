@@ -1,12 +1,11 @@
 package vfs
 
 import (
-	"context"
 	"os"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/tetratelabs/wazero/api"
+	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 )
 
 const (
@@ -16,13 +15,11 @@ const (
 	_SHARED_SIZE   = 510
 )
 
-func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
+func (file *vfsFile) Lock(eLock sqlite3vfs.LockLevel) error {
 	// Argument check. SQLite never explicitly requests a pending lock.
 	if eLock != _LOCK_SHARED && eLock != _LOCK_RESERVED && eLock != _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
-
-	file := vfsFileGet(ctx, mod, pFile)
 
 	switch {
 	case file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE:
@@ -38,7 +35,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 
 	// If we already have an equal or more restrictive lock, do nothing.
 	if file.lock >= eLock {
-		return _OK
+		return nil
 	}
 
 	// Do not allow any kind of write-lock on a read-only database.
@@ -56,7 +53,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 			return rc
 		}
 		file.lock = _LOCK_SHARED
-		return _OK
+		return nil
 
 	case _LOCK_RESERVED:
 		// Must be SHARED to get RESERVED.
@@ -67,7 +64,7 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 			return rc
 		}
 		file.lock = _LOCK_RESERVED
-		return _OK
+		return nil
 
 	case _LOCK_EXCLUSIVE:
 		// Must be SHARED, RESERVED or PENDING to get EXCLUSIVE.
@@ -85,20 +82,18 @@ func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel
 			return rc
 		}
 		file.lock = _LOCK_EXCLUSIVE
-		return _OK
+		return nil
 
 	default:
 		panic(util.AssertErr())
 	}
 }
 
-func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
+func (file *vfsFile) Unlock(eLock sqlite3vfs.LockLevel) error {
 	// Argument check.
 	if eLock != _LOCK_NONE && eLock != _LOCK_SHARED {
 		panic(util.AssertErr())
 	}
-
-	file := vfsFileGet(ctx, mod, pFile)
 
 	// Connection state check.
 	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
@@ -107,7 +102,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 
 	// If we don't have a more restrictive lock, do nothing.
 	if file.lock <= eLock {
-		return _OK
+		return nil
 	}
 
 	switch eLock {
@@ -116,7 +111,7 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 			return rc
 		}
 		file.lock = _LOCK_SHARED
-		return _OK
+		return nil
 
 	case _LOCK_NONE:
 		rc := osReleaseLock(file.File, file.lock)
@@ -128,28 +123,16 @@ func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLev
 	}
 }
 
-func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
-
+func (file *vfsFile) CheckReservedLock() (bool, error) {
 	// Connection state check.
 	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
-	var locked bool
-	var rc _ErrorCode
 	if file.lock >= _LOCK_RESERVED {
-		locked = true
-	} else {
-		locked, rc = osCheckReservedLock(file.File)
+		return true, nil
 	}
-
-	var res uint32
-	if locked {
-		res = 1
-	}
-	util.WriteUint32(mod, pResOut, res)
-	return rc
+	return osCheckReservedLock(file.File)
 }
 
 func osGetReservedLock(file *os.File, timeout time.Duration) _ErrorCode {
