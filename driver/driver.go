@@ -16,7 +16,7 @@
 //
 //	sql.Open("sqlite3", "file:demo.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)")
 //
-// If no PRAGMAs are specifed, a busy timeout of 1 minute
+// If no PRAGMAs are specified, a busy timeout of 1 minute
 // and normal locking mode are used.
 //
 // [URI]: https://www.sqlite.org/uri.html

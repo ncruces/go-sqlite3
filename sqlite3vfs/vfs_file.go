@@ -143,19 +143,22 @@ func vfsFileNew(vfs *vfsState, file File) uint32 {
 }
 
 func vfsFileRegister(ctx context.Context, mod api.Module, pFile uint32, file File) {
+	const fileHandleOffset = 4
 	id := vfsFileNew(ctx.Value(vfsKey{}).(*vfsState), file)
-	util.WriteUint32(mod, pFile+4, id)
+	util.WriteUint32(mod, pFile+fileHandleOffset, id)
 }
 
 func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) File {
+	const fileHandleOffset = 4
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
-	id := util.ReadUint32(mod, pFile+4)
+	id := util.ReadUint32(mod, pFile+fileHandleOffset)
 	return vfs.files[id]
 }
 
 func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {
+	const fileHandleOffset = 4
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
-	id := util.ReadUint32(mod, pFile+4)
+	id := util.ReadUint32(mod, pFile+fileHandleOffset)
 	file := vfs.files[id]
 	vfs.files[id] = nil
 	return file.Close()

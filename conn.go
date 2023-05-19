@@ -278,7 +278,8 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 			break
 
 		case <-ctx.Done(): // Done was closed.
-			buf := util.View(c.mod, c.handle+280, 4)
+			const isInterruptedOffset = 280
+			buf := util.View(c.mod, c.handle+isInterruptedOffset, 4)
 			(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 			// Wait for the next call to SetInterrupt.
 			<-waiter
@@ -294,7 +295,8 @@ func (c *Conn) checkInterrupt() bool {
 	if c.interrupt == nil || c.interrupt.Err() == nil {
 		return false
 	}
-	buf := util.View(c.mod, c.handle+280, 4)
+	const isInterruptedOffset = 280
+	buf := util.View(c.mod, c.handle+isInterruptedOffset, 4)
 	(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
 	return true
 }

@@ -15,6 +15,8 @@ provides a [`database/sql`](https://pkg.go.dev/database/sql) driver
 ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
 - Package [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
 embeds a build of SQLite into your application.
+- Package [`github.com/ncruces/go-sqlite3/sqlite3vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/sqlite3vfs)
+wraps the [C SQLite VFS API](https://www.sqlite.org/vfs.html) and provides a pure Go implementation.
 
 ### Caveats
 
@@ -73,7 +75,7 @@ Performance is tested by running
   - [ ] in-memory VFS
   - [ ] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
-  - [ ] custom VFS API
+  - [x] custom VFS API
 
 ### Alternatives
 

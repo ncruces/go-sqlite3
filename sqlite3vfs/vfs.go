@@ -13,29 +13,31 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+// ExportHostFunctions registers the required VFS host functions
+// with the provided env module.
 func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.RegisterFuncII(env, "go_vfs_find", vfsFind)
-	util.RegisterFuncIIJ(env, "go_localtime", vfsLocaltime)
-	util.RegisterFuncIIII(env, "go_randomness", vfsRandomness)
-	util.RegisterFuncIII(env, "go_sleep", vfsSleep)
-	util.RegisterFuncIII(env, "go_current_time", vfsCurrentTime)
-	util.RegisterFuncIII(env, "go_current_time_64", vfsCurrentTime64)
-	util.RegisterFuncIIIII(env, "go_full_pathname", vfsFullPathname)
-	util.RegisterFuncIIII(env, "go_delete", vfsDelete)
-	util.RegisterFuncIIIII(env, "go_access", vfsAccess)
-	util.RegisterFuncIIIIII(env, "go_open", vfsOpen)
-	util.RegisterFuncII(env, "go_close", vfsClose)
-	util.RegisterFuncIIIIJ(env, "go_read", vfsRead)
-	util.RegisterFuncIIIIJ(env, "go_write", vfsWrite)
-	util.RegisterFuncIIJ(env, "go_truncate", vfsTruncate)
-	util.RegisterFuncIII(env, "go_sync", vfsSync)
-	util.RegisterFuncIII(env, "go_file_size", vfsFileSize)
-	util.RegisterFuncIIII(env, "go_file_control", vfsFileControl)
-	util.RegisterFuncII(env, "go_sector_size", vfsSectorSize)
-	util.RegisterFuncII(env, "go_device_characteristics", vfsDeviceCharacteristics)
-	util.RegisterFuncIII(env, "go_lock", vfsLock)
-	util.RegisterFuncIII(env, "go_unlock", vfsUnlock)
-	util.RegisterFuncIII(env, "go_check_reserved_lock", vfsCheckReservedLock)
+	util.ExportFuncII(env, "go_vfs_find", vfsFind)
+	util.ExportFuncIIJ(env, "go_localtime", vfsLocaltime)
+	util.ExportFuncIIII(env, "go_randomness", vfsRandomness)
+	util.ExportFuncIII(env, "go_sleep", vfsSleep)
+	util.ExportFuncIII(env, "go_current_time", vfsCurrentTime)
+	util.ExportFuncIII(env, "go_current_time_64", vfsCurrentTime64)
+	util.ExportFuncIIIII(env, "go_full_pathname", vfsFullPathname)
+	util.ExportFuncIIII(env, "go_delete", vfsDelete)
+	util.ExportFuncIIIII(env, "go_access", vfsAccess)
+	util.ExportFuncIIIIII(env, "go_open", vfsOpen)
+	util.ExportFuncII(env, "go_close", vfsClose)
+	util.ExportFuncIIIIJ(env, "go_read", vfsRead)
+	util.ExportFuncIIIIJ(env, "go_write", vfsWrite)
+	util.ExportFuncIIJ(env, "go_truncate", vfsTruncate)
+	util.ExportFuncIII(env, "go_sync", vfsSync)
+	util.ExportFuncIII(env, "go_file_size", vfsFileSize)
+	util.ExportFuncIIII(env, "go_file_control", vfsFileControl)
+	util.ExportFuncII(env, "go_sector_size", vfsSectorSize)
+	util.ExportFuncII(env, "go_device_characteristics", vfsDeviceCharacteristics)
+	util.ExportFuncIII(env, "go_lock", vfsLock)
+	util.ExportFuncIII(env, "go_unlock", vfsUnlock)
+	util.ExportFuncIII(env, "go_check_reserved_lock", vfsCheckReservedLock)
 	return env
 }
 
@@ -44,6 +46,13 @@ type vfsState struct {
 	files []File
 }
 
+// NewContext creates a new context to hold [api.Module] specific VFS data.
+//
+// This context should be passed to any [api.Function] calls that might
+// generate VFS host callbacks.
+//
+// The returned [io.Closer] should be closed after the [api.Module] is closed,
+// to release any associated resources.
 func NewContext(ctx context.Context) (context.Context, io.Closer) {
 	vfs := &vfsState{}
 	return context.WithValue(ctx, vfsKey{}, vfs), vfs
@@ -113,7 +122,7 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) _
 }
 
 func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) _ErrorCode {
-	vfs := vfsAPIGet(mod, pVfs)
+	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zRelative, _MAX_PATHNAME)
 
 	path, err := vfs.FullPathname(path)
@@ -126,19 +135,19 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull
 	mem[len(path)] = 0
 	copy(mem, path)
 
-	return vfsAPIErrorCode(err, _CANTOPEN_FULLPATH)
+	return vfsErrorCode(err, _CANTOPEN_FULLPATH)
 }
 
 func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32) _ErrorCode {
-	vfs := vfsAPIGet(mod, pVfs)
+	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
 	err := vfs.Delete(path, syncDir != 0)
-	return vfsAPIErrorCode(err, _IOERR_DELETE)
+	return vfsErrorCode(err, _IOERR_DELETE)
 }
 
 func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags AccessFlag, pResOut uint32) _ErrorCode {
-	vfs := vfsAPIGet(mod, pVfs)
+	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
 	ok, err := vfs.Access(path, flags)
@@ -148,11 +157,11 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 	}
 
 	util.WriteUint32(mod, pResOut, res)
-	return vfsAPIErrorCode(err, _IOERR_ACCESS)
+	return vfsErrorCode(err, _IOERR_ACCESS)
 }
 
 func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, flags OpenFlag, pOutFlags uint32) _ErrorCode {
-	vfs := vfsAPIGet(mod, pVfs)
+	vfs := vfsGet(mod, pVfs)
 
 	var path string
 	if zPath != 0 {
@@ -161,7 +170,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 
 	file, flags, err := vfs.Open(path, flags)
 	if err != nil {
-		return vfsAPIErrorCode(err, _CANTOPEN)
+		return vfsErrorCode(err, _CANTOPEN)
 	}
 
 	vfsFileRegister(ctx, mod, pFile, file)
@@ -210,32 +219,32 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOf
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Truncate(nByte)
-	return vfsAPIErrorCode(err, _IOERR_TRUNCATE)
+	return vfsErrorCode(err, _IOERR_TRUNCATE)
 }
 
 func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags SyncFlag) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Sync(flags)
-	return vfsAPIErrorCode(err, _IOERR_FSYNC)
+	return vfsErrorCode(err, _IOERR_FSYNC)
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	size, err := file.FileSize()
 	util.WriteUint64(mod, pSize, uint64(size))
-	return vfsAPIErrorCode(err, _IOERR_SEEK)
+	return vfsErrorCode(err, _IOERR_SEEK)
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Lock(eLock)
-	return vfsAPIErrorCode(err, _IOERR_LOCK)
+	return vfsErrorCode(err, _IOERR_LOCK)
 }
 
 func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Unlock(eLock)
-	return vfsAPIErrorCode(err, _IOERR_UNLOCK)
+	return vfsErrorCode(err, _IOERR_UNLOCK)
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
@@ -248,7 +257,7 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 	}
 
 	util.WriteUint32(mod, pResOut, res)
-	return vfsAPIErrorCode(err, _IOERR_CHECKRESERVEDLOCK)
+	return vfsErrorCode(err, _IOERR_CHECKRESERVEDLOCK)
 }
 
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) _ErrorCode {
@@ -290,7 +299,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 		if file, ok := file.(FileSizeHint); ok {
 			size := util.ReadUint64(mod, pArg)
 			err := file.SizeHint(int64(size))
-			return vfsAPIErrorCode(err, _IOERR_TRUNCATE)
+			return vfsErrorCode(err, _IOERR_TRUNCATE)
 		}
 
 	case _FCNTL_HAS_MOVED:
@@ -303,7 +312,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			}
 
 			util.WriteUint32(mod, pArg, res)
-			return vfsAPIErrorCode(err, _IOERR_FSTAT)
+			return vfsErrorCode(err, _IOERR_FSTAT)
 		}
 	}
 
@@ -326,17 +335,22 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 	return file.DeviceCharacteristics()
 }
 
-func vfsAPIGet(mod api.Module, pVfs uint32) VFS {
-	if pVfs != 0 {
-		name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
-		if vfs := Find(name); vfs != nil {
-			return vfs
-		}
+func vfsGet(mod api.Module, pVfs uint32) VFS {
+	if pVfs == 0 {
+		return vfsOS{}
 	}
-	return vfsOS{}
+	const zNameOffset = 16
+	name := util.ReadString(mod, util.ReadUint32(mod, pVfs+zNameOffset), _MAX_STRING)
+	if name == "os" {
+		return vfsOS{}
+	}
+	if vfs := Find(name); vfs != nil {
+		return vfs
+	}
+	panic(util.NoVFSErr + util.ErrorString(name))
 }
 
-func vfsAPIErrorCode(err error, def _ErrorCode) _ErrorCode {
+func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 	if err == nil {
 		return _OK
 	}

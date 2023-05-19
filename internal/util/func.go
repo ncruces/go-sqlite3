@@ -16,7 +16,7 @@ func (fn funcII[TR, T0]) Call(ctx context.Context, mod api.Module, stack []uint6
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0])))
 }
 
-func RegisterFuncII[TR, T0 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0) TR) {
+func ExportFuncII[TR, T0 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcII[TR, T0](fn),
 			[]api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
@@ -29,7 +29,7 @@ func (fn funcIII[TR, T0, T1]) Call(ctx context.Context, mod api.Module, stack []
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1])))
 }
 
-func RegisterFuncIII[TR, T0, T1 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1) TR) {
+func ExportFuncIII[TR, T0, T1 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIII[TR, T0, T1](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
@@ -42,7 +42,7 @@ func (fn funcIIII[TR, T0, T1, T2]) Call(ctx context.Context, mod api.Module, sta
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2])))
 }
 
-func RegisterFuncIIII[TR, T0, T1, T2 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2) TR) {
+func ExportFuncIIII[TR, T0, T1, T2 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIII[TR, T0, T1, T2](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
@@ -55,7 +55,7 @@ func (fn funcIIIII[TR, T0, T1, T2, T3]) Call(ctx context.Context, mod api.Module
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2]), T3(stack[3])))
 }
 
-func RegisterFuncIIIII[TR, T0, T1, T2, T3 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3) TR) {
+func ExportFuncIIIII[TR, T0, T1, T2, T3 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIIII[TR, T0, T1, T2, T3](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
@@ -68,7 +68,7 @@ func (fn funcIIIIII[TR, T0, T1, T2, T3, T4]) Call(ctx context.Context, mod api.M
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2]), T3(stack[3]), T4(stack[4])))
 }
 
-func RegisterFuncIIIIII[TR, T0, T1, T2, T3, T4 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3, T4) TR) {
+func ExportFuncIIIIII[TR, T0, T1, T2, T3, T4 i32](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3, T4) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIIIII[TR, T0, T1, T2, T3, T4](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}).
@@ -81,7 +81,7 @@ func (fn funcIIIIJ[TR, T0, T1, T2, T3]) Call(ctx context.Context, mod api.Module
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1]), T2(stack[2]), T3(stack[3])))
 }
 
-func RegisterFuncIIIIJ[TR, T0, T1, T2 i32, T3 i64](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3) TR) {
+func ExportFuncIIIIJ[TR, T0, T1, T2 i32, T3 i64](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1, T2, T3) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIIIJ[TR, T0, T1, T2, T3](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
@@ -94,7 +94,7 @@ func (fn funcIIJ[TR, T0, T1]) Call(ctx context.Context, mod api.Module, stack []
 	stack[0] = uint64(fn(ctx, mod, T0(stack[0]), T1(stack[1])))
 }
 
-func RegisterFuncIIJ[TR, T0 i32, T1 i64](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1) TR) {
+func ExportFuncIIJ[TR, T0 i32, T1 i64](mod wazero.HostModuleBuilder, name string, fn func(context.Context, api.Module, T0, T1) TR) {
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIJ[TR, T0, T1](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).

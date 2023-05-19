@@ -42,7 +42,7 @@ const (
 	_OK_SYMLINK              _ErrorCode = util.OK_SYMLINK
 )
 
-// OpenFlag is a flag for the [VFS.Open] method.
+// OpenFlag is a flag for the [VFS] Open method.
 //
 // https://www.sqlite.org/c3ref/c_open_autoproxy.html
 type OpenFlag uint32
@@ -71,7 +71,7 @@ const (
 	OPEN_NOFOLLOW      OpenFlag = 0x01000000 /* Ok for sqlite3_open_v2() */
 )
 
-// AccessFlag is a flag for the [VFS.Access] method.
+// AccessFlag is a flag for the [VFS] Access method.
 //
 // https://www.sqlite.org/c3ref/c_access_exists.html
 type AccessFlag uint32
@@ -82,7 +82,7 @@ const (
 	ACCESS_READ      AccessFlag = 2 /* Unused */
 )
 
-// SyncFlag is a flag for the [File.Sync] method.
+// SyncFlag is a flag for the [File] Sync method.
 //
 // https://www.sqlite.org/c3ref/c_sync_dataonly.html
 type SyncFlag uint32
@@ -93,7 +93,7 @@ const (
 	SYNC_DATAONLY SyncFlag = 0x00010
 )
 
-// LockLevel is a value used with [File.Lock] and [File.Unlock] methods.
+// LockLevel is a value used with [File] Lock and Unlock methods.
 //
 // https://www.sqlite.org/c3ref/c_lock_exclusive.html
 type LockLevel uint32
@@ -139,7 +139,7 @@ const (
 	LOCK_EXCLUSIVE LockLevel = 4 /* xLock() only */
 )
 
-// DeviceCharacteristic is a flag retuned by the [File.DeviceCharacteristic] method.
+// DeviceCharacteristic is a flag retuned by the [File] DeviceCharacteristics method.
 //
 // https://www.sqlite.org/c3ref/c_iocap_atomic.html
 type DeviceCharacteristic uint32

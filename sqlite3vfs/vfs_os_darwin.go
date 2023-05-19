@@ -47,7 +47,7 @@ func osAllocate(file *os.File, size int64) error {
 		Length:  size,
 	}
 
-	// Try to get a continous chunk of disk space.
+	// Try to get a continuous chunk of disk space.
 	err = unix.FcntlFstore(file.Fd(), unix.F_PREALLOCATE, &store)
 	if err != nil {
 		// OK, perhaps we are too fragmented, allocate non-continuous.
