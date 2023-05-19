@@ -28,7 +28,7 @@ func osAccess(path string, flags AccessFlag) error {
 func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
 	// Test the PENDING lock before acquiring a new SHARED lock.
 	if pending, _ := osCheckLock(file, _PENDING_BYTE, 1); pending {
-		return _ErrorCode(_BUSY)
+		return _BUSY
 	}
 	// Acquire the SHARED lock.
 	return osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
@@ -78,9 +78,9 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 			unix.ENOLCK,
 			unix.EDEADLK,
 			unix.ETIMEDOUT:
-			return _ErrorCode(_BUSY)
+			return _BUSY
 		case unix.EPERM:
-			return _ErrorCode(_PERM)
+			return _PERM
 		}
 	}
 	return def

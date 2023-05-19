@@ -1,11 +1,11 @@
 // Package sqlite3vfs wraps the C SQLite VFS API.
 package sqlite3vfs
 
-import (
-	"sync"
-)
+import "sync"
 
 // A VFS defines the interface between the SQLite core and the underlying operating system.
+//
+// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes.
 //
 // https://www.sqlite.org/c3ref/vfs.html
 type VFS interface {
@@ -17,7 +17,9 @@ type VFS interface {
 
 // A File represents an open file in the OS interface layer.
 //
-// https://www.sqlite.org/c3ref/file.html
+// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes.
+// In particular, sqlite3.BUSY is necessary to correctly implement lock methods.
+//
 // https://www.sqlite.org/c3ref/io_methods.html
 type File interface {
 	Close() error

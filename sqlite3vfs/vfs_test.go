@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -218,6 +219,11 @@ func Test_vfsFile(t *testing.T) {
 		t.Fatal("returned", rc)
 	}
 
+	// Check sector size.
+	if size := vfsSectorSize(ctx, mod, 4); size != _DEFAULT_SECTOR_SIZE {
+		t.Fatal("returned", size)
+	}
+
 	// Write stuff.
 	text := "Hello world!"
 	util.WriteString(mod, 16, text)
@@ -266,6 +272,68 @@ func Test_vfsFile(t *testing.T) {
 	}
 	if got := util.ReadString(mod, 32, 64); got != text[:4] {
 		t.Errorf("got %q", got)
+	}
+
+	// Close the file.
+	rc = vfsClose(ctx, mod, 4)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+}
+
+func Test_vfsFile_psow(t *testing.T) {
+	mod := util.NewMockModule(128)
+	ctx, vfs := NewContext(context.TODO())
+	defer vfs.Close()
+
+	// Open a temporary file.
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Read powersafe overwrite.
+	util.WriteUint32(mod, 16, math.MaxUint32)
+	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, 16); got == 0 {
+		t.Error("psow disabled")
+	}
+
+	// Unset powersafe overwrite.
+	util.WriteUint32(mod, 16, 0)
+	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Read powersafe overwrite.
+	util.WriteUint32(mod, 16, math.MaxUint32)
+	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, 16); got != 0 {
+		t.Error("psow enabled")
+	}
+
+	// Set powersafe overwrite.
+	util.WriteUint32(mod, 16, 1)
+	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	// Read powersafe overwrite.
+	util.WriteUint32(mod, 16, math.MaxUint32)
+	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, 16); got == 0 {
+		t.Error("psow disabled")
 	}
 
 	// Close the file.

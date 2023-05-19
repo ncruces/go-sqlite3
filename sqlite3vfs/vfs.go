@@ -15,6 +15,8 @@ import (
 
 // ExportHostFunctions registers the required VFS host functions
 // with the provided env module.
+//
+// Users of the [github.com/ncruces/go-sqlite3] package need not call this directly.
 func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_vfs_find", vfsFind)
 	util.ExportFuncIIJ(env, "go_localtime", vfsLocaltime)
@@ -53,6 +55,8 @@ type vfsState struct {
 //
 // The returned [io.Closer] should be closed after the [api.Module] is closed,
 // to release any associated resources.
+//
+// Users of the [github.com/ncruces/go-sqlite3] package need not call this directly.
 func NewContext(ctx context.Context) (context.Context, io.Closer) {
 	vfs := &vfsState{}
 	return context.WithValue(ctx, vfsKey{}, vfs), vfs

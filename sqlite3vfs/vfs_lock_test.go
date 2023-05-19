@@ -60,6 +60,13 @@ func Test_vfsLock(t *testing.T) {
 	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
 	}
+	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_NONE) {
+		t.Error("invalid lock state", got)
+	}
 
 	rc = vfsLock(ctx, mod, pFile2, LOCK_SHARED)
 	if rc != _OK {
@@ -79,6 +86,13 @@ func Test_vfsLock(t *testing.T) {
 	}
 	if got := util.ReadUint32(mod, pOutput); got != 0 {
 		t.Error("file was locked")
+	}
+	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_SHARED) {
+		t.Error("invalid lock state", got)
 	}
 
 	rc = vfsLock(ctx, mod, pFile2, LOCK_RESERVED)
@@ -104,6 +118,13 @@ func Test_vfsLock(t *testing.T) {
 	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
+	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_RESERVED) {
+		t.Error("invalid lock state", got)
+	}
 
 	rc = vfsLock(ctx, mod, pFile2, LOCK_EXCLUSIVE)
 	if rc != _OK {
@@ -124,6 +145,13 @@ func Test_vfsLock(t *testing.T) {
 	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
 	}
+	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_EXCLUSIVE) {
+		t.Error("invalid lock state", got)
+	}
 
 	rc = vfsLock(ctx, mod, pFile1, LOCK_SHARED)
 	if rc == _OK {
@@ -143,6 +171,13 @@ func Test_vfsLock(t *testing.T) {
 	}
 	if got := util.ReadUint32(mod, pOutput); got == 0 {
 		t.Error("file wasn't locked")
+	}
+	rc = vfsFileControl(ctx, mod, pFile1, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_NONE) {
+		t.Error("invalid lock state", got)
 	}
 
 	rc = vfsUnlock(ctx, mod, pFile2, LOCK_SHARED)
@@ -166,6 +201,18 @@ func Test_vfsLock(t *testing.T) {
 	}
 
 	rc = vfsLock(ctx, mod, pFile1, LOCK_SHARED)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	rc = vfsFileControl(ctx, mod, pFile1, _FCNTL_LOCKSTATE, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_SHARED) {
+		t.Error("invalid lock state", got)
+	}
+
+	rc = vfsFileControl(ctx, mod, pFile1, _FCNTL_LOCK_TIMEOUT, 1)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
