@@ -5,7 +5,7 @@ import "sync"
 
 // A VFS defines the interface between the SQLite core and the underlying operating system.
 //
-// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes.
+// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
 //
 // https://www.sqlite.org/c3ref/vfs.html
 type VFS interface {
@@ -17,7 +17,7 @@ type VFS interface {
 
 // A File represents an open file in the OS interface layer.
 //
-// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes.
+// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
 // In particular, sqlite3.BUSY is necessary to correctly implement lock methods.
 //
 // https://www.sqlite.org/c3ref/io_methods.html
@@ -44,7 +44,7 @@ type FileLockState interface {
 	LockState() LockLevel
 }
 
-// FileLockState extends [File] to implement the
+// FileSizeHint extends [File] to implement the
 // SQLITE_FCNTL_SIZE_HINT file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
@@ -53,7 +53,7 @@ type FileSizeHint interface {
 	SizeHint(size int64) error
 }
 
-// FileLockState extends [File] to implement the
+// FileHasMoved extends [File] to implement the
 // SQLITE_FCNTL_HAS_MOVED file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
@@ -62,7 +62,7 @@ type FileHasMoved interface {
 	HasMoved() (bool, error)
 }
 
-// FileLockState extends [File] to implement the
+// FilePowersafeOverwrite extends [File] to implement the
 // SQLITE_FCNTL_POWERSAFE_OVERWRITE file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
