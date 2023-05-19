@@ -20,6 +20,28 @@ type File interface {
 	Unlock(lock LockLevel) error
 	CheckReservedLock() (bool, error)
 	SectorSize() int
+	DeviceCharacteristics() DeviceCharacteristic
+}
+
+type FileLockState interface {
+	File
+	LockState() LockLevel
+}
+
+type FileSizeHint interface {
+	File
+	SizeHint(size int64) error
+}
+
+type FileHasMoved interface {
+	File
+	HasMoved() (bool, error)
+}
+
+type FilePowersafeOverwrite interface {
+	File
+	PowersafeOverwrite() bool
+	SetPowersafeOverwrite(bool)
 }
 
 var (

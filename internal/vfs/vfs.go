@@ -3,10 +3,7 @@ package vfs
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"io"
-	"io/fs"
-	"os"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -255,45 +252,61 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 }
 
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile)
+
 	switch op {
 	case _FCNTL_LOCKSTATE:
-		file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-		if !ok {
-			return _NOTFOUND
+		if file, ok := file.(sqlite3vfs.FileLockState); ok {
+			util.WriteUint32(mod, pArg, uint32(file.LockState()))
+			return _OK
 		}
-		util.WriteUint32(mod, pArg, uint32(file.lock))
-		return _OK
+
 	case _FCNTL_LOCK_TIMEOUT:
-		file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-		if !ok {
-			return _NOTFOUND
+		if file, ok := file.(*vfsFile); ok {
+			millis := file.lockTimeout.Milliseconds()
+			file.lockTimeout = time.Duration(util.ReadUint32(mod, pArg)) * time.Millisecond
+			util.WriteUint32(mod, pArg, uint32(millis))
+			return _OK
 		}
-		millis := file.lockTimeout.Milliseconds()
-		file.lockTimeout = time.Duration(util.ReadUint32(mod, pArg)) * time.Millisecond
-		util.WriteUint32(mod, pArg, uint32(millis))
-		return _OK
+
 	case _FCNTL_POWERSAFE_OVERWRITE:
-		file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-		if !ok {
-			return _NOTFOUND
-		}
-		switch util.ReadUint32(mod, pArg) {
-		case 0:
-			file.psow = false
-		case 1:
-			file.psow = true
-		default:
-			if file.psow {
-				util.WriteUint32(mod, pArg, 1)
-			} else {
-				util.WriteUint32(mod, pArg, 0)
+		if file, ok := file.(sqlite3vfs.FilePowersafeOverwrite); ok {
+			switch util.ReadUint32(mod, pArg) {
+			case 0:
+				file.SetPowersafeOverwrite(false)
+			case 1:
+				file.SetPowersafeOverwrite(true)
+			default:
+				if file.PowersafeOverwrite() {
+					util.WriteUint32(mod, pArg, 1)
+				} else {
+					util.WriteUint32(mod, pArg, 0)
+				}
 			}
+			return _OK
 		}
+
 	case _FCNTL_SIZE_HINT:
-		return vfsSizeHint(ctx, mod, pFile, pArg)
+		if file, ok := file.(sqlite3vfs.FileSizeHint); ok {
+			size := util.ReadUint64(mod, pArg)
+			err := file.SizeHint(int64(size))
+			return vfsAPIErrorCode(err, _IOERR_TRUNCATE)
+		}
+
 	case _FCNTL_HAS_MOVED:
-		return vfsFileMoved(ctx, mod, pFile, pArg)
+		if file, ok := file.(sqlite3vfs.FileHasMoved); ok {
+			moved, err := file.HasMoved()
+
+			var res uint32
+			if moved {
+				res = 1
+			}
+
+			util.WriteUint32(mod, pArg, res)
+			return vfsAPIErrorCode(err, _IOERR_FSTAT)
+		}
 	}
+
 	// Consider also implementing these opcodes (in use by SQLite):
 	//  _FCNTL_BUSYHANDLER
 	//  _FCNTL_COMMIT_PHASETWO
@@ -309,43 +322,6 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 }
 
 func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) _DeviceCharacteristic {
-	file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-	if ok && file.psow {
-		return _IOCAP_POWERSAFE_OVERWRITE
-	}
-	return 0
-}
-
-func vfsSizeHint(ctx context.Context, mod api.Module, pFile, pArg uint32) _ErrorCode {
-	file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-	if !ok {
-		return _NOTFOUND
-	}
-	size := util.ReadUint64(mod, pArg)
-	err := osAllocate(file.File, int64(size))
-	if err != nil {
-		return _IOERR_TRUNCATE
-	}
-	return _OK
-}
-
-func vfsFileMoved(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file, ok := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-	if !ok {
-		return _NOTFOUND
-	}
-	fi, err := file.Stat()
-	if err != nil {
-		return _IOERR_FSTAT
-	}
-	pi, err := os.Stat(file.Name())
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return _IOERR_FSTAT
-	}
-	var res uint32
-	if !os.SameFile(fi, pi) {
-		res = 1
-	}
-	util.WriteUint32(mod, pResOut, res)
-	return _OK
+	file := vfsFileGet(ctx, mod, pFile)
+	return file.DeviceCharacteristics()
 }

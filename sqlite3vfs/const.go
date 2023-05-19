@@ -96,3 +96,26 @@ const (
 	// time that EXCLUSIVE locks are held.
 	LOCK_EXCLUSIVE LockLevel = 4 /* xLock() only */
 )
+
+// DeviceCharacteristic is a flag retuned by the [File.DeviceCharacteristic] method.
+//
+// https://www.sqlite.org/c3ref/c_iocap_atomic.html
+type DeviceCharacteristic uint32
+
+const (
+	IOCAP_ATOMIC                DeviceCharacteristic = 0x00000001
+	IOCAP_ATOMIC512             DeviceCharacteristic = 0x00000002
+	IOCAP_ATOMIC1K              DeviceCharacteristic = 0x00000004
+	IOCAP_ATOMIC2K              DeviceCharacteristic = 0x00000008
+	IOCAP_ATOMIC4K              DeviceCharacteristic = 0x00000010
+	IOCAP_ATOMIC8K              DeviceCharacteristic = 0x00000020
+	IOCAP_ATOMIC16K             DeviceCharacteristic = 0x00000040
+	IOCAP_ATOMIC32K             DeviceCharacteristic = 0x00000080
+	IOCAP_ATOMIC64K             DeviceCharacteristic = 0x00000100
+	IOCAP_SAFE_APPEND           DeviceCharacteristic = 0x00000200
+	IOCAP_SEQUENTIAL            DeviceCharacteristic = 0x00000400
+	IOCAP_UNDELETABLE_WHEN_OPEN DeviceCharacteristic = 0x00000800
+	IOCAP_POWERSAFE_OVERWRITE   DeviceCharacteristic = 0x00001000
+	IOCAP_IMMUTABLE             DeviceCharacteristic = 0x00002000
+	IOCAP_BATCH_ATOMIC          DeviceCharacteristic = 0x00004000
+)

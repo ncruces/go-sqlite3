@@ -101,6 +101,27 @@ const (
 	_LOCK_EXCLUSIVE = sqlite3vfs.LOCK_EXCLUSIVE
 )
 
+// https://www.sqlite.org/c3ref/c_iocap_atomic.html
+type _DeviceCharacteristic = sqlite3vfs.DeviceCharacteristic
+
+const (
+	_IOCAP_ATOMIC                = sqlite3vfs.IOCAP_ATOMIC
+	_IOCAP_ATOMIC512             = sqlite3vfs.IOCAP_ATOMIC512
+	_IOCAP_ATOMIC1K              = sqlite3vfs.IOCAP_ATOMIC1K
+	_IOCAP_ATOMIC2K              = sqlite3vfs.IOCAP_ATOMIC2K
+	_IOCAP_ATOMIC4K              = sqlite3vfs.IOCAP_ATOMIC4K
+	_IOCAP_ATOMIC8K              = sqlite3vfs.IOCAP_ATOMIC8K
+	_IOCAP_ATOMIC16K             = sqlite3vfs.IOCAP_ATOMIC16K
+	_IOCAP_ATOMIC32K             = sqlite3vfs.IOCAP_ATOMIC32K
+	_IOCAP_ATOMIC64K             = sqlite3vfs.IOCAP_ATOMIC64K
+	_IOCAP_SAFE_APPEND           = sqlite3vfs.IOCAP_SAFE_APPEND
+	_IOCAP_SEQUENTIAL            = sqlite3vfs.IOCAP_SEQUENTIAL
+	_IOCAP_UNDELETABLE_WHEN_OPEN = sqlite3vfs.IOCAP_UNDELETABLE_WHEN_OPEN
+	_IOCAP_POWERSAFE_OVERWRITE   = sqlite3vfs.IOCAP_POWERSAFE_OVERWRITE
+	_IOCAP_IMMUTABLE             = sqlite3vfs.IOCAP_IMMUTABLE
+	_IOCAP_BATCH_ATOMIC          = sqlite3vfs.IOCAP_BATCH_ATOMIC
+)
+
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
 type _FcntlOpcode uint32
 
@@ -146,25 +167,4 @@ const (
 	_FCNTL_EXTERNAL_READER       _FcntlOpcode = 40
 	_FCNTL_CKSM_FILE             _FcntlOpcode = 41
 	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
-)
-
-// https://www.sqlite.org/c3ref/c_iocap_atomic.html
-type _DeviceCharacteristic uint32
-
-const (
-	_IOCAP_ATOMIC                _DeviceCharacteristic = 0x00000001
-	_IOCAP_ATOMIC512             _DeviceCharacteristic = 0x00000002
-	_IOCAP_ATOMIC1K              _DeviceCharacteristic = 0x00000004
-	_IOCAP_ATOMIC2K              _DeviceCharacteristic = 0x00000008
-	_IOCAP_ATOMIC4K              _DeviceCharacteristic = 0x00000010
-	_IOCAP_ATOMIC8K              _DeviceCharacteristic = 0x00000020
-	_IOCAP_ATOMIC16K             _DeviceCharacteristic = 0x00000040
-	_IOCAP_ATOMIC32K             _DeviceCharacteristic = 0x00000080
-	_IOCAP_ATOMIC64K             _DeviceCharacteristic = 0x00000100
-	_IOCAP_SAFE_APPEND           _DeviceCharacteristic = 0x00000200
-	_IOCAP_SEQUENTIAL            _DeviceCharacteristic = 0x00000400
-	_IOCAP_UNDELETABLE_WHEN_OPEN _DeviceCharacteristic = 0x00000800
-	_IOCAP_POWERSAFE_OVERWRITE   _DeviceCharacteristic = 0x00001000
-	_IOCAP_IMMUTABLE             _DeviceCharacteristic = 0x00002000
-	_IOCAP_BATCH_ATOMIC          _DeviceCharacteristic = 0x00004000
 )

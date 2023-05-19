@@ -137,7 +137,7 @@ const (
 	AUTH_USER               ExtendedErrorCode = xErrorCode(AUTH) | (1 << 8)
 )
 
-// OpenFlag is a flag for a file open operation.
+// OpenFlag is a flag for the [OpenFlags] function.
 //
 // https://www.sqlite.org/c3ref/c_open_autoproxy.html
 type OpenFlag uint32
