@@ -1,4 +1,4 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"bytes"
@@ -181,7 +181,7 @@ func Test_vfsAccess(t *testing.T) {
 	util.WriteString(mod, 8, dir)
 	ctx := context.TODO()
 
-	rc := vfsAccess(ctx, mod, 0, 8, _ACCESS_EXISTS, 4)
+	rc := vfsAccess(ctx, mod, 0, 8, ACCESS_EXISTS, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -189,7 +189,7 @@ func Test_vfsAccess(t *testing.T) {
 		t.Error("directory did not exist")
 	}
 
-	rc = vfsAccess(ctx, mod, 0, 8, _ACCESS_READWRITE, 4)
+	rc = vfsAccess(ctx, mod, 0, 8, ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -198,7 +198,7 @@ func Test_vfsAccess(t *testing.T) {
 	}
 
 	util.WriteString(mod, 8, file)
-	rc = vfsAccess(ctx, mod, 0, 8, _ACCESS_READWRITE, 4)
+	rc = vfsAccess(ctx, mod, 0, 8, ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -209,11 +209,11 @@ func Test_vfsAccess(t *testing.T) {
 
 func Test_vfsFile(t *testing.T) {
 	mod := util.NewMockModule(128)
-	ctx, vfs := Context(context.TODO())
+	ctx, vfs := NewContext(context.TODO())
 	defer vfs.Close()
 
 	// Open a temporary file.
-	rc := vfsOpen(ctx, mod, 0, 0, 4, _OPEN_CREATE|_OPEN_EXCLUSIVE|_OPEN_READWRITE|_OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

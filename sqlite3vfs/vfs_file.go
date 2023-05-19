@@ -1,4 +1,4 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -57,9 +56,9 @@ func (vfsOS) Delete(path string, syncDir bool) error {
 	return nil
 }
 
-func (vfsOS) Access(name string, flags sqlite3vfs.AccessFlag) (bool, error) {
+func (vfsOS) Access(name string, flags AccessFlag) (bool, error) {
 	err := osAccess(name, flags)
-	if flags == _ACCESS_EXISTS {
+	if flags == ACCESS_EXISTS {
 		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
@@ -71,18 +70,18 @@ func (vfsOS) Access(name string, flags sqlite3vfs.AccessFlag) (bool, error) {
 	return err == nil, err
 }
 
-func (vfsOS) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqlite3vfs.OpenFlag, error) {
+func (vfsOS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
 	var oflags int
-	if flags&_OPEN_EXCLUSIVE != 0 {
+	if flags&OPEN_EXCLUSIVE != 0 {
 		oflags |= os.O_EXCL
 	}
-	if flags&_OPEN_CREATE != 0 {
+	if flags&OPEN_CREATE != 0 {
 		oflags |= os.O_CREATE
 	}
-	if flags&_OPEN_READONLY != 0 {
+	if flags&OPEN_READONLY != 0 {
 		oflags |= os.O_RDONLY
 	}
-	if flags&_OPEN_READWRITE != 0 {
+	if flags&OPEN_READWRITE != 0 {
 		oflags |= os.O_RDWR
 	}
 
@@ -97,17 +96,17 @@ func (vfsOS) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqli
 		return nil, flags, err
 	}
 
-	if flags&_OPEN_DELETEONCLOSE != 0 {
+	if flags&OPEN_DELETEONCLOSE != 0 {
 		os.Remove(f.Name())
 	}
 
 	file := vfsFile{
 		File:     f,
 		psow:     true,
-		readOnly: flags&_OPEN_READONLY != 0,
+		readOnly: flags&OPEN_READONLY != 0,
 		syncDir: runtime.GOOS != "windows" &&
-			flags&(_OPEN_CREATE) != 0 &&
-			flags&(_OPEN_MAIN_JOURNAL|_OPEN_SUPER_JOURNAL|_OPEN_WAL) != 0,
+			flags&(OPEN_CREATE) != 0 &&
+			flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0,
 	}
 	return &file, flags, nil
 }
@@ -115,7 +114,7 @@ func (vfsOS) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqli
 type vfsFile struct {
 	*os.File
 	lockTimeout time.Duration
-	lock        _LockLevel
+	lock        LockLevel
 	psow        bool
 	syncDir     bool
 	readOnly    bool
@@ -123,13 +122,13 @@ type vfsFile struct {
 
 var (
 	// Ensure these interfaces are implemented:
-	_ sqlite3vfs.FileLockState          = &vfsFile{}
-	_ sqlite3vfs.FileHasMoved           = &vfsFile{}
-	_ sqlite3vfs.FileSizeHint           = &vfsFile{}
-	_ sqlite3vfs.FilePowersafeOverwrite = &vfsFile{}
+	_ FileLockState          = &vfsFile{}
+	_ FileHasMoved           = &vfsFile{}
+	_ FileSizeHint           = &vfsFile{}
+	_ FilePowersafeOverwrite = &vfsFile{}
 )
 
-func vfsFileNew(vfs *vfsState, file sqlite3vfs.File) uint32 {
+func vfsFileNew(vfs *vfsState, file File) uint32 {
 	// Find an empty slot.
 	for id, f := range vfs.files {
 		if f == nil {
@@ -143,12 +142,12 @@ func vfsFileNew(vfs *vfsState, file sqlite3vfs.File) uint32 {
 	return uint32(len(vfs.files) - 1)
 }
 
-func vfsFileRegister(ctx context.Context, mod api.Module, pFile uint32, file sqlite3vfs.File) {
+func vfsFileRegister(ctx context.Context, mod api.Module, pFile uint32, file File) {
 	id := vfsFileNew(ctx.Value(vfsKey{}).(*vfsState), file)
 	util.WriteUint32(mod, pFile+4, id)
 }
 
-func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) sqlite3vfs.File {
+func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) File {
 	vfs := ctx.Value(vfsKey{}).(*vfsState)
 	id := util.ReadUint32(mod, pFile+4)
 	return vfs.files[id]
@@ -162,9 +161,9 @@ func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {
 	return file.Close()
 }
 
-func (f *vfsFile) Sync(flags sqlite3vfs.SyncFlag) error {
-	dataonly := (flags & _SYNC_DATAONLY) != 0
-	fullsync := (flags & 0x0f) == _SYNC_FULL
+func (f *vfsFile) Sync(flags SyncFlag) error {
+	dataonly := (flags & SYNC_DATAONLY) != 0
+	fullsync := (flags & 0x0f) == SYNC_FULL
 
 	err := osSync(f.File, fullsync, dataonly)
 	if err != nil {
@@ -193,9 +192,9 @@ func (*vfsFile) SectorSize() int {
 	return _DEFAULT_SECTOR_SIZE
 }
 
-func (f *vfsFile) DeviceCharacteristics() sqlite3vfs.DeviceCharacteristic {
+func (f *vfsFile) DeviceCharacteristics() DeviceCharacteristic {
 	if f.psow {
-		return _IOCAP_POWERSAFE_OVERWRITE
+		return IOCAP_POWERSAFE_OVERWRITE
 	}
 	return 0
 }
@@ -216,6 +215,6 @@ func (f *vfsFile) HasMoved() (bool, error) {
 	return !os.SameFile(fi, pi), nil
 }
 
-func (f *vfsFile) LockState() sqlite3vfs.LockLevel { return f.lock }
+func (f *vfsFile) LockState() LockLevel            { return f.lock }
 func (f *vfsFile) PowersafeOverwrite() bool        { return f.psow }
 func (f *vfsFile) SetPowersafeOverwrite(psow bool) { f.psow = psow }

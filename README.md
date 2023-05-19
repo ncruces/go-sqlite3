@@ -19,7 +19,7 @@ embeds a build of SQLite into your application.
 ### Caveats
 
 This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html) (aka VFS)
-with a [pure Go](internal/vfs/) implementation.
+with a [pure Go](sqlite3vfs/) implementation.
 This has numerous benefits, but also comes with some drawbacks.
 
 #### Write-Ahead Logging

@@ -1,6 +1,6 @@
 //go:build unix
 
-package vfs
+package sqlite3vfs
 
 import (
 	"io/fs"
@@ -14,12 +14,12 @@ func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.OpenFile(name, flag, perm)
 }
 
-func osAccess(path string, flags _AccessFlag) error {
+func osAccess(path string, flags AccessFlag) error {
 	var access uint32 // unix.F_OK
 	switch flags {
-	case _ACCESS_READWRITE:
+	case ACCESS_READWRITE:
 		access = unix.R_OK | unix.W_OK
-	case _ACCESS_READ:
+	case ACCESS_READ:
 		access = unix.R_OK
 	}
 	return unix.Access(path, access)
@@ -43,8 +43,8 @@ func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
 	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
-func osDowngradeLock(file *os.File, state _LockLevel) _ErrorCode {
-	if state >= _LOCK_EXCLUSIVE {
+func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+	if state >= LOCK_EXCLUSIVE {
 		// Downgrade to a SHARED lock.
 		if rc := osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, 0); rc != _OK {
 			// In theory, the downgrade to a SHARED cannot fail because another
@@ -59,7 +59,7 @@ func osDowngradeLock(file *os.File, state _LockLevel) _ErrorCode {
 	return osUnlock(file, _PENDING_BYTE, 2)
 }
 
-func osReleaseLock(file *os.File, _ _LockLevel) _ErrorCode {
+func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
 	// Release all locks.
 	return osUnlock(file, 0, 0)
 }

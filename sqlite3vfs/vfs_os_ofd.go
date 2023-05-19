@@ -1,6 +1,6 @@
-//go:build freebsd || openbsd || netbsd || dragonfly || (darwin && sqlite3_bsd)
+//go:build linux || illumos
 
-package vfs
+package sqlite3vfs
 
 import (
 	"os"
@@ -10,19 +10,26 @@ import (
 )
 
 func osUnlock(file *os.File, start, len int64) _ErrorCode {
-	if start == 0 && len == 0 {
-		err := unix.Flock(int(file.Fd()), unix.LOCK_UN)
-		if err != nil {
-			return _IOERR_UNLOCK
-		}
+	err := unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &unix.Flock_t{
+		Type:  unix.F_UNLCK,
+		Start: start,
+		Len:   len,
+	})
+	if err != nil {
+		return _IOERR_UNLOCK
 	}
 	return _OK
 }
 
-func osLock(file *os.File, how int, timeout time.Duration, def _ErrorCode) _ErrorCode {
+func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, def _ErrorCode) _ErrorCode {
+	lock := unix.Flock_t{
+		Type:  typ,
+		Start: start,
+		Len:   len,
+	}
 	var err error
 	for {
-		err = unix.Flock(int(file.Fd()), how)
+		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
 		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 			break
 		}
@@ -36,11 +43,11 @@ func osLock(file *os.File, how int, timeout time.Duration, def _ErrorCode) _Erro
 }
 
 func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
-	return osLock(file, unix.LOCK_SH|unix.LOCK_NB, timeout, _IOERR_RDLOCK)
+	return osLock(file, unix.F_RDLCK, start, len, timeout, _IOERR_RDLOCK)
 }
 
 func osWriteLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
-	return osLock(file, unix.LOCK_EX|unix.LOCK_NB, timeout, _IOERR_LOCK)
+	return osLock(file, unix.F_WRLCK, start, len, timeout, _IOERR_LOCK)
 }
 
 func osCheckLock(file *os.File, start, len int64) (bool, _ErrorCode) {
@@ -49,7 +56,7 @@ func osCheckLock(file *os.File, start, len int64) (bool, _ErrorCode) {
 		Start: start,
 		Len:   len,
 	}
-	if unix.FcntlFlock(file.Fd(), unix.F_GETLK, &lock) != nil {
+	if unix.FcntlFlock(file.Fd(), unix.F_OFD_GETLK, &lock) != nil {
 		return false, _IOERR_CHECKRESERVEDLOCK
 	}
 	return lock.Type != unix.F_UNLCK, _OK

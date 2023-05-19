@@ -1,5 +1,47 @@
 package sqlite3vfs
 
+import "github.com/ncruces/go-sqlite3/internal/util"
+
+const (
+	_MAX_STRING          = 512 // Used for short strings: names, error messages…
+	_MAX_PATHNAME        = 512
+	_DEFAULT_SECTOR_SIZE = 4096
+)
+
+// https://www.sqlite.org/rescode.html
+type _ErrorCode uint32
+
+func (e _ErrorCode) Error() string {
+	return util.ErrorCodeString(uint32(e))
+}
+
+const (
+	_OK                      _ErrorCode = util.OK
+	_PERM                    _ErrorCode = util.PERM
+	_BUSY                    _ErrorCode = util.BUSY
+	_IOERR                   _ErrorCode = util.IOERR
+	_NOTFOUND                _ErrorCode = util.NOTFOUND
+	_CANTOPEN                _ErrorCode = util.CANTOPEN
+	_IOERR_READ              _ErrorCode = util.IOERR_READ
+	_IOERR_SHORT_READ        _ErrorCode = util.IOERR_SHORT_READ
+	_IOERR_WRITE             _ErrorCode = util.IOERR_WRITE
+	_IOERR_FSYNC             _ErrorCode = util.IOERR_FSYNC
+	_IOERR_DIR_FSYNC         _ErrorCode = util.IOERR_DIR_FSYNC
+	_IOERR_TRUNCATE          _ErrorCode = util.IOERR_TRUNCATE
+	_IOERR_FSTAT             _ErrorCode = util.IOERR_FSTAT
+	_IOERR_UNLOCK            _ErrorCode = util.IOERR_UNLOCK
+	_IOERR_RDLOCK            _ErrorCode = util.IOERR_RDLOCK
+	_IOERR_DELETE            _ErrorCode = util.IOERR_DELETE
+	_IOERR_ACCESS            _ErrorCode = util.IOERR_ACCESS
+	_IOERR_CHECKRESERVEDLOCK _ErrorCode = util.IOERR_CHECKRESERVEDLOCK
+	_IOERR_LOCK              _ErrorCode = util.IOERR_LOCK
+	_IOERR_CLOSE             _ErrorCode = util.IOERR_CLOSE
+	_IOERR_SEEK              _ErrorCode = util.IOERR_SEEK
+	_IOERR_DELETE_NOENT      _ErrorCode = util.IOERR_DELETE_NOENT
+	_CANTOPEN_FULLPATH       _ErrorCode = util.CANTOPEN_FULLPATH
+	_OK_SYMLINK              _ErrorCode = util.OK_SYMLINK
+)
+
 // OpenFlag is a flag for the [VFS.Open] method.
 //
 // https://www.sqlite.org/c3ref/c_open_autoproxy.html
@@ -118,4 +160,51 @@ const (
 	IOCAP_POWERSAFE_OVERWRITE   DeviceCharacteristic = 0x00001000
 	IOCAP_IMMUTABLE             DeviceCharacteristic = 0x00002000
 	IOCAP_BATCH_ATOMIC          DeviceCharacteristic = 0x00004000
+)
+
+// https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
+type _FcntlOpcode uint32
+
+const (
+	_FCNTL_LOCKSTATE             _FcntlOpcode = 1
+	_FCNTL_GET_LOCKPROXYFILE     _FcntlOpcode = 2
+	_FCNTL_SET_LOCKPROXYFILE     _FcntlOpcode = 3
+	_FCNTL_LAST_ERRNO            _FcntlOpcode = 4
+	_FCNTL_SIZE_HINT             _FcntlOpcode = 5
+	_FCNTL_CHUNK_SIZE            _FcntlOpcode = 6
+	_FCNTL_FILE_POINTER          _FcntlOpcode = 7
+	_FCNTL_SYNC_OMITTED          _FcntlOpcode = 8
+	_FCNTL_WIN32_AV_RETRY        _FcntlOpcode = 9
+	_FCNTL_PERSIST_WAL           _FcntlOpcode = 10
+	_FCNTL_OVERWRITE             _FcntlOpcode = 11
+	_FCNTL_VFSNAME               _FcntlOpcode = 12
+	_FCNTL_POWERSAFE_OVERWRITE   _FcntlOpcode = 13
+	_FCNTL_PRAGMA                _FcntlOpcode = 14
+	_FCNTL_BUSYHANDLER           _FcntlOpcode = 15
+	_FCNTL_TEMPFILENAME          _FcntlOpcode = 16
+	_FCNTL_MMAP_SIZE             _FcntlOpcode = 18
+	_FCNTL_TRACE                 _FcntlOpcode = 19
+	_FCNTL_HAS_MOVED             _FcntlOpcode = 20
+	_FCNTL_SYNC                  _FcntlOpcode = 21
+	_FCNTL_COMMIT_PHASETWO       _FcntlOpcode = 22
+	_FCNTL_WIN32_SET_HANDLE      _FcntlOpcode = 23
+	_FCNTL_WAL_BLOCK             _FcntlOpcode = 24
+	_FCNTL_ZIPVFS                _FcntlOpcode = 25
+	_FCNTL_RBU                   _FcntlOpcode = 26
+	_FCNTL_VFS_POINTER           _FcntlOpcode = 27
+	_FCNTL_JOURNAL_POINTER       _FcntlOpcode = 28
+	_FCNTL_WIN32_GET_HANDLE      _FcntlOpcode = 29
+	_FCNTL_PDB                   _FcntlOpcode = 30
+	_FCNTL_BEGIN_ATOMIC_WRITE    _FcntlOpcode = 31
+	_FCNTL_COMMIT_ATOMIC_WRITE   _FcntlOpcode = 32
+	_FCNTL_ROLLBACK_ATOMIC_WRITE _FcntlOpcode = 33
+	_FCNTL_LOCK_TIMEOUT          _FcntlOpcode = 34
+	_FCNTL_DATA_VERSION          _FcntlOpcode = 35
+	_FCNTL_SIZE_LIMIT            _FcntlOpcode = 36
+	_FCNTL_CKPT_DONE             _FcntlOpcode = 37
+	_FCNTL_RESERVE_BYTES         _FcntlOpcode = 38
+	_FCNTL_CKPT_START            _FcntlOpcode = 39
+	_FCNTL_EXTERNAL_READER       _FcntlOpcode = 40
+	_FCNTL_CKSM_FILE             _FcntlOpcode = 41
+	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
 )

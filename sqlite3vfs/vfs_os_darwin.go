@@ -1,6 +1,6 @@
 //go:build !sqlite3_bsd
 
-package vfs
+package sqlite3vfs
 
 import (
 	"io"

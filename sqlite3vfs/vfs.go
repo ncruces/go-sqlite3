@@ -1,19 +1,19 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"context"
 	"crypto/rand"
 	"io"
+	"reflect"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 	"github.com/ncruces/julianday"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
 
-func Export(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.RegisterFuncII(env, "go_vfs_find", vfsFind)
 	util.RegisterFuncIIJ(env, "go_localtime", vfsLocaltime)
 	util.RegisterFuncIIII(env, "go_randomness", vfsRandomness)
@@ -41,10 +41,10 @@ func Export(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 
 type vfsKey struct{}
 type vfsState struct {
-	files []sqlite3vfs.File
+	files []File
 }
 
-func Context(ctx context.Context) (context.Context, io.Closer) {
+func NewContext(ctx context.Context) (context.Context, io.Closer) {
 	vfs := &vfsState{}
 	return context.WithValue(ctx, vfsKey{}, vfs), vfs
 }
@@ -61,7 +61,7 @@ func (vfs *vfsState) Close() error {
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName uint32) uint32 {
 	name := util.ReadString(mod, zVfsName, _MAX_STRING)
-	if sqlite3vfs.Find(name) != nil {
+	if Find(name) != nil {
 		return 1
 	}
 	return 0
@@ -137,7 +137,7 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath, syncDir uint32)
 	return vfsAPIErrorCode(err, _IOERR_DELETE)
 }
 
-func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _AccessFlag, pResOut uint32) _ErrorCode {
+func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags AccessFlag, pResOut uint32) _ErrorCode {
 	vfs := vfsAPIGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
@@ -151,7 +151,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags _A
 	return vfsAPIErrorCode(err, _IOERR_ACCESS)
 }
 
-func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, flags _OpenFlag, pOutFlags uint32) _ErrorCode {
+func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, flags OpenFlag, pOutFlags uint32) _ErrorCode {
 	vfs := vfsAPIGet(mod, pVfs)
 
 	var path string
@@ -213,7 +213,7 @@ func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64)
 	return vfsAPIErrorCode(err, _IOERR_TRUNCATE)
 }
 
-func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags _SyncFlag) _ErrorCode {
+func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags SyncFlag) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Sync(flags)
 	return vfsAPIErrorCode(err, _IOERR_FSYNC)
@@ -226,13 +226,13 @@ func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _Erro
 	return vfsAPIErrorCode(err, _IOERR_SEEK)
 }
 
-func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
+func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Lock(eLock)
 	return vfsAPIErrorCode(err, _IOERR_LOCK)
 }
 
-func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock _LockLevel) _ErrorCode {
+func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	err := file.Unlock(eLock)
 	return vfsAPIErrorCode(err, _IOERR_UNLOCK)
@@ -256,7 +256,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 
 	switch op {
 	case _FCNTL_LOCKSTATE:
-		if file, ok := file.(sqlite3vfs.FileLockState); ok {
+		if file, ok := file.(FileLockState); ok {
 			util.WriteUint32(mod, pArg, uint32(file.LockState()))
 			return _OK
 		}
@@ -270,7 +270,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 		}
 
 	case _FCNTL_POWERSAFE_OVERWRITE:
-		if file, ok := file.(sqlite3vfs.FilePowersafeOverwrite); ok {
+		if file, ok := file.(FilePowersafeOverwrite); ok {
 			switch util.ReadUint32(mod, pArg) {
 			case 0:
 				file.SetPowersafeOverwrite(false)
@@ -287,14 +287,14 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 		}
 
 	case _FCNTL_SIZE_HINT:
-		if file, ok := file.(sqlite3vfs.FileSizeHint); ok {
+		if file, ok := file.(FileSizeHint); ok {
 			size := util.ReadUint64(mod, pArg)
 			err := file.SizeHint(int64(size))
 			return vfsAPIErrorCode(err, _IOERR_TRUNCATE)
 		}
 
 	case _FCNTL_HAS_MOVED:
-		if file, ok := file.(sqlite3vfs.FileHasMoved); ok {
+		if file, ok := file.(FileHasMoved); ok {
 			moved, err := file.HasMoved()
 
 			var res uint32
@@ -321,7 +321,28 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 	return uint32(file.SectorSize())
 }
 
-func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) _DeviceCharacteristic {
+func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) DeviceCharacteristic {
 	file := vfsFileGet(ctx, mod, pFile)
 	return file.DeviceCharacteristics()
+}
+
+func vfsAPIGet(mod api.Module, pVfs uint32) VFS {
+	if pVfs != 0 {
+		name := util.ReadString(mod, util.ReadUint32(mod, pVfs+16), _MAX_STRING)
+		if vfs := Find(name); vfs != nil {
+			return vfs
+		}
+	}
+	return vfsOS{}
+}
+
+func vfsAPIErrorCode(err error, def _ErrorCode) _ErrorCode {
+	if err == nil {
+		return _OK
+	}
+	switch v := reflect.ValueOf(err); v.Kind() {
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		return _ErrorCode(v.Uint())
+	}
+	return def
 }

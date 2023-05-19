@@ -1,4 +1,4 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"os"

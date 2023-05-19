@@ -1,4 +1,4 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"io/fs"
@@ -25,17 +25,17 @@ func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.NewFile(uintptr(r), name), nil
 }
 
-func osAccess(path string, flags _AccessFlag) error {
+func osAccess(path string, flags AccessFlag) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	if flags == _ACCESS_EXISTS {
+	if flags == ACCESS_EXISTS {
 		return nil
 	}
 
 	var want fs.FileMode = windows.S_IRUSR
-	if flags == _ACCESS_READWRITE {
+	if flags == ACCESS_READWRITE {
 		want |= windows.S_IWUSR
 	}
 	if fi.IsDir() {
@@ -79,8 +79,8 @@ func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
 	return rc
 }
 
-func osDowngradeLock(file *os.File, state _LockLevel) _ErrorCode {
-	if state >= _LOCK_EXCLUSIVE {
+func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+	if state >= LOCK_EXCLUSIVE {
 		// Release the SHARED lock.
 		osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
@@ -93,24 +93,24 @@ func osDowngradeLock(file *os.File, state _LockLevel) _ErrorCode {
 	}
 
 	// Release the PENDING and RESERVED locks.
-	if state >= _LOCK_RESERVED {
+	if state >= LOCK_RESERVED {
 		osUnlock(file, _RESERVED_BYTE, 1)
 	}
-	if state >= _LOCK_PENDING {
+	if state >= LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK
 }
 
-func osReleaseLock(file *os.File, state _LockLevel) _ErrorCode {
+func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 	// Release all locks.
-	if state >= _LOCK_RESERVED {
+	if state >= LOCK_RESERVED {
 		osUnlock(file, _RESERVED_BYTE, 1)
 	}
-	if state >= _LOCK_SHARED {
+	if state >= LOCK_SHARED {
 		osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 	}
-	if state >= _LOCK_PENDING {
+	if state >= LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK

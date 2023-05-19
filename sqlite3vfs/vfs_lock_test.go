@@ -1,4 +1,4 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func Test_vfsLock(t *testing.T) {
 		pOutput = 32
 	)
 	mod := util.NewMockModule(128)
-	ctx, vfs := Context(context.TODO())
+	ctx, vfs := NewContext(context.TODO())
 	defer vfs.Close()
 
 	vfsFileRegister(ctx, mod, pFile1, &vfsFile{File: file1})
@@ -61,7 +61,7 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(ctx, mod, pFile2, _LOCK_SHARED)
+	rc = vfsLock(ctx, mod, pFile2, LOCK_SHARED)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -81,31 +81,11 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(ctx, mod, pFile2, _LOCK_RESERVED)
+	rc = vfsLock(ctx, mod, pFile2, LOCK_RESERVED)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	rc = vfsLock(ctx, mod, pFile2, _LOCK_SHARED)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-
-	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-	if got := util.ReadUint32(mod, pOutput); got == 0 {
-		t.Error("file wasn't locked")
-	}
-	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
-	if got := util.ReadUint32(mod, pOutput); got == 0 {
-		t.Error("file wasn't locked")
-	}
-
-	rc = vfsLock(ctx, mod, pFile2, _LOCK_EXCLUSIVE)
+	rc = vfsLock(ctx, mod, pFile2, LOCK_SHARED)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -125,7 +105,27 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file wasn't locked")
 	}
 
-	rc = vfsLock(ctx, mod, pFile1, _LOCK_SHARED)
+	rc = vfsLock(ctx, mod, pFile2, LOCK_EXCLUSIVE)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+
+	rc = vfsCheckReservedLock(ctx, mod, pFile1, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
+		t.Error("file wasn't locked")
+	}
+	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, pOutput); got == 0 {
+		t.Error("file wasn't locked")
+	}
+
+	rc = vfsLock(ctx, mod, pFile1, LOCK_SHARED)
 	if rc == _OK {
 		t.Fatal("returned", rc)
 	}
@@ -145,7 +145,7 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file wasn't locked")
 	}
 
-	rc = vfsUnlock(ctx, mod, pFile2, _LOCK_SHARED)
+	rc = vfsUnlock(ctx, mod, pFile2, LOCK_SHARED)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -165,7 +165,7 @@ func Test_vfsLock(t *testing.T) {
 		t.Error("file was locked")
 	}
 
-	rc = vfsLock(ctx, mod, pFile1, _LOCK_SHARED)
+	rc = vfsLock(ctx, mod, pFile1, LOCK_SHARED)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

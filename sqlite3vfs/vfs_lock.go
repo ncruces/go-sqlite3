@@ -1,11 +1,10 @@
-package vfs
+package sqlite3vfs
 
 import (
 	"os"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 )
 
 const (
@@ -15,20 +14,20 @@ const (
 	_SHARED_SIZE   = 510
 )
 
-func (file *vfsFile) Lock(eLock sqlite3vfs.LockLevel) error {
+func (file *vfsFile) Lock(eLock LockLevel) error {
 	// Argument check. SQLite never explicitly requests a pending lock.
-	if eLock != _LOCK_SHARED && eLock != _LOCK_RESERVED && eLock != _LOCK_EXCLUSIVE {
+	if eLock != LOCK_SHARED && eLock != LOCK_RESERVED && eLock != LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	switch {
-	case file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE:
+	case file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE:
 		// Connection state check.
 		panic(util.AssertErr())
-	case file.lock == _LOCK_NONE && eLock > _LOCK_SHARED:
+	case file.lock == LOCK_NONE && eLock > LOCK_SHARED:
 		// We never move from unlocked to anything higher than a shared lock.
 		panic(util.AssertErr())
-	case file.lock != _LOCK_SHARED && eLock == _LOCK_RESERVED:
+	case file.lock != LOCK_SHARED && eLock == LOCK_RESERVED:
 		// A shared lock is always held when a reserved lock is requested.
 		panic(util.AssertErr())
 	}
@@ -39,49 +38,49 @@ func (file *vfsFile) Lock(eLock sqlite3vfs.LockLevel) error {
 	}
 
 	// Do not allow any kind of write-lock on a read-only database.
-	if file.readOnly && eLock >= _LOCK_RESERVED {
+	if file.readOnly && eLock >= LOCK_RESERVED {
 		return _IOERR_LOCK
 	}
 
 	switch eLock {
-	case _LOCK_SHARED:
+	case LOCK_SHARED:
 		// Must be unlocked to get SHARED.
-		if file.lock != _LOCK_NONE {
+		if file.lock != LOCK_NONE {
 			panic(util.AssertErr())
 		}
 		if rc := osGetSharedLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = _LOCK_SHARED
+		file.lock = LOCK_SHARED
 		return nil
 
-	case _LOCK_RESERVED:
+	case LOCK_RESERVED:
 		// Must be SHARED to get RESERVED.
-		if file.lock != _LOCK_SHARED {
+		if file.lock != LOCK_SHARED {
 			panic(util.AssertErr())
 		}
 		if rc := osGetReservedLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = _LOCK_RESERVED
+		file.lock = LOCK_RESERVED
 		return nil
 
-	case _LOCK_EXCLUSIVE:
+	case LOCK_EXCLUSIVE:
 		// Must be SHARED, RESERVED or PENDING to get EXCLUSIVE.
-		if file.lock <= _LOCK_NONE || file.lock >= _LOCK_EXCLUSIVE {
+		if file.lock <= LOCK_NONE || file.lock >= LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if file.lock < _LOCK_PENDING {
+		if file.lock < LOCK_PENDING {
 			if rc := osGetPendingLock(file.File); rc != _OK {
 				return rc
 			}
-			file.lock = _LOCK_PENDING
+			file.lock = LOCK_PENDING
 		}
 		if rc := osGetExclusiveLock(file.File, file.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = _LOCK_EXCLUSIVE
+		file.lock = LOCK_EXCLUSIVE
 		return nil
 
 	default:
@@ -89,14 +88,14 @@ func (file *vfsFile) Lock(eLock sqlite3vfs.LockLevel) error {
 	}
 }
 
-func (file *vfsFile) Unlock(eLock sqlite3vfs.LockLevel) error {
+func (file *vfsFile) Unlock(eLock LockLevel) error {
 	// Argument check.
-	if eLock != _LOCK_NONE && eLock != _LOCK_SHARED {
+	if eLock != LOCK_NONE && eLock != LOCK_SHARED {
 		panic(util.AssertErr())
 	}
 
 	// Connection state check.
-	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
+	if file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
@@ -106,16 +105,16 @@ func (file *vfsFile) Unlock(eLock sqlite3vfs.LockLevel) error {
 	}
 
 	switch eLock {
-	case _LOCK_SHARED:
+	case LOCK_SHARED:
 		if rc := osDowngradeLock(file.File, file.lock); rc != _OK {
 			return rc
 		}
-		file.lock = _LOCK_SHARED
+		file.lock = LOCK_SHARED
 		return nil
 
-	case _LOCK_NONE:
+	case LOCK_NONE:
 		rc := osReleaseLock(file.File, file.lock)
-		file.lock = _LOCK_NONE
+		file.lock = LOCK_NONE
 		return rc
 
 	default:
@@ -125,11 +124,11 @@ func (file *vfsFile) Unlock(eLock sqlite3vfs.LockLevel) error {
 
 func (file *vfsFile) CheckReservedLock() (bool, error) {
 	// Connection state check.
-	if file.lock < _LOCK_NONE || file.lock > _LOCK_EXCLUSIVE {
+	if file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
-	if file.lock >= _LOCK_RESERVED {
+	if file.lock >= LOCK_RESERVED {
 		return true, nil
 	}
 	return osCheckReservedLock(file.File)
