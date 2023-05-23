@@ -1,8 +1,6 @@
 // Package sqlite3vfs wraps the C SQLite VFS API.
 package sqlite3vfs
 
-import "sync"
-
 // A VFS defines the interface between the SQLite core and the underlying operating system.
 //
 // Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
@@ -70,40 +68,4 @@ type FilePowersafeOverwrite interface {
 	File
 	PowersafeOverwrite() bool
 	SetPowersafeOverwrite(bool)
-}
-
-var (
-	vfsRegistry    map[string]VFS
-	vfsRegistryMtx sync.Mutex
-)
-
-// Find returns a VFS given its name.
-// If there is no match, nil is returned.
-//
-// https://www.sqlite.org/c3ref/vfs_find.html
-func Find(name string) VFS {
-	vfsRegistryMtx.Lock()
-	defer vfsRegistryMtx.Unlock()
-	return vfsRegistry[name]
-}
-
-// Register registers a VFS.
-//
-// https://www.sqlite.org/c3ref/vfs_find.html
-func Register(name string, vfs VFS) {
-	vfsRegistryMtx.Lock()
-	defer vfsRegistryMtx.Unlock()
-	if vfsRegistry == nil {
-		vfsRegistry = map[string]VFS{}
-	}
-	vfsRegistry[name] = vfs
-}
-
-// Unregister unregisters a VFS.
-//
-// https://www.sqlite.org/c3ref/vfs_find.html
-func Unregister(name string) {
-	vfsRegistryMtx.Lock()
-	defer vfsRegistryMtx.Unlock()
-	delete(vfsRegistry, name)
 }

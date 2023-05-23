@@ -354,6 +354,42 @@ func vfsGet(mod api.Module, pVfs uint32) VFS {
 	panic(util.NoVFSErr + util.ErrorString(name))
 }
 
+func vfsFileNew(vfs *vfsState, file File) uint32 {
+	// Find an empty slot.
+	for id, f := range vfs.files {
+		if f == nil {
+			vfs.files[id] = file
+			return uint32(id)
+		}
+	}
+
+	// Add a new slot.
+	vfs.files = append(vfs.files, file)
+	return uint32(len(vfs.files) - 1)
+}
+
+func vfsFileRegister(ctx context.Context, mod api.Module, pFile uint32, file File) {
+	const fileHandleOffset = 4
+	id := vfsFileNew(ctx.Value(vfsKey{}).(*vfsState), file)
+	util.WriteUint32(mod, pFile+fileHandleOffset, id)
+}
+
+func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) File {
+	const fileHandleOffset = 4
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	id := util.ReadUint32(mod, pFile+fileHandleOffset)
+	return vfs.files[id]
+}
+
+func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {
+	const fileHandleOffset = 4
+	vfs := ctx.Value(vfsKey{}).(*vfsState)
+	id := util.ReadUint32(mod, pFile+fileHandleOffset)
+	file := vfs.files[id]
+	vfs.files[id] = nil
+	return file.Close()
+}
+
 func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 	if err == nil {
 		return _OK
