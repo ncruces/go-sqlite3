@@ -39,6 +39,7 @@ const (
 	_IOERR_SEEK              _ErrorCode = util.IOERR_SEEK
 	_IOERR_DELETE_NOENT      _ErrorCode = util.IOERR_DELETE_NOENT
 	_CANTOPEN_FULLPATH       _ErrorCode = util.CANTOPEN_FULLPATH
+	_CANTOPEN_ISDIR          _ErrorCode = util.CANTOPEN_ISDIR
 	_OK_SYMLINK              _ErrorCode = util.OK_SYMLINK
 )
 

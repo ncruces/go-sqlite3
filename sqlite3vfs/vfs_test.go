@@ -168,7 +168,7 @@ func Test_vfsDelete(t *testing.T) {
 
 func Test_vfsAccess(t *testing.T) {
 	dir := t.TempDir()
-	file := filepath.Join(t.TempDir(), "test.db")
+	file := filepath.Join(dir, "test.db")
 	if f, err := os.Create(file); err != nil {
 		t.Fatal(err)
 	} else {

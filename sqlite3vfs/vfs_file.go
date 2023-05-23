@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -36,10 +37,10 @@ func (vfsOS) FullPathname(path string) (string, error) {
 
 func (vfsOS) Delete(path string, syncDir bool) error {
 	err := os.Remove(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return _IOERR_DELETE_NOENT
-	}
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return _IOERR_DELETE_NOENT
+		}
 		return err
 	}
 	if runtime.GOOS != "windows" && syncDir {
@@ -93,6 +94,9 @@ func (vfsOS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
 		f, err = osOpenFile(name, oflags, 0666)
 	}
 	if err != nil {
+		if errors.Is(err, syscall.EISDIR) {
+			return nil, flags, _CANTOPEN_ISDIR
+		}
 		return nil, flags, err
 	}
 
@@ -212,7 +216,10 @@ func (f *vfsFile) HasMoved() (bool, error) {
 		return false, err
 	}
 	pi, err := os.Stat(f.Name())
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return true, nil
+		}
 		return false, err
 	}
 	return !os.SameFile(fi, pi), nil
