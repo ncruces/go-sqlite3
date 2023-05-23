@@ -23,6 +23,18 @@ func TestConn_Open_dir(t *testing.T) {
 	}
 }
 
+func TestConn_Open_notfound(t *testing.T) {
+	t.Parallel()
+
+	_, err := sqlite3.OpenFlags("test.db", sqlite3.OPEN_READONLY)
+	if err == nil {
+		t.Fatal("want error")
+	}
+	if !errors.Is(err, sqlite3.CANTOPEN) {
+		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+	}
+}
+
 func TestConn_Close(t *testing.T) {
 	var conn *sqlite3.Conn
 	conn.Close()

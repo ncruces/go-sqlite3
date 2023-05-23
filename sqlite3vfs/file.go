@@ -151,7 +151,7 @@ func (f *vfsFile) Sync(flags SyncFlag) error {
 	return nil
 }
 
-func (f *vfsFile) FileSize() (int64, error) {
+func (f *vfsFile) Size() (int64, error) {
 	return f.Seek(0, io.SeekEnd)
 }
 

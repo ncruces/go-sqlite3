@@ -234,7 +234,7 @@ func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags SyncFlag) 
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
-	size, err := file.FileSize()
+	size, err := file.Size()
 	util.WriteUint64(mod, pSize, uint64(size))
 	return vfsErrorCode(err, _IOERR_SEEK)
 }

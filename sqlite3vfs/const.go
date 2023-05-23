@@ -19,6 +19,7 @@ const (
 	_OK                      _ErrorCode = util.OK
 	_PERM                    _ErrorCode = util.PERM
 	_BUSY                    _ErrorCode = util.BUSY
+	_READONLY                _ErrorCode = util.READONLY
 	_IOERR                   _ErrorCode = util.IOERR
 	_NOTFOUND                _ErrorCode = util.NOTFOUND
 	_CANTOPEN                _ErrorCode = util.CANTOPEN

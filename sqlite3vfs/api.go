@@ -25,7 +25,7 @@ type File interface {
 	WriteAt(p []byte, off int64) (n int, err error)
 	Truncate(size int64) error
 	Sync(flags SyncFlag) error
-	FileSize() (int64, error)
+	Size() (int64, error)
 	Lock(lock LockLevel) error
 	Unlock(lock LockLevel) error
 	CheckReservedLock() (bool, error)
