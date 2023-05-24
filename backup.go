@@ -129,6 +129,6 @@ func (b *Backup) Remaining() int {
 //
 // https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backuppagecount
 func (b *Backup) PageCount() int {
-	r := b.c.call(b.c.api.backupFinish, uint64(b.handle))
+	r := b.c.call(b.c.api.backupPageCount, uint64(b.handle))
 	return int(r[0])
 }

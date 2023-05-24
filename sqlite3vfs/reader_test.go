@@ -4,7 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
 
+	_ "embed"
+
+	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/sqlite3vfs"
@@ -57,4 +64,86 @@ func ExampleReaderVFS() {
 	// 2011.12: 18748 million Dollars
 	// 2012.03: 18477 million Dollars
 	// 2012.06: 18270 million Dollars
+}
+
+//go:embed testdata/test.db
+var testDB string
+
+func TestReaderVFS_Open(t *testing.T) {
+	sqlite3vfs.Register("reader", sqlite3vfs.ReaderVFS{
+		"test.db": sqlite3vfs.NewSizeReaderAt(strings.NewReader(testDB)),
+	})
+
+	_, err := sqlite3.Open("file:demo.db?vfs=reader&mode=ro")
+	if err == nil {
+		t.Error("want error")
+	}
+
+	db, err := sqlite3.Open("file:test.db?vfs=reader&mode=ro")
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	row := 0
+	ids := []int{0, 1, 2}
+	names := []string{"go", "zig", "whatever"}
+	for ; stmt.Step(); row++ {
+		id := stmt.ColumnInt(0)
+		name := stmt.ColumnText(1)
+
+		if id != ids[row] {
+			t.Errorf("got %d, want %d", id, ids[row])
+		}
+		if name != names[row] {
+			t.Errorf("got %q, want %q", name, names[row])
+		}
+	}
+	if row != 3 {
+		t.Errorf("got %d, want %d", row, len(ids))
+	}
+
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNewSizeReaderAt(t *testing.T) {
+	n, err := sqlite3vfs.NewSizeReaderAt(strings.NewReader("abc")).Size()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 3 {
+		t.Errorf("got %d", n)
+	}
+
+	f, err := os.Create(filepath.Join(t.TempDir(), "abc.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	n, err = sqlite3vfs.NewSizeReaderAt(f).Size()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("got %d", n)
+	}
 }

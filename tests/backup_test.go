@@ -124,4 +124,46 @@ func TestBackup(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+
+	func() { // Incremental.
+		db, err := sqlite3.Open(backupName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+
+		b, err := db.BackupInit("main", ":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer b.Close()
+
+		done, err := b.Step(1)
+		if done {
+			t.Error("want false")
+		}
+		if err != nil {
+			t.Error(err)
+		}
+
+		n := b.Remaining()
+		if n != 1 {
+			t.Errorf("got %d", n)
+		}
+
+		n = b.PageCount()
+		if n != 2 {
+			t.Errorf("got %d", n)
+		}
+
+		err = b.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = db.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 }

@@ -199,6 +199,15 @@ func Test_vfsAccess(t *testing.T) {
 	}
 
 	util.WriteString(mod, 8, file)
+	rc = vfsAccess(ctx, mod, 0, 8, ACCESS_READ, 4)
+	if rc != _OK {
+		t.Fatal("returned", rc)
+	}
+	if got := util.ReadUint32(mod, 4); got != 1 {
+		t.Error("can't access file")
+	}
+
+	util.WriteString(mod, 8, file)
 	rc = vfsAccess(ctx, mod, 0, 8, ACCESS_READWRITE, 4)
 	if rc != _OK {
 		t.Fatal("returned", rc)

@@ -27,18 +27,32 @@ func TestDriver(t *testing.T) {
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(ctx,
+	res, err := conn.ExecContext(ctx,
 		`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
 	}
+	changes, err := res.RowsAffected()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changes != 0 {
+		t.Errorf("got %d want 0", changes)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != 0 {
+		t.Errorf("got %d want 0", changes)
+	}
 
-	res, err := conn.ExecContext(ctx,
+	res, err = conn.ExecContext(ctx,
 		`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	changes, err := res.RowsAffected()
+	changes, err = res.RowsAffected()
 	if err != nil {
 		t.Fatal(err)
 	}
