@@ -80,7 +80,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	handle := util.ReadUint32(c.mod, connPtr)
-	if err := c.module.error(r[0], handle); err != nil {
+	if err := c.module.error(r, handle); err != nil {
 		c.closeDB(handle)
 		return 0, err
 	}
@@ -99,7 +99,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 		c.arena.reset()
 		pragmaPtr := c.arena.string(pragmas.String())
 		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
-		if err := c.module.error(r[0], handle, pragmas.String()); err != nil {
+		if err := c.module.error(r, handle, pragmas.String()); err != nil {
 			if errors.Is(err, ERROR) {
 				err = fmt.Errorf("sqlite3: invalid _pragma: %w", err)
 			}
@@ -113,7 +113,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 
 func (c *Conn) closeDB(handle uint32) {
 	r := c.call(c.api.closeZombie, uint64(handle))
-	if err := c.module.error(r[0], handle); err != nil {
+	if err := c.module.error(r, handle); err != nil {
 		panic(err)
 	}
 }
@@ -137,7 +137,7 @@ func (c *Conn) Close() error {
 	c.pending = nil
 
 	r := c.call(c.api.close, uint64(c.handle))
-	if err := c.error(r[0]); err != nil {
+	if err := c.error(r); err != nil {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func (c *Conn) Exec(sql string) error {
 	sqlPtr := c.arena.string(sql)
 
 	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
-	return c.error(r[0])
+	return c.error(r)
 }
 
 // Prepare calls [Conn.PrepareFlags] with no flags.
@@ -189,7 +189,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	i := util.ReadUint32(c.mod, tailPtr)
 	tail = sql[i-sqlPtr:]
 
-	if err := c.error(r[0], sql); err != nil {
+	if err := c.error(r, sql); err != nil {
 		return nil, "", err
 	}
 	if stmt.handle == 0 {
@@ -203,7 +203,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 // https://www.sqlite.org/c3ref/get_autocommit.html
 func (c *Conn) GetAutocommit() bool {
 	r := c.call(c.api.autocommit, uint64(c.handle))
-	return r[0] != 0
+	return r != 0
 }
 
 // LastInsertRowID returns the rowid of the most recent successful INSERT
@@ -212,7 +212,7 @@ func (c *Conn) GetAutocommit() bool {
 // https://www.sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() int64 {
 	r := c.call(c.api.lastRowid, uint64(c.handle))
-	return int64(r[0])
+	return int64(r)
 }
 
 // Changes returns the number of rows modified, inserted or deleted
@@ -222,7 +222,7 @@ func (c *Conn) LastInsertRowID() int64 {
 // https://www.sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() int64 {
 	r := c.call(c.api.changes, uint64(c.handle))
-	return int64(r[0])
+	return int64(r)
 }
 
 // SetInterrupt interrupts a long-running query when a context is done.

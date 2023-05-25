@@ -45,13 +45,13 @@ func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob,
 		uint64(dbPtr), uint64(tablePtr), uint64(columnPtr),
 		uint64(row), flags, uint64(blobPtr))
 
-	if err := c.error(r[0]); err != nil {
+	if err := c.error(r); err != nil {
 		return nil, err
 	}
 
 	blob := Blob{c: c}
 	blob.handle = util.ReadUint32(c.mod, blobPtr)
-	blob.bytes = int64(c.call(c.api.blobBytes, uint64(blob.handle))[0])
+	blob.bytes = int64(c.call(c.api.blobBytes, uint64(blob.handle)))
 	return &blob, nil
 }
 
@@ -68,7 +68,7 @@ func (b *Blob) Close() error {
 	r := b.c.call(b.c.api.blobClose, uint64(b.handle))
 
 	b.handle = 0
-	return b.c.error(r[0])
+	return b.c.error(r)
 }
 
 // Size returns the size of the BLOB in bytes.
@@ -97,7 +97,7 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 
 	r := b.c.call(b.c.api.blobRead, uint64(b.handle),
 		uint64(ptr), uint64(want), uint64(b.offset))
-	err = b.c.error(r[0])
+	err = b.c.error(r)
 	if err != nil {
 		return 0, err
 	}
@@ -130,7 +130,7 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 	for want > 0 {
 		r := b.c.call(b.c.api.blobRead, uint64(b.handle),
 			uint64(ptr), uint64(want), uint64(b.offset))
-		err = b.c.error(r[0])
+		err = b.c.error(r)
 		if err != nil {
 			return n, err
 		}
@@ -163,7 +163,7 @@ func (b *Blob) Write(p []byte) (n int, err error) {
 
 	r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
 		uint64(ptr), uint64(len(p)), uint64(b.offset))
-	err = b.c.error(r[0])
+	err = b.c.error(r)
 	if err != nil {
 		return 0, err
 	}
@@ -193,7 +193,7 @@ func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
 		if m > 0 {
 			r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
 				uint64(ptr), uint64(m), uint64(b.offset))
-			err := b.c.error(r[0])
+			err := b.c.error(r)
 			if err != nil {
 				return n, err
 			}
@@ -240,8 +240,8 @@ func (b *Blob) Seek(offset int64, whence int) (int64, error) {
 //
 // https://www.sqlite.org/c3ref/blob_reopen.html
 func (b *Blob) Reopen(row int64) error {
-	err := b.c.error(b.c.call(b.c.api.blobReopen, uint64(b.handle), uint64(row))[0])
-	b.bytes = int64(b.c.call(b.c.api.blobBytes, uint64(b.handle))[0])
+	err := b.c.error(b.c.call(b.c.api.blobReopen, uint64(b.handle), uint64(row)))
+	b.bytes = int64(b.c.call(b.c.api.blobBytes, uint64(b.handle)))
 	b.offset = 0
 	return err
 }

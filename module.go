@@ -177,22 +177,17 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 		panic(util.OOMErr)
 	}
 
-	var r []uint64
-
-	r = m.call(m.api.errstr, rc)
-	if r != nil {
-		err.str = util.ReadString(m.mod, uint32(r[0]), _MAX_STRING)
+	if r := m.call(m.api.errstr, rc); r != 0 {
+		err.str = util.ReadString(m.mod, uint32(r), _MAX_STRING)
 	}
 
-	r = m.call(m.api.errmsg, uint64(handle))
-	if r != nil {
-		err.msg = util.ReadString(m.mod, uint32(r[0]), _MAX_STRING)
+	if r := m.call(m.api.errmsg, uint64(handle)); r != 0 {
+		err.msg = util.ReadString(m.mod, uint32(r), _MAX_STRING)
 	}
 
 	if sql != nil {
-		r = m.call(m.api.erroff, uint64(handle))
-		if r != nil && r[0] != math.MaxUint32 {
-			err.sql = sql[0][r[0]:]
+		if r := m.call(m.api.erroff, uint64(handle)); r != math.MaxUint32 {
+			err.sql = sql[0][r:]
 		}
 	}
 
@@ -203,7 +198,7 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
-func (m *module) call(fn api.Function, params ...uint64) []uint64 {
+func (m *module) call(fn api.Function, params ...uint64) uint64 {
 	copy(m.arg[:], params)
 	err := fn.CallWithStack(m.ctx, m.arg[:])
 	if err != nil {
@@ -211,7 +206,7 @@ func (m *module) call(fn api.Function, params ...uint64) []uint64 {
 		m.vfs.Close()
 		panic(err)
 	}
-	return m.arg[:]
+	return m.arg[0]
 }
 
 func (m *module) free(ptr uint32) {
@@ -225,8 +220,7 @@ func (m *module) new(size uint64) uint32 {
 	if size > _MAX_ALLOCATION_SIZE {
 		panic(util.OOMErr)
 	}
-	r := m.call(m.api.malloc, size)
-	ptr := uint32(r[0])
+	ptr := uint32(m.call(m.api.malloc, size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
