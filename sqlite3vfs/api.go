@@ -1,6 +1,8 @@
 // Package sqlite3vfs wraps the C SQLite VFS API.
 package sqlite3vfs
 
+import "net/url"
+
 // A VFS defines the interface between the SQLite core and the underlying operating system.
 //
 // Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
@@ -11,6 +13,15 @@ type VFS interface {
 	Delete(name string, syncDir bool) error
 	Access(name string, flags AccessFlag) (bool, error)
 	FullPathname(name string) (string, error)
+}
+
+// VFSParams extends [VFS] to with the ability to handle URI parameters
+// through the OpenParams method.
+//
+// https://www.sqlite.org/c3ref/uri_boolean.html
+type VFSParams interface {
+	VFS
+	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
 }
 
 // A File represents an open file in the OS interface layer.

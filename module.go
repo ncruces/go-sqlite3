@@ -139,9 +139,6 @@ func newModule(mod api.Module) (m *module, err error) {
 		columnText:      getFun("sqlite3_column_text"),
 		columnBlob:      getFun("sqlite3_column_blob"),
 		columnBytes:     getFun("sqlite3_column_bytes"),
-		autocommit:      getFun("sqlite3_get_autocommit"),
-		lastRowid:       getFun("sqlite3_last_insert_rowid"),
-		changes:         getFun("sqlite3_changes64"),
 		blobOpen:        getFun("sqlite3_blob_open"),
 		blobClose:       getFun("sqlite3_blob_close"),
 		blobReopen:      getFun("sqlite3_blob_reopen"),
@@ -153,6 +150,9 @@ func newModule(mod api.Module) (m *module, err error) {
 		backupFinish:    getFun("sqlite3_backup_finish"),
 		backupRemaining: getFun("sqlite3_backup_remaining"),
 		backupPageCount: getFun("sqlite3_backup_pagecount"),
+		changes:         getFun("sqlite3_changes64"),
+		lastRowid:       getFun("sqlite3_last_insert_rowid"),
+		autocommit:      getFun("sqlite3_get_autocommit"),
 	}
 	if err != nil {
 		return nil, err
@@ -334,9 +334,6 @@ type sqliteAPI struct {
 	columnText      api.Function
 	columnBlob      api.Function
 	columnBytes     api.Function
-	autocommit      api.Function
-	lastRowid       api.Function
-	changes         api.Function
 	blobOpen        api.Function
 	blobClose       api.Function
 	blobReopen      api.Function
@@ -348,5 +345,8 @@ type sqliteAPI struct {
 	backupFinish    api.Function
 	backupRemaining api.Function
 	backupPageCount api.Function
+	changes         api.Function
+	lastRowid       api.Function
+	autocommit      api.Function
 	destructor      uint32
 }
