@@ -19,6 +19,9 @@
 // If no PRAGMAs are specified, a busy timeout of 1 minute
 // and normal locking mode are used.
 //
+// Order matters:
+// busy timeout and locking mode should be the first PRAGMAs set, in that order.
+//
 // [URI]: https://www.sqlite.org/uri.html
 // [PRAGMA]: https://www.sqlite.org/pragma.html
 // [TRANSACTION]: https://www.sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
@@ -71,8 +74,8 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 	}
 	if len(pragmas) == 0 {
 		err := c.conn.Exec(`
-			PRAGMA locking_mode=normal;
 			PRAGMA busy_timeout=60000;
+			PRAGMA locking_mode=normal;
 		`)
 		if err != nil {
 			c.Close()
