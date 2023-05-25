@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -172,7 +173,25 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 		path = util.ReadString(mod, zPath, _MAX_PATHNAME)
 	}
 
-	file, flags, err := vfs.Open(path, flags)
+	var file File
+	var err error
+	var params url.Values
+	if pfs, ok := vfs.(VFSParams); ok {
+		params = vfsURIParameters(ctx, mod, zPath, flags)
+		file, flags, err = pfs.OpenParams(path, flags, params)
+	} else {
+		file, flags, err = vfs.Open(path, flags)
+	}
+
+	if file, ok := file.(FilePowersafeOverwrite); ok {
+		if params == nil {
+			params = vfsURIParameters(ctx, mod, zPath, flags)
+		}
+		if b, ok := util.ParseBool(params.Get("psow")); ok {
+			file.SetPowersafeOverwrite(b)
+		}
+	}
+
 	if err != nil {
 		return vfsErrorCode(err, _CANTOPEN)
 	}
@@ -337,6 +356,46 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) DeviceCharacteristic {
 	file := vfsFileGet(ctx, mod, pFile)
 	return file.DeviceCharacteristics()
+}
+
+func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
+	if flags&OPEN_URI == 0 {
+		return nil
+	}
+
+	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+	uriKey := mod.ExportedFunction("sqlite3_uri_key")
+	if uriParam == nil || uriKey == nil {
+		return nil
+	}
+
+	var stack [2]uint64
+	var params url.Values
+
+	for i := 0; ; i++ {
+		stack[1] = uint64(i)
+		stack[0] = uint64(zPath)
+		if err := uriKey.CallWithStack(ctx, stack[:]); err != nil {
+			panic(err)
+		}
+		if stack[0] == 0 {
+			return params
+		}
+		key := util.ReadString(mod, uint32(stack[0]), _MAX_STRING)
+		if params.Has(key) {
+			continue
+		}
+
+		stack[1] = stack[0]
+		stack[0] = uint64(zPath)
+		if err := uriParam.CallWithStack(ctx, stack[:]); err != nil {
+			panic(err)
+		}
+		if params == nil {
+			params = url.Values{}
+		}
+		params.Set(key, util.ReadString(mod, uint32(stack[0]), _MAX_STRING))
+	}
 }
 
 func vfsGet(mod api.Module, pVfs uint32) VFS {
