@@ -5,7 +5,7 @@ import (
 	"io/fs"
 )
 
-// A ReaderVFS is [VFS] for immutable databases.
+// A ReaderVFS is a [VFS] for immutable databases.
 type ReaderVFS map[string]SizeReaderAt
 
 var _ VFS = ReaderVFS{}
@@ -64,11 +64,11 @@ func (readerFile) Sync(flag SyncFlag) error {
 	return nil
 }
 
-func (readerFile) Lock(elock LockLevel) error {
+func (readerFile) Lock(lock LockLevel) error {
 	return nil
 }
 
-func (readerFile) Unlock(elock LockLevel) error {
+func (readerFile) Unlock(lock LockLevel) error {
 	return nil
 }
 
