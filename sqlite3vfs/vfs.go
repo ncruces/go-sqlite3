@@ -222,9 +222,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 	if n == 0 && err != io.EOF {
 		return _IOERR_READ
 	}
-	for i := range buf[n:] {
-		buf[n+i] = 0
-	}
+	clear(buf[n:])
 	return _IOERR_SHORT_READ
 }
 

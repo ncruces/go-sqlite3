@@ -11,6 +11,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 )
 
 func TestParallel(t *testing.T) {
@@ -21,7 +22,33 @@ func TestParallel(t *testing.T) {
 		iter = 5000
 	}
 
-	name := filepath.Join(t.TempDir(), "test.db")
+	name := "file:" +
+		filepath.Join(t.TempDir(), "test.db") +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=locking_mode(normal)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
+	testParallel(t, name, iter)
+	testIntegrity(t, name)
+}
+
+func TestMemory(t *testing.T) {
+	var iter int
+	if testing.Short() {
+		iter = 1000
+	} else {
+		iter = 5000
+	}
+
+	sqlite3vfs.Register("memvfs", sqlite3vfs.MemoryVFS{
+		"test.db": &sqlite3vfs.MemoryDB{},
+	})
+
+	name := "file:test.db?vfs=memvfs" +
+		"&_pragma=busy_timeout(10000)" +
+		"&_pragma=locking_mode(normal)" +
+		"&_pragma=journal_mode(memory)" +
+		"&_pragma=synchronous(off)"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -31,8 +58,14 @@ func TestMultiProcess(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	name := filepath.Join(t.TempDir(), "test.db")
-	t.Setenv("TestMultiProcess_dbname", name)
+	file := filepath.Join(t.TempDir(), "test.db")
+	t.Setenv("TestMultiProcess_dbfile", file)
+
+	name := "file:" + file +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=locking_mode(normal)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
 
 	cmd := exec.Command("go", "test", "-v", "-run", "TestChildProcess")
 	out, err := cmd.StdoutPipe()
@@ -57,10 +90,16 @@ func TestMultiProcess(t *testing.T) {
 }
 
 func TestChildProcess(t *testing.T) {
-	name := os.Getenv("TestMultiProcess_dbname")
-	if name == "" || testing.Short() {
+	file := os.Getenv("TestMultiProcess_dbfile")
+	if file == "" || testing.Short() {
 		t.SkipNow()
 	}
+
+	name := "file:" + file +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=locking_mode(normal)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
 
 	testParallel(t, name, 1000)
 }
@@ -72,16 +111,6 @@ func testParallel(t *testing.T, name string, n int) {
 			return err
 		}
 		defer db.Close()
-
-		err = db.Exec(`
-			PRAGMA busy_timeout=10000;
-			PRAGMA synchronous=off;
-			PRAGMA locking_mode=normal;
-			PRAGMA journal_mode=truncate;
-		`)
-		if err != nil {
-			return err
-		}
 
 		err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
 		if err != nil {
