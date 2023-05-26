@@ -14,73 +14,73 @@ const (
 	_SHARED_SIZE   = 510
 )
 
-func (file *vfsFile) Lock(eLock LockLevel) error {
+func (f *vfsFile) Lock(lock LockLevel) error {
 	// Argument check. SQLite never explicitly requests a pending lock.
-	if eLock != LOCK_SHARED && eLock != LOCK_RESERVED && eLock != LOCK_EXCLUSIVE {
+	if lock != LOCK_SHARED && lock != LOCK_RESERVED && lock != LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	switch {
-	case file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE:
+	case f.lock < LOCK_NONE || f.lock > LOCK_EXCLUSIVE:
 		// Connection state check.
 		panic(util.AssertErr())
-	case file.lock == LOCK_NONE && eLock > LOCK_SHARED:
+	case f.lock == LOCK_NONE && lock > LOCK_SHARED:
 		// We never move from unlocked to anything higher than a shared lock.
 		panic(util.AssertErr())
-	case file.lock != LOCK_SHARED && eLock == LOCK_RESERVED:
+	case f.lock != LOCK_SHARED && lock == LOCK_RESERVED:
 		// A shared lock is always held when a reserved lock is requested.
 		panic(util.AssertErr())
 	}
 
 	// If we already have an equal or more restrictive lock, do nothing.
-	if file.lock >= eLock {
+	if f.lock >= lock {
 		return nil
 	}
 
 	// Do not allow any kind of write-lock on a read-only database.
-	if file.readOnly && eLock >= LOCK_RESERVED {
+	if f.readOnly && lock >= LOCK_RESERVED {
 		return _IOERR_LOCK
 	}
 
-	switch eLock {
+	switch lock {
 	case LOCK_SHARED:
 		// Must be unlocked to get SHARED.
-		if file.lock != LOCK_NONE {
+		if f.lock != LOCK_NONE {
 			panic(util.AssertErr())
 		}
-		if rc := osGetSharedLock(file.File, file.lockTimeout); rc != _OK {
+		if rc := osGetSharedLock(f.File, f.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = LOCK_SHARED
+		f.lock = LOCK_SHARED
 		return nil
 
 	case LOCK_RESERVED:
 		// Must be SHARED to get RESERVED.
-		if file.lock != LOCK_SHARED {
+		if f.lock != LOCK_SHARED {
 			panic(util.AssertErr())
 		}
-		if rc := osGetReservedLock(file.File, file.lockTimeout); rc != _OK {
+		if rc := osGetReservedLock(f.File, f.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = LOCK_RESERVED
+		f.lock = LOCK_RESERVED
 		return nil
 
 	case LOCK_EXCLUSIVE:
 		// Must be SHARED, RESERVED or PENDING to get EXCLUSIVE.
-		if file.lock <= LOCK_NONE || file.lock >= LOCK_EXCLUSIVE {
+		if f.lock <= LOCK_NONE || f.lock >= LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
-		if file.lock < LOCK_PENDING {
-			if rc := osGetPendingLock(file.File); rc != _OK {
+		if f.lock < LOCK_PENDING {
+			if rc := osGetPendingLock(f.File); rc != _OK {
 				return rc
 			}
-			file.lock = LOCK_PENDING
+			f.lock = LOCK_PENDING
 		}
-		if rc := osGetExclusiveLock(file.File, file.lockTimeout); rc != _OK {
+		if rc := osGetExclusiveLock(f.File, f.lockTimeout); rc != _OK {
 			return rc
 		}
-		file.lock = LOCK_EXCLUSIVE
+		f.lock = LOCK_EXCLUSIVE
 		return nil
 
 	default:
@@ -88,33 +88,33 @@ func (file *vfsFile) Lock(eLock LockLevel) error {
 	}
 }
 
-func (file *vfsFile) Unlock(eLock LockLevel) error {
+func (f *vfsFile) Unlock(lock LockLevel) error {
 	// Argument check.
-	if eLock != LOCK_NONE && eLock != LOCK_SHARED {
+	if lock != LOCK_NONE && lock != LOCK_SHARED {
 		panic(util.AssertErr())
 	}
 
 	// Connection state check.
-	if file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE {
+	if f.lock < LOCK_NONE || f.lock > LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
 	// If we don't have a more restrictive lock, do nothing.
-	if file.lock <= eLock {
+	if f.lock <= lock {
 		return nil
 	}
 
-	switch eLock {
+	switch lock {
 	case LOCK_SHARED:
-		if rc := osDowngradeLock(file.File, file.lock); rc != _OK {
+		if rc := osDowngradeLock(f.File, f.lock); rc != _OK {
 			return rc
 		}
-		file.lock = LOCK_SHARED
+		f.lock = LOCK_SHARED
 		return nil
 
 	case LOCK_NONE:
-		rc := osReleaseLock(file.File, file.lock)
-		file.lock = LOCK_NONE
+		rc := osReleaseLock(f.File, f.lock)
+		f.lock = LOCK_NONE
 		return rc
 
 	default:
@@ -122,16 +122,16 @@ func (file *vfsFile) Unlock(eLock LockLevel) error {
 	}
 }
 
-func (file *vfsFile) CheckReservedLock() (bool, error) {
+func (f *vfsFile) CheckReservedLock() (bool, error) {
 	// Connection state check.
-	if file.lock < LOCK_NONE || file.lock > LOCK_EXCLUSIVE {
+	if f.lock < LOCK_NONE || f.lock > LOCK_EXCLUSIVE {
 		panic(util.AssertErr())
 	}
 
-	if file.lock >= LOCK_RESERVED {
+	if f.lock >= LOCK_RESERVED {
 		return true, nil
 	}
-	return osCheckReservedLock(file.File)
+	return osCheckReservedLock(f.File)
 }
 
 func osGetReservedLock(file *os.File, timeout time.Duration) _ErrorCode {

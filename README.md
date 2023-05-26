@@ -72,10 +72,10 @@ Performance is tested by running
   - [ ] session extension
 - [ ] custom SQL functions
 - [ ] custom VFSes
-  - [ ] in-memory VFS
+  - [x] custom VFS API
+  - [x] in-memory VFS
   - [x] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
-  - [x] custom VFS API
 
 ### Alternatives
 
