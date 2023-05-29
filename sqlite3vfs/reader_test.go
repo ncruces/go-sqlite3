@@ -3,6 +3,7 @@ package sqlite3vfs_test
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -125,7 +126,23 @@ func TestReaderVFS_Open(t *testing.T) {
 }
 
 func TestNewSizeReaderAt(t *testing.T) {
-	n, err := sqlite3vfs.NewSizeReaderAt(strings.NewReader("abc")).Size()
+	f, err := os.Create(filepath.Join(t.TempDir(), "abc.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	n, err := sqlite3vfs.NewSizeReaderAt(f).Size()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("got %d", n)
+	}
+
+	reader := strings.NewReader("abc")
+
+	n, err = sqlite3vfs.NewSizeReaderAt(reader).Size()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,17 +150,55 @@ func TestNewSizeReaderAt(t *testing.T) {
 		t.Errorf("got %d", n)
 	}
 
-	f, err := os.Create(filepath.Join(t.TempDir(), "abc.txt"))
+	n, err = sqlite3vfs.NewSizeReaderAt(lener{reader, reader.Len()}).Size()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
-
-	n, err = sqlite3vfs.NewSizeReaderAt(f).Size()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != 0 {
+	if n != 3 {
 		t.Errorf("got %d", n)
 	}
+
+	n, err = sqlite3vfs.NewSizeReaderAt(sizer{reader, reader.Size()}).Size()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 3 {
+		t.Errorf("got %d", n)
+	}
+
+	n, err = sqlite3vfs.NewSizeReaderAt(seeker{reader, reader}).Size()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 3 {
+		t.Errorf("got %d", n)
+	}
+
+	_, err = sqlite3vfs.NewSizeReaderAt(readerat{reader}).Size()
+	if err == nil {
+		t.Error("want error")
+	}
+}
+
+type lener struct {
+	io.ReaderAt
+	len int
+}
+
+func (l lener) Len() int { return l.len }
+
+type sizer struct {
+	io.ReaderAt
+	size int64
+}
+
+func (l sizer) Size() (int64, error) { return l.size, nil }
+
+type seeker struct {
+	io.ReaderAt
+	io.Seeker
+}
+
+type readerat struct {
+	io.ReaderAt
 }

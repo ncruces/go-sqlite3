@@ -76,7 +76,6 @@ func TestConn_newArena(t *testing.T) {
 	defer arena.free()
 
 	const title = "Lorem ipsum"
-
 	ptr := arena.string(title)
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
@@ -93,6 +92,19 @@ func TestConn_newArena(t *testing.T) {
 	if got := util.ReadString(m.mod, ptr, math.MaxUint32); got != body {
 		t.Errorf("got %q, want %q", got, body)
 	}
+
+	ptr = arena.bytes(nil)
+	if ptr != 0 {
+		t.Errorf("want nullptr")
+	}
+	ptr = arena.bytes([]byte(title))
+	if ptr == 0 {
+		t.Fatalf("got nullptr")
+	}
+	if got := util.View(m.mod, ptr, uint64(len(title))); string(got) != title {
+		t.Errorf("got %q, want %q", got, title)
+	}
+
 	arena.free()
 }
 

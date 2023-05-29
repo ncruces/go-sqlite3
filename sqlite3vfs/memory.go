@@ -43,6 +43,9 @@ func (vfs MemoryVFS) FullPathname(name string) (string, error) {
 
 const memSectorSize = 65536
 
+// A MemoryDB is a [MemoryVFS] database.
+//
+// A MemoryDB is safe to access concurrently from multiple SQLite connections.
 type MemoryDB struct {
 	mtx  sync.RWMutex
 	size int64
@@ -60,10 +63,12 @@ type memoryFile struct {
 	readOnly bool
 }
 
+// Close implements the [File] and [io.Closer] interfaces.
 func (m *memoryFile) Close() error {
 	return m.Unlock(LOCK_NONE)
 }
 
+// ReadAt implements the [File] and [io.ReaderAt] interfaces.
 func (m *memoryFile) ReadAt(b []byte, off int64) (n int, err error) {
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
@@ -71,31 +76,40 @@ func (m *memoryFile) ReadAt(b []byte, off int64) (n int, err error) {
 	if off >= m.size {
 		return 0, io.EOF
 	}
+
 	base := off / memSectorSize
 	rest := off % memSectorSize
 	have := int64(memSectorSize)
 	if base == int64(len(m.data))-1 {
-		have = m.size % memSectorSize
+		have = modRoundUp(m.size, memSectorSize)
 	}
-	return copy(b, (*m.data[base])[rest:have]), nil
+	n = copy(b, (*m.data[base])[rest:have])
+	if n < len(b) {
+		// Assume reads are page aligned.
+		return 0, io.ErrNoProgress
+	}
+	return n, nil
 }
 
+// WriteAt implements the [File] and [io.WriterAt] interfaces.
 func (m *memoryFile) WriteAt(b []byte, off int64) (n int, err error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
 	base := off / memSectorSize
 	rest := off % memSectorSize
-	if base >= int64(len(m.data)) {
+	for base >= int64(len(m.data)) {
 		m.data = append(m.data, new([memSectorSize]byte))
 	}
 	n = copy((*m.data[base])[rest:], b)
-	if size := off + int64(n); size > m.size {
-		m.size = size
+	if n < len(b) {
+		// Assume writes are page aligned.
+		return 0, io.ErrShortWrite
 	}
 	return n, nil
 }
 
+// Truncate implements the [File] interface.
 func (m *memoryFile) Truncate(size int64) error {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
@@ -106,31 +120,33 @@ func (m *memoryFile) truncate(size int64) error {
 	if size < m.size {
 		base := size / memSectorSize
 		rest := size % memSectorSize
-		clear((*m.data[base])[rest:])
+		if rest != 0 {
+			clear((*m.data[base])[rest:])
+		}
 	}
-	sectors := (size + memSectorSize - 1) / memSectorSize
+	sectors := divRoundUp(size, memSectorSize)
 	for sectors > int64(len(m.data)) {
 		m.data = append(m.data, new([memSectorSize]byte))
 	}
-	for sectors < int64(len(m.data)) {
-		last := int64(len(m.data)) - 1
-		m.data[last] = nil
-		m.data = m.data[:last]
-	}
+	clear(m.data[sectors:])
+	m.data = m.data[:sectors]
 	m.size = size
 	return nil
 }
 
+// Sync implements the [File] interface.
 func (*memoryFile) Sync(flag SyncFlag) error {
 	return nil
 }
 
+// Size implements the [File] interface.
 func (m *memoryFile) Size() (int64, error) {
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
 	return m.size, nil
 }
 
+// Lock implements the [File] interface.
 func (m *memoryFile) Lock(lock LockLevel) error {
 	if m.lock >= lock {
 		return nil
@@ -185,6 +201,7 @@ func (m *memoryFile) Lock(lock LockLevel) error {
 	return nil
 }
 
+// Unlock implements the [File] interface.
 func (m *memoryFile) Unlock(lock LockLevel) error {
 	if m.lock <= lock {
 		return nil
@@ -206,6 +223,7 @@ func (m *memoryFile) Unlock(lock LockLevel) error {
 	return nil
 }
 
+// CheckReservedLock implements the [File] interface.
 func (m *memoryFile) CheckReservedLock() (bool, error) {
 	if m.lock >= LOCK_RESERVED {
 		return true, nil
@@ -215,10 +233,12 @@ func (m *memoryFile) CheckReservedLock() (bool, error) {
 	return m.reserved != nil, nil
 }
 
+// SectorSize implements the [File] interface.
 func (*memoryFile) SectorSize() int {
 	return memSectorSize
 }
 
+// DeviceCharacteristics implements the [File] interface.
 func (*memoryFile) DeviceCharacteristics() DeviceCharacteristic {
 	return IOCAP_ATOMIC |
 		IOCAP_SEQUENTIAL |
@@ -226,6 +246,7 @@ func (*memoryFile) DeviceCharacteristics() DeviceCharacteristic {
 		IOCAP_POWERSAFE_OVERWRITE
 }
 
+// SizeHint implements the [FileSizeHint] interface.
 func (m *memoryFile) SizeHint(size int64) error {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
@@ -235,12 +256,22 @@ func (m *memoryFile) SizeHint(size int64) error {
 	return nil
 }
 
+// LockState implements the [FileLockState] interface.
 func (m *memoryFile) LockState() LockLevel {
 	return m.lock
 }
 
-func clear(b []byte) {
+func divRoundUp(a, b int64) int64 {
+	return (a + b - 1) / b
+}
+
+func modRoundUp(a, b int64) int64 {
+	return b - (b-a%b)%b
+}
+
+func clear[T any](b []T) {
+	var zero T
 	for i := range b {
-		b[i] = 0
+		b[i] = zero
 	}
 }
