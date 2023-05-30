@@ -22,6 +22,7 @@ const (
 	_READONLY                _ErrorCode = util.READONLY
 	_IOERR                   _ErrorCode = util.IOERR
 	_NOTFOUND                _ErrorCode = util.NOTFOUND
+	_FULL                    _ErrorCode = util.FULL
 	_CANTOPEN                _ErrorCode = util.CANTOPEN
 	_IOERR_READ              _ErrorCode = util.IOERR_READ
 	_IOERR_SHORT_READ        _ErrorCode = util.IOERR_SHORT_READ

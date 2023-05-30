@@ -10,10 +10,12 @@ import (
 )
 
 func TestDB_memory(t *testing.T) {
+	t.Parallel()
 	testDB(t, ":memory:")
 }
 
 func TestDB_file(t *testing.T) {
+	t.Parallel()
 	testDB(t, filepath.Join(t.TempDir(), "test.db"))
 }
 
@@ -21,12 +23,11 @@ func TestDB_VFS(t *testing.T) {
 	sqlite3vfs.Register("memvfs", sqlite3vfs.MemoryVFS{
 		"test.db": &sqlite3vfs.MemoryDB{},
 	})
+	defer sqlite3vfs.Unregister("memvfs")
 	testDB(t, "file:test.db?vfs=memvfs&_pragma=journal_mode(memory)")
 }
 
 func testDB(t *testing.T, name string) {
-	t.Parallel()
-
 	db, err := sqlite3.Open(name)
 	if err != nil {
 		t.Fatal(err)

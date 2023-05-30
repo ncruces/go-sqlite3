@@ -43,6 +43,7 @@ func TestMemory(t *testing.T) {
 	sqlite3vfs.Register("memvfs", sqlite3vfs.MemoryVFS{
 		"test.db": &sqlite3vfs.MemoryDB{},
 	})
+	defer sqlite3vfs.Unregister("memvfs")
 
 	name := "file:test.db?vfs=memvfs" +
 		"&_pragma=busy_timeout(10000)" +

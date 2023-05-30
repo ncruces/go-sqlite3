@@ -46,7 +46,10 @@ const memSectorSize = 65536
 // A MemoryDB is a [MemoryVFS] database.
 //
 // A MemoryDB is safe to access concurrently from multiple SQLite connections.
+// It requires journal mode MEMORY or OFF.
 type MemoryDB struct {
+	MaxSize int64
+
 	mtx  sync.RWMutex
 	size int64
 	data []*[memSectorSize]byte
@@ -55,6 +58,27 @@ type MemoryDB struct {
 	pending  *memoryFile
 	reserved *memoryFile
 	shared   int
+}
+
+// NewMemoryDB creates a new MemoryDB using buf as its initial contents.
+// The new MemoryDB takes ownership of buf, and the caller should not use buf after this call.
+func NewMemoryDB(buf []byte) *MemoryDB {
+	m := new(MemoryDB)
+	m.size = int64(len(buf))
+
+	sectors := divRoundUp(m.size, memSectorSize)
+	m.data = make([]*[memSectorSize]byte, sectors)
+	for i := range m.data {
+		sector := buf[i*memSectorSize:]
+		if len(sector) >= memSectorSize {
+			m.data[i] = (*[memSectorSize]byte)(sector)
+		} else {
+			m.data[i] = new([memSectorSize]byte)
+			copy((*m.data[i])[:], sector)
+		}
+	}
+
+	return m
 }
 
 type memoryFile struct {
@@ -96,6 +120,10 @@ func (m *memoryFile) WriteAt(b []byte, off int64) (n int, err error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
+	if m.MaxSize > 0 && off+int64(len(b)) > m.MaxSize {
+		return 0, _FULL
+	}
+
 	base := off / memSectorSize
 	rest := off % memSectorSize
 	for base >= int64(len(m.data)) {
@@ -117,6 +145,9 @@ func (m *memoryFile) Truncate(size int64) error {
 }
 
 func (m *memoryFile) truncate(size int64) error {
+	if m.MaxSize > 0 && size > m.MaxSize {
+		return _FULL
+	}
 	if size < m.size {
 		base := size / memSectorSize
 		rest := size % memSectorSize
