@@ -8,6 +8,9 @@ unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3* .
 rm -rf sqlite-amalgamation-*
 
+patch < vfs_find.patch
+patch < deserialize.patch
+
 cd ext/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/decimal.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/uint.c"

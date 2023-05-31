@@ -30,6 +30,9 @@
 
 // Other Options
 #define SQLITE_ALLOW_URI_AUTHORITY
+#define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
+#define SQLITE_ENABLE_ATOMIC_WRITE
+#define SQLITE_OMIT_DESERIALIZE
 
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.
@@ -55,16 +58,5 @@
 // #define SQLITE_ENABLE_SESSION
 // #define SQLITE_ENABLE_PREUPDATE_HOOK
 
-// https://stackoverflow.com/a/50616684
-#define SECOND(...) SECOND_I(__VA_ARGS__, , )
-#define SECOND_I(A, B, ...) B
-#define GLUE(A, B) GLUE_I(A, B)
-#define GLUE_I(A, B) A##_##B
-#define CREATE_REPLACER(A) SECOND(GLUE(A, __LINE__), A)
-#define REPLACE_AT_LINE(A) , A
-
 // Implemented in vfs.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
-
-#define sqlite3_vfs_find CREATE_REPLACER(sqlite3_vfs_find_wrapper)
-#define sqlite3_vfs_find_wrapper_25397 REPLACE_AT_LINE(sqlite3_vfs_find)

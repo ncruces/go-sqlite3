@@ -21,7 +21,7 @@ func (vfs MemoryVFS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
 		return &memoryFile{
 			MemoryDB: db,
 			readOnly: flags&OPEN_READONLY != 0,
-		}, flags, nil
+		}, flags | OPEN_MEMORY, nil
 	}
 	return nil, flags, _CANTOPEN
 }
@@ -45,8 +45,7 @@ const memSectorSize = 65536
 
 // A MemoryDB is a [MemoryVFS] database.
 //
-// A MemoryDB is safe to access concurrently from multiple SQLite connections.
-// It requires journal mode MEMORY or OFF.
+// A MemoryDB is safe to access concurrently through multiple SQLite connections.
 type MemoryDB struct {
 	MaxSize int64
 
@@ -60,16 +59,16 @@ type MemoryDB struct {
 	shared   int
 }
 
-// NewMemoryDB creates a new MemoryDB using buf as its initial contents.
-// The new MemoryDB takes ownership of buf, and the caller should not use buf after this call.
-func NewMemoryDB(buf []byte) *MemoryDB {
+// NewMemoryDB creates a new MemoryDB using mem as its initial contents.
+// The new MemoryDB takes ownership of mem, and the caller should not use mem after this call.
+func NewMemoryDB(mem []byte) *MemoryDB {
 	m := new(MemoryDB)
-	m.size = int64(len(buf))
+	m.size = int64(len(mem))
 
 	sectors := divRoundUp(m.size, memSectorSize)
 	m.data = make([]*[memSectorSize]byte, sectors)
 	for i := range m.data {
-		sector := buf[i*memSectorSize:]
+		sector := mem[i*memSectorSize:]
 		if len(sector) >= memSectorSize {
 			m.data[i] = (*[memSectorSize]byte)(sector)
 		} else {

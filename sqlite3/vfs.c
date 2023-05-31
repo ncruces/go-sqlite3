@@ -87,8 +87,7 @@ int localtime_s(struct tm *const pTm, time_t const *const pTime) {
   return go_localtime(pTm, (sqlite3_int64)*pTime);
 }
 
-#undef sqlite3_vfs_find
-sqlite3_vfs *sqlite3_vfs_find_wrapper(const char *zVfsName) {
+sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
   if (zVfsName) {
     static sqlite3_vfs *go_vfs_list;
     sqlite3_vfs *found = NULL;
@@ -130,7 +129,7 @@ sqlite3_vfs *sqlite3_vfs_find_wrapper(const char *zVfsName) {
       return go_vfs_list;
     }
   }
-  return sqlite3_vfs_find(zVfsName);
+  return sqlite3_vfs_find_orig(zVfsName);
 }
 
 static_assert(offsetof(struct go_file, handle) == 4, "Unexpected offset");

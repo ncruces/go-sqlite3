@@ -1,0 +1,20 @@
+--- sqlite3.c.orig
++++ sqlite3.c
+@@ -60425,7 +60425,7 @@
+   int rc = SQLITE_OK;      /* Return code */
+   int tempFile = 0;        /* True for temp files (incl. in-memory files) */
+   int memDb = 0;           /* True if this is an in-memory file */
+-#ifndef SQLITE_OMIT_DESERIALIZE
++#if 1
+   int memJM = 0;           /* Memory journal mode */
+ #else
+ # define memJM 0
+@@ -60628,7 +60628,7 @@
+     int fout = 0;                    /* VFS flags returned by xOpen() */
+     rc = sqlite3OsOpen(pVfs, pPager->zFilename, pPager->fd, vfsFlags, &fout);
+     assert( !memDb );
+-#ifndef SQLITE_OMIT_DESERIALIZE
++#if 1
+     pPager->memVfs = memJM = (fout&SQLITE_OPEN_MEMORY)!=0;
+ #endif
+     readOnly = (fout&SQLITE_OPEN_READONLY)!=0;

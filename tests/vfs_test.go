@@ -31,34 +31,13 @@ func TestMemoryVFS_Open_notfound(t *testing.T) {
 	}
 }
 
-func TestMemoryVFS_Open_journal(t *testing.T) {
-	sqlite3vfs.Register("memory", sqlite3vfs.MemoryVFS{
-		"test.db": &sqlite3vfs.MemoryDB{},
-	})
-	defer sqlite3vfs.Unregister("memory")
-
-	db, err := sqlite3.Open("file:test.db?vfs=memory")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
-	if err == nil {
-		t.Error("want error")
-	}
-	if !errors.Is(err, sqlite3.CANTOPEN) {
-		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
-	}
-}
-
 func TestMemoryVFS_Open_errors(t *testing.T) {
 	sqlite3vfs.Register("memory", sqlite3vfs.MemoryVFS{
 		"test.db": &sqlite3vfs.MemoryDB{MaxSize: 65536},
 	})
 	defer sqlite3vfs.Unregister("memory")
 
-	db, err := sqlite3.Open("file:test.db?vfs=memory&_pragma=journal_mode(memory)")
+	db, err := sqlite3.Open("file:test.db?vfs=memory")
 	if err != nil {
 		t.Fatal(err)
 	}

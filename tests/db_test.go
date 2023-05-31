@@ -24,7 +24,7 @@ func TestDB_VFS(t *testing.T) {
 		"test.db": &sqlite3vfs.MemoryDB{},
 	})
 	defer sqlite3vfs.Unregister("memvfs")
-	testDB(t, "file:test.db?vfs=memvfs&_pragma=journal_mode(memory)")
+	testDB(t, "file:test.db?vfs=memvfs")
 }
 
 func testDB(t *testing.T, name string) {

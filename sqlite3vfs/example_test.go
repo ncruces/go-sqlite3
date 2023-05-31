@@ -22,7 +22,7 @@ func ExampleMemoryVFS_embed() {
 		"test.db": sqlite3vfs.NewMemoryDB(testDB),
 	})
 
-	db, err := sql.Open("sqlite3", "file:test.db?vfs=memory&_pragma=journal_mode(memory)")
+	db, err := sql.Open("sqlite3", "file:test.db?vfs=memory")
 	if err != nil {
 		log.Fatal(err)
 	}
