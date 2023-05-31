@@ -20,9 +20,9 @@ wraps the [C SQLite VFS API](https://www.sqlite.org/vfs.html) and provides a pur
 
 ### Caveats
 
-This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html) (aka VFS)
-with a [pure Go](sqlite3vfs/) implementation.
-This has numerous benefits, but also comes with some drawbacks.
+This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html)
+(aka VFS) with a [pure Go](sqlite3vfs/) implementation.
+This has benefits, but also comes with some drawbacks.
 
 #### Write-Ahead Logging
 
@@ -57,7 +57,7 @@ BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
 
 #### Testing
 
-The pure Go VFS is stress tested by running an unmodified build of SQLite's
+The pure Go VFS is tested by running an unmodified build of SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
 on Linux, macOS and Windows.
 Performance is tested by running
@@ -70,12 +70,12 @@ Performance is tested by running
   - [x] incremental BLOB I/O
   - [x] online backup
   - [ ] session extension
-- [ ] custom SQL functions
 - [ ] custom VFSes
   - [x] custom VFS API
   - [x] in-memory VFS
   - [x] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
+- [ ] custom SQL functions
 
 ### Alternatives
 

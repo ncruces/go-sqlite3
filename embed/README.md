@@ -17,7 +17,8 @@ The following optional features are compiled in:
 - [uuid](https://github.com/sqlite/sqlite/blob/master/ext/misc/uuid.c)
 - [time](../sqlite3/time.c)
 
-See the [configuration options](../sqlite3/sqlite_cfg.h).
+See the [configuration options](../sqlite3/sqlite_cfg.h),
+and [patches](../sqlite3) applied.
 
 Built using [`wasi-sdk`](https://github.com/WebAssembly/wasi-sdk),
 and [`binaryen`](https://github.com/WebAssembly/binaryen).
