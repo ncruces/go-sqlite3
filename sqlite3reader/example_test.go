@@ -1,4 +1,4 @@
-package sqlite3vfs_test
+package sqlite3reader_test
 
 import (
 	"bytes"
@@ -10,19 +10,18 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/sqlite3reader"
 	"github.com/psanford/httpreadat"
 )
 
 //go:embed testdata/test.db
 var testDB []byte
 
-func ExampleReaderVFS_http() {
-	sqlite3vfs.Register("httpvfs", sqlite3vfs.ReaderVFS{
-		"demo.db": httpreadat.New("https://www.sanford.io/demo.db"),
-	})
+func Example_http() {
+	sqlite3reader.Create("demo.db", httpreadat.New("https://www.sanford.io/demo.db"))
+	defer sqlite3reader.Delete("demo.db")
 
-	db, err := sql.Open("sqlite3", "file:demo.db?vfs=httpvfs&mode=ro")
+	db, err := sql.Open("sqlite3", "file:demo.db?vfs=reader")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,12 +64,11 @@ func ExampleReaderVFS_http() {
 	// 2012.06: 18270 million Dollars
 }
 
-func ExampleReaderVFS_embed() {
-	sqlite3vfs.Register("reader", sqlite3vfs.ReaderVFS{
-		"test.db": sqlite3vfs.NewSizeReaderAt(bytes.NewReader(testDB)),
-	})
+func Example_embed() {
+	sqlite3reader.Create("test.db", sqlite3reader.NewSizeReaderAt(bytes.NewReader(testDB)))
+	defer sqlite3reader.Delete("test.db")
 
-	db, err := sql.Open("sqlite3", "file:test.db?vfs=reader&mode=ro")
+	db, err := sql.Open("sqlite3", "file:test.db?vfs=reader")
 	if err != nil {
 		log.Fatal(err)
 	}

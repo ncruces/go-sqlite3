@@ -8,7 +8,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/sqlite3memdb"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/sqlite3reader"
 )
 
 func TestMemoryVFS_Open_notfound(t *testing.T) {
@@ -24,10 +24,9 @@ func TestMemoryVFS_Open_notfound(t *testing.T) {
 }
 
 func TestReaderVFS_Open_notfound(t *testing.T) {
-	sqlite3vfs.Register("reader", sqlite3vfs.ReaderVFS{})
-	defer sqlite3vfs.Unregister("reader")
+	sqlite3reader.Delete("demo.db")
 
-	_, err := sqlite3.Open("file:demo.db?vfs=reader&mode=ro")
+	_, err := sqlite3.Open("file:demo.db?vfs=reader")
 	if err == nil {
 		t.Error("want error")
 	}
