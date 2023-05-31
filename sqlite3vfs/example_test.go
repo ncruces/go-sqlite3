@@ -17,43 +17,6 @@ import (
 //go:embed testdata/test.db
 var testDB []byte
 
-func ExampleMemoryVFS_embed() {
-	sqlite3vfs.Register("memory", sqlite3vfs.MemoryVFS{
-		"test.db": sqlite3vfs.NewMemoryDB(testDB),
-	})
-
-	db, err := sql.Open("sqlite3", "file:test.db?vfs=memory")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	_, err = db.Exec(`INSERT INTO users (id, name) VALUES (3, 'rust')`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rows, err := db.Query(`SELECT id, name FROM users`)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id, name string
-		err = rows.Scan(&id, &name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%s %s\n", id, name)
-	}
-	// Output:
-	// 0 go
-	// 1 zig
-	// 2 whatever
-	// 3 rust
-}
-
 func ExampleReaderVFS_http() {
 	sqlite3vfs.Register("httpvfs", sqlite3vfs.ReaderVFS{
 		"demo.db": httpreadat.New("https://www.sanford.io/demo.db"),

@@ -59,7 +59,7 @@ type vfsState struct {
 //
 // Users of the [github.com/ncruces/go-sqlite3] package need not call this directly.
 func NewContext(ctx context.Context) (context.Context, io.Closer) {
-	vfs := &vfsState{}
+	vfs := new(vfsState)
 	return context.WithValue(ctx, vfsKey{}, vfs), vfs
 }
 
@@ -456,4 +456,10 @@ func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 		return _ErrorCode(v.Uint())
 	}
 	return def
+}
+
+func clear(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
 }

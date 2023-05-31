@@ -6,7 +6,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
 )
 
 func TestDB_memory(t *testing.T) {
@@ -19,12 +19,8 @@ func TestDB_file(t *testing.T) {
 	testDB(t, filepath.Join(t.TempDir(), "test.db"))
 }
 
-func TestDB_VFS(t *testing.T) {
-	sqlite3vfs.Register("memvfs", sqlite3vfs.MemoryVFS{
-		"test.db": &sqlite3vfs.MemoryDB{},
-	})
-	defer sqlite3vfs.Unregister("memvfs")
-	testDB(t, "file:test.db?vfs=memvfs")
+func TestDB_vfs(t *testing.T) {
+	testDB(t, "file:test.db?vfs=memdb")
 }
 
 func testDB(t *testing.T, name string) {

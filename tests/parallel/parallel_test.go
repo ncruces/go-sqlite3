@@ -11,7 +11,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
 )
 
 func TestParallel(t *testing.T) {
@@ -40,12 +40,7 @@ func TestMemory(t *testing.T) {
 		iter = 5000
 	}
 
-	sqlite3vfs.Register("memvfs", sqlite3vfs.MemoryVFS{
-		"test.db": &sqlite3vfs.MemoryDB{},
-	})
-	defer sqlite3vfs.Unregister("memvfs")
-
-	name := "file:test.db?vfs=memvfs" +
+	name := "file:/test.db?vfs=memdb" +
 		"&_pragma=busy_timeout(10000)" +
 		"&_pragma=locking_mode(normal)" +
 		"&_pragma=journal_mode(memory)" +

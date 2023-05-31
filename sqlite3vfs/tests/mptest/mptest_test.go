@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
 	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -32,7 +33,6 @@ var (
 	rt        wazero.Runtime
 	module    wazero.CompiledModule
 	instances atomic.Uint64
-	memory    = sqlite3vfs.MemoryVFS{}
 )
 
 func init() {
@@ -52,8 +52,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	sqlite3vfs.Register("memvfs", memory)
 }
 
 func config(ctx context.Context) wazero.ModuleConfig {
@@ -75,28 +73,11 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 	buf, _ := mod.Memory().Read(ptr, mod.Memory().Size()-ptr)
 	buf = buf[:bytes.IndexByte(buf, 0)]
 
-	var memvfs, journal, timeout bool
 	args := strings.Split(string(buf), " ")
 	for i := range args {
 		args[i] = strings.Trim(args[i], `"`)
-		switch args[i] {
-		case "memvfs":
-			memvfs = true
-		case "--timeout":
-			timeout = true
-		case "--journalmode":
-			journal = true
-		}
 	}
 	args = args[:len(args)-1]
-	if memvfs {
-		if !timeout {
-			args = append(args, "--timeout", "1000")
-		}
-		if !journal {
-			args = append(args, "--journalmode", "memory")
-		}
-	}
 
 	cfg := config(ctx).WithArgs(args...)
 	go func() {
@@ -172,13 +153,11 @@ func Test_multiwrite01(t *testing.T) {
 }
 
 func Test_config01_memory(t *testing.T) {
-	memory["test.db"] = new(sqlite3vfs.MemoryDB)
 	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "test.db",
 		"config01.test",
-		"--vfs", "memvfs",
-		"--timeout", "1000",
-		"--journalmode", "memory")
+		"--vfs", "memdb",
+		"--timeout", "1000")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)
@@ -192,13 +171,11 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	memory["test.db"] = new(sqlite3vfs.MemoryDB)
 	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "test.db",
+	cfg := config(ctx).WithArgs("mptest", "/test.db",
 		"multiwrite01.test",
-		"--vfs", "memvfs",
-		"--timeout", "1000",
-		"--journalmode", "memory")
+		"--vfs", "memdb",
+		"--timeout", "1000")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Error(err)

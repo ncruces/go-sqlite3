@@ -83,7 +83,7 @@ type module struct {
 }
 
 func newModule(mod api.Module) (m *module, err error) {
-	m = &module{}
+	m = new(module)
 	m.mod = mod
 	m.ctx, m.vfs = sqlite3vfs.NewContext(context.Background())
 
