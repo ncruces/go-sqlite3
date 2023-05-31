@@ -214,7 +214,9 @@ func newContext(t *testing.T) context.Context {
 type logger struct{}
 
 type testWriter struct {
+	// +checklocks:mtx
 	*testing.T
+	// +checklocks:mtx
 	buf []byte
 	mtx sync.Mutex
 }

@@ -3,6 +3,7 @@ package sqlite3vfs
 import "sync"
 
 var (
+	// +checklocks:vfsRegistryMtx
 	vfsRegistry    map[string]VFS
 	vfsRegistryMtx sync.Mutex
 )
