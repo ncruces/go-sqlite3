@@ -1,4 +1,4 @@
-package sqlite3memdb
+package memdb
 
 import (
 	"io"
@@ -8,24 +8,24 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
-type vfs struct{}
+type memVFS struct{}
 
-func (vfs) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqlite3vfs.OpenFlag, error) {
+func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
 	// Allowed file types:
 	// - databases, which only do page aligned reads/writes;
 	// - temp journals, used by the sorter, which does the same.
-	const types = sqlite3vfs.OPEN_MAIN_DB |
-		sqlite3vfs.OPEN_TRANSIENT_DB |
-		sqlite3vfs.OPEN_TEMP_DB |
-		sqlite3vfs.OPEN_TEMP_JOURNAL
+	const types = vfs.OPEN_MAIN_DB |
+		vfs.OPEN_TRANSIENT_DB |
+		vfs.OPEN_TEMP_DB |
+		vfs.OPEN_TEMP_JOURNAL
 	if flags&types == 0 {
 		return nil, flags, sqlite3.CANTOPEN
 	}
 
-	var db *dbase
+	var db *memDB
 
 	shared := strings.HasPrefix(name, "/")
 	if shared {
@@ -34,41 +34,41 @@ func (vfs) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqlite
 		db = memoryDBs[name[1:]]
 	}
 	if db == nil {
-		if flags&sqlite3vfs.OPEN_CREATE == 0 {
+		if flags&vfs.OPEN_CREATE == 0 {
 			return nil, flags, sqlite3.CANTOPEN
 		}
-		db = new(dbase)
+		db = new(memDB)
 	}
 	if shared {
 		memoryDBs[name[1:]] = db
 	}
 
-	return &file{
-		dbase:    db,
-		readOnly: flags&sqlite3vfs.OPEN_READONLY != 0,
-	}, flags | sqlite3vfs.OPEN_MEMORY, nil
+	return &memFile{
+		memDB:    db,
+		readOnly: flags&vfs.OPEN_READONLY != 0,
+	}, flags | vfs.OPEN_MEMORY, nil
 }
 
-func (vfs) Delete(name string, dirSync bool) error {
+func (memVFS) Delete(name string, dirSync bool) error {
 	return sqlite3.IOERR_DELETE
 }
 
-func (vfs) Access(name string, flag sqlite3vfs.AccessFlag) (bool, error) {
+func (memVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 	return false, nil
 }
 
-func (vfs) FullPathname(name string) (string, error) {
+func (memVFS) FullPathname(name string) (string, error) {
 	return name, nil
 }
 
 // Must be a multiple of 64K (the largest page size).
 const sectorSize = 65536
 
-type dbase struct {
+type memDB struct {
 	// +checklocks:lockMtx
-	pending *file
+	pending *memFile
 	// +checklocks:lockMtx
-	reserved *file
+	reserved *memFile
 
 	// +checklocks:dataMtx
 	data []*[sectorSize]byte
@@ -83,23 +83,23 @@ type dbase struct {
 	dataMtx sync.RWMutex
 }
 
-type file struct {
-	*dbase
-	lock     sqlite3vfs.LockLevel
+type memFile struct {
+	*memDB
+	lock     vfs.LockLevel
 	readOnly bool
 }
 
 var (
 	// Ensure these interfaces are implemented:
-	_ sqlite3vfs.FileLockState = &file{}
-	_ sqlite3vfs.FileSizeHint  = &file{}
+	_ vfs.FileLockState = &memFile{}
+	_ vfs.FileSizeHint  = &memFile{}
 )
 
-func (m *file) Close() error {
-	return m.Unlock(sqlite3vfs.LOCK_NONE)
+func (m *memFile) Close() error {
+	return m.Unlock(vfs.LOCK_NONE)
 }
 
-func (m *file) ReadAt(b []byte, off int64) (n int, err error) {
+func (m *memFile) ReadAt(b []byte, off int64) (n int, err error) {
 	m.dataMtx.RLock()
 	defer m.dataMtx.RUnlock()
 
@@ -121,7 +121,7 @@ func (m *file) ReadAt(b []byte, off int64) (n int, err error) {
 	return n, nil
 }
 
-func (m *file) WriteAt(b []byte, off int64) (n int, err error) {
+func (m *memFile) WriteAt(b []byte, off int64) (n int, err error) {
 	m.dataMtx.Lock()
 	defer m.dataMtx.Unlock()
 
@@ -141,14 +141,14 @@ func (m *file) WriteAt(b []byte, off int64) (n int, err error) {
 	return n, nil
 }
 
-func (m *file) Truncate(size int64) error {
+func (m *memFile) Truncate(size int64) error {
 	m.dataMtx.Lock()
 	defer m.dataMtx.Unlock()
 	return m.truncate(size)
 }
 
 // +checklocks:m.dataMtx
-func (m *file) truncate(size int64) error {
+func (m *memFile) truncate(size int64) error {
 	if size < m.size {
 		base := size / sectorSize
 		rest := size % sectorSize
@@ -166,22 +166,22 @@ func (m *file) truncate(size int64) error {
 	return nil
 }
 
-func (*file) Sync(flag sqlite3vfs.SyncFlag) error {
+func (*memFile) Sync(flag vfs.SyncFlag) error {
 	return nil
 }
 
-func (m *file) Size() (int64, error) {
+func (m *memFile) Size() (int64, error) {
 	m.dataMtx.RLock()
 	defer m.dataMtx.RUnlock()
 	return m.size, nil
 }
 
-func (m *file) Lock(lock sqlite3vfs.LockLevel) error {
+func (m *memFile) Lock(lock vfs.LockLevel) error {
 	if m.lock >= lock {
 		return nil
 	}
 
-	if m.readOnly && lock >= sqlite3vfs.LOCK_RESERVED {
+	if m.readOnly && lock >= vfs.LOCK_RESERVED {
 		return sqlite3.IOERR_LOCK
 	}
 
@@ -190,7 +190,7 @@ func (m *file) Lock(lock sqlite3vfs.LockLevel) error {
 	deadline := time.Now().Add(time.Millisecond)
 
 	switch lock {
-	case sqlite3vfs.LOCK_SHARED:
+	case vfs.LOCK_SHARED:
 		for m.pending != nil {
 			if time.Now().After(deadline) {
 				return sqlite3.BUSY
@@ -201,18 +201,18 @@ func (m *file) Lock(lock sqlite3vfs.LockLevel) error {
 		}
 		m.shared++
 
-	case sqlite3vfs.LOCK_RESERVED:
+	case vfs.LOCK_RESERVED:
 		if m.reserved != nil {
 			return sqlite3.BUSY
 		}
 		m.reserved = m
 
-	case sqlite3vfs.LOCK_EXCLUSIVE:
-		if m.lock < sqlite3vfs.LOCK_PENDING {
+	case vfs.LOCK_EXCLUSIVE:
+		if m.lock < vfs.LOCK_PENDING {
 			if m.pending != nil {
 				return sqlite3.BUSY
 			}
-			m.lock = sqlite3vfs.LOCK_PENDING
+			m.lock = vfs.LOCK_PENDING
 			m.pending = m
 		}
 
@@ -230,7 +230,7 @@ func (m *file) Lock(lock sqlite3vfs.LockLevel) error {
 	return nil
 }
 
-func (m *file) Unlock(lock sqlite3vfs.LockLevel) error {
+func (m *memFile) Unlock(lock vfs.LockLevel) error {
 	if m.lock <= lock {
 		return nil
 	}
@@ -244,15 +244,15 @@ func (m *file) Unlock(lock sqlite3vfs.LockLevel) error {
 	if m.reserved == m {
 		m.reserved = nil
 	}
-	if lock < sqlite3vfs.LOCK_SHARED {
+	if lock < vfs.LOCK_SHARED {
 		m.shared--
 	}
 	m.lock = lock
 	return nil
 }
 
-func (m *file) CheckReservedLock() (bool, error) {
-	if m.lock >= sqlite3vfs.LOCK_RESERVED {
+func (m *memFile) CheckReservedLock() (bool, error) {
+	if m.lock >= vfs.LOCK_RESERVED {
 		return true, nil
 	}
 	m.lockMtx.Lock()
@@ -260,18 +260,18 @@ func (m *file) CheckReservedLock() (bool, error) {
 	return m.reserved != nil, nil
 }
 
-func (*file) SectorSize() int {
+func (*memFile) SectorSize() int {
 	return sectorSize
 }
 
-func (*file) DeviceCharacteristics() sqlite3vfs.DeviceCharacteristic {
-	return sqlite3vfs.IOCAP_ATOMIC |
-		sqlite3vfs.IOCAP_SEQUENTIAL |
-		sqlite3vfs.IOCAP_SAFE_APPEND |
-		sqlite3vfs.IOCAP_POWERSAFE_OVERWRITE
+func (*memFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
+	return vfs.IOCAP_ATOMIC |
+		vfs.IOCAP_SEQUENTIAL |
+		vfs.IOCAP_SAFE_APPEND |
+		vfs.IOCAP_POWERSAFE_OVERWRITE
 }
 
-func (m *file) SizeHint(size int64) error {
+func (m *memFile) SizeHint(size int64) error {
 	m.dataMtx.Lock()
 	defer m.dataMtx.Unlock()
 	if size > m.size {
@@ -280,7 +280,7 @@ func (m *file) SizeHint(size int64) error {
 	return nil
 }
 
-func (m *file) LockState() sqlite3vfs.LockLevel {
+func (m *memFile) LockState() vfs.LockLevel {
 	return m.lock
 }
 

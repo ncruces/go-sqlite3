@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -41,7 +41,7 @@ func init() {
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
-	env := sqlite3vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
+	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	env.NewFunctionBuilder().WithFunc(system).Export("system")
 	_, err := env.Instantiate(ctx)
 	if err != nil {
@@ -81,7 +81,7 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 
 	cfg := config(ctx).WithArgs(args...)
 	go func() {
-		ctx, vfs := sqlite3vfs.NewContext(ctx)
+		ctx, vfs := vfs.NewContext(ctx)
 		mod, _ := rt.InstantiateModule(ctx, module, cfg)
 		mod.Close(ctx)
 		vfs.Close()
@@ -90,7 +90,7 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 }
 
 func Test_config01(t *testing.T) {
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -109,7 +109,7 @@ func Test_config02(t *testing.T) {
 		t.Skip("skipping in CI")
 	}
 
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -125,7 +125,7 @@ func Test_crash01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -141,7 +141,7 @@ func Test_multiwrite01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -153,7 +153,7 @@ func Test_multiwrite01(t *testing.T) {
 }
 
 func Test_config01_memory(t *testing.T) {
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "test.db",
 		"config01.test",
 		"--vfs", "memdb",
@@ -171,7 +171,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, vfs := sqlite3vfs.NewContext(newContext(t))
+	ctx, vfs := vfs.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db",
 		"multiwrite01.test",
 		"--vfs", "memdb",

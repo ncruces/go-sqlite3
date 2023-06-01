@@ -1,4 +1,4 @@
-package sqlite3memdb_test
+package memdb_test
 
 import (
 	"database/sql"
@@ -9,14 +9,14 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3memdb"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 //go:embed testdata/test.db
 var testDB []byte
 
 func Example() {
-	sqlite3memdb.Create("test.db", testDB)
+	memdb.Create("test.db", testDB)
 
 	db, err := sql.Open("sqlite3", "file:/test.db?vfs=memdb")
 	if err != nil {

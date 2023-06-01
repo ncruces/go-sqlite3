@@ -15,13 +15,13 @@ provides a [`database/sql`](https://pkg.go.dev/database/sql) driver
 ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
 - Package [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
 embeds a build of SQLite into your application.
-- Package [`github.com/ncruces/go-sqlite3/sqlite3vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/sqlite3vfs)
+- Package [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
 wraps the [C SQLite VFS API](https://www.sqlite.org/vfs.html) and provides a pure Go implementation.
 
 ### Caveats
 
 This module replaces the SQLite [OS Interface](https://www.sqlite.org/vfs.html)
-(aka VFS) with a [pure Go](sqlite3vfs/) implementation.
+(aka VFS) with a [pure Go](vfs/) implementation.
 This has benefits, but also comes with some drawbacks.
 
 #### Write-Ahead Logging

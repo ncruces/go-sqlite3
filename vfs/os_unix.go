@@ -1,6 +1,6 @@
 //go:build unix
 
-package sqlite3vfs
+package vfs
 
 import (
 	"io/fs"
