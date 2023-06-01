@@ -14,7 +14,14 @@ import (
 type vfs struct{}
 
 func (vfs) Open(name string, flags sqlite3vfs.OpenFlag) (sqlite3vfs.File, sqlite3vfs.OpenFlag, error) {
-	if flags&sqlite3vfs.OPEN_MAIN_DB == 0 {
+	// Allowed file types:
+	// - databases, which only do page aligned reads/writes;
+	// - temp journals, used by the sorter, which does the same.
+	const types = sqlite3vfs.OPEN_MAIN_DB |
+		sqlite3vfs.OPEN_TRANSIENT_DB |
+		sqlite3vfs.OPEN_TEMP_DB |
+		sqlite3vfs.OPEN_TEMP_JOURNAL
+	if flags&types == 0 {
 		return nil, flags, sqlite3.CANTOPEN
 	}
 
@@ -54,6 +61,7 @@ func (vfs) FullPathname(name string) (string, error) {
 	return name, nil
 }
 
+// Must be a multiple of 64K (the largest page size).
 const sectorSize = 65536
 
 type dbase struct {

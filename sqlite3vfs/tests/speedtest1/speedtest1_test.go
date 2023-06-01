@@ -20,6 +20,7 @@ import (
 	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
+	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
 	"github.com/ncruces/go-sqlite3/sqlite3vfs"
 )
 

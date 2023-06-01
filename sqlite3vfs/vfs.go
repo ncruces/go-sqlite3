@@ -219,7 +219,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 	if n == int(iAmt) {
 		return _OK
 	}
-	if n == 0 && err != io.EOF {
+	if err != io.EOF {
 		return vfsErrorCode(err, _IOERR_READ)
 	}
 	clear(buf[n:])
