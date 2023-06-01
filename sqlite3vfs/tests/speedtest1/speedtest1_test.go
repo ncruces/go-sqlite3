@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"flag"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -40,7 +41,7 @@ func TestMain(m *testing.M) {
 	initFlags()
 
 	ctx := context.Background()
-	ctx, cpu, mem := setupProfiling(ctx)
+	ctx, prof, cpu, mem := setupProfiling(ctx)
 
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
@@ -58,7 +59,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	defer os.Exit(code)
 	io.Copy(os.Stderr, &output)
-	saveProfiles(module, cpu, mem)
+	saveProfiles(module, prof, cpu, mem)
 }
 
 func initFlags() {
@@ -71,7 +72,7 @@ func initFlags() {
 			// keep test flags
 			os.Args[i] = arg
 			i++
-		case arg == "-wzprof":
+		case strings.HasSuffix(arg, "-wzprof"):
 			// collect guest profile
 			wzprof = true
 		default:
@@ -93,18 +94,23 @@ func initFlags() {
 	}
 }
 
-func setupProfiling(ctx context.Context) (context.Context, *wzprof.CPUProfiler, *wzprof.MemoryProfiler) {
+func setupProfiling(ctx context.Context) (context.Context, *wzprof.Profiling, *wzprof.CPUProfiler, *wzprof.MemoryProfiler) {
+	if cpuprof == "" && memprof == "" {
+		return ctx, nil, nil, nil
+	}
+
 	var cpu *wzprof.CPUProfiler
 	var mem *wzprof.MemoryProfiler
+	prof := wzprof.ProfilingFor(binary)
 
 	var listeners []experimental.FunctionListenerFactory
 	if cpuprof != "" {
-		cpu = wzprof.NewCPUProfiler()
+		cpu = prof.CPUProfiler()
 		listeners = append(listeners, cpu)
 		cpu.StartProfile()
 	}
 	if memprof != "" {
-		mem = wzprof.NewMemoryProfiler()
+		mem = prof.MemoryProfiler()
 		listeners = append(listeners, mem)
 	}
 	if listeners != nil {
@@ -112,21 +118,22 @@ func setupProfiling(ctx context.Context) (context.Context, *wzprof.CPUProfiler, 
 			experimental.FunctionListenerFactoryKey{},
 			experimental.MultiFunctionListenerFactory(listeners...))
 	}
-	return ctx, cpu, mem
+	return ctx, prof, cpu, mem
 }
 
-func saveProfiles(module wazero.CompiledModule, cpu *wzprof.CPUProfiler, mem *wzprof.MemoryProfiler) {
+func saveProfiles(module wazero.CompiledModule, prof *wzprof.Profiling, cpu *wzprof.CPUProfiler, mem *wzprof.MemoryProfiler) {
 	if cpu == nil && mem == nil {
 		return
 	}
 
-	symbols, err := wzprof.BuildDwarfSymbolizer(module)
+	log.SetOutput(io.Discard)
+	err := prof.Prepare(module)
 	if err != nil {
 		panic(err)
 	}
 
 	if cpu != nil {
-		prof := cpu.StopProfile(1, symbols)
+		prof := cpu.StopProfile(1)
 		err := wzprof.WriteProfile(cpuprof, prof)
 		if err != nil {
 			panic(err)
@@ -134,7 +141,7 @@ func saveProfiles(module wazero.CompiledModule, cpu *wzprof.CPUProfiler, mem *wz
 	}
 
 	if mem != nil {
-		prof := mem.NewProfile(1, symbols)
+		prof := mem.NewProfile(1)
 		err := wzprof.WriteProfile(memprof, prof)
 		if err != nil {
 			panic(err)
