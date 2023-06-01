@@ -35,7 +35,7 @@ var (
 	instances atomic.Uint64
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	ctx := context.TODO()
 
 	rt = wazero.NewRuntime(ctx)
@@ -52,6 +52,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	os.Exit(m.Run())
 }
 
 func config(ctx context.Context) wazero.ModuleConfig {
