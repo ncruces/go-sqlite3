@@ -1,4 +1,4 @@
-package sqlite3vfs
+package vfs
 
 import "github.com/ncruces/go-sqlite3/internal/util"
 

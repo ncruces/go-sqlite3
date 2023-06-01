@@ -1,4 +1,4 @@
-package sqlite3reader_test
+package readervfs_test
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3reader"
+	"github.com/ncruces/go-sqlite3/vfs/readervfs"
 	"github.com/psanford/httpreadat"
 )
 
@@ -18,8 +18,8 @@ import (
 var testDB []byte
 
 func Example_http() {
-	sqlite3reader.Create("demo.db", httpreadat.New("https://www.sanford.io/demo.db"))
-	defer sqlite3reader.Delete("demo.db")
+	readervfs.Create("demo.db", httpreadat.New("https://www.sanford.io/demo.db"))
+	defer readervfs.Delete("demo.db")
 
 	db, err := sql.Open("sqlite3", "file:demo.db?vfs=reader")
 	if err != nil {
@@ -65,8 +65,8 @@ func Example_http() {
 }
 
 func Example_embed() {
-	sqlite3reader.Create("test.db", sqlite3reader.NewSizeReaderAt(bytes.NewReader(testDB)))
-	defer sqlite3reader.Delete("test.db")
+	readervfs.Create("test.db", readervfs.NewSizeReaderAt(bytes.NewReader(testDB)))
+	defer readervfs.Delete("test.db")
 
 	db, err := sql.Open("sqlite3", "file:test.db?vfs=reader")
 	if err != nil {

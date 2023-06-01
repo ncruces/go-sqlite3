@@ -1,12 +1,12 @@
-// Package sqlite3reader implements an SQLite VFS for immutable databases.
+// Package readervfs implements an SQLite VFS for immutable databases.
 //
-// The "reader" [sqlite3vfs.VFS] permits accessing any [io.ReaderAt]
+// The "reader" [vfs.VFS] permits accessing any [io.ReaderAt]
 // as an immutable SQLite database.
 //
-// Importing package sqlite3reader registers the VFS.
+// Importing package readervfs registers the VFS.
 //
-//	import _ "github.com/ncruces/go-sqlite3/sqlite3reader"
-package sqlite3reader
+//	import _ "github.com/ncruces/go-sqlite3/vfs/readervfs"
+package readervfs
 
 import (
 	"io"
@@ -14,11 +14,11 @@ import (
 	"sync"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func init() {
-	sqlite3vfs.Register("reader", vfs{})
+	vfs.Register("reader", readerVFS{})
 }
 
 var (

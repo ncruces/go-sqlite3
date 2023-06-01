@@ -1,4 +1,4 @@
-package sqlite3vfs
+package vfs
 
 import "sync"
 

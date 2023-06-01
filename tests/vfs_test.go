@@ -7,12 +7,12 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/sqlite3memdb"
-	"github.com/ncruces/go-sqlite3/sqlite3reader"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/readervfs"
 )
 
 func TestMemoryVFS_Open_notfound(t *testing.T) {
-	sqlite3memdb.Delete("demo.db")
+	memdb.Delete("demo.db")
 
 	_, err := sqlite3.Open("file:/demo.db?vfs=memdb&mode=ro")
 	if err == nil {
@@ -24,7 +24,7 @@ func TestMemoryVFS_Open_notfound(t *testing.T) {
 }
 
 func TestReaderVFS_Open_notfound(t *testing.T) {
-	sqlite3reader.Delete("demo.db")
+	readervfs.Delete("demo.db")
 
 	_, err := sqlite3.Open("file:demo.db?vfs=reader")
 	if err == nil {

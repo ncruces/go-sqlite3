@@ -6,7 +6,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestDB_memory(t *testing.T) {

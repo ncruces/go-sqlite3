@@ -21,8 +21,8 @@ import (
 	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
-	_ "github.com/ncruces/go-sqlite3/sqlite3memdb"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 //go:embed testdata/speedtest1.wasm
@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
-	env := sqlite3vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
+	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	_, err := env.Instantiate(ctx)
 	if err != nil {
 		panic(err)
@@ -151,7 +151,7 @@ func saveProfiles(module wazero.CompiledModule, prof *wzprof.Profiling, cpu *wzp
 
 func Benchmark_speedtest1(b *testing.B) {
 	output.Reset()
-	ctx, vfs := sqlite3vfs.NewContext(context.Background())
+	ctx, vfs := vfs.NewContext(context.Background())
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().

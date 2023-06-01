@@ -1,5 +1,5 @@
-// Package sqlite3vfs wraps the C SQLite VFS API.
-package sqlite3vfs
+// Package vfs wraps the C SQLite VFS API.
+package vfs
 
 import "net/url"
 

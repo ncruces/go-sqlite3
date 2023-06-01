@@ -1,4 +1,4 @@
-package sqlite3reader
+package readervfs
 
 import (
 	"io"

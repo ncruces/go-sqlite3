@@ -1,27 +1,27 @@
-// Package sqlite3memdb implements the "memdb" SQLite VFS.
+// Package memdb implements the "memdb" SQLite VFS.
 //
-// The "memdb" [sqlite3vfs.VFS] allows the same in-memory database to be shared
+// The "memdb" [vfs.VFS] allows the same in-memory database to be shared
 // among multiple database connections in the same process,
 // as long as the database name begins with "/".
 //
-// Importing package sqlite3memdb registers the VFS.
+// Importing package memdb registers the VFS.
 //
-//	import _ "github.com/ncruces/go-sqlite3/sqlite3memdb"
-package sqlite3memdb
+//	import _ "github.com/ncruces/go-sqlite3/vfs/memdb"
+package memdb
 
 import (
 	"sync"
 
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func init() {
-	sqlite3vfs.Register("memdb", vfs{})
+	vfs.Register("memdb", memVFS{})
 }
 
 var (
 	memoryMtx sync.Mutex
-	memoryDBs = map[string]*dbase{}
+	memoryDBs = map[string]*memDB{}
 )
 
 // Create creates a shared memory database,
@@ -32,7 +32,7 @@ func Create(name string, data []byte) {
 	memoryMtx.Lock()
 	defer memoryMtx.Unlock()
 
-	db := new(dbase)
+	db := new(memDB)
 	db.size = int64(len(data))
 
 	sectors := divRoundUp(db.size, sectorSize)

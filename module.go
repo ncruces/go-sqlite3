@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/sqlite3vfs"
+	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -53,7 +53,7 @@ func compileModule() {
 	ctx := context.Background()
 	sqlite3.runtime = wazero.NewRuntime(ctx)
 
-	env := sqlite3vfs.ExportHostFunctions(sqlite3.runtime.NewHostModuleBuilder("env"))
+	env := vfs.ExportHostFunctions(sqlite3.runtime.NewHostModuleBuilder("env"))
 	_, sqlite3.err = env.Instantiate(ctx)
 	if sqlite3.err != nil {
 		return
@@ -85,7 +85,7 @@ type module struct {
 func newModule(mod api.Module) (m *module, err error) {
 	m = new(module)
 	m.mod = mod
-	m.ctx, m.vfs = sqlite3vfs.NewContext(context.Background())
+	m.ctx, m.vfs = vfs.NewContext(context.Background())
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
