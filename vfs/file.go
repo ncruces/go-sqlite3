@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -68,6 +69,10 @@ func (vfsOS) Access(name string, flags AccessFlag) (bool, error) {
 }
 
 func (vfsOS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
+	return vfsOS{}.OpenParams(name, flags, nil)
+}
+
+func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error) {
 	var oflags int
 	if flags&OPEN_EXCLUSIVE != 0 {
 		oflags |= os.O_EXCL
@@ -96,6 +101,12 @@ func (vfsOS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
 		return nil, flags, err
 	}
 
+	if modeof := params.Get("modeof"); modeof != "" {
+		if err = osSetMode(f, modeof); err != nil {
+			f.Close()
+			return nil, flags, _IOERR_FSTAT
+		}
+	}
 	if flags&OPEN_DELETEONCLOSE != 0 {
 		os.Remove(f.Name())
 	}
