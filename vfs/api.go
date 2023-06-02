@@ -15,7 +15,7 @@ type VFS interface {
 	FullPathname(name string) (string, error)
 }
 
-// VFSParams extends [VFS] to with the ability to handle URI parameters
+// VFSParams extends VFS to with the ability to handle URI parameters
 // through the OpenParams method.
 //
 // https://www.sqlite.org/c3ref/uri_boolean.html
@@ -44,7 +44,7 @@ type File interface {
 	DeviceCharacteristics() DeviceCharacteristic
 }
 
-// FileLockState extends [File] to implement the
+// FileLockState extends File to implement the
 // SQLITE_FCNTL_LOCKSTATE file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
@@ -53,7 +53,7 @@ type FileLockState interface {
 	LockState() LockLevel
 }
 
-// FileSizeHint extends [File] to implement the
+// FileSizeHint extends File to implement the
 // SQLITE_FCNTL_SIZE_HINT file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
@@ -62,7 +62,7 @@ type FileSizeHint interface {
 	SizeHint(size int64) error
 }
 
-// FileHasMoved extends [File] to implement the
+// FileHasMoved extends File to implement the
 // SQLITE_FCNTL_HAS_MOVED file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
@@ -71,7 +71,7 @@ type FileHasMoved interface {
 	HasMoved() (bool, error)
 }
 
-// FilePowersafeOverwrite extends [File] to implement the
+// FilePowersafeOverwrite extends File to implement the
 // SQLITE_FCNTL_POWERSAFE_OVERWRITE file control opcode.
 //
 // https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html

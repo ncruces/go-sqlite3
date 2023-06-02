@@ -23,6 +23,7 @@ func init() {
 
 var (
 	readerMtx sync.RWMutex
+	// +checklocks:readerMtx
 	readerDBs = map[string]SizeReaderAt{}
 )
 
