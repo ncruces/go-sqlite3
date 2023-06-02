@@ -81,6 +81,15 @@ type FilePowersafeOverwrite interface {
 	SetPowersafeOverwrite(bool)
 }
 
+// FilePowersafeOverwrite extends File to implement the
+// SQLITE_FCNTL_COMMIT_PHASETWO file control opcode.
+//
+// https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
+type FileCommitPhaseTwo interface {
+	File
+	CommitPhaseTwo() error
+}
+
 // FileBatchAtomicWrite extends File to implement the
 // SQLITE_FCNTL_BEGIN_ATOMIC_WRITE, SQLITE_FCNTL_COMMIT_ATOMIC_WRITE
 // and SQLITE_FCNTL_ROLLBACK_ATOMIC_WRITE file control opcodes.

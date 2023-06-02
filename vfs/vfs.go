@@ -336,6 +336,12 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return vfsErrorCode(err, _IOERR_FSTAT)
 		}
 
+	case _FCNTL_COMMIT_PHASETWO:
+		if file, ok := file.(FileCommitPhaseTwo); ok {
+			err := file.CommitPhaseTwo()
+			return vfsErrorCode(err, _IOERR)
+		}
+
 	case _FCNTL_BEGIN_ATOMIC_WRITE:
 		if file, ok := file.(FileBatchAtomicWrite); ok {
 			err := file.BeginAtomicWrite()
@@ -356,9 +362,8 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	// Consider also implementing these opcodes (in use by SQLite):
 	//  _FCNTL_PDB
 	//  _FCNTL_BUSYHANDLER
-	//	_FCNTL_CHUNK_SIZE
-	//  _FCNTL_COMMIT_PHASETWO
-	//	_FCNTL_OVERWRITE
+	//  _FCNTL_CHUNK_SIZE
+	//  _FCNTL_OVERWRITE
 	//  _FCNTL_PRAGMA
 	//  _FCNTL_SYNC
 	return _NOTFOUND
