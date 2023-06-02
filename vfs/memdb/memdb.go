@@ -40,7 +40,7 @@ func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, err
 		db = new(memDB)
 	}
 	if shared {
-		memoryDBs[name[1:]] = db
+		memoryDBs[name[1:]] = db // +checklocksignore: lock is held
 	}
 
 	return &memFile{

@@ -5,16 +5,20 @@ import "sync"
 var (
 	// +checklocks:vfsRegistryMtx
 	vfsRegistry    map[string]VFS
-	vfsRegistryMtx sync.Mutex
+	vfsRegistryMtx sync.RWMutex
 )
 
 // Find returns a VFS given its name.
 // If there is no match, nil is returned.
+// If name is empty, the default VFS is returned.
 //
 // https://www.sqlite.org/c3ref/vfs_find.html
 func Find(name string) VFS {
-	vfsRegistryMtx.Lock()
-	defer vfsRegistryMtx.Unlock()
+	if name == "" || name == "os" {
+		return vfsOS{}
+	}
+	vfsRegistryMtx.RLock()
+	defer vfsRegistryMtx.RUnlock()
 	return vfsRegistry[name]
 }
 
@@ -22,6 +26,9 @@ func Find(name string) VFS {
 //
 // https://www.sqlite.org/c3ref/vfs_find.html
 func Register(name string, vfs VFS) {
+	if name == "" || name == "os" {
+		return
+	}
 	vfsRegistryMtx.Lock()
 	defer vfsRegistryMtx.Unlock()
 	if vfsRegistry == nil {

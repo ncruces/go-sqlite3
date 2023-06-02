@@ -14,10 +14,10 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+// ExportHostFunctions is an internal API users need not call directly.
+//
 // ExportHostFunctions registers the required VFS host functions
 // with the provided env module.
-//
-// Users of the [github.com/ncruces/go-sqlite3] package need not call this directly.
 func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_vfs_find", vfsFind)
 	util.ExportFuncIIJ(env, "go_localtime", vfsLocaltime)
@@ -49,15 +49,13 @@ type vfsState struct {
 	files []File
 }
 
+// NewContext is an internal API users need not call directly.
+//
 // NewContext creates a new context to hold [api.Module] specific VFS data.
-//
-// This context should be passed to any [api.Function] calls that might
+// The context should be passed to any [api.Function] calls that might
 // generate VFS host callbacks.
-//
 // The returned [io.Closer] should be closed after the [api.Module] is closed,
 // to release any associated resources.
-//
-// Users of the [github.com/ncruces/go-sqlite3] package need not call this directly.
 func NewContext(ctx context.Context) (context.Context, io.Closer) {
 	vfs := new(vfsState)
 	return context.WithValue(ctx, vfsKey{}, vfs), vfs
@@ -75,7 +73,7 @@ func (vfs *vfsState) Close() error {
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName uint32) uint32 {
 	name := util.ReadString(mod, zVfsName, _MAX_STRING)
-	if Find(name) != nil {
+	if vfs := Find(name); vfs != nil && vfs != (vfsOS{}) {
 		return 1
 	}
 	return 0
@@ -399,13 +397,10 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 }
 
 func vfsGet(mod api.Module, pVfs uint32) VFS {
-	if pVfs == 0 {
-		return vfsOS{}
-	}
-	const zNameOffset = 16
-	name := util.ReadString(mod, util.ReadUint32(mod, pVfs+zNameOffset), _MAX_STRING)
-	if name == "os" {
-		return vfsOS{}
+	var name string
+	if pVfs != 0 {
+		const zNameOffset = 16
+		name = util.ReadString(mod, util.ReadUint32(mod, pVfs+zNameOffset), _MAX_STRING)
 	}
 	if vfs := Find(name); vfs != nil {
 		return vfs

@@ -21,6 +21,7 @@ func init() {
 
 var (
 	memoryMtx sync.Mutex
+	// +checklocks:memoryMtx
 	memoryDBs = map[string]*memDB{}
 )
 
