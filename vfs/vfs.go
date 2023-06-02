@@ -335,12 +335,30 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			util.WriteUint32(mod, pArg, res)
 			return vfsErrorCode(err, _IOERR_FSTAT)
 		}
+
+	case _FCNTL_BEGIN_ATOMIC_WRITE:
+		if file, ok := file.(FileBatchAtomicWrite); ok {
+			err := file.BeginAtomicWrite()
+			return vfsErrorCode(err, _IOERR_BEGIN_ATOMIC)
+		}
+	case _FCNTL_COMMIT_ATOMIC_WRITE:
+		if file, ok := file.(FileBatchAtomicWrite); ok {
+			err := file.CommitAtomicWrite()
+			return vfsErrorCode(err, _IOERR_COMMIT_ATOMIC)
+		}
+	case _FCNTL_ROLLBACK_ATOMIC_WRITE:
+		if file, ok := file.(FileBatchAtomicWrite); ok {
+			err := file.RollbackAtomicWrite()
+			return vfsErrorCode(err, _IOERR_ROLLBACK_ATOMIC)
+		}
 	}
 
 	// Consider also implementing these opcodes (in use by SQLite):
 	//  _FCNTL_PDB
 	//  _FCNTL_BUSYHANDLER
+	//	_FCNTL_CHUNK_SIZE
 	//  _FCNTL_COMMIT_PHASETWO
+	//	_FCNTL_OVERWRITE
 	//  _FCNTL_PRAGMA
 	//  _FCNTL_SYNC
 	return _NOTFOUND
