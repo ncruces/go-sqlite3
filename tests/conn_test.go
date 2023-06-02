@@ -3,6 +3,8 @@ package tests
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -32,6 +34,43 @@ func TestConn_Open_notfound(t *testing.T) {
 	}
 	if !errors.Is(err, sqlite3.CANTOPEN) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+	}
+}
+
+func TestConn_Open_modeof(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	file := filepath.Join(dir, "test.db")
+	mode := filepath.Join(dir, "modeof.txt")
+
+	fd, err := os.OpenFile(mode, os.O_CREATE, 0624)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fi, err := fd.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fd.Close()
+
+	db, err := sqlite3.Open("file:" + file + "?modeof=" + mode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	di, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+
+	if di.Mode() != fi.Mode() {
+		t.Errorf("got %v, want %v", di.Mode(), fi.Mode())
+	}
+
+	_, err = sqlite3.Open("file:" + file + "?modeof=" + mode + "2")
+	if err == nil {
+		t.Fatal("want error")
 	}
 }
 

@@ -5,6 +5,7 @@ package vfs
 import (
 	"io/fs"
 	"os"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -23,6 +24,18 @@ func osAccess(path string, flags AccessFlag) error {
 		access = unix.R_OK
 	}
 	return unix.Access(path, access)
+}
+
+func osSetMode(file *os.File, modeof string) error {
+	fi, err := os.Stat(modeof)
+	if err != nil {
+		return err
+	}
+	file.Chmod(fi.Mode())
+	if sys, ok := fi.Sys().(*syscall.Stat_t); ok {
+		file.Chown(int(sys.Uid), int(sys.Gid))
+	}
+	return nil
 }
 
 func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {

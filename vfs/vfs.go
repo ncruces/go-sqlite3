@@ -175,8 +175,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 
 	var file File
 	var err error
+	var parsed bool
 	var params url.Values
 	if pfs, ok := vfs.(VFSParams); ok {
+		parsed = true
 		params = vfsURIParameters(ctx, mod, zPath, flags)
 		file, flags, err = pfs.OpenParams(path, flags, params)
 	} else {
@@ -184,7 +186,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	}
 
 	if file, ok := file.(FilePowersafeOverwrite); ok {
-		if params == nil {
+		if !parsed {
 			params = vfsURIParameters(ctx, mod, zPath, flags)
 		}
 		if b, ok := util.ParseBool(params.Get("psow")); ok {
@@ -338,9 +340,9 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	}
 
 	// Consider also implementing these opcodes (in use by SQLite):
+	//  _FCNTL_PDB
 	//  _FCNTL_BUSYHANDLER
 	//  _FCNTL_COMMIT_PHASETWO
-	//  _FCNTL_PDB
 	//  _FCNTL_PRAGMA
 	//  _FCNTL_SYNC
 	return _NOTFOUND

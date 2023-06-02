@@ -47,6 +47,15 @@ func osAccess(path string, flags AccessFlag) error {
 	return nil
 }
 
+func osSetMode(file *os.File, modeof string) error {
+	fi, err := os.Stat(modeof)
+	if err != nil {
+		return err
+	}
+	file.Chmod(fi.Mode())
+	return nil
+}
+
 func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
 	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
 	rc := osReadLock(file, _PENDING_BYTE, 1, timeout)
