@@ -79,6 +79,24 @@ func TestParseDDL(t *testing.T) {
 				},
 			},
 		},
+		{
+			"non-unique index",
+			[]string{
+				"CREATE TABLE `test-c` (`field` integer NOT NULL)",
+				"CREATE INDEX `idx_uq` ON `test-b`(`field`) WHERE field = 0",
+			},
+			1,
+			[]migrator.ColumnType{
+				{
+					NameValue:       sql.NullString{String: "field", Valid: true},
+					DataTypeValue:   sql.NullString{String: "integer", Valid: true},
+					ColumnTypeValue: sql.NullString{String: "integer", Valid: true},
+					PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
+					UniqueValue:     sql.NullBool{Bool: false, Valid: true},
+					NullableValue:   sql.NullBool{Bool: false, Valid: true},
+				},
+			},
+		},
 	}
 
 	for _, p := range params {

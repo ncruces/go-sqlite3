@@ -34,8 +34,9 @@ jobs:
     - name: Download
       run: go mod download
 
-    - name: Verify
-      run: go mod verify
+    # Fixed in go 1.21: https://go.dev/issue/54372
+    # - name: Verify
+    #   run: go mod verify
 
     - name: Vet
       run: go vet ./...

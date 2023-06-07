@@ -162,7 +162,7 @@ func parseDDL(strs ...string) (*ddl, error) {
 			for _, column := range getAllColumns(matches[1]) {
 				for idx, c := range result.columns {
 					if c.NameValue.String == column {
-						c.UniqueValue = sql.NullBool{Bool: true, Valid: true}
+						c.UniqueValue = sql.NullBool{Bool: strings.ToUpper(strings.Fields(str)[1]) == "UNIQUE", Valid: true}
 						result.columns[idx] = c
 					}
 				}

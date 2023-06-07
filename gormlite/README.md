@@ -1,5 +1,7 @@
 # GORM SQLite Driver
 
+[![Go Reference](https://pkg.go.dev/badge/image)](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
+
 ## Usage
 
 ```go
