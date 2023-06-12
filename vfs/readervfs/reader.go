@@ -37,7 +37,7 @@ func (readerVFS) FullPathname(name string) (string, error) {
 
 type readerFile struct{ SizeReaderAt }
 
-func (r readerFile) Close() error {
+func (readerFile) Close() error {
 	return nil
 }
 

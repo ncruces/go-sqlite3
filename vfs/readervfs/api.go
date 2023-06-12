@@ -28,7 +28,7 @@ var (
 )
 
 // Create creates an immutable database from reader.
-// The caller should insure that data from reader does not mutate,
+// The caller should ensure that data from reader does not mutate,
 // otherwise SQLite might return incorrect query results and/or [sqlite3.CORRUPT] errors.
 func Create(name string, reader SizeReaderAt) {
 	readerMtx.Lock()

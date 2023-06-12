@@ -187,17 +187,11 @@ func (m *memFile) Lock(lock vfs.LockLevel) error {
 
 	m.lockMtx.Lock()
 	defer m.lockMtx.Unlock()
-	deadline := time.Now().Add(time.Millisecond)
 
 	switch lock {
 	case vfs.LOCK_SHARED:
-		for m.pending != nil {
-			if time.Now().After(deadline) {
-				return sqlite3.BUSY
-			}
-			m.lockMtx.Unlock()
-			runtime.Gosched()
-			m.lockMtx.Lock()
+		if m.pending != nil {
+			return sqlite3.BUSY
 		}
 		m.shared++
 
@@ -216,8 +210,8 @@ func (m *memFile) Lock(lock vfs.LockLevel) error {
 			m.pending = m
 		}
 
-		for m.shared > 1 {
-			if time.Now().After(deadline) {
+		for start := time.Now(); m.shared > 1; {
+			if time.Since(start) > time.Millisecond {
 				return sqlite3.BUSY
 			}
 			m.lockMtx.Unlock()
