@@ -23,6 +23,7 @@ import (
 var (
 	Binary []byte // WASM binary to load.
 	Path   string // Path to load the binary from.
+	Debug  bool   // Whether to enable SQLite debug stack traces.
 )
 
 var sqlite3 struct {
@@ -51,7 +52,7 @@ func instantiateModule() (*module, error) {
 
 func compileModule() {
 	ctx := context.Background()
-	sqlite3.runtime = wazero.NewRuntime(ctx)
+	sqlite3.runtime = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithDebugInfoEnabled(Debug))
 
 	env := vfs.ExportHostFunctions(sqlite3.runtime.NewHostModuleBuilder("env"))
 	_, sqlite3.err = env.Instantiate(ctx)

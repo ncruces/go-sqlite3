@@ -11,4 +11,8 @@ rm -rf gorm/
 patch -p1 -N < tests.patch
 
 cd tests
-go mod tidy && go test
+go mod tidy && go work use . && go test
+
+cd ..
+rm -rf tests/
+go work use -r .

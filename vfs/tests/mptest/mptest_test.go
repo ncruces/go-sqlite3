@@ -36,9 +36,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	ctx := context.TODO()
-
-	rt = wazero.NewRuntime(ctx)
+	ctx := context.Background()
+	rt = wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithDebugInfoEnabled(false))
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
