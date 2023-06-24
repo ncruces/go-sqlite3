@@ -1,13 +1,19 @@
 package tests
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+
+	_ "embed"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
+
+//go:embed testdata/wal.db
+var waldb []byte
 
 func TestDB_memory(t *testing.T) {
 	t.Parallel()
@@ -17,6 +23,16 @@ func TestDB_memory(t *testing.T) {
 func TestDB_file(t *testing.T) {
 	t.Parallel()
 	testDB(t, filepath.Join(t.TempDir(), "test.db"))
+}
+
+func TestDB_wal(t *testing.T) {
+	t.Parallel()
+	wal := filepath.Join(t.TempDir(), "test.db")
+	err := os.WriteFile(wal, waldb, 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testDB(t, wal)
 }
 
 func TestDB_vfs(t *testing.T) {

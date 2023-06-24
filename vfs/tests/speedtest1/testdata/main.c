@@ -1,8 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-// Configuration
-#include "sqlite_cfg.h"
 // Amalgamation
 #include "sqlite3.c"
 // VFS

@@ -25,7 +25,6 @@ func TestParallel(t *testing.T) {
 	name := "file:" +
 		filepath.Join(t.TempDir(), "test.db") +
 		"?_pragma=busy_timeout(10000)" +
-		"&_pragma=locking_mode(normal)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
 	testParallel(t, name, iter)
@@ -42,7 +41,6 @@ func TestMemory(t *testing.T) {
 
 	name := "file:/test.db?vfs=memdb" +
 		"&_pragma=busy_timeout(10000)" +
-		"&_pragma=locking_mode(normal)" +
 		"&_pragma=journal_mode(memory)" +
 		"&_pragma=synchronous(off)"
 	testParallel(t, name, iter)
@@ -59,7 +57,6 @@ func TestMultiProcess(t *testing.T) {
 
 	name := "file:" + file +
 		"?_pragma=busy_timeout(10000)" +
-		"&_pragma=locking_mode(normal)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
 
@@ -93,7 +90,6 @@ func TestChildProcess(t *testing.T) {
 
 	name := "file:" + file +
 		"?_pragma=busy_timeout(10000)" +
-		"&_pragma=locking_mode(normal)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
 
@@ -128,10 +124,7 @@ func testParallel(t *testing.T, name string, n int) {
 		}
 		defer db.Close()
 
-		err = db.Exec(`
-			PRAGMA busy_timeout=10000;
-			PRAGMA locking_mode=normal;
-		`)
+		err = db.Exec(`PRAGMA busy_timeout=10000`)
 		if err != nil {
 			return err
 		}

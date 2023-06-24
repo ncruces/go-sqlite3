@@ -36,12 +36,9 @@
 
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.
-// We set the default locking mode to EXCLUSIVE instead.
+// We patch SQLite to use exclusive locking mode instead.
 // https://www.sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
-#ifndef SQLITE_DEFAULT_LOCKING_MODE
-#define SQLITE_DEFAULT_LOCKING_MODE 1
-#endif
 
 // Amalgamated Extensions
 

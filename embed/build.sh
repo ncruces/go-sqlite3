@@ -18,6 +18,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	-Wl,--initial-memory=327680 \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
+	-D_HAVE_SQLITE_CONFIG_H \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 trap 'rm -f sqlite3.tmp' EXIT

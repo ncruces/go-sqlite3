@@ -21,6 +21,6 @@ Checkout [https://gorm.io](https://gorm.io) for details.
 Foreign-key constraint is disabled by default in SQLite. To activate it, use connection URL parameter:
 ```go
 db, err := gorm.Open(gormlite.Open(
-	"file:gorm.db?_pragma=busy_timeout(10000)&_pragma=locking_mode(normal)&_pragma=foreign_keys(1)"),
+	"file:gorm.db?_pragma=busy_timeout(10000)&_pragma=foreign_keys(1)"),
 	&gorm.Config{})
 ```

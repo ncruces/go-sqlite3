@@ -134,4 +134,4 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
 
 static_assert(offsetof(struct go_file, handle) == 4, "Unexpected offset");
 static_assert(offsetof(sqlite3_vfs, zName) == 16, "Unexpected offset");
-static_assert(offsetof(sqlite3, u1.isInterrupted) == 280, "Unexpected offset");
+static_assert(offsetof(sqlite3, u1.isInterrupted) == 288, "Unexpected offset");

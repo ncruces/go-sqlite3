@@ -15,7 +15,8 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
-	-Wl,--import-undefined
+	-Wl,--import-undefined \
+	-D_HAVE_SQLITE_CONFIG_H
 
 "$BINARYEN/wasm-opt" -g --strip -c -O3 \
 	speedtest1.wasm -o speedtest1.tmp \
