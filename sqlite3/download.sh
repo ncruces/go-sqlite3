@@ -8,10 +8,9 @@ unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3* .
 rm -rf sqlite-amalgamation-*
 
-patch < vfs_find.patch
-patch < open_memory.patch
-patch < locking_mode.patch
+cat *.patch | patch
 
+mkdir -p ext/
 cd ext/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/decimal.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/uint.c"
@@ -19,6 +18,7 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/uuid.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/base64.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/regexp.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/series.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.42.0/ext/misc/anycollseq.c"
 cd ~-
 
 cd ../vfs/tests/mptest/testdata/

@@ -53,7 +53,9 @@ func compileModule() {
 	ctx := context.Background()
 	sqlite3.runtime = wazero.NewRuntime(ctx)
 
-	env := vfs.ExportHostFunctions(sqlite3.runtime.NewHostModuleBuilder("env"))
+	env := sqlite3.runtime.NewHostModuleBuilder("env")
+	env = vfs.ExportHostFunctions(env)
+	env = exportHostFunctions(env)
 	_, sqlite3.err = env.Instantiate(ctx)
 	if sqlite3.err != nil {
 		return

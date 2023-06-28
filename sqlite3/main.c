@@ -6,12 +6,14 @@
 // VFS
 #include "vfs.c"
 // Extensions
+#include "ext/anycollseq.c"
 #include "ext/base64.c"
 #include "ext/decimal.c"
 #include "ext/regexp.c"
 #include "ext/series.c"
 #include "ext/uint.c"
 #include "ext/uuid.c"
+#include "func.c"
 #include "time.c"
 
 __attribute__((constructor)) void init() {
