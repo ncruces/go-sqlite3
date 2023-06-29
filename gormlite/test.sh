@@ -3,8 +3,8 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-rm -rf gorm/ tests/
-git clone --filter=blob:none --branch=v1.25.1 https://github.com/go-gorm/gorm.git
+rm -rf gorm/ tests/ $TMPDIR/gorm.db
+git clone --filter=blob:none https://github.com/go-gorm/gorm.git
 mv gorm/tests tests
 rm -rf gorm/
 
@@ -14,5 +14,5 @@ cd tests
 go mod tidy && go work use . && go test
 
 cd ..
-rm -rf tests/
+rm -rf tests/ $TMPDIR/gorm.db
 go work use -r .

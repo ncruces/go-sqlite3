@@ -15,7 +15,7 @@ func (dialector Dialector) Translate(err error) error {
 		return gorm.ErrDuplicatedKey
 	case
 		errors.Is(err, sqlite3.CONSTRAINT_FOREIGNKEY):
-		return err // gorm.ErrForeignKeyViolated (gorm v1.25.2)
+		return gorm.ErrForeignKeyViolated
 	}
 	return err
 }
