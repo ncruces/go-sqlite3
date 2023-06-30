@@ -156,6 +156,12 @@ func newModule(mod api.Module) (m *module, err error) {
 		lastRowid:       getFun("sqlite3_last_insert_rowid"),
 		autocommit:      getFun("sqlite3_get_autocommit"),
 		createCollation: getFun("sqlite3_create_go_collation"),
+		valueType:       getFun("sqlite3_value_type"),
+		valueInteger:    getFun("sqlite3_value_int64"),
+		valueFloat:      getFun("sqlite3_value_double"),
+		valueText:       getFun("sqlite3_value_text"),
+		valueBlob:       getFun("sqlite3_value_blob"),
+		valueBytes:      getFun("sqlite3_value_bytes"),
 	}
 	if err != nil {
 		return nil, err
@@ -352,5 +358,11 @@ type sqliteAPI struct {
 	lastRowid       api.Function
 	autocommit      api.Function
 	createCollation api.Function
+	valueType       api.Function
+	valueInteger    api.Function
+	valueFloat      api.Function
+	valueText       api.Function
+	valueBlob       api.Function
+	valueBytes      api.Function
 	destructor      uint32
 }

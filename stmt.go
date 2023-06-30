@@ -374,18 +374,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 func (s *Stmt) ColumnRawText(col int) []byte {
 	r := s.c.call(s.c.api.columnText,
 		uint64(s.handle), uint64(col))
-
-	ptr := uint32(r)
-	if ptr == 0 {
-		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
-		s.err = s.c.error(r)
-		return nil
-	}
-
-	r = s.c.call(s.c.api.columnBytes,
-		uint64(s.handle), uint64(col))
-
-	return util.View(s.c.mod, ptr, r)
+	return s.columnRawBytes(col, uint32(r))
 }
 
 // ColumnRawBlob returns the value of the result column as a []byte.
@@ -397,17 +386,18 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 func (s *Stmt) ColumnRawBlob(col int) []byte {
 	r := s.c.call(s.c.api.columnBlob,
 		uint64(s.handle), uint64(col))
+	return s.columnRawBytes(col, uint32(r))
+}
 
-	ptr := uint32(r)
+func (s *Stmt) columnRawBytes(col int, ptr uint32) []byte {
 	if ptr == 0 {
-		r = s.c.call(s.c.api.errcode, uint64(s.c.handle))
+		r := s.c.call(s.c.api.errcode, uint64(s.c.handle))
 		s.err = s.c.error(r)
 		return nil
 	}
 
-	r = s.c.call(s.c.api.columnBytes,
+	r := s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
-
 	return util.View(s.c.mod, ptr, r)
 }
 
