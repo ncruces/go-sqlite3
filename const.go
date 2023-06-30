@@ -167,6 +167,18 @@ const (
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
 )
 
+// FunctionFlag is a flag that can be passed to [Conn.PrepareFlags].
+//
+// https://www.sqlite.org/c3ref/c_deterministic.html
+type FunctionFlag uint32
+
+const (
+	DETERMINISTIC FunctionFlag = 0x000000800
+	DIRECTONLY    FunctionFlag = 0x000080000
+	SUBTYPE       FunctionFlag = 0x000100000
+	INNOCUOUS     FunctionFlag = 0x000200000
+)
+
 // Datatype is a fundamental datatype of SQLite.
 //
 // https://www.sqlite.org/c3ref/c_blob.html

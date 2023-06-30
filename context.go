@@ -12,7 +12,7 @@ import (
 //
 // https://www.sqlite.org/c3ref/context.html
 type Context struct {
-	c      *Conn
+	*module
 	handle uint32
 }
 
@@ -40,7 +40,7 @@ func (c *Context) ResultInt(value int) {
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultInt64(value int64) {
-	c.c.call(c.c.api.resultInteger,
+	c.call(c.api.resultInteger,
 		uint64(c.handle), uint64(value))
 }
 
@@ -48,7 +48,7 @@ func (c *Context) ResultInt64(value int64) {
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultFloat(value float64) {
-	c.c.call(c.c.api.resultFloat,
+	c.call(c.api.resultFloat,
 		uint64(c.handle), math.Float64bits(value))
 }
 
@@ -56,10 +56,10 @@ func (c *Context) ResultFloat(value float64) {
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultText(value string) {
-	ptr := c.c.newString(value)
-	c.c.call(c.c.api.resultText,
+	ptr := c.newString(value)
+	c.call(c.api.resultText,
 		uint64(c.handle), uint64(ptr), uint64(len(value)),
-		uint64(c.c.api.destructor), _UTF8)
+		uint64(c.api.destructor), _UTF8)
 }
 
 // ResultBlob sets the result of the function to a []byte.
@@ -67,17 +67,17 @@ func (c *Context) ResultText(value string) {
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultBlob(value []byte) {
-	ptr := c.c.newBytes(value)
-	c.c.call(c.c.api.resultBlob,
+	ptr := c.newBytes(value)
+	c.call(c.api.resultBlob,
 		uint64(c.handle), uint64(ptr), uint64(len(value)),
-		uint64(c.c.api.destructor))
+		uint64(c.api.destructor))
 }
 
 // BindZeroBlob sets the result of the function to a zero-filled, length n BLOB.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultZeroBlob(n int64) {
-	c.c.call(c.c.api.resultZeroBlob,
+	c.call(c.api.resultZeroBlob,
 		uint64(c.handle), uint64(n))
 }
 
@@ -85,7 +85,7 @@ func (c *Context) ResultZeroBlob(n int64) {
 //
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultNull() {
-	c.c.call(c.c.api.resultNull,
+	c.call(c.api.resultNull,
 		uint64(c.handle))
 }
 
@@ -112,13 +112,13 @@ func (c *Context) ResultTime(value time.Time, format TimeFormat) {
 func (c *Context) resultRFC3339Nano(value time.Time) {
 	const maxlen = uint64(len(time.RFC3339Nano))
 
-	ptr := c.c.new(maxlen)
-	buf := util.View(c.c.mod, ptr, maxlen)
+	ptr := c.new(maxlen)
+	buf := util.View(c.mod, ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 
-	c.c.call(c.c.api.resultText,
+	c.call(c.api.resultText,
 		uint64(c.handle), uint64(ptr), uint64(len(buf)),
-		uint64(c.c.api.destructor), _UTF8)
+		uint64(c.api.destructor), _UTF8)
 }
 
 // ResultError sets the result of the function an error.
@@ -126,19 +126,20 @@ func (c *Context) resultRFC3339Nano(value time.Time) {
 // https://www.sqlite.org/c3ref/result_blob.html
 func (c *Context) ResultError(err error) {
 	if errors.Is(err, NOMEM) {
-		c.c.call(c.c.api.resultErrorMem, uint64(c.handle))
+		c.call(c.api.resultErrorMem, uint64(c.handle))
 		return
 	}
 
 	if errors.Is(err, TOOBIG) {
-		c.c.call(c.c.api.resultErrorBig, uint64(c.handle))
+		c.call(c.api.resultErrorBig, uint64(c.handle))
 		return
 	}
 
 	str := err.Error()
-	ptr := c.c.arena.string(str)
-	c.c.call(c.c.api.resultBlob,
+	ptr := c.newString(str)
+	c.call(c.api.resultBlob,
 		uint64(c.handle), uint64(ptr), uint64(len(str)))
+	c.free(ptr)
 
 	var code uint64
 	var ecode ErrorCode
@@ -150,7 +151,7 @@ func (c *Context) ResultError(err error) {
 		code = uint64(ecode)
 	}
 	if code != 0 {
-		c.c.call(c.c.api.resultErrorCode,
+		c.call(c.api.resultErrorCode,
 			uint64(c.handle), uint64(xcode))
 	}
 }

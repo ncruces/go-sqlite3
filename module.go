@@ -84,10 +84,13 @@ type module struct {
 	stack  [8]uint64
 }
 
+type moduleKey struct{}
+
 func newModule(mod api.Module) (m *module, err error) {
 	m = new(module)
-	m.mod = mod
 	m.ctx, m.closer = util.NewContext(context.Background())
+	m.ctx = context.WithValue(m.ctx, moduleKey{}, m)
+	m.mod = mod
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
@@ -156,6 +159,8 @@ func newModule(mod api.Module) (m *module, err error) {
 		lastRowid:       getFun("sqlite3_last_insert_rowid"),
 		autocommit:      getFun("sqlite3_get_autocommit"),
 		createCollation: getFun("sqlite3_create_go_collation"),
+		createFunction:  getFun("sqlite3_create_go_function"),
+		userData:        getFun("sqlite3_user_data"),
 		valueType:       getFun("sqlite3_value_type"),
 		valueInteger:    getFun("sqlite3_value_int64"),
 		valueFloat:      getFun("sqlite3_value_double"),
@@ -368,6 +373,8 @@ type sqliteAPI struct {
 	lastRowid       api.Function
 	autocommit      api.Function
 	createCollation api.Function
+	createFunction  api.Function
+	userData        api.Function
 	valueType       api.Function
 	valueInteger    api.Function
 	valueFloat      api.Function

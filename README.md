@@ -63,6 +63,7 @@ Performance is tested by running
 ### Roadmap
 
 - [ ] advanced SQLite features
+  - [x] custom functions
   - [x] nested transactions
   - [x] incremental BLOB I/O
   - [x] online backup
@@ -72,7 +73,6 @@ Performance is tested by running
   - [x] in-memory VFS
   - [x] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
-- [ ] custom SQL functions
 
 ### Alternatives
 
