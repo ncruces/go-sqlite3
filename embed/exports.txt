@@ -33,10 +33,10 @@ sqlite3_column_blob
 sqlite3_column_bytes
 sqlite3_blob_open
 sqlite3_blob_close
+sqlite3_blob_reopen
 sqlite3_blob_bytes
 sqlite3_blob_read
 sqlite3_blob_write
-sqlite3_blob_reopen
 sqlite3_backup_init
 sqlite3_backup_step
 sqlite3_backup_finish

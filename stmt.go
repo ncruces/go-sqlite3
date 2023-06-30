@@ -131,10 +131,11 @@ func (s *Stmt) BindName(param int) string {
 //
 // https://www.sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindBool(param int, value bool) error {
+	var i int64
 	if value {
-		return s.BindInt64(param, 1)
+		i = 1
 	}
-	return s.BindInt64(param, 0)
+	return s.BindInt64(param, i)
 }
 
 // BindInt binds an int to the prepared statement.
