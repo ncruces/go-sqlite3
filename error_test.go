@@ -18,21 +18,35 @@ func Test_assertErr(t *testing.T) {
 func TestError(t *testing.T) {
 	t.Parallel()
 
-	err := Error{code: 0x8080}
-	if rc := err.Code(); rc != 0x80 {
-		t.Errorf("got %#x, want 0x80", rc)
+	var ecode ErrorCode
+	var xcode xErrorCode
+	err := &Error{code: 0x8080}
+	if !errors.As(err, &err) {
+		t.Fatal("want true")
 	}
-	if !errors.Is(&err, ErrorCode(0x80)) {
+	if ecode := err.Code(); ecode != 0x80 {
+		t.Errorf("got %#x, want 0x80", uint8(ecode))
+	}
+	if ok := errors.As(err, &ecode); !ok || ecode != ErrorCode(0x80) {
+		t.Errorf("got %#x, want 0x80", uint8(ecode))
+	}
+	if !errors.Is(err, ErrorCode(0x80)) {
 		t.Errorf("want true")
 	}
-	if rc := err.ExtendedCode(); rc != 0x8080 {
-		t.Errorf("got %#x, want 0x8080", rc)
+	if xcode := err.ExtendedCode(); xcode != 0x8080 {
+		t.Errorf("got %#x, want 0x8080", uint16(xcode))
 	}
-	if !errors.Is(&err, ExtendedErrorCode(0x8080)) {
+	if ok := errors.As(err, &xcode); !ok || xcode != xErrorCode(0x8080) {
+		t.Errorf("got %#x, want 0x8080", uint16(xcode))
+	}
+	if !errors.Is(err, xErrorCode(0x8080)) {
 		t.Errorf("want true")
 	}
 	if s := err.Error(); s != "sqlite3: 32896" {
 		t.Errorf("got %q", s)
+	}
+	if ok := errors.As(err.ExtendedCode(), &ecode); !ok || ecode != ErrorCode(0x80) {
+		t.Errorf("got %#x, want 0x80", uint8(ecode))
 	}
 	if !errors.Is(err.ExtendedCode(), ErrorCode(0x80)) {
 		t.Errorf("want true")

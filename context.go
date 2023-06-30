@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"errors"
 	"math"
 	"time"
 
@@ -118,4 +119,38 @@ func (c *Context) resultRFC3339Nano(value time.Time) {
 	c.c.call(c.c.api.resultText,
 		uint64(c.handle), uint64(ptr), uint64(len(buf)),
 		uint64(c.c.api.destructor), _UTF8)
+}
+
+// ResultError sets the result of the function an error.
+//
+// https://www.sqlite.org/c3ref/result_blob.html
+func (c *Context) ResultError(err error) {
+	if errors.Is(err, NOMEM) {
+		c.c.call(c.c.api.resultErrorMem, uint64(c.handle))
+		return
+	}
+
+	if errors.Is(err, TOOBIG) {
+		c.c.call(c.c.api.resultErrorBig, uint64(c.handle))
+		return
+	}
+
+	str := err.Error()
+	ptr := c.c.arena.string(str)
+	c.c.call(c.c.api.resultBlob,
+		uint64(c.handle), uint64(ptr), uint64(len(str)))
+
+	var code uint64
+	var ecode ErrorCode
+	var xcode xErrorCode
+	switch {
+	case errors.As(err, &xcode):
+		code = uint64(xcode)
+	case errors.As(err, &ecode):
+		code = uint64(ecode)
+	}
+	if code != 0 {
+		c.c.call(c.c.api.resultErrorCode,
+			uint64(c.handle), uint64(xcode))
+	}
 }
