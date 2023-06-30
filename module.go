@@ -77,17 +77,17 @@ func compileModule() {
 }
 
 type module struct {
-	ctx context.Context
-	mod api.Module
-	vfs io.Closer
-	api sqliteAPI
-	arg [8]uint64
+	ctx    context.Context
+	mod    api.Module
+	closer io.Closer
+	api    sqliteAPI
+	stack  [8]uint64
 }
 
 func newModule(mod api.Module) (m *module, err error) {
 	m = new(module)
 	m.mod = mod
-	m.ctx, m.vfs = vfs.NewContext(context.Background())
+	m.ctx, m.closer = util.NewContext(context.Background())
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
@@ -164,7 +164,7 @@ func newModule(mod api.Module) (m *module, err error) {
 
 func (m *module) close() error {
 	err := m.mod.Close(m.ctx)
-	m.vfs.Close()
+	m.closer.Close()
 	return err
 }
 
@@ -201,14 +201,14 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 }
 
 func (m *module) call(fn api.Function, params ...uint64) uint64 {
-	copy(m.arg[:], params)
-	err := fn.CallWithStack(m.ctx, m.arg[:])
+	copy(m.stack[:], params)
+	err := fn.CallWithStack(m.ctx, m.stack[:])
 	if err != nil {
 		// The module closed or panicked; release resources.
-		m.vfs.Close()
+		m.closer.Close()
 		panic(err)
 	}
-	return m.arg[0]
+	return m.stack[0]
 }
 
 func (m *module) free(ptr uint32) {

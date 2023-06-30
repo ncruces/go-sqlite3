@@ -18,6 +18,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
+	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
@@ -74,7 +75,7 @@ func initFlags() {
 
 func Benchmark_speedtest1(b *testing.B) {
 	output.Reset()
-	ctx, vfs := vfs.NewContext(context.Background())
+	ctx, closer := util.NewContext(context.Background())
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
@@ -88,5 +89,5 @@ func Benchmark_speedtest1(b *testing.B) {
 		b.Error(err)
 	}
 	mod.Close(ctx)
-	vfs.Close()
+	closer.Close()
 }
