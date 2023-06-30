@@ -28,33 +28,41 @@ func (s *handleState) Close() (err error) {
 }
 
 func GetHandle(ctx context.Context, id uint32) any {
+	if id == 0 {
+		return nil
+	}
 	s := ctx.Value(handleKey{}).(*handleState)
-	return s.handles[id]
+	return s.handles[^id]
 }
 
 func DelHandle(ctx context.Context, id uint32) error {
+	if id == 0 {
+		return nil
+	}
 	s := ctx.Value(handleKey{}).(*handleState)
-	a := s.handles[id]
-	s.handles[id] = nil
+	a := s.handles[^id]
+	s.handles[^id] = nil
 	if c, ok := a.(io.Closer); ok {
 		return c.Close()
 	}
 	return nil
-
 }
 
 func AddHandle(ctx context.Context, a any) (id uint32) {
+	if a == nil {
+		return 0
+	}
 	s := ctx.Value(handleKey{}).(*handleState)
 
 	// Find an empty slot.
 	for id, h := range s.handles {
 		if h == nil {
 			s.handles[id] = a
-			return uint32(id)
+			return ^uint32(id)
 		}
 	}
 
 	// Add a new slot.
 	s.handles = append(s.handles, a)
-	return uint32(len(s.handles) - 1)
+	return -uint32(len(s.handles))
 }
