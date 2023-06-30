@@ -155,6 +155,7 @@ func newModule(mod api.Module) (m *module, err error) {
 		changes:         getFun("sqlite3_changes64"),
 		lastRowid:       getFun("sqlite3_last_insert_rowid"),
 		autocommit:      getFun("sqlite3_get_autocommit"),
+		createCollation: getFun("sqlite3_create_go_collation"),
 	}
 	if err != nil {
 		return nil, err
@@ -350,5 +351,6 @@ type sqliteAPI struct {
 	changes         api.Function
 	lastRowid       api.Function
 	autocommit      api.Function
+	createCollation api.Function
 	destructor      uint32
 }
