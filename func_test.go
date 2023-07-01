@@ -13,7 +13,7 @@ import (
 )
 
 func ExampleConn_CreateCollation() {
-	db, err := sqlite3.Open(memory)
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func ExampleConn_CreateCollation() {
 }
 
 func ExampleConn_CreateFunction() {
-	db, err := sqlite3.Open(memory)
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}

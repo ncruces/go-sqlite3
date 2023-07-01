@@ -21,15 +21,15 @@ int sqlite3_create_go_function(sqlite3 *db, const char *zName, int nArg,
                                     go_func, NULL, NULL, go_destroy);
 }
 
-int sqlite3_create_go_window_function(sqlite3 *db, const char *zName, int nArg,
-                                      int flags, void *pApp) {
+int sqlite3_create_go_aggregate_function(sqlite3 *db, const char *zName,
+                                         int nArg, int flags, void *pApp) {
   return sqlite3_create_window_function(db, zName, nArg, SQLITE_UTF8 | flags,
                                         pApp, go_step, go_final, NULL, NULL,
                                         go_destroy);
 }
 
-int sqlite3_create_go_aggregate_function(sqlite3 *db, const char *zName,
-                                         int nArg, int flags, void *pApp) {
+int sqlite3_create_go_window_function(sqlite3 *db, const char *zName, int nArg,
+                                      int flags, void *pApp) {
   return sqlite3_create_window_function(db, zName, nArg, SQLITE_UTF8 | flags,
                                         pApp, go_step, go_final, go_value,
                                         go_inverse, go_destroy);

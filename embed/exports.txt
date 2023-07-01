@@ -50,8 +50,8 @@ sqlite3_get_autocommit
 sqlite3_anycollseq_init
 sqlite3_create_go_collation
 sqlite3_create_go_function
-sqlite3_create_go_window_function
 sqlite3_create_go_aggregate_function
+sqlite3_create_go_window_function
 sqlite3_aggregate_context
 sqlite3_user_data
 sqlite3_value_type
