@@ -21,7 +21,7 @@ type Context struct {
 // Instead, boolean values are stored as integers 0 (false) and 1 (true).
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultBool(value bool) {
+func (c Context) ResultBool(value bool) {
 	var i int64
 	if value {
 		i = 1
@@ -32,14 +32,14 @@ func (c *Context) ResultBool(value bool) {
 // ResultInt sets the result of the function to an int.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultInt(value int) {
+func (c Context) ResultInt(value int) {
 	c.ResultInt64(int64(value))
 }
 
 // ResultInt64 sets the result of the function to an int64.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultInt64(value int64) {
+func (c Context) ResultInt64(value int64) {
 	c.call(c.api.resultInteger,
 		uint64(c.handle), uint64(value))
 }
@@ -47,7 +47,7 @@ func (c *Context) ResultInt64(value int64) {
 // ResultFloat sets the result of the function to a float64.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultFloat(value float64) {
+func (c Context) ResultFloat(value float64) {
 	c.call(c.api.resultFloat,
 		uint64(c.handle), math.Float64bits(value))
 }
@@ -55,7 +55,7 @@ func (c *Context) ResultFloat(value float64) {
 // ResultText sets the result of the function to a string.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultText(value string) {
+func (c Context) ResultText(value string) {
 	ptr := c.newString(value)
 	c.call(c.api.resultText,
 		uint64(c.handle), uint64(ptr), uint64(len(value)),
@@ -66,7 +66,7 @@ func (c *Context) ResultText(value string) {
 // Returning a nil slice is the same as calling [Context.ResultNull].
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultBlob(value []byte) {
+func (c Context) ResultBlob(value []byte) {
 	ptr := c.newBytes(value)
 	c.call(c.api.resultBlob,
 		uint64(c.handle), uint64(ptr), uint64(len(value)),
@@ -76,7 +76,7 @@ func (c *Context) ResultBlob(value []byte) {
 // BindZeroBlob sets the result of the function to a zero-filled, length n BLOB.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultZeroBlob(n int64) {
+func (c Context) ResultZeroBlob(n int64) {
 	c.call(c.api.resultZeroBlob,
 		uint64(c.handle), uint64(n))
 }
@@ -84,7 +84,7 @@ func (c *Context) ResultZeroBlob(n int64) {
 // ResultNull sets the result of the function to NULL.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultNull() {
+func (c Context) ResultNull() {
 	c.call(c.api.resultNull,
 		uint64(c.handle))
 }
@@ -92,7 +92,7 @@ func (c *Context) ResultNull() {
 // ResultTime sets the result of the function to a [time.Time].
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultTime(value time.Time, format TimeFormat) {
+func (c Context) ResultTime(value time.Time, format TimeFormat) {
 	if format == TimeFormatDefault {
 		c.resultRFC3339Nano(value)
 		return
@@ -109,7 +109,7 @@ func (c *Context) ResultTime(value time.Time, format TimeFormat) {
 	}
 }
 
-func (c *Context) resultRFC3339Nano(value time.Time) {
+func (c Context) resultRFC3339Nano(value time.Time) {
 	const maxlen = uint64(len(time.RFC3339Nano))
 
 	ptr := c.new(maxlen)
@@ -124,7 +124,7 @@ func (c *Context) resultRFC3339Nano(value time.Time) {
 // ResultError sets the result of the function an error.
 //
 // https://www.sqlite.org/c3ref/result_blob.html
-func (c *Context) ResultError(err error) {
+func (c Context) ResultError(err error) {
 	if errors.Is(err, NOMEM) {
 		c.call(c.api.resultErrorMem, uint64(c.handle))
 		return
@@ -137,7 +137,7 @@ func (c *Context) ResultError(err error) {
 
 	str := err.Error()
 	ptr := c.newString(str)
-	c.call(c.api.resultBlob,
+	c.call(c.api.resultError,
 		uint64(c.handle), uint64(ptr), uint64(len(str)))
 	c.free(ptr)
 
@@ -152,6 +152,6 @@ func (c *Context) ResultError(err error) {
 	}
 	if code != 0 {
 		c.call(c.api.resultErrorCode,
-			uint64(c.handle), uint64(xcode))
+			uint64(c.handle), uint64(code))
 	}
 }

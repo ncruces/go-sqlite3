@@ -56,8 +56,12 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 //
 // https://www.sqlite.org/appfunc.html
 type AggregateFunction interface {
+	// Step is invoked to add a row to the current window.
+	// The function arguments, if any, corresponding to the row being added are passed to Step.
 	Step(ctx Context, arg ...Value)
-	Final(ctx Context)
+
+	// Value is invoked to return the current value of the aggregate.
+	Value(ctx Context)
 }
 
 // WindowFunction is the interface an aggregate window function should implement.
@@ -65,7 +69,9 @@ type AggregateFunction interface {
 // https://www.sqlite.org/windowfunctions.html
 type WindowFunction interface {
 	AggregateFunction
-	Value(ctx Context)
+
+	// Inverse is invoked to remove the oldest presently aggregated result of Step from the current window.
+	// The function arguments, if any, are those passed to Step for the row being removed.
 	Inverse(ctx Context, arg ...Value)
 }
 
@@ -92,48 +98,35 @@ func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
 	fn := callbackHandle(module, pCtx).(func(ctx Context, arg ...Value))
-	fn(Context{
-		module: module,
-		handle: pCtx,
-	}, callbackArgs(module, nArg, pArg)...)
+	fn(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
 }
 
 func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
 	fn := callbackAggregate(module, pCtx, nil).(AggregateFunction)
-	fn.Step(Context{
-		module: module,
-		handle: pCtx,
-	}, callbackArgs(module, nArg, pArg)...)
+	fn.Step(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
 }
 
 func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
 	module := ctx.Value(moduleKey{}).(*module)
 	fn := callbackAggregate(module, pCtx, &handle).(AggregateFunction)
-	fn.Final(Context{
-		module: module,
-		handle: pCtx,
-	})
-	util.DelHandle(ctx, handle)
+	fn.Value(Context{module, pCtx})
+	if err := util.DelHandle(ctx, handle); err != nil {
+		Context{module, pCtx}.ResultError(err)
+	}
 }
 
 func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackAggregate(module, pCtx, nil).(WindowFunction)
-	fn.Value(Context{
-		module: module,
-		handle: pCtx,
-	})
+	fn := callbackAggregate(module, pCtx, nil).(AggregateFunction)
+	fn.Value(Context{module, pCtx})
 }
 
 func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
 	fn := callbackAggregate(module, pCtx, nil).(WindowFunction)
-	fn.Inverse(Context{
-		module: module,
-		handle: pCtx,
-	}, callbackArgs(module, nArg, pArg)...)
+	fn.Inverse(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
 }
 
 func callbackHandle(module *module, pCtx uint32) any {
@@ -141,18 +134,21 @@ func callbackHandle(module *module, pCtx uint32) any {
 	return util.GetHandle(module.ctx, pApp)
 }
 
-func callbackAggregate(module *module, pCtx uint32, delete *uint32) any {
+func callbackAggregate(module *module, pCtx uint32, close *uint32) any {
+	// On close, we're getting rid of the handle.
+	// Don't allocate space to store it.
 	var size uint64
-	if delete == nil {
+	if close == nil {
 		size = ptrlen
 	}
 	ptr := uint32(module.call(module.api.aggregateCtx, uint64(pCtx), size))
 
-	if ptr != 0 {
+	// Try loading the handle, if we already have one, or want a new one.
+	if ptr != 0 || size != 0 {
 		if handle := util.ReadUint32(module.mod, ptr); handle != 0 {
 			fn := util.GetHandle(module.ctx, handle)
-			if delete != nil {
-				*delete = handle
+			if close != nil {
+				*close = handle
 			}
 			if fn != nil {
 				return fn
@@ -160,6 +156,7 @@ func callbackAggregate(module *module, pCtx uint32, delete *uint32) any {
 		}
 	}
 
+	// Create a new aggregate and store the handle.
 	fn := callbackHandle(module, pCtx).(func() AggregateFunction)()
 	if ptr != 0 {
 		util.WriteUint32(module.mod, ptr, util.AddHandle(module.ctx, fn))

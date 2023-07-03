@@ -61,16 +61,10 @@ func ExampleConn_CreateWindowFunction() {
 	// 0
 }
 
-type countASCII struct {
-	result int
-}
+type countASCII struct{ result int }
 
 func newASCIICounter() sqlite3.AggregateFunction {
 	return &countASCII{}
-}
-
-func (f *countASCII) Final(ctx sqlite3.Context) {
-	f.Value(ctx)
 }
 
 func (f *countASCII) Value(ctx sqlite3.Context) {

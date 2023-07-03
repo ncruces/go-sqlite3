@@ -18,7 +18,7 @@ type Value struct {
 // Type returns the initial [Datatype] of the value.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Type() Datatype {
+func (v Value) Type() Datatype {
 	r := v.call(v.api.valueType, uint64(v.handle))
 	return Datatype(r)
 }
@@ -29,7 +29,7 @@ func (v *Value) Type() Datatype {
 // with 0 converted to false and any other value to true.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Bool() bool {
+func (v Value) Bool() bool {
 	if i := v.Int64(); i != 0 {
 		return true
 	}
@@ -39,14 +39,14 @@ func (v *Value) Bool() bool {
 // Int returns the value as an int.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Int() int {
+func (v Value) Int() int {
 	return int(v.Int64())
 }
 
 // Int64 returns the value as an int64.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Int64() int64 {
+func (v Value) Int64() int64 {
 	r := v.call(v.api.valueInteger, uint64(v.handle))
 	return int64(r)
 }
@@ -54,7 +54,7 @@ func (v *Value) Int64() int64 {
 // Float returns the value as a float64.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Float() float64 {
+func (v Value) Float() float64 {
 	r := v.call(v.api.valueFloat, uint64(v.handle))
 	return math.Float64frombits(r)
 }
@@ -62,7 +62,7 @@ func (v *Value) Float() float64 {
 // Time returns the value as a [time.Time].
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Time(format TimeFormat) time.Time {
+func (v Value) Time(format TimeFormat) time.Time {
 	var a any
 	switch v.Type() {
 	case INTEGER:
@@ -83,7 +83,7 @@ func (v *Value) Time(format TimeFormat) time.Time {
 // Text returns the value as a string.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Text() string {
+func (v Value) Text() string {
 	return string(v.RawText())
 }
 
@@ -91,7 +91,7 @@ func (v *Value) Text() string {
 // the value as a []byte.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) Blob(buf []byte) []byte {
+func (v Value) Blob(buf []byte) []byte {
 	return append(buf, v.RawBlob()...)
 }
 
@@ -100,7 +100,7 @@ func (v *Value) Blob(buf []byte) []byte {
 // subsequent calls to [Value] methods.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) RawText() []byte {
+func (v Value) RawText() []byte {
 	r := v.call(v.api.valueText, uint64(v.handle))
 	return v.rawBytes(uint32(r))
 }
@@ -110,12 +110,12 @@ func (v *Value) RawText() []byte {
 // subsequent calls to [Value] methods.
 //
 // https://www.sqlite.org/c3ref/value_blob.html
-func (v *Value) RawBlob() []byte {
+func (v Value) RawBlob() []byte {
 	r := v.call(v.api.valueBlob, uint64(v.handle))
 	return v.rawBytes(uint32(r))
 }
 
-func (v *Value) rawBytes(ptr uint32) []byte {
+func (v Value) rawBytes(ptr uint32) []byte {
 	if ptr == 0 {
 		return nil
 	}
