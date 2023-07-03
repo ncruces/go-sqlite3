@@ -25,58 +25,58 @@ var (
 	Path   string // Path to load the binary from.
 )
 
-var sqlite3 struct {
+var instance struct {
 	runtime  wazero.Runtime
 	compiled wazero.CompiledModule
 	err      error
 	once     sync.Once
 }
 
-func instantiateModule() (*module, error) {
+func instantiateSQLite() (*sqlite, error) {
 	ctx := context.Background()
 
-	sqlite3.once.Do(compileModule)
-	if sqlite3.err != nil {
-		return nil, sqlite3.err
+	instance.once.Do(compileSQLite)
+	if instance.err != nil {
+		return nil, instance.err
 	}
 
 	cfg := wazero.NewModuleConfig()
 
-	mod, err := sqlite3.runtime.InstantiateModule(ctx, sqlite3.compiled, cfg)
+	mod, err := instance.runtime.InstantiateModule(ctx, instance.compiled, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return newModule(mod)
+	return newSQLite(mod)
 }
 
-func compileModule() {
+func compileSQLite() {
 	ctx := context.Background()
-	sqlite3.runtime = wazero.NewRuntime(ctx)
+	instance.runtime = wazero.NewRuntime(ctx)
 
-	env := sqlite3.runtime.NewHostModuleBuilder("env")
+	env := instance.runtime.NewHostModuleBuilder("env")
 	env = vfs.ExportHostFunctions(env)
 	env = exportHostFunctions(env)
-	_, sqlite3.err = env.Instantiate(ctx)
-	if sqlite3.err != nil {
+	_, instance.err = env.Instantiate(ctx)
+	if instance.err != nil {
 		return
 	}
 
 	bin := Binary
 	if bin == nil && Path != "" {
-		bin, sqlite3.err = os.ReadFile(Path)
-		if sqlite3.err != nil {
+		bin, instance.err = os.ReadFile(Path)
+		if instance.err != nil {
 			return
 		}
 	}
 	if bin == nil {
-		sqlite3.err = util.BinaryErr
+		instance.err = util.BinaryErr
 		return
 	}
 
-	sqlite3.compiled, sqlite3.err = sqlite3.runtime.CompileModule(ctx, bin)
+	instance.compiled, instance.err = instance.runtime.CompileModule(ctx, bin)
 }
 
-type module struct {
+type sqlite struct {
 	ctx    context.Context
 	mod    api.Module
 	closer io.Closer
@@ -84,13 +84,13 @@ type module struct {
 	stack  [8]uint64
 }
 
-type moduleKey struct{}
+type sqliteKey struct{}
 
-func newModule(mod api.Module) (m *module, err error) {
-	m = new(module)
-	m.ctx, m.closer = util.NewContext(context.Background())
-	m.ctx = context.WithValue(m.ctx, moduleKey{}, m)
-	m.mod = mod
+func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
+	sqlt = new(sqlite)
+	sqlt.ctx, sqlt.closer = util.NewContext(context.Background())
+	sqlt.ctx = context.WithValue(sqlt.ctx, sqliteKey{}, sqlt)
+	sqlt.mod = mod
 
 	getFun := func(name string) api.Function {
 		f := mod.ExportedFunction(name)
@@ -110,7 +110,7 @@ func newModule(mod api.Module) (m *module, err error) {
 		return util.ReadUint32(mod, uint32(g.Get()))
 	}
 
-	m.api = sqliteAPI{
+	sqlt.api = sqliteAPI{
 		free:            getFun("free"),
 		malloc:          getFun("malloc"),
 		destructor:      getVal("malloc_destructor"),
@@ -184,16 +184,16 @@ func newModule(mod api.Module) (m *module, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return m, nil
+	return sqlt, nil
 }
 
-func (m *module) close() error {
-	err := m.mod.Close(m.ctx)
-	m.closer.Close()
+func (sqlt *sqlite) close() error {
+	err := sqlt.mod.Close(sqlt.ctx)
+	sqlt.closer.Close()
 	return err
 }
 
-func (m *module) error(rc uint64, handle uint32, sql ...string) error {
+func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	if rc == _OK {
 		return nil
 	}
@@ -204,16 +204,16 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 		panic(util.OOMErr)
 	}
 
-	if r := m.call(m.api.errstr, rc); r != 0 {
-		err.str = util.ReadString(m.mod, uint32(r), _MAX_STRING)
+	if r := sqlt.call(sqlt.api.errstr, rc); r != 0 {
+		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
 	}
 
-	if r := m.call(m.api.errmsg, uint64(handle)); r != 0 {
-		err.msg = util.ReadString(m.mod, uint32(r), _MAX_STRING)
+	if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
+		err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
 	}
 
 	if sql != nil {
-		if r := m.call(m.api.erroff, uint64(handle)); r != math.MaxUint32 {
+		if r := sqlt.call(sqlt.api.erroff, uint64(handle)); r != math.MaxUint32 {
 			err.sql = sql[0][r:]
 		}
 	}
@@ -225,60 +225,60 @@ func (m *module) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
-func (m *module) call(fn api.Function, params ...uint64) uint64 {
-	copy(m.stack[:], params)
-	err := fn.CallWithStack(m.ctx, m.stack[:])
+func (sqlt *sqlite) call(fn api.Function, params ...uint64) uint64 {
+	copy(sqlt.stack[:], params)
+	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
 		// The module closed or panicked; release resources.
-		m.closer.Close()
+		sqlt.closer.Close()
 		panic(err)
 	}
-	return m.stack[0]
+	return sqlt.stack[0]
 }
 
-func (m *module) free(ptr uint32) {
+func (sqlt *sqlite) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	m.call(m.api.free, uint64(ptr))
+	sqlt.call(sqlt.api.free, uint64(ptr))
 }
 
-func (m *module) new(size uint64) uint32 {
+func (sqlt *sqlite) new(size uint64) uint32 {
 	if size > _MAX_ALLOCATION_SIZE {
 		panic(util.OOMErr)
 	}
-	ptr := uint32(m.call(m.api.malloc, size))
+	ptr := uint32(sqlt.call(sqlt.api.malloc, size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
 	return ptr
 }
 
-func (m *module) newBytes(b []byte) uint32 {
+func (sqlt *sqlite) newBytes(b []byte) uint32 {
 	if b == nil {
 		return 0
 	}
-	ptr := m.new(uint64(len(b)))
-	util.WriteBytes(m.mod, ptr, b)
+	ptr := sqlt.new(uint64(len(b)))
+	util.WriteBytes(sqlt.mod, ptr, b)
 	return ptr
 }
 
-func (m *module) newString(s string) uint32 {
-	ptr := m.new(uint64(len(s) + 1))
-	util.WriteString(m.mod, ptr, s)
+func (sqlt *sqlite) newString(s string) uint32 {
+	ptr := sqlt.new(uint64(len(s) + 1))
+	util.WriteString(sqlt.mod, ptr, s)
 	return ptr
 }
 
-func (m *module) newArena(size uint64) arena {
+func (sqlt *sqlite) newArena(size uint64) arena {
 	return arena{
-		m:    m,
-		base: m.new(size),
+		sqlt: sqlt,
 		size: uint32(size),
+		base: sqlt.new(size),
 	}
 }
 
 type arena struct {
-	m    *module
+	sqlt *sqlite
 	ptrs []uint32
 	base uint32
 	next uint32
@@ -286,17 +286,17 @@ type arena struct {
 }
 
 func (a *arena) free() {
-	if a.m == nil {
+	if a.sqlt == nil {
 		return
 	}
 	a.reset()
-	a.m.free(a.base)
-	a.m = nil
+	a.sqlt.free(a.base)
+	a.sqlt = nil
 }
 
 func (a *arena) reset() {
 	for _, ptr := range a.ptrs {
-		a.m.free(ptr)
+		a.sqlt.free(ptr)
 	}
 	a.ptrs = nil
 	a.next = 0
@@ -308,7 +308,7 @@ func (a *arena) new(size uint64) uint32 {
 		a.next += uint32(size)
 		return ptr
 	}
-	ptr := a.m.new(size)
+	ptr := a.sqlt.new(size)
 	a.ptrs = append(a.ptrs, ptr)
 	return ptr
 }
@@ -318,13 +318,13 @@ func (a *arena) bytes(b []byte) uint32 {
 		return 0
 	}
 	ptr := a.new(uint64(len(b)))
-	util.WriteBytes(a.m.mod, ptr, b)
+	util.WriteBytes(a.sqlt.mod, ptr, b)
 	return ptr
 }
 
 func (a *arena) string(s string) uint32 {
 	ptr := a.new(uint64(len(s) + 1))
-	util.WriteString(a.m.mod, ptr, s)
+	util.WriteString(a.sqlt.mod, ptr, s)
 	return ptr
 }
 

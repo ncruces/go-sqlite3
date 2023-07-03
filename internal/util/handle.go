@@ -29,7 +29,7 @@ func (s *handleState) Close() (err error) {
 
 func GetHandle(ctx context.Context, id uint32) any {
 	if id == 0 {
-		return nil
+		panic(NilErr)
 	}
 	s := ctx.Value(handleKey{}).(*handleState)
 	return s.handles[^id]
@@ -50,7 +50,7 @@ func DelHandle(ctx context.Context, id uint32) error {
 
 func AddHandle(ctx context.Context, a any) (id uint32) {
 	if a == nil {
-		return 0
+		panic(NilErr)
 	}
 	s := ctx.Value(handleKey{}).(*handleState)
 

@@ -11,7 +11,7 @@ import (
 //
 // https://www.sqlite.org/c3ref/value.html
 type Value struct {
-	*module
+	*sqlite
 	handle uint32
 }
 

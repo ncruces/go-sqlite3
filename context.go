@@ -12,7 +12,7 @@ import (
 //
 // https://www.sqlite.org/c3ref/context.html
 type Context struct {
-	*module
+	*sqlite
 	handle uint32
 }
 

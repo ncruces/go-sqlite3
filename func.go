@@ -96,57 +96,57 @@ func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 }
 
 func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackHandle(module, pCtx).(func(ctx Context, arg ...Value))
-	fn(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
+	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	fn := callbackHandle(sqlite, pCtx).(func(ctx Context, arg ...Value))
+	fn(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
 
 func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackAggregate(module, pCtx, nil).(AggregateFunction)
-	fn.Step(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
+	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
+	fn.Step(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
 
 func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
-	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackAggregate(module, pCtx, &handle).(AggregateFunction)
-	fn.Value(Context{module, pCtx})
+	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	fn := callbackAggregate(sqlite, pCtx, &handle).(AggregateFunction)
+	fn.Value(Context{sqlite, pCtx})
 	if err := util.DelHandle(ctx, handle); err != nil {
-		Context{module, pCtx}.ResultError(err)
+		Context{sqlite, pCtx}.ResultError(err)
 	}
 }
 
 func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
-	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackAggregate(module, pCtx, nil).(AggregateFunction)
-	fn.Value(Context{module, pCtx})
+	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
+	fn.Value(Context{sqlite, pCtx})
 }
 
 func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	module := ctx.Value(moduleKey{}).(*module)
-	fn := callbackAggregate(module, pCtx, nil).(WindowFunction)
-	fn.Inverse(Context{module, pCtx}, callbackArgs(module, nArg, pArg)...)
+	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	fn := callbackAggregate(sqlite, pCtx, nil).(WindowFunction)
+	fn.Inverse(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
 
-func callbackHandle(module *module, pCtx uint32) any {
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	return util.GetHandle(module.ctx, pApp)
+func callbackHandle(sqlite *sqlite, pCtx uint32) any {
+	pApp := uint32(sqlite.call(sqlite.api.userData, uint64(pCtx)))
+	return util.GetHandle(sqlite.ctx, pApp)
 }
 
-func callbackAggregate(module *module, pCtx uint32, close *uint32) any {
+func callbackAggregate(sqlite *sqlite, pCtx uint32, close *uint32) any {
 	// On close, we're getting rid of the handle.
 	// Don't allocate space to store it.
 	var size uint64
 	if close == nil {
 		size = ptrlen
 	}
-	ptr := uint32(module.call(module.api.aggregateCtx, uint64(pCtx), size))
+	ptr := uint32(sqlite.call(sqlite.api.aggregateCtx, uint64(pCtx), size))
 
 	// Try loading the handle, if we already have one, or want a new one.
 	if ptr != 0 || size != 0 {
-		if handle := util.ReadUint32(module.mod, ptr); handle != 0 {
-			fn := util.GetHandle(module.ctx, handle)
+		if handle := util.ReadUint32(sqlite.mod, ptr); handle != 0 {
+			fn := util.GetHandle(sqlite.ctx, handle)
 			if close != nil {
 				*close = handle
 			}
@@ -157,19 +157,19 @@ func callbackAggregate(module *module, pCtx uint32, close *uint32) any {
 	}
 
 	// Create a new aggregate and store the handle.
-	fn := callbackHandle(module, pCtx).(func() AggregateFunction)()
+	fn := callbackHandle(sqlite, pCtx).(func() AggregateFunction)()
 	if ptr != 0 {
-		util.WriteUint32(module.mod, ptr, util.AddHandle(module.ctx, fn))
+		util.WriteUint32(sqlite.mod, ptr, util.AddHandle(sqlite.ctx, fn))
 	}
 	return fn
 }
 
-func callbackArgs(module *module, nArg, pArg uint32) []Value {
+func callbackArgs(sqlite *sqlite, nArg, pArg uint32) []Value {
 	args := make([]Value, nArg)
 	for i := range args {
 		args[i] = Value{
-			module: module,
-			handle: util.ReadUint32(module.mod, pArg+ptrlen*uint32(i)),
+			sqlite: sqlite,
+			handle: util.ReadUint32(sqlite.mod, pArg+ptrlen*uint32(i)),
 		}
 	}
 	return args

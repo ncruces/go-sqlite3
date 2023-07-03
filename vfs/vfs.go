@@ -156,6 +156,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 		file, flags, err = vfs.Open(path, flags)
 	}
 
+	if err != nil {
+		return vfsErrorCode(err, _CANTOPEN)
+	}
+
 	if file, ok := file.(FilePowersafeOverwrite); ok {
 		if !parsed {
 			params = vfsURIParameters(ctx, mod, zPath, flags)
@@ -165,14 +169,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 		}
 	}
 
-	if err != nil {
-		return vfsErrorCode(err, _CANTOPEN)
-	}
-
-	vfsFileRegister(ctx, mod, pFile, file)
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
+	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
 }
 
