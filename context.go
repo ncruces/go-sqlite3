@@ -152,6 +152,6 @@ func (c Context) ResultError(err error) {
 	}
 	if code != 0 {
 		c.call(c.api.resultErrorCode,
-			uint64(c.handle), uint64(code))
+			uint64(c.handle), code)
 	}
 }
