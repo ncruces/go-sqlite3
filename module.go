@@ -162,7 +162,7 @@ func newModule(mod api.Module) (m *module, err error) {
 		createFunction:  getFun("sqlite3_create_go_function"),
 		createAggregate: getFun("sqlite3_create_go_aggregate_function"),
 		createWindow:    getFun("sqlite3_create_go_window_function"),
-		aggregateData:   getFun("sqlite3_aggregate_context"),
+		aggregateCtx:    getFun("sqlite3_aggregate_context"),
 		userData:        getFun("sqlite3_user_data"),
 		valueType:       getFun("sqlite3_value_type"),
 		valueInteger:    getFun("sqlite3_value_int64"),
@@ -379,7 +379,7 @@ type sqliteAPI struct {
 	createFunction  api.Function
 	createAggregate api.Function
 	createWindow    api.Function
-	aggregateData   api.Function
+	aggregateCtx    api.Function
 	userData        api.Function
 	valueType       api.Function
 	valueInteger    api.Function

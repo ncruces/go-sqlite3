@@ -14,7 +14,6 @@ import (
 type Context struct {
 	*module
 	handle uint32
-	final  bool
 }
 
 // ResultBool sets the result of the function to a bool.
@@ -155,27 +154,4 @@ func (c *Context) ResultError(err error) {
 		c.call(c.api.resultErrorCode,
 			uint64(c.handle), uint64(xcode))
 	}
-
-}
-
-func AggregateContext[T any](ctx Context) *T {
-	var size uint64
-	if !ctx.final {
-		size = ptrlen
-	}
-	pAgg := uint32(ctx.call(ctx.api.aggregateData, uint64(ctx.handle), size))
-	if pAgg == 0 {
-		return nil
-	}
-	pData := util.ReadUint32(ctx.mod, pAgg)
-	if data := util.GetHandle(ctx.ctx, pData); data != nil {
-		return data.(*T)
-	}
-	if ctx.final {
-		return nil
-	}
-	data := new(T)
-	pData = util.AddHandle(ctx.ctx, data)
-	util.WriteUint32(ctx.mod, pAgg, pData)
-	return data
 }

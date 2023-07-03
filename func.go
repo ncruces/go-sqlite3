@@ -23,7 +23,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 	return nil
 }
 
-// CreateFunction defines a new scalar function.
+// CreateFunction defines a new scalar SQL function.
 //
 // https://www.sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(ctx Context, arg ...Value)) error {
@@ -35,27 +35,21 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 	return c.error(r)
 }
 
-// CreateWindowFunction defines a new aggregate or window function.
+// CreateWindowFunction defines a new aggregate or aggregate window SQL function.
+// If fn returns a [WindowFunction], then an aggregate window function is created.
 //
 // https://www.sqlite.org/c3ref/create_function.html
-func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn AggregateFunction) error {
+func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
 	call := c.api.createAggregate
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
-	if _, ok := fn.(WindowFunction); ok {
+	if _, ok := fn().(WindowFunction); ok {
 		call = c.api.createWindow
 	}
 	r := c.call(call,
 		uint64(c.handle), uint64(namePtr), uint64(nArg),
 		uint64(flag), uint64(funcPtr))
 	return c.error(r)
-}
-
-// ScalarFunction is the interface a scalar function should implement.
-//
-// https://www.sqlite.org/appfunc.html
-type ScalarFunction interface {
-	Func(ctx Context, arg ...Value)
 }
 
 // AggregateFunction is the interface an aggregate function should implement.
@@ -97,8 +91,7 @@ func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 
 func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	fn := util.GetHandle(ctx, pApp).(func(ctx Context, arg ...Value))
+	fn := callbackHandle(module, pCtx).(func(ctx Context, arg ...Value))
 	fn(Context{
 		module: module,
 		handle: pCtx,
@@ -107,8 +100,7 @@ func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) 
 
 func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	fn := util.GetHandle(ctx, pApp).(AggregateFunction)
+	fn := callbackAggregate(module, pCtx, nil).(AggregateFunction)
 	fn.Step(Context{
 		module: module,
 		handle: pCtx,
@@ -116,20 +108,19 @@ func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) 
 }
 
 func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
+	var handle uint32
 	module := ctx.Value(moduleKey{}).(*module)
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	fn := util.GetHandle(ctx, pApp).(AggregateFunction)
+	fn := callbackAggregate(module, pCtx, &handle).(AggregateFunction)
 	fn.Final(Context{
 		module: module,
 		handle: pCtx,
-		final:  true,
 	})
+	util.DelHandle(ctx, handle)
 }
 
 func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	fn := util.GetHandle(ctx, pApp).(WindowFunction)
+	fn := callbackAggregate(module, pCtx, nil).(WindowFunction)
 	fn.Value(Context{
 		module: module,
 		handle: pCtx,
@@ -138,12 +129,42 @@ func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
 
 func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	module := ctx.Value(moduleKey{}).(*module)
-	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
-	fn := util.GetHandle(ctx, pApp).(WindowFunction)
+	fn := callbackAggregate(module, pCtx, nil).(WindowFunction)
 	fn.Inverse(Context{
 		module: module,
 		handle: pCtx,
 	}, callbackArgs(module, nArg, pArg)...)
+}
+
+func callbackHandle(module *module, pCtx uint32) any {
+	pApp := uint32(module.call(module.api.userData, uint64(pCtx)))
+	return util.GetHandle(module.ctx, pApp)
+}
+
+func callbackAggregate(module *module, pCtx uint32, delete *uint32) any {
+	var size uint64
+	if delete == nil {
+		size = ptrlen
+	}
+	ptr := uint32(module.call(module.api.aggregateCtx, uint64(pCtx), size))
+
+	if ptr != 0 {
+		if handle := util.ReadUint32(module.mod, ptr); handle != 0 {
+			fn := util.GetHandle(module.ctx, handle)
+			if delete != nil {
+				*delete = handle
+			}
+			if fn != nil {
+				return fn
+			}
+		}
+	}
+
+	fn := callbackHandle(module, pCtx).(func() AggregateFunction)()
+	if ptr != 0 {
+		util.WriteUint32(module.mod, ptr, util.AddHandle(module.ctx, fn))
+	}
+	return fn
 }
 
 func callbackArgs(module *module, nArg, pArg uint32) []Value {

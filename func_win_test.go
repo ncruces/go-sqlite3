@@ -25,12 +25,12 @@ func ExampleConn_CreateWindowFunction() {
 		log.Fatal(err)
 	}
 
-	err = db.CreateWindowFunction("count_ascii", 1, sqlite3.INNOCUOUS, countASCII{})
+	err = db.CreateWindowFunction("count_ascii", 1, sqlite3.INNOCUOUS, newASCIICounter)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT count_ascii(word) FROM words`)
+	stmt, _, err := db.Prepare(`SELECT count_ascii(word) OVER (ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) FROM words`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,27 +53,50 @@ func ExampleConn_CreateWindowFunction() {
 		log.Fatal(err)
 	}
 	// Output:
+	// 1
 	// 2
+	// 2
+	// 1
+	// 0
+	// 0
 }
 
-type countASCII struct{}
+type countASCII struct {
+	result int
+}
 
-func (countASCII) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	if arg[0].Type() != sqlite3.TEXT {
-		return
+func newASCIICounter() sqlite3.AggregateFunction {
+	return &countASCII{}
+}
+
+func (f *countASCII) Final(ctx sqlite3.Context) {
+	f.Value(ctx)
+}
+
+func (f *countASCII) Value(ctx sqlite3.Context) {
+	ctx.ResultInt(f.result)
+}
+
+func (f *countASCII) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if f.isASCII(arg[0]) {
+		f.result++
 	}
-	for _, c := range arg[0].RawText() {
+}
+
+func (f *countASCII) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if f.isASCII(arg[0]) {
+		f.result--
+	}
+}
+
+func (f *countASCII) isASCII(arg sqlite3.Value) bool {
+	if arg.Type() != sqlite3.TEXT {
+		return false
+	}
+	for _, c := range arg.RawText() {
 		if c > unicode.MaxASCII {
-			return
+			return false
 		}
 	}
-	if count := sqlite3.AggregateContext[int](ctx); count != nil {
-		*count++
-	}
-}
-
-func (countASCII) Final(ctx sqlite3.Context) {
-	if count := sqlite3.AggregateContext[int](ctx); count != nil {
-		ctx.ResultInt(*count)
-	}
+	return true
 }
