@@ -9,6 +9,7 @@ import (
 )
 
 // Context is the context in which an SQL function executes.
+// An SQLite [Context] is in no way related to a Go [context.Context].
 //
 // https://www.sqlite.org/c3ref/context.html
 type Context struct {

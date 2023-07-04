@@ -50,19 +50,19 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 }
 
 func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
-	mod, err := instantiateSQLite()
+	sqlite, err := instantiateSQLite()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if conn == nil {
-			mod.close()
+			sqlite.close()
 		} else {
 			runtime.SetFinalizer(conn, util.Finalizer[Conn](3))
 		}
 	}()
 
-	c := &Conn{sqlite: mod}
+	c := &Conn{sqlite: sqlite}
 	c.arena = c.newArena(1024)
 	c.handle, err = c.openDB(filename, flags)
 	if err != nil {

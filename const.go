@@ -194,18 +194,18 @@ const (
 
 // String implements the [fmt.Stringer] interface.
 func (t Datatype) String() string {
-	const name = "INTEGERFLOATTEXTBLOBNULL"
+	const name = "INTEGERFLOATEXTBLOBNULL"
 	switch t {
 	case INTEGER:
 		return name[0:7]
 	case FLOAT:
 		return name[7:12]
 	case TEXT:
-		return name[12:16]
+		return name[11:15]
 	case BLOB:
-		return name[16:20]
+		return name[15:19]
 	case NULL:
-		return name[20:24]
+		return name[19:23]
 	}
 	return strconv.FormatUint(uint64(t), 10)
 }
