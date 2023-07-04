@@ -158,12 +158,14 @@ func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
 		changes:         getFun("sqlite3_changes64"),
 		lastRowid:       getFun("sqlite3_last_insert_rowid"),
 		autocommit:      getFun("sqlite3_get_autocommit"),
-		createCollation: getFun("sqlite3_create_go_collation"),
-		createFunction:  getFun("sqlite3_create_go_function"),
-		createAggregate: getFun("sqlite3_create_go_aggregate_function"),
-		createWindow:    getFun("sqlite3_create_go_window_function"),
+		createCollation: getFun("sqlite3_create_collation_go"),
+		createFunction:  getFun("sqlite3_create_function_go"),
+		createAggregate: getFun("sqlite3_create_aggregate_function_go"),
+		createWindow:    getFun("sqlite3_create_window_function_go"),
 		aggregateCtx:    getFun("sqlite3_aggregate_context"),
 		userData:        getFun("sqlite3_user_data"),
+		setAuxData:      getFun("sqlite3_set_auxdata_go"),
+		getAuxData:      getFun("sqlite3_get_auxdata"),
 		valueType:       getFun("sqlite3_value_type"),
 		valueInteger:    getFun("sqlite3_value_int64"),
 		valueFloat:      getFun("sqlite3_value_double"),
@@ -381,6 +383,8 @@ type sqliteAPI struct {
 	createWindow    api.Function
 	aggregateCtx    api.Function
 	userData        api.Function
+	setAuxData      api.Function
+	getAuxData      api.Function
 	valueType       api.Function
 	valueInteger    api.Function
 	valueFloat      api.Function

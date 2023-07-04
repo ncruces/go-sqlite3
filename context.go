@@ -16,6 +16,22 @@ type Context struct {
 	handle uint32
 }
 
+// SetAuxData saves metadata for argument n of the function.
+//
+// https://www.sqlite.org/c3ref/get_auxdata.html
+func (c Context) SetAuxData(n int, data any) {
+	ptr := util.AddHandle(c.ctx, data)
+	c.call(c.api.setAuxData, uint64(c.handle), uint64(n), uint64(ptr))
+}
+
+// GetAuxData returns metadata for argument n of the function.
+//
+// https://www.sqlite.org/c3ref/get_auxdata.html
+func (c Context) GetAuxData(n int) any {
+	ptr := uint32(c.call(c.api.getAuxData, uint64(c.handle), uint64(n)))
+	return util.GetHandle(c.ctx, ptr)
+}
+
 // ResultBool sets the result of the function to a bool.
 // SQLite does not have a separate boolean storage class.
 // Instead, boolean values are stored as integers 0 (false) and 1 (true).

@@ -29,7 +29,7 @@ func (s *handleState) Close() (err error) {
 
 func GetHandle(ctx context.Context, id uint32) any {
 	if id == 0 {
-		panic(NilErr)
+		return nil
 	}
 	s := ctx.Value(handleKey{}).(*handleState)
 	return s.handles[^id]
