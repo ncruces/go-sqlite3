@@ -8,6 +8,7 @@ import (
 type handleKey struct{}
 type handleState struct {
 	handles []any
+	empty   int
 }
 
 func NewContext(ctx context.Context) (context.Context, io.Closer) {
@@ -24,6 +25,7 @@ func (s *handleState) Close() (err error) {
 		}
 	}
 	s.handles = nil
+	s.empty = 0
 	return err
 }
 
@@ -42,6 +44,7 @@ func DelHandle(ctx context.Context, id uint32) error {
 	s := ctx.Value(handleKey{}).(*handleState)
 	a := s.handles[^id]
 	s.handles[^id] = nil
+	s.empty++
 	if c, ok := a.(io.Closer); ok {
 		return c.Close()
 	}
@@ -55,10 +58,13 @@ func AddHandle(ctx context.Context, a any) (id uint32) {
 	s := ctx.Value(handleKey{}).(*handleState)
 
 	// Find an empty slot.
-	for id, h := range s.handles {
-		if h == nil {
-			s.handles[id] = a
-			return ^uint32(id)
+	if s.empty > cap(s.handles)-len(s.handles) {
+		for id, h := range s.handles {
+			if h == nil {
+				s.empty--
+				s.handles[id] = a
+				return ^uint32(id)
+			}
 		}
 	}
 

@@ -8,6 +8,16 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+// AnyCollationNeeded registers a fake collating function
+// for any unknown collating sequence.
+// The fake collating function works like BINARY.
+//
+// This extension can be used to load schemas that contain
+// one or more unknown collating sequences.
+func (c *Conn) AnyCollationNeeded() {
+	c.call(c.api.anyCollation, uint64(c.handle), 0, 0)
+}
+
 // CreateCollation defines a new collating sequence.
 //
 // https://www.sqlite.org/c3ref/create_collation.html

@@ -158,6 +158,7 @@ func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
 		changes:         getFun("sqlite3_changes64"),
 		lastRowid:       getFun("sqlite3_last_insert_rowid"),
 		autocommit:      getFun("sqlite3_get_autocommit"),
+		anyCollation:    getFun("sqlite3_anycollseq_init"),
 		createCollation: getFun("sqlite3_create_collation_go"),
 		createFunction:  getFun("sqlite3_create_function_go"),
 		createAggregate: getFun("sqlite3_create_aggregate_function_go"),
@@ -377,6 +378,7 @@ type sqliteAPI struct {
 	changes         api.Function
 	lastRowid       api.Function
 	autocommit      api.Function
+	anyCollation    api.Function
 	createCollation api.Function
 	createFunction  api.Function
 	createAggregate api.Function

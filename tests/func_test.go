@@ -136,3 +136,53 @@ func TestCreateFunction(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.FULL", err)
 	}
 }
+
+func TestAnyCollationNeeded(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db.AnyCollationNeeded()
+
+	stmt, _, err := db.Prepare(`SELECT id, name FROM users ORDER BY name COLLATE silly`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	row := 0
+	ids := []int{0, 2, 1}
+	names := []string{"go", "whatever", "zig"}
+	for ; stmt.Step(); row++ {
+		id := stmt.ColumnInt(0)
+		name := stmt.ColumnText(1)
+
+		if id != ids[row] {
+			t.Errorf("got %d, want %d", id, ids[row])
+		}
+		if name != names[row] {
+			t.Errorf("got %q, want %q", name, names[row])
+		}
+	}
+	if row != 3 {
+		t.Errorf("got %d, want %d", row, len(ids))
+	}
+
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
+	}
+}
