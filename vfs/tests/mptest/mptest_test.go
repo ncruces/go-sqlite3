@@ -83,16 +83,15 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 
 	cfg := config(ctx).WithArgs(args...)
 	go func() {
-		ctx, closer := util.NewContext(ctx)
+		ctx := util.NewContext(ctx)
 		mod, _ := rt.InstantiateModule(ctx, module, cfg)
 		mod.Close(ctx)
-		closer.Close()
 	}()
 	return 0
 }
 
 func Test_config01(t *testing.T) {
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -100,7 +99,6 @@ func Test_config01(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func Test_config02(t *testing.T) {
@@ -111,7 +109,7 @@ func Test_config02(t *testing.T) {
 		t.Skip("skipping in CI")
 	}
 
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -119,7 +117,6 @@ func Test_config02(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func Test_crash01(t *testing.T) {
@@ -127,7 +124,7 @@ func Test_crash01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -135,7 +132,6 @@ func Test_crash01(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func Test_multiwrite01(t *testing.T) {
@@ -143,7 +139,7 @@ func Test_multiwrite01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -151,11 +147,10 @@ func Test_multiwrite01(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func Test_config01_memory(t *testing.T) {
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "test.db",
 		"config01.test",
 		"--vfs", "memdb",
@@ -165,7 +160,6 @@ func Test_config01_memory(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func Test_multiwrite01_memory(t *testing.T) {
@@ -173,7 +167,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx, closer := util.NewContext(newContext(t))
+	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db",
 		"multiwrite01.test",
 		"--vfs", "memdb",
@@ -183,7 +177,6 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }
 
 func newContext(t *testing.T) context.Context {

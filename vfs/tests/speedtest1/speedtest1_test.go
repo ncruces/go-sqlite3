@@ -75,7 +75,7 @@ func initFlags() {
 
 func Benchmark_speedtest1(b *testing.B) {
 	output.Reset()
-	ctx, closer := util.NewContext(context.Background())
+	ctx := util.NewContext(context.Background())
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
@@ -89,5 +89,4 @@ func Benchmark_speedtest1(b *testing.B) {
 		b.Error(err)
 	}
 	mod.Close(ctx)
-	closer.Close()
 }

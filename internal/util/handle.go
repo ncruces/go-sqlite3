@@ -3,6 +3,8 @@ package util
 import (
 	"context"
 	"io"
+
+	"github.com/tetratelabs/wazero/experimental"
 )
 
 type handleKey struct{}
@@ -11,22 +13,21 @@ type handleState struct {
 	empty   int
 }
 
-func NewContext(ctx context.Context) (context.Context, io.Closer) {
+func NewContext(ctx context.Context) context.Context {
 	state := new(handleState)
-	return context.WithValue(ctx, handleKey{}, state), state
+	ctx = experimental.WithCloseNotifier(ctx, state)
+	ctx = context.WithValue(ctx, handleKey{}, state)
+	return ctx
 }
 
-func (s *handleState) Close() (err error) {
+func (s *handleState) CloseNotify(ctx context.Context, exitCode uint32) {
 	for _, h := range s.handles {
 		if c, ok := h.(io.Closer); ok {
-			if e := c.Close(); err == nil {
-				err = e
-			}
+			c.Close()
 		}
 	}
 	s.handles = nil
 	s.empty = 0
-	return err
 }
 
 func GetHandle(ctx context.Context, id uint32) any {

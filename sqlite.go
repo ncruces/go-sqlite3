@@ -3,7 +3,6 @@ package sqlite3
 
 import (
 	"context"
-	"io"
 	"math"
 	"os"
 	"sync"
@@ -30,23 +29,6 @@ var instance struct {
 	compiled wazero.CompiledModule
 	err      error
 	once     sync.Once
-}
-
-func instantiateSQLite() (*sqlite, error) {
-	ctx := context.Background()
-
-	instance.once.Do(compileSQLite)
-	if instance.err != nil {
-		return nil, instance.err
-	}
-
-	cfg := wazero.NewModuleConfig()
-
-	mod, err := instance.runtime.InstantiateModule(ctx, instance.compiled, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return newSQLite(mod)
 }
 
 func compileSQLite() {
@@ -77,23 +59,32 @@ func compileSQLite() {
 }
 
 type sqlite struct {
-	ctx    context.Context
-	mod    api.Module
-	closer io.Closer
-	api    sqliteAPI
-	stack  [8]uint64
+	ctx   context.Context
+	mod   api.Module
+	api   sqliteAPI
+	stack [8]uint64
 }
 
 type sqliteKey struct{}
 
-func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
+func instantiateSQLite() (sqlt *sqlite, err error) {
+	instance.once.Do(compileSQLite)
+	if instance.err != nil {
+		return nil, instance.err
+	}
+
 	sqlt = new(sqlite)
-	sqlt.ctx, sqlt.closer = util.NewContext(context.Background())
+	sqlt.ctx = util.NewContext(context.Background())
 	sqlt.ctx = context.WithValue(sqlt.ctx, sqliteKey{}, sqlt)
-	sqlt.mod = mod
+
+	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
+		instance.compiled, wazero.NewModuleConfig())
+	if err != nil {
+		return nil, err
+	}
 
 	getFun := func(name string) api.Function {
-		f := mod.ExportedFunction(name)
+		f := sqlt.mod.ExportedFunction(name)
 		if f == nil {
 			err = util.NoFuncErr + util.ErrorString(name)
 			return nil
@@ -102,12 +93,12 @@ func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
 	}
 
 	getVal := func(name string) uint32 {
-		g := mod.ExportedGlobal(name)
+		g := sqlt.mod.ExportedGlobal(name)
 		if g == nil {
 			err = util.NoGlobalErr + util.ErrorString(name)
 			return 0
 		}
-		return util.ReadUint32(mod, uint32(g.Get()))
+		return util.ReadUint32(sqlt.mod, uint32(g.Get()))
 	}
 
 	sqlt.api = sqliteAPI{
@@ -191,9 +182,7 @@ func newSQLite(mod api.Module) (sqlt *sqlite, err error) {
 }
 
 func (sqlt *sqlite) close() error {
-	err := sqlt.mod.Close(sqlt.ctx)
-	sqlt.closer.Close()
-	return err
+	return sqlt.mod.Close(sqlt.ctx)
 }
 
 func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
@@ -232,8 +221,6 @@ func (sqlt *sqlite) call(fn api.Function, params ...uint64) uint64 {
 	copy(sqlt.stack[:], params)
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
-		// The module closed or panicked; release resources.
-		sqlt.closer.Close()
 		panic(err)
 	}
 	return sqlt.stack[0]
