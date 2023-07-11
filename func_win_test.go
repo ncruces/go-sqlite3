@@ -87,7 +87,7 @@ func (f *countASCII) isASCII(arg sqlite3.Value) bool {
 	if arg.Type() != sqlite3.TEXT {
 		return false
 	}
-	for _, c := range arg.RawText() {
+	for _, c := range arg.RawBlob() {
 		if c > unicode.MaxASCII {
 			return false
 		}
