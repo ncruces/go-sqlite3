@@ -1,9 +1,17 @@
-// Package unicode provides a replacement for the SQLite ICU extension.
+// Package unicode provides an alternative to the SQLite ICU extension.
 //
 // Provides Unicode aware:
 //   - upper and lower functions,
-//   - LIKE and REGEX operators,
+//   - LIKE and REGEXP operators,
 //   - collation sequences.
+//
+// This package is not 100% compatible with the ICU extension:
+//   - upper and lower use [strings.ToUpper], [strings.ToLower] and [cases];
+//   - the LIKE operator follows [strings.EqualFold] rules;
+//   - the REGEXP operator uses Go [regex/syntax];
+//   - collation sequences use [collate].
+//
+// Expect subtle differences (e.g.) in the handling of Turkish case folding.
 package unicode
 
 import (
@@ -20,7 +28,7 @@ import (
 )
 
 // Register registers Unicode aware functions for a database connection.
-func Register(db sqlite3.Conn) {
+func Register(db *sqlite3.Conn) {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 
 	db.CreateFunction("like", 2, flags, like)
@@ -58,7 +66,7 @@ func upper(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 	cs, ok := ctx.GetAuxData(1).(cases.Caser)
 	if !ok {
-		t, err := language.Parse(arg[0].Text())
+		t, err := language.Parse(arg[1].Text())
 		if err != nil {
 			ctx.ResultError(err)
 			return
@@ -77,7 +85,7 @@ func lower(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 	cs, ok := ctx.GetAuxData(1).(cases.Caser)
 	if !ok {
-		t, err := language.Parse(arg[0].Text())
+		t, err := language.Parse(arg[1].Text())
 		if err != nil {
 			ctx.ResultError(err)
 			return
@@ -137,7 +145,8 @@ func like2regex(pattern string, escape rune) string {
 	var re strings.Builder
 	start := 0
 	literal := false
-	re.WriteString(`(?is)`) // case insensitive, . matches any character
+	re.Grow(len(pattern) + 10)
+	re.WriteString(`(?is)\A`) // case insensitive, . matches any character
 	for i, r := range pattern {
 		if start < 0 {
 			start = i
@@ -164,5 +173,6 @@ func like2regex(pattern string, escape rune) string {
 	if start >= 0 {
 		re.WriteString(regexp.QuoteMeta(pattern[start:]))
 	}
+	re.WriteString(`\z`)
 	return re.String()
 }
