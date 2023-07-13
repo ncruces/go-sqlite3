@@ -52,6 +52,11 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			c.Close()
+		}
+	}()
 
 	var pragmas bool
 	c.txBegin = "BEGIN"
@@ -65,7 +70,6 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 			case "deferred", "immediate", "exclusive":
 				c.txBegin = "BEGIN " + s
 			default:
-				c.Close()
 				return nil, fmt.Errorf("sqlite3: invalid _txlock: %s", s)
 			}
 
@@ -73,9 +77,8 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 		}
 	}
 	if !pragmas {
-		err := c.Conn.Exec(`PRAGMA busy_timeout=60000`)
+		err = c.Conn.Exec(`PRAGMA busy_timeout=60000`)
 		if err != nil {
-			c.Close()
 			return nil, err
 		}
 		c.reusable = true
@@ -86,7 +89,6 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 				PRAGMA_query_only;
 		`)
 		if err != nil {
-			c.Close()
 			return nil, err
 		}
 		if s.Step() {
@@ -95,7 +97,6 @@ func (sqlite) Open(name string) (_ driver.Conn, err error) {
 		}
 		err = s.Close()
 		if err != nil {
-			c.Close()
 			return nil, err
 		}
 	}

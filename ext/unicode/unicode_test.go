@@ -2,6 +2,7 @@ package unicode
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -62,6 +63,67 @@ func TestRegister(t *testing.T) {
 			}
 		})
 	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRegister_collation(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	Register(db)
+
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`INSERT INTO words (word) VALUES ('côte'), ('cote'), ('coter'), ('coté'), ('cotée'), ('côté')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT icu_load_collation('fr_FR', 'french')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT word FROM words ORDER BY word COLLATE french`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	got, want := []string{}, []string{"cote", "coté", "côte", "côté", "cotée", "coter"}
+
+	for stmt.Step() {
+		got = append(got, stmt.ColumnText(0))
+	}
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Error("not equal")
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRegister_error(t *testing.T) {
@@ -99,12 +161,30 @@ func TestRegister_error(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.ERROR", err)
 	}
 
-	err = db.Exec(`SELECT 'hello' LIKE 'HELLO' ESCAPE '\\' `)
+	err = db.Exec(`SELECT 'hello' LIKE 'HELLO' ESCAPE '\\'`)
 	if err == nil {
 		t.Error("want error")
 	}
 	if !errors.Is(err, sqlite3.ERROR) {
 		t.Errorf("got %v, want sqlite3.ERROR", err)
+	}
+
+	err = db.Exec(`SELECT icu_load_collation('enUS', 'error')`)
+	if err == nil {
+		t.Error("want error")
+	}
+	if !errors.Is(err, sqlite3.ERROR) {
+		t.Errorf("got %v, want sqlite3.ERROR", err)
+	}
+
+	err = db.Exec(`SELECT icu_load_collation('enUS', '')`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

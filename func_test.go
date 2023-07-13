@@ -18,6 +18,7 @@ func ExampleConn_CreateCollation() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
 	if err != nil {
@@ -46,16 +47,6 @@ func ExampleConn_CreateCollation() {
 	if err := stmt.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	err = stmt.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
 	// Output:
 	// cote
 	// coté
@@ -70,6 +61,7 @@ func ExampleConn_CreateFunction() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
 	if err != nil {
@@ -100,16 +92,6 @@ func ExampleConn_CreateFunction() {
 	if err := stmt.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	err = stmt.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
 	// Unordered output:
 	// COTE
 	// COTÉ
@@ -124,6 +106,7 @@ func ExampleContext_SetAuxData() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
 	if err != nil {
@@ -162,16 +145,6 @@ func ExampleContext_SetAuxData() {
 		fmt.Println(stmt.ColumnText(0))
 	}
 	if err := stmt.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	err = stmt.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.Close()
-	if err != nil {
 		log.Fatal(err)
 	}
 	// Unordered output:
