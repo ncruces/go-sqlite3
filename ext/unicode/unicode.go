@@ -130,12 +130,10 @@ func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 
 	re, ok := ctx.GetAuxData(0).(likeData)
 	if !ok || re.escape != escape {
-		r, err := regexp.Compile(like2regex(arg[0].Text(), escape))
-		if err != nil {
-			ctx.ResultError(err)
-			return
+		re = likeData{
+			regexp.MustCompile(like2regex(arg[0].Text(), escape)),
+			escape,
 		}
-		re = likeData{r, escape}
 		ctx.SetAuxData(0, re)
 	}
 	ctx.ResultBool(re.Match(arg[1].RawBlob()))

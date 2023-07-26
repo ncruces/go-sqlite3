@@ -29,6 +29,7 @@
 #define SQLITE_USE_ALLOCA
 
 // Other Options
+
 #define SQLITE_ALLOW_URI_AUTHORITY
 #define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
 #define SQLITE_ENABLE_ATOMIC_WRITE
@@ -54,6 +55,8 @@
 // Session Extension
 // #define SQLITE_ENABLE_SESSION
 // #define SQLITE_ENABLE_PREUPDATE_HOOK
+
+#define SQLITE_SOUNDEX
 
 // Implemented in vfs.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
