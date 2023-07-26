@@ -7,19 +7,20 @@ diff --git a/tests/.gitignore b/tests/.gitignore
 diff --git a/tests/go.mod b/tests/go.mod
 --- a/tests/go.mod
 +++ b/tests/go.mod
-@@ -7,12 +7,12 @@ require (
- 	github.com/jackc/pgx/v5 v5.3.1 // indirect
+@@ -6,9 +6,10 @@ require (
+ 	github.com/google/uuid v1.3.0
  	github.com/jinzhu/now v1.1.5
- 	github.com/lib/pq v1.10.8
--	github.com/mattn/go-sqlite3 v1.14.16 // indirect
-+	github.com/ncruces/go-sqlite3 v0.7.2
+ 	github.com/lib/pq v1.10.9
++	github.com/ncruces/go-sqlite3 v0.8.3
 +	github.com/ncruces/go-sqlite3/gormlite v0.0.0
- 	gorm.io/driver/mysql v1.5.0
- 	gorm.io/driver/postgres v1.5.0
--	gorm.io/driver/sqlite v1.5.0
- 	gorm.io/driver/sqlserver v1.5.1
--	gorm.io/gorm v1.25.1
-+	gorm.io/gorm v1.25.2
+ 	gorm.io/driver/mysql v1.5.2-0.20230612053416-48b6526a21f0
+ 	gorm.io/driver/postgres v1.5.3-0.20230607070428-18bc84b75196
+-	gorm.io/driver/sqlite v1.5.2
+ 	gorm.io/driver/sqlserver v1.5.2-0.20230613072041-6e2cde390b0a
+ 	gorm.io/gorm v1.25.2
+ )
+@@ -27,4 +28,4 @@ require (
+ 	golang.org/x/text v0.11.0 // indirect
  )
  
 -replace gorm.io/gorm => ../
@@ -40,3 +41,12 @@ diff --git a/tests/tests_test.go b/tests/tests_test.go
  	"gorm.io/driver/sqlserver"
  	"gorm.io/gorm"
  	"gorm.io/gorm/logger"
+@@ -89,7 +91,7 @@ func OpenTestConnection(cfg *gorm.Config) (db *gorm.DB, err error) {
+ 		db, err = gorm.Open(mysql.Open(dbDSN), cfg)
+ 	default:
+ 		log.Println("testing sqlite3...")
+-		db, err = gorm.Open(sqlite.Open(filepath.Join(os.TempDir(), "gorm.db?_foreign_keys=on")), cfg)
++		db, err = gorm.Open(sqlite.Open("file:"+filepath.Join(os.TempDir(), "gorm.db")+"?_pragma=busy_timeout(1000)&_pragma=foreign_keys(1)"), cfg)
+ 	}
+ 
+ 	if err != nil {
