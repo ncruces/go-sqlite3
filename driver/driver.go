@@ -256,9 +256,7 @@ func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	// Use QueryContext to setup bindings.
-	// No need to close rows: that simply resets the statement, exec does the same.
-	_, err := s.QueryContext(ctx, args)
+	err := s.setupBindings(ctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -272,9 +270,18 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 }
 
 func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	err := s.Stmt.ClearBindings()
+	err := s.setupBindings(ctx, args)
 	if err != nil {
 		return nil, err
+	}
+
+	return &rows{ctx, s.Stmt, s.Conn}, nil
+}
+
+func (s *stmt) setupBindings(ctx context.Context, args []driver.NamedValue) error {
+	err := s.Stmt.ClearBindings()
+	if err != nil {
+		return err
 	}
 
 	var ids [3]int
@@ -315,11 +322,10 @@ func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 			}
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	return &rows{ctx, s.Stmt, s.Conn}, nil
+	return nil
 }
 
 func (s *stmt) CheckNamedValue(arg *driver.NamedValue) error {
