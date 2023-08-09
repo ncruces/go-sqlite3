@@ -285,10 +285,3 @@ func divRoundUp(a, b int64) int64 {
 func modRoundUp(a, b int64) int64 {
 	return b - (b-a%b)%b
 }
-
-func clear[T any](b []T) {
-	var zero T
-	for i := range b {
-		b[i] = zero
-	}
-}

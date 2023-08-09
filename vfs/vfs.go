@@ -432,9 +432,3 @@ func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 	}
 	return def
 }
-
-func clear(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
-}

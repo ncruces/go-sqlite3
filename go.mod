@@ -1,6 +1,6 @@
 module github.com/ncruces/go-sqlite3
 
-go 1.19
+go 1.21
 
 require (
 	github.com/ncruces/julianday v0.1.5
