@@ -45,18 +45,20 @@ func Register(db *sqlite3.Conn) {
 				return
 			}
 
-			tag, err := language.Parse(arg[0].Text())
-			if err != nil {
-				ctx.ResultError(err)
-				return
-			}
-
-			err = db.CreateCollation(name, collate.New(tag).Compare)
+			err := RegisterCollation(db, name, arg[0].Text())
 			if err != nil {
 				ctx.ResultError(err)
 				return
 			}
 		})
+}
+
+func RegisterCollation(db *sqlite3.Conn, name, lang string) error {
+	tag, err := language.Parse(lang)
+	if err != nil {
+		return err
+	}
+	return db.CreateCollation(name, collate.New(tag).Compare)
 }
 
 func upper(ctx sqlite3.Context, arg ...sqlite3.Value) {
