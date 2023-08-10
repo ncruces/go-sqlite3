@@ -61,12 +61,12 @@ func (s *Stmt) ClearBindings() error {
 func (s *Stmt) Step() bool {
 	s.c.checkInterrupt()
 	r := s.c.call(s.c.api.step, uint64(s.handle))
-	if r == _ROW {
+	switch r {
+	case _ROW:
 		return true
-	}
-	if r == _DONE {
+	case _DONE:
 		s.err = nil
-	} else {
+	default:
 		s.err = s.c.error(r)
 	}
 	return false
