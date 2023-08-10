@@ -1,10 +1,10 @@
 package readervfs_test
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "embed"
 
@@ -15,7 +15,7 @@ import (
 )
 
 //go:embed testdata/test.db
-var testDB []byte
+var testDB string
 
 func Example_http() {
 	readervfs.Create("demo.db", httpreadat.New("https://www.sanford.io/demo.db"))
@@ -65,7 +65,7 @@ func Example_http() {
 }
 
 func Example_embed() {
-	readervfs.Create("test.db", readervfs.NewSizeReaderAt(bytes.NewReader(testDB)))
+	readervfs.Create("test.db", readervfs.NewSizeReaderAt(strings.NewReader(testDB)))
 	defer readervfs.Delete("test.db")
 
 	db, err := sql.Open("sqlite3", "file:test.db?vfs=reader")
