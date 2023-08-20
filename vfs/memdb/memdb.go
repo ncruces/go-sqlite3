@@ -176,6 +176,8 @@ func (m *memFile) Size() (int64, error) {
 	return m.size, nil
 }
 
+const spinWait = 25 * time.Microsecond
+
 func (m *memFile) Lock(lock vfs.LockLevel) error {
 	if m.lock >= lock {
 		return nil
@@ -210,8 +212,8 @@ func (m *memFile) Lock(lock vfs.LockLevel) error {
 			m.pending = m
 		}
 
-		for start := time.Now(); m.shared > 1; {
-			if time.Since(start) > time.Millisecond {
+		for before := time.Now(); m.shared > 1; {
+			if time.Since(before) > spinWait {
 				return sqlite3.BUSY
 			}
 			m.lockMtx.Unlock()

@@ -138,6 +138,7 @@ func osUnlock(file *os.File, start, len uint32) _ErrorCode {
 }
 
 func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def _ErrorCode) _ErrorCode {
+	before := time.Now()
 	var err error
 	for {
 		err = windows.LockFileEx(windows.Handle(file.Fd()), flags,
@@ -145,11 +146,16 @@ func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def 
 		if errno, _ := err.(windows.Errno); errno != windows.ERROR_LOCK_VIOLATION {
 			break
 		}
-		if timeout < time.Millisecond {
+		if timeout <= 0 || timeout < time.Since(before) {
 			break
 		}
-		timeout -= time.Millisecond
+		if err := windows.TimeBeginPeriod(1); err != nil {
+			break
+		}
 		time.Sleep(time.Millisecond)
+		if err := windows.TimeEndPeriod(1); err != nil {
+			break
+		}
 	}
 	return osLockErrorCode(err, def)
 }

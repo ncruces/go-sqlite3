@@ -20,16 +20,16 @@ func osUnlock(file *os.File, start, len int64) _ErrorCode {
 }
 
 func osLock(file *os.File, how int, timeout time.Duration, def _ErrorCode) _ErrorCode {
+	before := time.Now()
 	var err error
 	for {
 		err = unix.Flock(int(file.Fd()), how)
 		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 			break
 		}
-		if timeout < time.Millisecond {
+		if timeout <= 0 || timeout < time.Since(before) {
 			break
 		}
-		timeout -= time.Millisecond
 		time.Sleep(time.Millisecond)
 	}
 	return osLockErrorCode(err, def)
