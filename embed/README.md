@@ -1,6 +1,6 @@
 # Embeddable WASM build of SQLite
 
-This folder includes an embeddable WASM build of SQLite 3.42.0 for use with
+This folder includes an embeddable WASM build of SQLite 3.43.0 for use with
 [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3).
 
 The following optional features are compiled in:
