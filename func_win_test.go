@@ -26,7 +26,7 @@ func ExampleConn_CreateWindowFunction() {
 		log.Fatal(err)
 	}
 
-	err = db.CreateWindowFunction("count_ascii", 1, sqlite3.INNOCUOUS, newASCIICounter)
+	err = db.CreateWindowFunction("count_ascii", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, newASCIICounter)
 	if err != nil {
 		log.Fatal(err)
 	}

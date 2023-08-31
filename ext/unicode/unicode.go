@@ -1,17 +1,19 @@
 // Package unicode provides an alternative to the SQLite ICU extension.
 //
-// Provides Unicode aware:
-//   - upper and lower functions,
+// Like the [ICU extension], it provides Unicode aware:
+//   - upper() and lower() functions,
 //   - LIKE and REGEXP operators,
 //   - collation sequences.
 //
-// This package is not 100% compatible with the ICU extension:
-//   - upper and lower use [strings.ToUpper], [strings.ToLower] and [cases];
+// The implementation is not 100% compatible with the [ICU extension]:
+//   - upper() and lower() use [strings.ToUpper], [strings.ToLower] and [cases];
 //   - the LIKE operator follows [strings.EqualFold] rules;
 //   - the REGEXP operator uses Go [regex/syntax];
 //   - collation sequences use [collate].
 //
 // Expect subtle differences (e.g.) in the handling of Turkish case folding.
+//
+// [ICU extension]: https://sqlite.org/src/dir/ext/icu
 package unicode
 
 import (
@@ -45,7 +47,7 @@ func Register(db *sqlite3.Conn) {
 				return
 			}
 
-			err := RegisterCollation(db, name, arg[0].Text())
+			err := RegisterCollation(db, arg[0].Text(), name)
 			if err != nil {
 				ctx.ResultError(err)
 				return
@@ -53,8 +55,9 @@ func Register(db *sqlite3.Conn) {
 		})
 }
 
-func RegisterCollation(db *sqlite3.Conn, name, lang string) error {
-	tag, err := language.Parse(lang)
+// RegisterCollation registers a Unicode collation sequence for a database connection.
+func RegisterCollation(db *sqlite3.Conn, locale, name string) error {
+	tag, err := language.Parse(locale)
 	if err != nil {
 		return err
 	}
