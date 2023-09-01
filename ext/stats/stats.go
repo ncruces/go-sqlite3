@@ -1,10 +1,12 @@
 // Package stats provides aggregate functions for statistics.
 //
 // Functions:
-//   - var_samp: sample variance
-//   - var_pop: population variance
-//   - stddev_samp: sample standard deviation
 //   - stddev_pop: population standard deviation
+//   - stddev_samp: sample standard deviation
+//   - var_pop: population variance
+//   - var_samp: sample variance
+//   - covar_pop: population covariance
+//   - covar_samp: sample covariance
 //
 // See: [ANSI SQL Aggregate Functions]
 //
@@ -16,10 +18,12 @@ import "github.com/ncruces/go-sqlite3"
 // Register registers statistics functions.
 func Register(db *sqlite3.Conn) {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	db.CreateWindowFunction("var_pop", 1, flags, create(var_pop))
-	db.CreateWindowFunction("var_samp", 1, flags, create(var_samp))
-	db.CreateWindowFunction("stddev_pop", 1, flags, create(stddev_pop))
-	db.CreateWindowFunction("stddev_samp", 1, flags, create(stddev_samp))
+	db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop))
+	db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp))
+	db.CreateWindowFunction("stddev_pop", 1, flags, newVariance(stddev_pop))
+	db.CreateWindowFunction("stddev_samp", 1, flags, newVariance(stddev_samp))
+	db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop))
+	db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp))
 }
 
 const (
@@ -29,38 +33,72 @@ const (
 	stddev_samp
 )
 
-func create(kind int) func() sqlite3.AggregateFunction {
-	return func() sqlite3.AggregateFunction { return &state{kind: kind} }
+func newVariance(kind int) func() sqlite3.AggregateFunction {
+	return func() sqlite3.AggregateFunction { return &variance{kind: kind} }
 }
 
-type state struct {
+type variance struct {
 	kind int
 	welford
 }
 
-func (f *state) Value(ctx sqlite3.Context) {
+func (fn *variance) Value(ctx sqlite3.Context) {
 	var r float64
-	switch f.kind {
+	switch fn.kind {
 	case var_pop:
-		r = f.var_pop()
+		r = fn.var_pop()
 	case var_samp:
-		r = f.var_samp()
+		r = fn.var_samp()
 	case stddev_pop:
-		r = f.stddev_pop()
+		r = fn.stddev_pop()
 	case stddev_samp:
-		r = f.stddev_samp()
+		r = fn.stddev_samp()
 	}
 	ctx.ResultFloat(r)
 }
 
-func (f *state) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if a := arg[0]; a.Type() != sqlite3.NULL {
-		f.enqueue(a.Float())
+		fn.enqueue(a.Float())
 	}
 }
 
-func (f *state) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func (fn *variance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if a := arg[0]; a.Type() != sqlite3.NULL {
-		f.dequeue(a.Float())
+		fn.dequeue(a.Float())
+	}
+}
+
+func newCovariance(kind int) func() sqlite3.AggregateFunction {
+	return func() sqlite3.AggregateFunction { return &covariance{kind: kind} }
+}
+
+type covariance struct {
+	kind int
+	welford2
+}
+
+func (fn *covariance) Value(ctx sqlite3.Context) {
+	var r float64
+	switch fn.kind {
+	case var_pop:
+		r = fn.covar_pop()
+	case var_samp:
+		r = fn.covar_samp()
+	}
+	ctx.ResultFloat(r)
+}
+
+func (fn *covariance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	a, b := arg[0], arg[1]
+	if a.Type() != sqlite3.NULL && b.Type() != sqlite3.NULL {
+		fn.enqueue(a.Float(), b.Float())
+	}
+}
+
+func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	a, b := arg[0], arg[1]
+	if a.Type() != sqlite3.NULL && b.Type() != sqlite3.NULL {
+		fn.dequeue(a.Float(), b.Float())
 	}
 }
