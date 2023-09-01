@@ -7,6 +7,7 @@
 //   - var_samp: sample variance
 //   - covar_pop: population covariance
 //   - covar_samp: sample covariance
+//   - corr: correlation coefficient
 //
 // See: [ANSI SQL Aggregate Functions]
 //
@@ -24,6 +25,7 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("stddev_samp", 1, flags, newVariance(stddev_samp))
 	db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop))
 	db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp))
+	db.CreateWindowFunction("corr", 2, flags, newCovariance(corr))
 }
 
 const (
@@ -31,6 +33,7 @@ const (
 	var_samp
 	stddev_pop
 	stddev_samp
+	corr
 )
 
 func newVariance(kind int) func() sqlite3.AggregateFunction {
@@ -85,6 +88,8 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 		r = fn.covar_pop()
 	case var_samp:
 		r = fn.covar_samp()
+	case corr:
+		r = fn.correlation()
 	}
 	ctx.ResultFloat(r)
 }

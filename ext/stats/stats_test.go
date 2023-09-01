@@ -102,17 +102,20 @@ func TestRegister_covariance(t *testing.T) {
 	}
 
 	stmt, _, err := db.Prepare(`SELECT
-			covar_samp(x, y), covar_pop(x, y) FROM data`)
+		corr(x, y), covar_samp(x, y), covar_pop(x, y) FROM data`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
 
 	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 21.25 {
+		if got := stmt.ColumnFloat(0); got != 0.9881049293224639 {
+			t.Errorf("got %v, want 0.9881049293224639", got)
+		}
+		if got := stmt.ColumnFloat(1); got != 21.25 {
 			t.Errorf("got %v, want 21.25", got)
 		}
-		if got := stmt.ColumnFloat(1); got != 17 {
+		if got := stmt.ColumnFloat(2); got != 17 {
 			t.Errorf("got %v, want 17", got)
 		}
 	}

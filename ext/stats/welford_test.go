@@ -32,9 +32,7 @@ func Test_welford(t *testing.T) {
 	s2.enqueue(7)
 	s2.enqueue(13)
 	s2.enqueue(16)
-	s1.m1.lo, s2.m1.lo = 0, 0
-	s1.m2.lo, s2.m2.lo = 0, 0
-	if s1 != s2 {
+	if s1.var_pop() != s2.var_pop() {
 		t.Errorf("got %v, want %v", s1, s2)
 	}
 }
@@ -60,10 +58,18 @@ func Test_covar(t *testing.T) {
 	c2.enqueue(2, 60)
 	c2.enqueue(7, 90)
 	c2.enqueue(4, 75)
-	c1.x.lo, c2.x.lo = 0, 0
-	c1.y.lo, c2.y.lo = 0, 0
-	c1.c.lo, c2.c.lo = 0, 0
-	if c1 != c2 {
-		t.Errorf("got %v, want %v", c1, c2)
+	if c1.covar_pop() != c2.covar_pop() {
+		t.Errorf("got %v, want %v", c1.covar_pop(), c2.covar_pop())
+	}
+}
+
+func Test_correlation(t *testing.T) {
+	var c welford2
+	c.enqueue(1, 3)
+	c.enqueue(2, 2)
+	c.enqueue(3, 1)
+
+	if got := c.correlation(); got != -1 {
+		t.Errorf("got %v, want -1", got)
 	}
 }

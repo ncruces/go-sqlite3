@@ -48,36 +48,48 @@ func (w *welford) dequeue(x float64) {
 }
 
 type welford2 struct {
-	x, y, c kahan
-	n       uint64
+	m1x, m2x kahan
+	m1y, m2y kahan
+	cov      kahan
+	n        uint64
 }
 
 func (w welford2) covar_pop() float64 {
-	return w.c.hi / float64(w.n)
+	return w.cov.hi / float64(w.n)
 }
 
 func (w welford2) covar_samp() float64 {
-	return w.c.hi / float64(w.n-1) // Bessel's correction
+	return w.cov.hi / float64(w.n-1) // Bessel's correction
+}
+
+func (w welford2) correlation() float64 {
+	return w.cov.hi / math.Sqrt(w.m2x.hi*w.m2y.hi)
 }
 
 func (w *welford2) enqueue(x, y float64) {
 	w.n++
-	dx := x - w.x.hi - w.x.lo
-	dy := y - w.y.hi - w.y.lo
-	w.x.add(dx / float64(w.n))
-	w.y.add(dy / float64(w.n))
-	d2 := y - w.y.hi - w.y.lo
-	w.c.add(dx * d2)
+	d1x := x - w.m1x.hi - w.m1x.lo
+	d1y := y - w.m1y.hi - w.m1y.lo
+	w.m1x.add(d1x / float64(w.n))
+	w.m1y.add(d1y / float64(w.n))
+	d2x := x - w.m1x.hi - w.m1x.lo
+	d2y := y - w.m1y.hi - w.m1y.lo
+	w.m2x.add(d1x * d2x)
+	w.m2y.add(d1y * d2y)
+	w.cov.add(d1x * d2y)
 }
 
 func (w *welford2) dequeue(x, y float64) {
 	w.n--
-	dx := x - w.x.hi - w.x.lo
-	dy := y - w.y.hi - w.y.lo
-	w.x.sub(dx / float64(w.n))
-	w.y.sub(dy / float64(w.n))
-	d2 := y - w.y.hi - w.y.lo
-	w.c.sub(dx * d2)
+	d1x := x - w.m1x.hi - w.m1x.lo
+	d1y := y - w.m1y.hi - w.m1y.lo
+	w.m1x.sub(d1x / float64(w.n))
+	w.m1y.sub(d1y / float64(w.n))
+	d2x := x - w.m1x.hi - w.m1x.lo
+	d2y := y - w.m1y.hi - w.m1y.lo
+	w.m2x.sub(d1x * d2x)
+	w.m2y.sub(d1y * d2y)
+	w.cov.sub(d1x * d2y)
 }
 
 type kahan struct{ hi, lo float64 }
