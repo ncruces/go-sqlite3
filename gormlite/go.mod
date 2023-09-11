@@ -1,6 +1,6 @@
 module github.com/ncruces/go-sqlite3/gormlite
 
-go 1.20
+go 1.21
 
 require (
 	github.com/ncruces/go-sqlite3 v0.8.6
@@ -12,5 +12,5 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ncruces/julianday v0.1.5 // indirect
 	github.com/tetratelabs/wazero v1.5.0 // indirect
-	golang.org/x/sys v0.11.1-0.20230807062127-60ecf133770b // indirect
+	golang.org/x/sys v0.12.0 // indirect
 )
