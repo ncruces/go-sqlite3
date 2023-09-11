@@ -23,7 +23,7 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   implements a VFS for immutable databases.
 - Package [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
   registers Unicode aware functions.
-- Package [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/stats)
+- Package [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
   registers [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
 - Package [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
   provides a [GORM](https://gorm.io) driver.
