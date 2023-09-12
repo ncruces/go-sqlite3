@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -12,13 +11,6 @@ import (
 )
 
 func Test_vfsLock(t *testing.T) {
-	switch runtime.GOOS {
-	case "linux", "darwin", "windows":
-		break
-	default:
-		t.Skip("OS lacks OFD locks")
-	}
-
 	name := filepath.Join(t.TempDir(), "test.db")
 
 	// Create a temporary file.
