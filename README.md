@@ -7,25 +7,25 @@
 Go module `github.com/ncruces/go-sqlite3` wraps a [WASM](https://webassembly.org/) build of [SQLite](https://sqlite.org/),
 and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
 
-- Package [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
+- [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
   wraps the [C SQLite API](https://www.sqlite.org/cintro.html)
   ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3#example-package)).
-- Package [`github.com/ncruces/go-sqlite3/driver`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver)
+- [`github.com/ncruces/go-sqlite3/driver`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver)
   provides a [`database/sql`](https://pkg.go.dev/database/sql) driver
   ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
-- Package [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
+- [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
   embeds a build of SQLite into your application.
-- Package [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
+- [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
   wraps the [C SQLite VFS API](https://www.sqlite.org/vfs.html) and provides a pure Go implementation.
-- Package [`github.com/ncruces/go-sqlite3/vfs/memdb`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb)
+- [`github.com/ncruces/go-sqlite3/vfs/memdb`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb)
   implements an in-memory VFS.
-- Package [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
+- [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
   implements a VFS for immutable databases.
-- Package [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
+- [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
   registers Unicode aware functions.
-- Package [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
+- [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
   registers [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
-- Package [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
+- [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
   provides a [GORM](https://gorm.io) driver.
 
 ### Caveats
@@ -44,13 +44,13 @@ to always use `EXCLUSIVE` locking mode for WAL databases.
 
 Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
 to use the [`database/sql`](https://pkg.go.dev/database/sql)
-driver with WAL databases you should disable connection pooling by calling
+driver with WAL mode databases you should disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 #### POSIX Advisory Locks
 
 POSIX advisory locks, which SQLite uses, are
-[broken by design](https://www.sqlite.org/src/artifact/90c4fa?ln=1073-1161).
+[broken by design](https://www.sqlite.org/src/artifact/2e8b12?ln=1073-1161).
 
 On Linux, macOS and illumos, this module uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
@@ -72,7 +72,7 @@ it is _also_ safe to use it to access databases concurrently
 with _other_ implementations of SQLite.
 
 On other BSDs, where this might be unsafe,
-[this test](https://github.com/ncruces/go-sqlite3/blob/main/vfs/lock_test.go) should fail.
+[this test](vfs/lock_test.go) should fail.
 
 #### Testing
 
@@ -96,7 +96,6 @@ Performance is tested by running
   - [x] in-memory VFS
   - [x] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
   - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
-  - [ ] [MVCC](https://en.wikipedia.org/wiki/Multiversion_concurrency_control) VFS, using [BadgerDB](https://github.com/dgraph-io/badger)
 
 ### Alternatives
 
