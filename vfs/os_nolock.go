@@ -1,4 +1,4 @@
-//go:build sqlite3_nolock && solaris && !illumos
+//go:build sqlite3_nolock && unix && !(linux || darwin || freebsd || illumos)
 
 package vfs
 

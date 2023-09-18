@@ -1,4 +1,4 @@
-//go:build !sqlite3_bsd
+//go:build !sqlite3_flock
 
 package vfs
 

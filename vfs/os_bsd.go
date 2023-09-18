@@ -1,4 +1,4 @@
-//go:build freebsd || openbsd || netbsd || dragonfly || (darwin && sqlite3_bsd)
+//go:build sqlite3_flock || freebsd
 
 package vfs
 

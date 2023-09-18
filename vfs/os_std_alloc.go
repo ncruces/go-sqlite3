@@ -1,4 +1,4 @@
-//go:build !linux && (!darwin || sqlite3_bsd)
+//go:build !linux && (!darwin || sqlite3_flock)
 
 package vfs
 

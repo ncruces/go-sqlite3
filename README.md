@@ -57,29 +57,25 @@ On Linux, macOS and illumos, this module uses
 to synchronize access to database files.
 OFD locks are fully compatible with process-associated POSIX advisory locks.
 
-On BSD Unixes, this module uses
+On BSD Unixes, this module may use
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-BSD locks may _not_ be compatible with process-associated POSIX advisory locks
-(they are on FreeBSD).
+BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
 
 ##### TL;DR
 
 In all platforms for which this package builds,
-it is safe to use it to access databases concurrently from multiple goroutines.
-
-Additionally, on Windows, Linux, macOS, illumos and FreeBSD,
-it is _also_ safe to use it to access databases concurrently
+it should be safe to use it to access databases concurrently,
+from multiple goroutines, processes, and
 with _other_ implementations of SQLite.
 
-On other BSDs, where this might be unsafe,
-[this test](vfs/lock_test.go) should fail.
+If the package does not build for your platform,
+see [this](vfs/README.md#portability).
 
 #### Testing
 
 The pure Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
-on Linux, macOS and Windows;
-BSD code paths are tested on macOS using the `sqlite3_bsd` build tag.
+on Linux, macOS and Windows.
 Performance is tested by running
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 

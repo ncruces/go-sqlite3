@@ -47,8 +47,12 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+    - name: Test no locks
+      run: go test -v -tags sqlite3_nolock .
+      if: matrix.os == 'ubuntu-latest'
+
     - name: Test BSD locks
-      run: go test -v -tags sqlite3_bsd ./...
+      run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
 
     - name: Coverage report
@@ -58,6 +62,6 @@ jobs:
         amend: 'true'
         reuse-go: 'true'
       if: |
-        matrix.os == 'ubuntu-latest' &&
-        github.event_name == 'push'
+        github.event_name == 'push' &&
+        matrix.os == 'ubuntu-latest'
       continue-on-error: true

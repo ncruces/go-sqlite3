@@ -1,4 +1,4 @@
-//go:build linux || illumos
+//go:build (linux || illumos) && !sqlite3_flock
 
 package vfs
 
