@@ -7,10 +7,6 @@ import (
 	"os"
 )
 
-func osSync(file *os.File, fullsync, dataonly bool) error {
-	return file.Sync()
-}
-
 func osAllocate(file *os.File, size int64) error {
 	off, err := file.Seek(0, io.SeekEnd)
 	if err != nil {

@@ -3,17 +3,12 @@
 package vfs
 
 import (
-	"io/fs"
 	"os"
 	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
-
-func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	return os.OpenFile(name, flag, perm)
-}
 
 func osAccess(path string, flags AccessFlag) error {
 	var access uint32 // unix.F_OK

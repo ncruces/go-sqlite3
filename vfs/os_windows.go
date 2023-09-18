@@ -25,37 +25,6 @@ func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.NewFile(uintptr(r), name), nil
 }
 
-func osAccess(path string, flags AccessFlag) error {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if flags == ACCESS_EXISTS {
-		return nil
-	}
-
-	var want fs.FileMode = windows.S_IRUSR
-	if flags == ACCESS_READWRITE {
-		want |= windows.S_IWUSR
-	}
-	if fi.IsDir() {
-		want |= windows.S_IXUSR
-	}
-	if fi.Mode()&want != want {
-		return fs.ErrPermission
-	}
-	return nil
-}
-
-func osSetMode(file *os.File, modeof string) error {
-	fi, err := os.Stat(modeof)
-	if err != nil {
-		return err
-	}
-	file.Chmod(fi.Mode())
-	return nil
-}
-
 func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
 	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
 	rc := osReadLock(file, _PENDING_BYTE, 1, timeout)
