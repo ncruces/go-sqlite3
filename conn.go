@@ -2,7 +2,6 @@ package sqlite3
 
 import (
 	"context"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"net/url"
@@ -240,6 +239,11 @@ func (c *Conn) Changes() int64 {
 //
 // https://www.sqlite.org/c3ref/interrupt.html
 func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
+	// Is it the same context?
+	if ctx == c.interrupt {
+		return ctx
+	}
+
 	// Is a waiter running?
 	if c.waiter != nil {
 		c.waiter <- struct{}{} // Cancel the waiter.
@@ -331,15 +335,5 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 // [online backup]: https://www.sqlite.org/backup.html
 // [incremental BLOB I/O]: https://www.sqlite.org/c3ref/blob_open.html
 type DriverConn interface {
-	driver.Conn
-	driver.ConnBeginTx
-	driver.ExecerContext
-	driver.ConnPrepareContext
-
-	SetInterrupt(ctx context.Context) (old context.Context)
-
-	Savepoint() Savepoint
-	Backup(srcDB, dstURI string) error
-	Restore(dstDB, srcURI string) error
-	OpenBlob(db, table, column string, row int64, write bool) (*Blob, error)
+	Raw() *Conn
 }

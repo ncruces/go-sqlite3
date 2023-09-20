@@ -2,10 +2,9 @@ package tests
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
-	_ "github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
@@ -15,7 +14,7 @@ func TestDriver(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := driver.Open(":memory:", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

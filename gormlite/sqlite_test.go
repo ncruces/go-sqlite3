@@ -1,17 +1,31 @@
 package gormlite
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"gorm.io/gorm"
 
+	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 func TestDialector(t *testing.T) {
 	// This is the DSN of the in-memory SQLite database for these tests.
 	const InMemoryDSN = "file:testdatabase?mode=memory&cache=shared"
+
+	// Custom connection with a custom function called "my_custom_function".
+	conn, err := driver.Open(InMemoryDSN, func(ctx context.Context, conn *sqlite3.Conn) error {
+		return conn.CreateFunction("my_custom_function", 0, sqlite3.DETERMINISTIC,
+			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+				ctx.ResultText("my-result")
+			})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	rows := []struct {
 		description  string
@@ -27,6 +41,33 @@ func TestDialector(t *testing.T) {
 			},
 			openSuccess:  true,
 			query:        "SELECT 1",
+			querySuccess: true,
+		},
+		{
+			description: "Custom function",
+			dialector: &Dialector{
+				DSN: InMemoryDSN,
+			},
+			openSuccess:  true,
+			query:        "SELECT my_custom_function()",
+			querySuccess: false,
+		},
+		{
+			description: "Custom connection",
+			dialector: &Dialector{
+				Conn: conn,
+			},
+			openSuccess:  true,
+			query:        "SELECT 1",
+			querySuccess: true,
+		},
+		{
+			description: "Custom connection, custom function",
+			dialector: &Dialector{
+				Conn: conn,
+			},
+			openSuccess:  true,
+			query:        "SELECT my_custom_function()",
 			querySuccess: true,
 		},
 	}

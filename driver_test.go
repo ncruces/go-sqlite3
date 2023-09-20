@@ -47,7 +47,7 @@ func ExampleDriverConn() {
 	}
 
 	err = conn.Raw(func(driverConn any) error {
-		conn := driverConn.(sqlite3.DriverConn)
+		conn := driverConn.(sqlite3.DriverConn).Raw()
 		savept := conn.Savepoint()
 		defer savept.Release(&err)
 

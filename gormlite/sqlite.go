@@ -3,7 +3,6 @@ package gormlite
 
 import (
 	"context"
-	"database/sql"
 	"strconv"
 
 	"gorm.io/gorm"
@@ -13,7 +12,7 @@ import (
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
 
-	_ "github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/driver"
 )
 
 type Dialector struct {
@@ -33,7 +32,7 @@ func (dialector Dialector) Initialize(db *gorm.DB) (err error) {
 	if dialector.Conn != nil {
 		db.ConnPool = dialector.Conn
 	} else {
-		conn, err := sql.Open("sqlite3", dialector.DSN)
+		conn, err := driver.Open(dialector.DSN, nil)
 		if err != nil {
 			return err
 		}
