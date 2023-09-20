@@ -151,7 +151,7 @@ func Test_multiwrite01(t *testing.T) {
 
 func Test_config01_memory(t *testing.T) {
 	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "test.db",
+	cfg := config(ctx).WithArgs("mptest", "/test.db",
 		"config01.test",
 		"--vfs", "memdb",
 		"--timeout", "1000")

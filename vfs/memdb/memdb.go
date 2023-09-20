@@ -133,7 +133,7 @@ func (m *memFile) WriteAt(b []byte, off int64) (n int, err error) {
 	n = copy((*m.data[base])[rest:], b)
 	if n < len(b) {
 		// Assume writes are page aligned.
-		return 0, io.ErrShortWrite
+		return n, io.ErrShortWrite
 	}
 	if size := off + int64(len(b)); size > m.size {
 		m.size = size

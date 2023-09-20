@@ -94,10 +94,10 @@ func newConnector(name string, init func(ctx context.Context, conn *sqlite3.Conn
 }
 
 type connector struct {
+	init    func(ctx context.Context, conn *sqlite3.Conn) error
 	name    string
 	txlock  string
 	pragmas bool
-	init    func(ctx context.Context, conn *sqlite3.Conn) error
 }
 
 func (n *connector) Driver() driver.Driver {
