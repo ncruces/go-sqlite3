@@ -25,9 +25,9 @@ func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.NewFile(uintptr(r), name), nil
 }
 
-func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
+func osGetSharedLock(file *os.File) _ErrorCode {
 	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
-	rc := osReadLock(file, _PENDING_BYTE, 1, timeout)
+	rc := osReadLock(file, _PENDING_BYTE, 1, 0)
 
 	if rc == _OK {
 		// Acquire the SHARED lock.
@@ -39,16 +39,12 @@ func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
 	return rc
 }
 
-func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
-	if timeout == 0 {
-		timeout = time.Millisecond
-	}
-
+func osGetExclusiveLock(file *os.File) _ErrorCode {
 	// Release the SHARED lock.
 	osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 	// Acquire the EXCLUSIVE lock.
-	rc := osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+	rc := osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
 
 	if rc != _OK {
 		// Reacquire the SHARED lock.

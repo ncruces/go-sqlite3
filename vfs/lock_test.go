@@ -203,9 +203,4 @@ func Test_vfsLock(t *testing.T) {
 	if got := util.ReadUint32(mod, pOutput); got != uint32(LOCK_SHARED) {
 		t.Error("invalid lock state", got)
 	}
-
-	rc = vfsFileControl(ctx, mod, pFile1, _FCNTL_LOCK_TIMEOUT, 1)
-	if rc != _OK {
-		t.Fatal("returned", rc)
-	}
 }

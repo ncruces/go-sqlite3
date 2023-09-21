@@ -4,7 +4,6 @@ package vfs
 
 import (
 	"os"
-	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
@@ -50,7 +49,7 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock != LOCK_NONE {
 			panic(util.AssertErr())
 		}
-		if rc := osGetSharedLock(f.File, f.lockTimeout); rc != _OK {
+		if rc := osGetSharedLock(f.File); rc != _OK {
 			return rc
 		}
 		f.lock = LOCK_SHARED
@@ -61,7 +60,7 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock != LOCK_SHARED {
 			panic(util.AssertErr())
 		}
-		if rc := osGetReservedLock(f.File, f.lockTimeout); rc != _OK {
+		if rc := osGetReservedLock(f.File); rc != _OK {
 			return rc
 		}
 		f.lock = LOCK_RESERVED
@@ -79,7 +78,7 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 			}
 			f.lock = LOCK_PENDING
 		}
-		if rc := osGetExclusiveLock(f.File, f.lockTimeout); rc != _OK {
+		if rc := osGetExclusiveLock(f.File); rc != _OK {
 			return rc
 		}
 		f.lock = LOCK_EXCLUSIVE
@@ -136,9 +135,9 @@ func (f *vfsFile) CheckReservedLock() (bool, error) {
 	return osCheckReservedLock(f.File)
 }
 
-func osGetReservedLock(file *os.File, timeout time.Duration) _ErrorCode {
+func osGetReservedLock(file *os.File) _ErrorCode {
 	// Acquire the RESERVED lock.
-	return osWriteLock(file, _RESERVED_BYTE, 1, timeout)
+	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
 }
 
 func osGetPendingLock(file *os.File) _ErrorCode {

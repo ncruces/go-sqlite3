@@ -264,14 +264,6 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return _OK
 		}
 
-	case _FCNTL_LOCK_TIMEOUT:
-		if file, ok := file.(*vfsFile); ok {
-			millis := file.lockTimeout.Milliseconds()
-			file.lockTimeout = time.Duration(util.ReadUint32(mod, pArg)) * time.Millisecond
-			util.WriteUint32(mod, pArg, uint32(millis))
-			return _OK
-		}
-
 	case _FCNTL_POWERSAFE_OVERWRITE:
 		if file, ok := file.(FilePowersafeOverwrite); ok {
 			switch util.ReadUint32(mod, pArg) {
@@ -339,10 +331,8 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	}
 
 	// Consider also implementing these opcodes (in use by SQLite):
-	//  _FCNTL_PDB
 	//  _FCNTL_BUSYHANDLER
 	//  _FCNTL_CHUNK_SIZE
-	//  _FCNTL_OVERWRITE
 	//  _FCNTL_PRAGMA
 	//  _FCNTL_SYNC
 	return _NOTFOUND

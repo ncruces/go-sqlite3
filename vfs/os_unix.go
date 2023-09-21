@@ -33,22 +33,18 @@ func osSetMode(file *os.File, modeof string) error {
 	return nil
 }
 
-func osGetSharedLock(file *os.File, timeout time.Duration) _ErrorCode {
+func osGetSharedLock(file *os.File) _ErrorCode {
 	// Test the PENDING lock before acquiring a new SHARED lock.
 	if pending, _ := osCheckLock(file, _PENDING_BYTE, 1); pending {
 		return _BUSY
 	}
 	// Acquire the SHARED lock.
-	return osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+	return osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, 0)
 }
 
-func osGetExclusiveLock(file *os.File, timeout time.Duration) _ErrorCode {
-	if timeout == 0 {
-		timeout = time.Millisecond
-	}
-
+func osGetExclusiveLock(file *os.File) _ErrorCode {
 	// Acquire the EXCLUSIVE lock.
-	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
+	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
 }
 
 func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
