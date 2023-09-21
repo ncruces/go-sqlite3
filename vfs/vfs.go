@@ -309,6 +309,12 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return vfsErrorCode(err, _IOERR_FSTAT)
 		}
 
+	case _FCNTL_OVERWRITE:
+		if file, ok := file.(FileOverwrite); ok {
+			err := file.Overwrite()
+			return vfsErrorCode(err, _IOERR)
+		}
+
 	case _FCNTL_COMMIT_PHASETWO:
 		if file, ok := file.(FileCommitPhaseTwo); ok {
 			err := file.CommitPhaseTwo()
