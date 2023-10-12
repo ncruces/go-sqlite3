@@ -17,7 +17,7 @@ func TestDialector(t *testing.T) {
 	const InMemoryDSN = "file:testdatabase?mode=memory&cache=shared"
 
 	// Custom connection with a custom function called "my_custom_function".
-	conn, err := driver.Open(InMemoryDSN, func(ctx context.Context, conn *sqlite3.Conn) error {
+	db, err := driver.Open(InMemoryDSN, func(ctx context.Context, conn *sqlite3.Conn) error {
 		return conn.CreateFunction("my_custom_function", 0, sqlite3.DETERMINISTIC,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				ctx.ResultText("my-result")
@@ -29,43 +29,35 @@ func TestDialector(t *testing.T) {
 
 	rows := []struct {
 		description  string
-		dialector    *Dialector
+		dialector    gorm.Dialector
 		openSuccess  bool
 		query        string
 		querySuccess bool
 	}{
 		{
-			description: "Default driver",
-			dialector: &Dialector{
-				DSN: InMemoryDSN,
-			},
+			description:  "Default driver",
+			dialector:    Open(InMemoryDSN),
 			openSuccess:  true,
 			query:        "SELECT 1",
 			querySuccess: true,
 		},
 		{
-			description: "Custom function",
-			dialector: &Dialector{
-				DSN: InMemoryDSN,
-			},
+			description:  "Custom function",
+			dialector:    Open(InMemoryDSN),
 			openSuccess:  true,
 			query:        "SELECT my_custom_function()",
 			querySuccess: false,
 		},
 		{
-			description: "Custom connection",
-			dialector: &Dialector{
-				Conn: conn,
-			},
+			description:  "Custom connection",
+			dialector:    OpenDB(db),
 			openSuccess:  true,
 			query:        "SELECT 1",
 			querySuccess: true,
 		},
 		{
-			description: "Custom connection, custom function",
-			dialector: &Dialector{
-				Conn: conn,
-			},
+			description:  "Custom connection, custom function",
+			dialector:    OpenDB(db),
 			openSuccess:  true,
 			query:        "SELECT my_custom_function()",
 			querySuccess: true,

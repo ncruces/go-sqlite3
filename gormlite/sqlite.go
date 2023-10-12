@@ -3,6 +3,7 @@ package gormlite
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 
 	"gorm.io/gorm"
@@ -15,20 +16,26 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 )
 
-type Dialector struct {
+// Open opens a GORM dialector from a data source name.
+func Open(dsn string) gorm.Dialector {
+	return &_Dialector{DSN: dsn}
+}
+
+// Open opens a GORM dialector from a database handle.
+func OpenDB(db *sql.DB) gorm.Dialector {
+	return &_Dialector{Conn: db}
+}
+
+type _Dialector struct {
 	DSN  string
 	Conn gorm.ConnPool
 }
 
-func Open(dsn string) gorm.Dialector {
-	return &Dialector{DSN: dsn}
-}
-
-func (dialector Dialector) Name() string {
+func (dialector _Dialector) Name() string {
 	return "sqlite"
 }
 
-func (dialector Dialector) Initialize(db *gorm.DB) (err error) {
+func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 	if dialector.Conn != nil {
 		db.ConnPool = dialector.Conn
 	} else {
@@ -47,7 +54,7 @@ func (dialector Dialector) Initialize(db *gorm.DB) (err error) {
 	if compareVersion(version, "3.35.0") >= 0 {
 		callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{
 			CreateClauses:        []string{"INSERT", "VALUES", "ON CONFLICT", "RETURNING"},
-			UpdateClauses:        []string{"UPDATE", "SET", "WHERE", "RETURNING"},
+			UpdateClauses:        []string{"UPDATE", "SET", "FROM", "WHERE", "RETURNING"},
 			DeleteClauses:        []string{"DELETE", "FROM", "WHERE", "RETURNING"},
 			LastInsertIDReversed: true,
 		})
@@ -63,7 +70,7 @@ func (dialector Dialector) Initialize(db *gorm.DB) (err error) {
 	return
 }
 
-func (dialector Dialector) ClauseBuilders() map[string]clause.ClauseBuilder {
+func (dialector _Dialector) ClauseBuilders() map[string]clause.ClauseBuilder {
 	return map[string]clause.ClauseBuilder{
 		"INSERT": func(c clause.Clause, builder clause.Builder) {
 			if insert, ok := c.Expression.(clause.Insert); ok {
@@ -112,7 +119,7 @@ func (dialector Dialector) ClauseBuilders() map[string]clause.ClauseBuilder {
 	}
 }
 
-func (dialector Dialector) DefaultValueOf(field *schema.Field) clause.Expression {
+func (dialector _Dialector) DefaultValueOf(field *schema.Field) clause.Expression {
 	if field.AutoIncrement {
 		return clause.Expr{SQL: "NULL"}
 	}
@@ -121,19 +128,19 @@ func (dialector Dialector) DefaultValueOf(field *schema.Field) clause.Expression
 	return clause.Expr{SQL: "DEFAULT"}
 }
 
-func (dialector Dialector) Migrator(db *gorm.DB) gorm.Migrator {
-	return Migrator{migrator.Migrator{Config: migrator.Config{
+func (dialector _Dialector) Migrator(db *gorm.DB) gorm.Migrator {
+	return _Migrator{migrator.Migrator{Config: migrator.Config{
 		DB:                          db,
 		Dialector:                   dialector,
 		CreateIndexAfterCreateTable: true,
 	}}}
 }
 
-func (dialector Dialector) BindVarTo(writer clause.Writer, stmt *gorm.Statement, v interface{}) {
+func (dialector _Dialector) BindVarTo(writer clause.Writer, stmt *gorm.Statement, v interface{}) {
 	writer.WriteByte('?')
 }
 
-func (dialector Dialector) QuoteTo(writer clause.Writer, str string) {
+func (dialector _Dialector) QuoteTo(writer clause.Writer, str string) {
 	var (
 		underQuoted, selfQuoted bool
 		continuousBacktick      int8
@@ -181,16 +188,17 @@ func (dialector Dialector) QuoteTo(writer clause.Writer, str string) {
 	writer.WriteString("`")
 }
 
-func (dialector Dialector) Explain(sql string, vars ...interface{}) string {
+func (dialector _Dialector) Explain(sql string, vars ...interface{}) string {
 	return logger.ExplainSQL(sql, nil, `"`, vars...)
 }
 
-func (dialector Dialector) DataTypeOf(field *schema.Field) string {
+func (dialector _Dialector) DataTypeOf(field *schema.Field) string {
 	switch field.DataType {
 	case schema.Bool:
 		return "numeric"
 	case schema.Int, schema.Uint:
-		if field.AutoIncrement && !field.PrimaryKey {
+		if field.AutoIncrement {
+			// doesn't check `PrimaryKey`, to keep backward compatibility
 			// https://www.sqlite.org/autoinc.html
 			return "integer PRIMARY KEY AUTOINCREMENT"
 		} else {
@@ -214,12 +222,12 @@ func (dialector Dialector) DataTypeOf(field *schema.Field) string {
 	return string(field.DataType)
 }
 
-func (dialectopr Dialector) SavePoint(tx *gorm.DB, name string) error {
+func (dialectopr _Dialector) SavePoint(tx *gorm.DB, name string) error {
 	tx.Exec("SAVEPOINT " + name)
 	return nil
 }
 
-func (dialectopr Dialector) RollbackTo(tx *gorm.DB, name string) error {
+func (dialectopr _Dialector) RollbackTo(tx *gorm.DB, name string) error {
 	tx.Exec("ROLLBACK TO SAVEPOINT " + name)
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (dialector Dialector) Translate(err error) error {
+func (_Dialector) Translate(err error) error {
 	switch {
 	case
 		errors.Is(err, sqlite3.CONSTRAINT_UNIQUE),
