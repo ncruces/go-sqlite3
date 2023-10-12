@@ -1,2 +1,2 @@
-mptest.wasm filter=lfs diff=lfs merge=lfs -text
+mptest.wasm.bz2 filter=lfs diff=lfs merge=lfs -text
 *.*test -crlf

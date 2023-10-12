@@ -24,3 +24,4 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	--enable-bulk-memory --enable-reference-types \
 	--enable-nontrapping-float-to-int --enable-sign-ext
 mv speedtest1.tmp speedtest1.wasm
+bzip2 -9f speedtest1.wasm

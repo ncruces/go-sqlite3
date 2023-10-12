@@ -2,6 +2,7 @@ package speedtest1
 
 import (
 	"bytes"
+	"compress/bzip2"
 	"context"
 	"crypto/rand"
 	"flag"
@@ -23,8 +24,8 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
-//go:embed testdata/speedtest1.wasm
-var binary []byte
+//go:embed testdata/speedtest1.wasm.bz2
+var compressed string
 
 var (
 	rt      wazero.Runtime
@@ -41,6 +42,11 @@ func TestMain(m *testing.M) {
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	_, err := env.Instantiate(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	binary, err := io.ReadAll(bzip2.NewReader(strings.NewReader(compressed)))
 	if err != nil {
 		panic(err)
 	}

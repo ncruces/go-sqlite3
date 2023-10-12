@@ -2,6 +2,7 @@ package mptest
 
 import (
 	"bytes"
+	"compress/bzip2"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -24,8 +25,8 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
-//go:embed testdata/mptest.wasm
-var binary []byte
+//go:embed testdata/mptest.wasm.bz2
+var compressed string
 
 //go:embed testdata/*.*test
 var scripts embed.FS
@@ -44,6 +45,11 @@ func TestMain(m *testing.M) {
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	env.NewFunctionBuilder().WithFunc(system).Export("system")
 	_, err := env.Instantiate(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	binary, err := io.ReadAll(bzip2.NewReader(strings.NewReader(compressed)))
 	if err != nil {
 		panic(err)
 	}
