@@ -55,8 +55,8 @@ func init() {
 //
 // The init function is called by the driver on new connections.
 // The conn can be used to execute queries, register functions, etc.
-// Any error return closes the conn and passes the error to database/sql.
-func Open(dataSourceName string, init func(ctx context.Context, conn *sqlite3.Conn) error) (*sql.DB, error) {
+// Any error return closes the conn and passes the error to [database/sql].
+func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
 	c, err := newConnector(dataSourceName, init)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (sqlite) OpenConnector(name string) (driver.Connector, error) {
 	return newConnector(name, nil)
 }
 
-func newConnector(name string, init func(ctx context.Context, conn *sqlite3.Conn) error) (*connector, error) {
+func newConnector(name string, init func(*sqlite3.Conn) error) (*connector, error) {
 	c := connector{name: name, init: init}
 	if strings.HasPrefix(name, "file:") {
 		if _, after, ok := strings.Cut(name, "?"); ok {
@@ -94,7 +94,7 @@ func newConnector(name string, init func(ctx context.Context, conn *sqlite3.Conn
 }
 
 type connector struct {
-	init    func(ctx context.Context, conn *sqlite3.Conn) error
+	init    func(*sqlite3.Conn) error
 	name    string
 	txlock  string
 	pragmas bool
@@ -132,27 +132,24 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 		if err != nil {
 			return nil, err
 		}
-		c.reusable = true
-	} else {
-		s, _, err := c.Conn.Prepare(`
-			SELECT * FROM
-				PRAGMA_locking_mode,
-				PRAGMA_query_only;
-		`)
-		if err != nil {
-			return nil, err
-		}
-		if s.Step() {
-			c.reusable = s.ColumnText(0) == "normal"
-			c.readOnly = s.ColumnRawText(1)[0] // 0 or 1
-		}
-		err = s.Close()
+	}
+	if n.init != nil {
+		err = n.init(c.Conn)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if n.init != nil {
-		err = n.init(ctx, c.Conn)
+	if n.pragmas || n.init != nil {
+		s, _, err := c.Conn.Prepare(`PRAGMA query_only`)
+		if err != nil {
+			return nil, err
+		}
+		if s.Step() && s.ColumnBool(0) {
+			c.readOnly = '1'
+		} else {
+			c.readOnly = '0'
+		}
+		err = s.Close()
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +162,6 @@ type conn struct {
 	txBegin    string
 	txCommit   string
 	txRollback string
-	reusable   bool
 	readOnly   byte
 }
 
@@ -174,16 +170,11 @@ var (
 	_ driver.ConnPrepareContext = &conn{}
 	_ driver.ExecerContext      = &conn{}
 	_ driver.ConnBeginTx        = &conn{}
-	_ driver.Validator          = &conn{}
 	_ sqlite3.DriverConn        = &conn{}
 )
 
 func (c *conn) Raw() *sqlite3.Conn {
 	return c.Conn
-}
-
-func (c *conn) IsValid() bool {
-	return c.reusable
 }
 
 func (c *conn) Begin() (driver.Tx, error) {
@@ -199,10 +190,10 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 		txBegin = `
 			BEGIN deferred;
 			PRAGMA query_only=on`
-		c.txCommit = `
+		c.txRollback = `
 			ROLLBACK;
 			PRAGMA query_only=` + string(c.readOnly)
-		c.txRollback = c.txCommit
+		c.txCommit = c.txRollback
 	}
 
 	switch opts.Isolation {

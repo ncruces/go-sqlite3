@@ -1,7 +1,6 @@
 package gormlite
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -17,7 +16,7 @@ func TestDialector(t *testing.T) {
 	const InMemoryDSN = "file:testdatabase?mode=memory&cache=shared"
 
 	// Custom connection with a custom function called "my_custom_function".
-	db, err := driver.Open(InMemoryDSN, func(ctx context.Context, conn *sqlite3.Conn) error {
+	db, err := driver.Open(InMemoryDSN, func(conn *sqlite3.Conn) error {
 		return conn.CreateFunction("my_custom_function", 0, sqlite3.DETERMINISTIC,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				ctx.ResultText("my-result")
