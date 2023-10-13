@@ -36,8 +36,17 @@ func TestCreateFunction(t *testing.T) {
 		case 7:
 			ctx.ResultTime(arg.Time(sqlite3.TimeFormatUnix), sqlite3.TimeFormatDefault)
 		case 8:
-			ctx.ResultNull()
+			var v any
+			if err := arg.JSON(&v); err != nil {
+				ctx.ResultError(err)
+			} else {
+				ctx.ResultJSON(v)
+			}
 		case 9:
+			ctx.ResultValue(arg)
+		case 10:
+			ctx.ResultNull()
+		case 11:
 			ctx.ResultError(sqlite3.FULL)
 		}
 	})
@@ -45,7 +54,7 @@ func TestCreateFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT test(value) FROM generate_series(0, 9)`)
+	stmt, _, err := db.Prepare(`SELECT test(value) FROM generate_series(0)`)
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,6 +129,27 @@ func TestCreateFunction(t *testing.T) {
 		}
 		if got := stmt.ColumnTime(0, sqlite3.TimeFormatAuto); got.Unix() != 7 {
 			t.Errorf("got %v, want 7", got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
+			t.Errorf("got %v, want TEXT", got)
+		}
+		var got int
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != 8 {
+			t.Errorf("got %v, want 8", got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
+			t.Errorf("got %v, want INTEGER", got)
+		}
+		if got := stmt.ColumnInt64(0); got != 9 {
+			t.Errorf("got %v, want 9", got)
 		}
 	}
 

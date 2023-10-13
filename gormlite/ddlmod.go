@@ -235,6 +235,7 @@ func (d *ddl) removeConstraint(name string) bool {
 	return false
 }
 
+//lint:ignore U1000 ignore unused code.
 func (d *ddl) hasConstraint(name string) bool {
 	reg := regexp.MustCompile("^CONSTRAINT [\"`]?" + regexp.QuoteMeta(name) + "[\"` ]")
 

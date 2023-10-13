@@ -1,7 +1,9 @@
 package sqlite3
 
 import (
+	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -248,6 +250,23 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 	return s.c.error(r)
 }
 
+// BindJSON binds the JSON encoding of value to the prepared statement.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://www.sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindJSON(param int, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	ptr := s.c.newBytes(data)
+	r := s.c.call(s.c.api.bindText,
+		uint64(s.handle), uint64(param),
+		uint64(ptr), uint64(len(data)),
+		uint64(s.c.api.destructor))
+	return s.c.error(r)
+}
+
 // ColumnCount returns the number of columns in a result set.
 //
 // https://www.sqlite.org/c3ref/column_count.html
@@ -400,6 +419,28 @@ func (s *Stmt) columnRawBytes(col int, ptr uint32) []byte {
 	r := s.c.call(s.c.api.columnBytes,
 		uint64(s.handle), uint64(col))
 	return util.View(s.c.mod, ptr, r)
+}
+
+// ColumnJSON parses the JSON-encoded value of the result column
+// and stores it in the value pointed to by ptr.
+// The leftmost column of the result set has the index 0.
+//
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnJSON(col int, ptr any) error {
+	var data []byte
+	switch s.ColumnType(col) {
+	case NULL:
+		data = []byte("null")
+	case TEXT, BLOB:
+		data = s.ColumnRawBlob(col)
+	case INTEGER:
+		data = strconv.AppendInt(nil, s.ColumnInt64(col), 10)
+	case FLOAT:
+		data = strconv.AppendFloat(nil, s.ColumnFloat(col), 'g', -1, 64)
+	default:
+		panic(util.AssertErr())
+	}
+	return json.Unmarshal(data, ptr)
 }
 
 // Return true if stmt is an empty SQL statement.

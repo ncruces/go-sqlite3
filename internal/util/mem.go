@@ -14,6 +14,9 @@ func View(mod api.Module, ptr uint32, size uint64) []byte {
 	if size > math.MaxUint32 {
 		panic(RangeErr)
 	}
+	if size == 0 {
+		return nil
+	}
 	buf, ok := mod.Memory().Read(ptr, uint32(size))
 	if !ok {
 		panic(RangeErr)

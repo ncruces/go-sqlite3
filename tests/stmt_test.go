@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 	"time"
@@ -81,6 +82,13 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := stmt.BindBlob(1, []byte("")); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := stmt.BindBlob(1, []byte("blob")); err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +110,13 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := stmt.BindJSON(1, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := stmt.ClearBindings(); err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +129,7 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The table should have: 0, 1, 2, π, NULL, "", "text", "blob", NULL, "\0\0\0\0", NULL
+	// The table should have: 0, 1, 2, π, NULL, "", "text", "", "blob", NULL, "\0\0\0\0", "true", NULL
 	stmt, _, err = db.Prepare(`SELECT col FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -140,6 +155,12 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "0" {
 			t.Errorf("got %q, want zero", got)
 		}
+		var got int
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -160,6 +181,12 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); string(got) != "1" {
 			t.Errorf("got %q, want one", got)
+		}
+		var got float32
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != 1 {
+			t.Errorf("got %v, want one", got)
 		}
 	}
 
@@ -182,6 +209,12 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "2" {
 			t.Errorf("got %q, want two", got)
 		}
+		var got json.Number
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != "2" {
+			t.Errorf("got %v, want two", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -202,6 +235,12 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); string(got) != "3.14159265358979" {
 			t.Errorf("got %q, want π", got)
+		}
+		var got float64
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != math.Pi {
+			t.Errorf("got %v, want π", got)
 		}
 	}
 
@@ -224,6 +263,12 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); got != nil {
 			t.Errorf("got %q, want nil", got)
 		}
+		var got any = 1
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != nil {
+			t.Errorf("got %v, want NULL", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -244,6 +289,10 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); got != nil {
 			t.Errorf("got %q, want nil", got)
+		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
 		}
 	}
 
@@ -266,6 +315,35 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "text" {
 			t.Errorf(`got %q, want "text"`, got)
 		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
+			t.Errorf("got %v, want BLOB", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+		if got := stmt.ColumnBlob(0, nil); got != nil {
+			t.Errorf("got %q, want nil", got)
+		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -287,6 +365,10 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "blob" {
 			t.Errorf(`got %q, want "blob"`, got)
 		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -307,6 +389,12 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); got != nil {
 			t.Errorf("got %q, want nil", got)
+		}
+		var got any = 1
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != nil {
+			t.Errorf("got %v, want NULL", got)
 		}
 	}
 
@@ -329,6 +417,37 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "\x00\x00\x00\x00" {
 			t.Errorf(`got %q, want "\x00\x00\x00\x00"`, got)
 		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
+		}
+	}
+
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
+			t.Errorf("got %v, want TEXT", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "true" {
+			t.Errorf("got %q, want true", got)
+		}
+		if got := stmt.ColumnBlob(0, nil); string(got) != "true" {
+			t.Errorf("got %q, want true", got)
+		}
+		var got any = 1
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != true {
+			t.Errorf("got %v, want true", got)
+		}
 	}
 
 	if stmt.Step() {
@@ -349,6 +468,12 @@ func TestStmt(t *testing.T) {
 		}
 		if got := stmt.ColumnBlob(0, nil); got != nil {
 			t.Errorf("got %q, want nil", got)
+		}
+		var got any = 1
+		if err := stmt.ColumnJSON(0, &got); err != nil {
+			t.Error(err)
+		} else if got != nil {
+			t.Errorf("got %v, want NULL", got)
 		}
 	}
 

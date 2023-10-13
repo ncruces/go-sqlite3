@@ -1,7 +1,9 @@
 package sqlite3
 
 import (
+	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -122,4 +124,23 @@ func (v Value) rawBytes(ptr uint32) []byte {
 
 	r := v.call(v.api.valueBytes, uint64(v.handle))
 	return util.View(v.mod, ptr, r)
+}
+
+// JSON parses a JSON-encoded value
+// and stores the result in the value pointed to by ptr.
+func (v Value) JSON(ptr any) error {
+	var data []byte
+	switch v.Type() {
+	case NULL:
+		data = []byte("null")
+	case TEXT, BLOB:
+		data = v.RawBlob()
+	case INTEGER:
+		data = strconv.AppendInt(nil, v.Int64(), 10)
+	case FLOAT:
+		data = strconv.AppendFloat(nil, v.Float(), 'g', -1, 64)
+	default:
+		panic(util.AssertErr())
+	}
+	return json.Unmarshal(data, ptr)
 }

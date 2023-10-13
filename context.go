@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"time"
@@ -136,6 +137,31 @@ func (c Context) resultRFC3339Nano(value time.Time) {
 	c.call(c.api.resultText,
 		uint64(c.handle), uint64(ptr), uint64(len(buf)),
 		uint64(c.api.destructor), _UTF8)
+}
+
+// ResultJSON sets the result of the function to the JSON encoding of value.
+//
+// https://www.sqlite.org/c3ref/result_blob.html
+func (c Context) ResultJSON(value any) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		c.ResultError(err)
+	}
+	ptr := c.newBytes(data)
+	c.call(c.api.resultText,
+		uint64(c.handle), uint64(ptr), uint64(len(data)),
+		uint64(c.api.destructor))
+}
+
+// ResultValue sets the result of the function a copy of [Value].
+//
+// https://www.sqlite.org/c3ref/result_blob.html
+func (c Context) ResultValue(value Value) {
+	if value.sqlite != c.sqlite {
+		c.ResultError(MISUSE)
+	}
+	c.call(c.api.resultValue,
+		uint64(c.handle), uint64(value.handle))
 }
 
 // ResultError sets the result of the function an error.

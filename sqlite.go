@@ -170,6 +170,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		resultText:      getFun("sqlite3_result_text64"),
 		resultBlob:      getFun("sqlite3_result_blob64"),
 		resultZeroBlob:  getFun("sqlite3_result_zeroblob64"),
+		resultValue:     getFun("sqlite3_result_value"),
 		resultError:     getFun("sqlite3_result_error"),
 		resultErrorCode: getFun("sqlite3_result_error_code"),
 		resultErrorMem:  getFun("sqlite3_result_error_nomem"),
@@ -200,13 +201,15 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
 	}
 
-	if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
-		err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
-	}
+	if handle != 0 {
+		if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
+			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
+		}
 
-	if sql != nil {
-		if r := sqlt.call(sqlt.api.erroff, uint64(handle)); r != math.MaxUint32 {
-			err.sql = sql[0][r:]
+		if sql != nil {
+			if r := sqlt.call(sqlt.api.erroff, uint64(handle)); r != math.MaxUint32 {
+				err.sql = sql[0][r:]
+			}
 		}
 	}
 
@@ -245,7 +248,7 @@ func (sqlt *sqlite) new(size uint64) uint32 {
 }
 
 func (sqlt *sqlite) newBytes(b []byte) uint32 {
-	if b == nil {
+	if (*[0]byte)(b) == nil {
 		return 0
 	}
 	ptr := sqlt.new(uint64(len(b)))
@@ -386,6 +389,7 @@ type sqliteAPI struct {
 	resultText      api.Function
 	resultBlob      api.Function
 	resultZeroBlob  api.Function
+	resultValue     api.Function
 	resultError     api.Function
 	resultErrorCode api.Function
 	resultErrorMem  api.Function
