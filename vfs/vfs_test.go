@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"os/user"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -206,6 +207,10 @@ func Test_vfsAccess(t *testing.T) {
 	}
 	if got := util.ReadUint32(mod, 4); got != 1 {
 		t.Error("can't access file")
+	}
+
+	if usr, err := user.Current(); err == nil && usr.Uid == "0" {
+		t.Skip("skipping as root")
 	}
 
 	util.WriteString(mod, 8, file)

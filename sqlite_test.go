@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"bytes"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -56,6 +57,12 @@ func Test_sqlite_new(t *testing.T) {
 	})
 
 	t.Run("_MAX_ALLOCATION_SIZE", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("skipping in short mode")
+		}
+		if os.Getenv("CI") != "" {
+			t.Skip("skipping in CI")
+		}
 		defer func() { _ = recover() }()
 		sqlite.new(_MAX_ALLOCATION_SIZE)
 		sqlite.new(_MAX_ALLOCATION_SIZE)
