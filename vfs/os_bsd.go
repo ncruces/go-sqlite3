@@ -1,4 +1,4 @@
-//go:build sqlite3_flock || freebsd
+//go:build (freebsd || openbsd || netbsd || dragonfly || sqlite3_flock) && !sqlite3_nolock
 
 package vfs
 

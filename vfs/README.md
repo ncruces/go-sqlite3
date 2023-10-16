@@ -8,18 +8,17 @@ It also exposes interfaces that should allow you to implement your own custom VF
 
 ## Portability
 
-This package is tested on Linux, macOS and Windows,
-but it should also work on FreeBSD and illumos
+This package is continuously tested on Linux, macOS and Windows,
+but it should also work on BSD Unixes and illumos
 (code paths for those plaforms are tested on macOS and Linux, respectively).
 
-In all platforms for which this package builds,
+In all platforms for which this package builds out of the box,
 it should be safe to use it to access databases concurrently,
 from multiple goroutines, processes, and
 with _other_ implementations of SQLite.
 
 If the package does not build for your platform,
-you may try to use the `sqlite3_flock` and `sqlite3_nolock` build tags.
-These are only minimally tested and concurrency test failures should be expected.
+you may try to use the `sqlite3_flock` or `sqlite3_nolock` build tags.
 
 The `sqlite3_flock` tag uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).

@@ -57,13 +57,13 @@ On Linux, macOS and illumos, this module uses
 to synchronize access to database files.
 OFD locks are fully compatible with process-associated POSIX advisory locks.
 
-On BSD Unixes, this module may use
+On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-BSD locks may _not_ be compatible with process-associated POSIX advisory locks.
+On BSD Unixes, BSD locks _should_ be compatible with process-associated POSIX advisory locks.
 
 ##### TL;DR
 
-In all platforms for which this package builds,
+In all platforms for which this package builds out of the box,
 it should be safe to use it to access databases concurrently,
 from multiple goroutines, processes, and
 with _other_ implementations of SQLite.
