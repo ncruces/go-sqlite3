@@ -1,0 +1,28 @@
+name: BSD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-12
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        lfs: 'true'
+
+    - name: Set up
+      uses: actions/setup-go@v4
+      with:
+        go-version: stable
+
+    - name: Build
+      run: GOOS=freebsd go test -c ./...
+
+    - name: Test
+      uses: cross-platform-actions/action@v0.19.1
+      with:
+        operating_system: freebsd
+        version: '13.2'
+        run: find . -name '*.test' -maxdepth 1 -exec {} -test.v \;

@@ -46,26 +46,12 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+    - name: Test no locks
+      run: go test -v -tags sqlite3_nosys ./tests -run TestDB_nolock
+
     - name: Test BSD locks
       run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
-
-    - name: Build FreeBSD tests
-      run: GOOS=freebsd go test -c ./...
-      if: matrix.os == 'macos-latest'
-
-    - name: Run FreeBSD tests in a xHyve VM
-      uses: cross-platform-actions/action@master
-      with:
-        operating_system: freebsd
-        version: '13.2'
-        run: |
-          find . -name '*.test' -maxdepth 1 -exec {} -test.v \;
-      if: matrix.os == 'macos-latest'
-
-    - name: Test no locks
-      run: go test -v -tags sqlite3_nolock .
-      if: matrix.os == 'ubuntu-latest'
 
     - name: Coverage report
       uses: ncruces/go-coverage-report@v0
@@ -76,4 +62,3 @@ jobs:
       if: |
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
-      continue-on-error: true

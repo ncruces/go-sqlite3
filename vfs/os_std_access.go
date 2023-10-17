@@ -1,4 +1,4 @@
-//go:build !unix
+//go:build !unix || sqlite3_nosys
 
 package vfs
 

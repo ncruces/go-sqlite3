@@ -1,12 +1,6 @@
-//go:build !sqlite3_nolock
-
 package vfs
 
-import (
-	"os"
-
-	"github.com/ncruces/go-sqlite3/internal/util"
-)
+import "github.com/ncruces/go-sqlite3/internal/util"
 
 const (
 	_PENDING_BYTE  = 0x40000000
@@ -133,19 +127,4 @@ func (f *vfsFile) CheckReservedLock() (bool, error) {
 		return true, nil
 	}
 	return osCheckReservedLock(f.File)
-}
-
-func osGetReservedLock(file *os.File) _ErrorCode {
-	// Acquire the RESERVED lock.
-	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
-}
-
-func osGetPendingLock(file *os.File) _ErrorCode {
-	// Acquire the PENDING lock.
-	return osWriteLock(file, _PENDING_BYTE, 1, 0)
-}
-
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
-	// Test the RESERVED lock.
-	return osCheckLock(file, _RESERVED_BYTE, 1)
 }

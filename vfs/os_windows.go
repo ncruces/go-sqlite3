@@ -1,3 +1,5 @@
+//go:build !sqlite3_nosys
+
 package vfs
 
 import (
@@ -37,6 +39,16 @@ func osGetSharedLock(file *os.File) _ErrorCode {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return rc
+}
+
+func osGetReservedLock(file *os.File) _ErrorCode {
+	// Acquire the RESERVED lock.
+	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
+}
+
+func osGetPendingLock(file *os.File) _ErrorCode {
+	// Acquire the PENDING lock.
+	return osWriteLock(file, _PENDING_BYTE, 1, 0)
 }
 
 func osGetExclusiveLock(file *os.File) _ErrorCode {
@@ -88,6 +100,11 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
 	return _OK
+}
+
+func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+	// Test the RESERVED lock.
+	return osCheckLock(file, _RESERVED_BYTE, 1)
 }
 
 func osUnlock(file *os.File, start, len uint32) _ErrorCode {

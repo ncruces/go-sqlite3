@@ -25,6 +25,13 @@ func TestDB_file(t *testing.T) {
 	testDB(t, filepath.Join(t.TempDir(), "test.db"))
 }
 
+func TestDB_nolock(t *testing.T) {
+	t.Parallel()
+	testDB(t, "file:"+
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
+		"?nolock=1")
+}
+
 func TestDB_wal(t *testing.T) {
 	t.Parallel()
 	wal := filepath.Join(t.TempDir(), "test.db")

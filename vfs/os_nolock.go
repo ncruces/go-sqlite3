@@ -1,28 +1,33 @@
-//go:build sqlite3_nolock && unix && !darwin
+//go:build !(linux || darwin || windows || freebsd || openbsd || netbsd || dragonfly || illumos) || sqlite3_nosys
 
 package vfs
 
-import (
-	"os"
-	"time"
-)
+import "os"
 
-func osUnlock(file *os.File, start, len int64) _ErrorCode {
-	return _OK
+func osGetSharedLock(file *os.File) _ErrorCode {
+	return _IOERR_RDLOCK
 }
 
-func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, def _ErrorCode) _ErrorCode {
-	return _OK
+func osGetReservedLock(file *os.File) _ErrorCode {
+	return _IOERR_LOCK
 }
 
-func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
-	return _OK
+func osGetPendingLock(file *os.File) _ErrorCode {
+	return _IOERR_LOCK
 }
 
-func osWriteLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
-	return _OK
+func osGetExclusiveLock(file *os.File) _ErrorCode {
+	return _IOERR_LOCK
 }
 
-func osCheckLock(file *os.File, start, len int64) (bool, _ErrorCode) {
-	return false, _OK
+func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+	return _IOERR_RDLOCK
+}
+
+func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
+	return _IOERR_UNLOCK
+}
+
+func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+	return false, _IOERR_CHECKRESERVEDLOCK
 }

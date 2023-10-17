@@ -47,35 +47,31 @@ to use the [`database/sql`](https://pkg.go.dev/database/sql)
 driver with WAL mode databases you should disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
-#### POSIX Advisory Locks
+#### File Locking
 
-POSIX advisory locks, which SQLite uses, are
+POSIX advisory locks, which SQLite uses on Unix, are
 [broken by design](https://www.sqlite.org/src/artifact/2e8b12?ln=1073-1161).
 
 On Linux, macOS and illumos, this module uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
-OFD locks are fully compatible with process-associated POSIX advisory locks.
+OFD locks are fully compatible with POSIX advisory locks.
 
 On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-On BSD Unixes, BSD locks _should_ be compatible with process-associated POSIX advisory locks.
+On BSD Unixes, BSD locks are fully compatible with POSIX advisory locks.
 
-##### TL;DR
+On Windows, this module uses `LockFile`, `LockFileEx`, and `UnlockFile`, like SQLite.
 
-In all platforms for which this package builds out of the box,
-it should be safe to use it to access databases concurrently,
-from multiple goroutines, processes, and
-with _other_ implementations of SQLite.
-
-If the package does not build for your platform,
-see [this](vfs/README.md#portability).
+On all other platforms, file locking is not supported, and you must use
+[`nolock=1`](https://www.sqlite.org/uri.html#urinolock)
+to open database files.
 
 #### Testing
 
 The pure Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
-on Linux, macOS and Windows.
+on Linux, macOS, Windows and FreeBSD.
 Performance is tested by running
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
