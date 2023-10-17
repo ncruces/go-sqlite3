@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/driver"
 )
 
 func TestTimeFormat_Encode(t *testing.T) {
@@ -116,6 +117,38 @@ func TestTimeFormat_Decode(t *testing.T) {
 				t.Errorf("%q.Decode(%v) = %v, want %v", tt.fmt, tt.val, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestTimeFormat_Scanner(t *testing.T) {
+	t.Parallel()
+
+	db, err := driver.Open(":memory:", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(
+		`CREATE TABLE IF NOT EXISTS test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
+
+	_, err = db.Exec(`INSERT INTO test VALUES (?)`, sqlite3.TimeFormat7TZ.Encode(reference))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got time.Time
+	err = db.QueryRow("SELECT * FROM test").Scan(sqlite3.TimeFormatAuto.Scanner(&got))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Equal(reference) {
+		t.Errorf("got %v, want %v", got, reference)
 	}
 }
 

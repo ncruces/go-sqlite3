@@ -338,3 +338,19 @@ func (f TimeFormat) parseRelaxed(s string) (time.Time, error) {
 	}
 	return t, nil
 }
+
+// Scanner returns a [database/sql.Scanner] that
+// decodes a time value into dest using this format.
+func (f TimeFormat) Scanner(dest *time.Time) interface{ Scan(any) error } {
+	return timeScanner{dest, f}
+}
+
+type timeScanner struct {
+	*time.Time
+	TimeFormat
+}
+
+func (s timeScanner) Scan(src any) (err error) {
+	*s.Time, err = s.Decode(src)
+	return
+}
