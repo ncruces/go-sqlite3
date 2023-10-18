@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         lfs: 'true'
 
@@ -56,9 +56,9 @@ jobs:
     - name: Coverage report
       uses: ncruces/go-coverage-report@v0
       with:
-        chart: 'true'
-        amend: 'true'
-        reuse-go: 'true'
+        chart: true
+        amend: true
+        reuse-go: true
       if: |
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'

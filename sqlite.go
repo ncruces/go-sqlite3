@@ -22,6 +22,8 @@ import (
 var (
 	Binary []byte // WASM binary to load.
 	Path   string // Path to load the binary from.
+
+	RuntimeConfig wazero.RuntimeConfig
 )
 
 var instance struct {
@@ -32,8 +34,12 @@ var instance struct {
 }
 
 func compileSQLite() {
+	if RuntimeConfig == nil {
+		RuntimeConfig = wazero.NewRuntimeConfig()
+	}
+
 	ctx := context.Background()
-	instance.runtime = wazero.NewRuntime(ctx)
+	instance.runtime = wazero.NewRuntimeWithConfig(ctx, RuntimeConfig)
 
 	env := instance.runtime.NewHostModuleBuilder("env")
 	env = vfs.ExportHostFunctions(env)
