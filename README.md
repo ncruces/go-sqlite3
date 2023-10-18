@@ -82,7 +82,7 @@ Performance is tested by running
   - [x] nested transactions
   - [x] incremental BLOB I/O
   - [x] online backup
-  - [ ] JSON support
+  - [x] JSON support
   - [ ] session extension
 - [ ] custom VFSes
   - [x] custom VFS API

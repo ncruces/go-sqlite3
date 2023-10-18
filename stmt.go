@@ -263,7 +263,7 @@ func (s *Stmt) BindJSON(param int, value any) error {
 	r := s.c.call(s.c.api.bindText,
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(data)),
-		uint64(s.c.api.destructor))
+		uint64(s.c.api.destructor), _UTF8)
 	return s.c.error(r)
 }
 
