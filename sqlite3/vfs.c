@@ -90,22 +90,25 @@ int localtime_s(struct tm *const pTm, time_t const *const pTime) {
 sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
   if (zVfsName) {
     static sqlite3_vfs *go_vfs_list;
-    sqlite3_vfs *found = NULL;
-    for (sqlite3_vfs **next = &go_vfs_list; *next;) {
-      sqlite3_vfs *it = *next;
+
+    for (sqlite3_vfs *it = go_vfs_list; it; it = it->pNext) {
+      if (!strcmp(zVfsName, it->zName) && go_vfs_find(it->zName)) {
+        return it;
+      }
+    }
+
+    for (sqlite3_vfs **ptr = &go_vfs_list; *ptr;) {
+      sqlite3_vfs *it = *ptr;
       if (go_vfs_find(it->zName)) {
-        if (!strcmp(zVfsName, it->zName)) found = it;
-        next = &it->pNext;
+        ptr = &it->pNext;
       } else {
-        *next = it->pNext;
+        *ptr = it->pNext;
         free(it);
       }
     }
-    if (found) {
-      return found;
-    }
+
     if (go_vfs_find(zVfsName)) {
-      sqlite3_vfs *prev = go_vfs_list;
+      sqlite3_vfs *head = go_vfs_list;
       go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
       char *name = (char *)(go_vfs_list + 1);
       strcpy(name, zVfsName);
@@ -114,7 +117,7 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
           .szOsFile = sizeof(struct go_file),
           .mxPathname = 512,
           .zName = name,
-          .pNext = prev,
+          .pNext = head,
 
           .xOpen = go_open_wrapper,
           .xDelete = go_delete,
