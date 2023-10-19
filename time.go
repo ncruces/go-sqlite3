@@ -164,9 +164,9 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		case float64:
 			sec, frac := math.Modf(v)
 			nsec := math.Floor(frac * 1e9)
-			return time.Unix(int64(sec), int64(nsec)), nil
+			return time.Unix(int64(sec), int64(nsec)).UTC(), nil
 		case int64:
-			return time.Unix(v, 0), nil
+			return time.Unix(v, 0).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -181,9 +181,9 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.UnixMilli(int64(math.Floor(v))), nil
+			return time.UnixMilli(int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.UnixMilli(int64(v)), nil
+			return time.UnixMilli(int64(v)).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -198,9 +198,9 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.UnixMicro(int64(math.Floor(v))), nil
+			return time.UnixMicro(int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.UnixMicro(int64(v)), nil
+			return time.UnixMicro(int64(v)).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -215,9 +215,9 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		}
 		switch v := v.(type) {
 		case float64:
-			return time.Unix(0, int64(math.Floor(v))), nil
+			return time.Unix(0, int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.Unix(0, int64(v)), nil
+			return time.Unix(0, int64(v)).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -238,24 +238,14 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 			}
 
 			dates := []TimeFormat{
-				TimeFormat6TZ, TimeFormat6, TimeFormat3TZ, TimeFormat3,
-				TimeFormat5TZ, TimeFormat5, TimeFormat2TZ, TimeFormat2,
-				TimeFormat1,
+				TimeFormat9, TimeFormat8,
+				TimeFormat6, TimeFormat5,
+				TimeFormat3, TimeFormat2, TimeFormat1,
 			}
 			for _, f := range dates {
-				t, err := time.Parse(string(f), s)
+				t, err := f.Decode(s)
 				if err == nil {
 					return t, nil
-				}
-			}
-
-			times := []TimeFormat{
-				TimeFormat9TZ, TimeFormat9, TimeFormat8TZ, TimeFormat8,
-			}
-			for _, f := range times {
-				t, err := time.Parse(string(f), s)
-				if err == nil {
-					return t.AddDate(2000, 0, 0), nil
 				}
 			}
 		}
@@ -314,7 +304,10 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 			return time.Time{}, util.TimeErr
 		}
 		t, err := f.parseRelaxed(s)
-		return t.AddDate(2000, 0, 0), err
+		if err != nil {
+			return time.Time{}, err
+		}
+		return t.AddDate(2000, 0, 0), nil
 
 	default:
 		s, ok := v.(string)

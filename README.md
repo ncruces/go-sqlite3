@@ -43,8 +43,8 @@ To work around this limitation, SQLite is [patched](sqlite3/locking_mode.patch)
 to always use `EXCLUSIVE` locking mode for WAL databases.
 
 Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
-to use the [`database/sql`](https://pkg.go.dev/database/sql)
-driver with WAL mode databases you should disable connection pooling by calling
+to use the [`database/sql`](https://pkg.go.dev/database/sql) driver
+with WAL mode databases you should disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 #### File Locking
@@ -61,11 +61,15 @@ On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
 On BSD Unixes, BSD locks are fully compatible with POSIX advisory locks.
 
-On Windows, this module uses `LockFile`, `LockFileEx`, and `UnlockFile`, like SQLite.
+On Windows, this module uses `LockFile`, `LockFileEx`, and `UnlockFile`,
+like SQLite.
 
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://www.sqlite.org/uri.html#urinolock)
 to open database files.
+To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
+with `nolock=1` you must disable connection pooling by calling
+[`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 #### Testing
 
