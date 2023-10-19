@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 	"unsafe"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // JSON returns:
@@ -29,8 +31,7 @@ func (j jsonValue) UnmarshalJSON(data []byte) error {
 }
 
 func (j jsonValue) Scan(value any) error {
-	var mem [40]byte
-	buf := mem[:0]
+	var buf []byte
 
 	switch v := value.(type) {
 	case []byte:
@@ -47,6 +48,8 @@ func (j jsonValue) Scan(value any) error {
 		buf = append(buf, '"')
 	case nil:
 		buf = append(buf, "null"...)
+	default:
+		panic(util.AssertErr())
 	}
 
 	return j.UnmarshalJSON(buf)

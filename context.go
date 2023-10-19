@@ -128,7 +128,7 @@ func (c Context) ResultTime(value time.Time, format TimeFormat) {
 }
 
 func (c Context) resultRFC3339Nano(value time.Time) {
-	const maxlen = uint64(len(time.RFC3339Nano))
+	const maxlen = uint64(len(time.RFC3339Nano)) + 5
 
 	ptr := c.new(maxlen)
 	buf := util.View(c.mod, ptr, maxlen)

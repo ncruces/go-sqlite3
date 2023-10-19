@@ -237,7 +237,7 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 }
 
 func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
-	const maxlen = uint64(len(time.RFC3339Nano))
+	const maxlen = uint64(len(time.RFC3339Nano)) + 5
 
 	ptr := s.c.new(maxlen)
 	buf := util.View(s.c.mod, ptr, maxlen)
@@ -430,8 +430,10 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 	var data []byte
 	switch s.ColumnType(col) {
 	case NULL:
-		data = []byte("null")
-	case TEXT, BLOB:
+		data = append(data, "null"...)
+	case TEXT:
+		data = s.ColumnRawText(col)
+	case BLOB:
 		data = s.ColumnRawBlob(col)
 	case INTEGER:
 		data = strconv.AppendInt(nil, s.ColumnInt64(col), 10)
