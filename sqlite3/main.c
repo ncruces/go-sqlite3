@@ -1,6 +1,3 @@
-#include <stdbool.h>
-#include <stddef.h>
-
 // Amalgamation
 #include "sqlite3.c"
 // VFS

@@ -1,3 +1,5 @@
+#include <stdbool.h>
+#include <stddef.h>
 #include <time.h>
 
 #include "sqlite3.h"

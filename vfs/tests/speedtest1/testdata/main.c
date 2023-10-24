@@ -6,5 +6,5 @@
 // VFS
 #include "vfs.c"
 
-#define randomFunc(args...) randomFunc2(args)
+#define randomFunc randomFunc2
 #include "speedtest1.c"

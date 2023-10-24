@@ -1,5 +1,4 @@
-#include <stdbool.h>
-#include <stddef.h>
+#include <unistd.h>
 
 // Amalgamation
 #include "sqlite3.c"
@@ -8,9 +7,8 @@
 
 __attribute__((constructor)) void init() { sqlite3_initialize(); }
 
-static int dont_unlink(const char *pathname) { return 0; }
 #define sqlite3_enable_load_extension(...)
 #define sqlite3_trace(...)
-#define unlink dont_unlink
+#define unlink(...) (0)
 #undef UNUSED_PARAMETER
 #include "mptest.c"
