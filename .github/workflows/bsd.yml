@@ -21,8 +21,9 @@ jobs:
       run: GOOS=freebsd go test -c ./...
 
     - name: Test
-      uses: cross-platform-actions/action@v0.19.1
+      uses: cross-platform-actions/action@v0.20.0
       with:
         operating_system: freebsd
         version: '13.2'
+        sync_files: runner-to-vm
         run: find . -name '*.test' -maxdepth 1 -exec {} -test.v \;
