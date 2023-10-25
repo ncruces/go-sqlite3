@@ -7,10 +7,9 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
-	"sync/atomic"
-	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/tetratelabs/wazero/api"
 )
 
 // Conn is a database connection handle.
@@ -21,7 +20,6 @@ type Conn struct {
 	*sqlite
 
 	interrupt context.Context
-	waiter    chan struct{}
 	pending   *Stmt
 	arena     arena
 
@@ -48,6 +46,8 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 	return newConn(filename, flags)
 }
 
+type connKey struct{}
+
 func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 	sqlite, err := instantiateSQLite()
 	if err != nil {
@@ -63,6 +63,7 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 
 	c := &Conn{sqlite: sqlite}
 	c.arena = c.newArena(1024)
+	c.ctx = context.WithValue(c.ctx, connKey{}, c)
 	c.handle, err = c.openDB(filename, flags)
 	if err != nil {
 		return nil, err
@@ -131,7 +132,6 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
-	c.SetInterrupt(context.Background())
 	c.pending.Close()
 	c.pending = nil
 
@@ -244,65 +244,40 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 		return ctx
 	}
 
-	// Is a waiter running?
-	if c.waiter != nil {
-		c.waiter <- struct{}{} // Cancel the waiter.
-		<-c.waiter             // Wait for it to finish.
-		c.waiter = nil
-	}
-	// Reset the pending statement.
-	if c.pending != nil {
+	// An uncompleted SQL statement prevents SQLite from ignoring
+	// an interrupt that comes before any other statements are started.
+	if c.pending == nil {
+		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
+	} else {
 		c.pending.Reset()
 	}
 
 	old = c.interrupt
 	c.interrupt = ctx
+	// Remove the handler if the context can't be canceled.
 	if ctx == nil || ctx.Done() == nil {
+		c.call(c.api.progressHandler, uint64(c.handle), 0)
 		return old
 	}
 
-	// Creating an uncompleted SQL statement prevents SQLite from ignoring
-	// an interrupt that comes before any other statements are started.
-	if c.pending == nil {
-		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
-	}
 	c.pending.Step()
-
-	// Don't create the goroutine if we're already interrupted.
-	// This happens frequently while restoring to a previously interrupted state.
-	if c.checkInterrupt() {
-		return old
-	}
-
-	waiter := make(chan struct{})
-	c.waiter = waiter
-	go func() {
-		select {
-		case <-waiter: // Waiter was cancelled.
-			break
-
-		case <-ctx.Done(): // Done was closed.
-			const isInterruptedOffset = 288
-			buf := util.View(c.mod, c.handle+isInterruptedOffset, 4)
-			(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
-			// Wait for the next call to SetInterrupt.
-			<-waiter
-		}
-
-		// Signal that the waiter has finished.
-		waiter <- struct{}{}
-	}()
+	c.call(c.api.progressHandler, uint64(c.handle), 100)
 	return old
 }
 
-func (c *Conn) checkInterrupt() bool {
-	if c.interrupt == nil || c.interrupt.Err() == nil {
-		return false
+func callbackProgress(ctx context.Context, mod api.Module, _ uint32) uint32 {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
+		if c.interrupt != nil && c.interrupt.Err() != nil {
+			return 1
+		}
 	}
-	const isInterruptedOffset = 288
-	buf := util.View(c.mod, c.handle+isInterruptedOffset, 4)
-	(*atomic.Uint32)(unsafe.Pointer(&buf[0])).Store(1)
-	return true
+	return 0
+}
+
+func (c *Conn) checkInterrupt() {
+	if c.interrupt != nil && c.interrupt.Err() != nil {
+		c.call(c.api.interrupt, uint64(c.handle))
+	}
 }
 
 // Pragma executes a PRAGMA statement and returns any results.

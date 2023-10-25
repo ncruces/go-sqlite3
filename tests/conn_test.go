@@ -182,7 +182,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	defer stmt.Close()
 
 	db.SetInterrupt(ctx)
-	cancel()
+	go cancel()
 
 	// Interrupting works.
 	err = stmt.Exec()

@@ -31,6 +31,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -225,7 +226,13 @@ func (c *conn) Commit() error {
 }
 
 func (c *conn) Rollback() error {
-	return c.Conn.Exec(c.txRollback)
+	err := c.Conn.Exec(c.txRollback)
+	if errors.Is(err, sqlite3.INTERRUPT) {
+		old := c.Conn.SetInterrupt(context.Background())
+		defer c.Conn.SetInterrupt(old)
+		err = c.Conn.Exec(c.txRollback)
+	}
+	return err
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {

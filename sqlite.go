@@ -43,7 +43,7 @@ func compileSQLite() {
 
 	env := instance.runtime.NewHostModuleBuilder("env")
 	env = vfs.ExportHostFunctions(env)
-	env = exportHostFunctions(env)
+	env = exportCallbacks(env)
 	_, instance.err = env.Instantiate(ctx)
 	if instance.err != nil {
 		return
@@ -71,8 +71,6 @@ type sqlite struct {
 	stack [8]uint64
 }
 
-type sqliteKey struct{}
-
 func instantiateSQLite() (sqlt *sqlite, err error) {
 	instance.once.Do(compileSQLite)
 	if instance.err != nil {
@@ -81,7 +79,6 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 
 	sqlt = new(sqlite)
 	sqlt.ctx = util.NewContext(context.Background())
-	sqlt.ctx = context.WithValue(sqlt.ctx, sqliteKey{}, sqlt)
 
 	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
 		instance.compiled, wazero.NewModuleConfig())
@@ -123,6 +120,8 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		reset:           getFun("sqlite3_reset"),
 		step:            getFun("sqlite3_step"),
 		exec:            getFun("sqlite3_exec"),
+		interrupt:       getFun("sqlite3_interrupt"),
+		progressHandler: getFun("sqlite3_progress_handler_go"),
 		clearBindings:   getFun("sqlite3_clear_bindings"),
 		bindCount:       getFun("sqlite3_bind_parameter_count"),
 		bindIndex:       getFun("sqlite3_bind_parameter_index"),
@@ -342,6 +341,8 @@ type sqliteAPI struct {
 	reset           api.Function
 	step            api.Function
 	exec            api.Function
+	interrupt       api.Function
+	progressHandler api.Function
 	clearBindings   api.Function
 	bindCount       api.Function
 	bindIndex       api.Function
@@ -401,4 +402,16 @@ type sqliteAPI struct {
 	resultErrorMem  api.Function
 	resultErrorBig  api.Function
 	destructor      uint32
+}
+
+func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+	util.ExportFuncII(env, "go_progress", callbackProgress)
+	util.ExportFuncVI(env, "go_destroy", callbackDestroy)
+	util.ExportFuncIIIIII(env, "go_compare", callbackCompare)
+	util.ExportFuncVIII(env, "go_func", callbackFunc)
+	util.ExportFuncVIII(env, "go_step", callbackStep)
+	util.ExportFuncVI(env, "go_final", callbackFinal)
+	util.ExportFuncVI(env, "go_value", callbackValue)
+	util.ExportFuncVIII(env, "go_inverse", callbackInverse)
+	return env
 }

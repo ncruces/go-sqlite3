@@ -11,6 +11,7 @@
 #include "ext/uint.c"
 #include "ext/uuid.c"
 #include "func.c"
+#include "progress.c"
 #include "time.c"
 
 __attribute__((constructor)) void init() {

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -47,6 +46,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
 // If fn returns a [WindowFunction], then an aggregate window function is created.
+// If fn returns an [io.Closer], it will be called to free resources.
 //
 // https://www.sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
@@ -70,7 +70,7 @@ type AggregateFunction interface {
 	// The function arguments, if any, corresponding to the row being added are passed to Step.
 	Step(ctx Context, arg ...Value)
 
-	// Value is invoked to return the current value of the aggregate.
+	// Value is invoked to return the current (or final) value of the aggregate.
 	Value(ctx Context)
 }
 
@@ -85,17 +85,6 @@ type WindowFunction interface {
 	Inverse(ctx Context, arg ...Value)
 }
 
-func exportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.ExportFuncVI(env, "go_destroy", callbackDestroy)
-	util.ExportFuncIIIIII(env, "go_compare", callbackCompare)
-	util.ExportFuncVIII(env, "go_func", callbackFunc)
-	util.ExportFuncVIII(env, "go_step", callbackStep)
-	util.ExportFuncVI(env, "go_final", callbackFinal)
-	util.ExportFuncVI(env, "go_value", callbackValue)
-	util.ExportFuncVIII(env, "go_inverse", callbackInverse)
-	return env
-}
-
 func callbackDestroy(ctx context.Context, mod api.Module, pApp uint32) {
 	util.DelHandle(ctx, pApp)
 }
@@ -106,20 +95,20 @@ func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 }
 
 func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
 	fn := callbackHandle(sqlite, pCtx).(func(ctx Context, arg ...Value))
 	fn(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
 
 func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
 	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
 	fn.Step(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
 
 func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
-	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
 	fn := callbackAggregate(sqlite, pCtx, &handle).(AggregateFunction)
 	fn.Value(Context{sqlite, pCtx})
 	if err := util.DelHandle(ctx, handle); err != nil {
@@ -128,13 +117,13 @@ func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
 }
 
 func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
-	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
 	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
 	fn.Value(Context{sqlite, pCtx})
 }
 
 func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(sqliteKey{}).(*sqlite)
+	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
 	fn := callbackAggregate(sqlite, pCtx, nil).(WindowFunction)
 	fn.Inverse(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
 }
