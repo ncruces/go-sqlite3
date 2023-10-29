@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -203,5 +204,105 @@ func TestDB_timeCollation(t *testing.T) {
 	err = stmt.Close()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDB_jsonTime(t *testing.T) {
+	t.Parallel()
+
+	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
+
+	db, err := driver.Open(":memory:", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS times (tstamp)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.Exec(`INSERT INTO times VALUES (?), (?), (?)`,
+		reference,
+		sqlite3.TimeFormatUnixFrac.Encode(reference),
+		sqlite3.TimeFormatJulianDay.Encode(reference))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := db.Query(`
+		SELECT
+			json_time(tstamp, 'auto', 'subsec'),
+			json_time(tstamp, 'auto')
+		FROM times`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t0, t1 time.Time
+		rows.Scan(&t0, &t1)
+		if want := reference; !t0.Equal(want) {
+			t.Errorf("got %v, want %v", t0, want)
+		}
+		if want := reference.Truncate(time.Second); !t1.Equal(want) {
+			t.Errorf("got %v, want %v", t1, want)
+		}
+	}
+}
+
+func TestDB_isoWeek(t *testing.T) {
+	t.Parallel()
+
+	tests := []time.Time{
+		time.Date(1977, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1977, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(1977, 12, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(1978, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1978, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(1978, 12, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(1979, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1979, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(1979, 12, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1980, 12, 28, 0, 0, 0, 0, time.UTC),
+		time.Date(1980, 12, 29, 0, 0, 0, 0, time.UTC),
+		time.Date(1980, 12, 30, 0, 0, 0, 0, time.UTC),
+		time.Date(1980, 12, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(1981, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1981, 12, 31, 0, 0, 0, 0, time.UTC),
+		time.Date(1982, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(1982, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(1982, 1, 3, 0, 0, 0, 0, time.UTC),
+	}
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT strftime('%G-W%V-%u', ?)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	for _, tm := range tests {
+		stmt.BindTime(1, tm, sqlite3.TimeFormatDefault)
+		if stmt.Step() {
+			y, w := tm.ISOWeek()
+			d := tm.Weekday()
+			if d == 0 {
+				d = 7
+			}
+			want := fmt.Sprintf("%04d-W%02d-%d", y, w, d)
+			if got := stmt.ColumnText(0); got != want {
+				t.Errorf("got %q, want %q (%v)", got, want, tm)
+			}
+		}
+		stmt.Reset()
 	}
 }

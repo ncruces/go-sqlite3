@@ -18,14 +18,15 @@ int sqlite3_create_collation_go(sqlite3 *db, const char *zName, void *pApp) {
 int sqlite3_create_function_go(sqlite3 *db, const char *zName, int nArg,
                                int flags, void *pApp) {
   return sqlite3_create_function_v2(db, zName, nArg, SQLITE_UTF8 | flags, pApp,
-                                    go_func, NULL, NULL, go_destroy);
+                                    go_func, /*step=*/NULL, /*final=*/NULL,
+                                    go_destroy);
 }
 
 int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *zName,
                                          int nArg, int flags, void *pApp) {
   return sqlite3_create_window_function(db, zName, nArg, SQLITE_UTF8 | flags,
-                                        pApp, go_step, go_final, NULL, NULL,
-                                        go_destroy);
+                                        pApp, go_step, go_final, /*value=*/NULL,
+                                        /*inverse=*/NULL, go_destroy);
 }
 
 int sqlite3_create_window_function_go(sqlite3 *db, const char *zName, int nArg,

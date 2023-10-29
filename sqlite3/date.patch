@@ -1,0 +1,57 @@
+--- sqlite3.c.orig
++++ sqlite3.c
+@@ -340,6 +340,7 @@ static int setDateTimeToCurrent(sqlite3_context *context, DateTime *p){
+   p->iJD = sqlite3StmtCurrentTime(context);
+   if( p->iJD>0 ){
+     p->validJD = 1;
++    p->tzSet = 1;
+     return 0;
+   }else{
+     return 1;
+@@ -355,6 +356,7 @@ static int setDateTimeToCurrent(sqlite3_context *context, DateTime *p){
+ static void setRawDateNumber(DateTime *p, double r){
+   p->s = r;
+   p->rawS = 1;
++  p->tzSet = 1;
+   if( r>=0.0 && r<5373484.5 ){
+     p->iJD = (sqlite3_int64)(r*86400000.0 + 0.5);
+     p->validJD = 1;
+@@ -572,6 +574,7 @@ static int toLocaltime(
+   time_t t;
+   struct tm sLocal;
+   int iYearDiff;
++  DateTime x;
+ 
+   /* Initialize the contents of sLocal to avoid a compiler warning. */
+   memset(&sLocal, 0, sizeof(sLocal));
+@@ -585,7 +588,7 @@ static int toLocaltime(
+     ** SQLite attempts to map the year into an equivalent year within this
+     ** range, do the calculation, then map the year back.
+     */
+-    DateTime x = *p;
++    x = *p;
+     computeYMD_HMS(&x);
+     iYearDiff = (2000 + x.Y%4) - x.Y;
+     x.Y += iYearDiff;
+@@ -610,8 +613,13 @@ static int toLocaltime(
+   p->validHMS = 1;
+   p->validJD = 0;
+   p->rawS = 0;
++  p->tzSet = 0;
+   p->validTZ = 0;
+   p->isError = 0;
++  x = *p;
++  computeJD(&x);
++  p->tz = (x.iJD-p->iJD)/60000;
++  if( abs(p->tz)>= 900 ) p->tz = 0;
+   return SQLITE_OK;
+ }
+ #endif /* SQLITE_OMIT_LOCALTIME */
+@@ -781,6 +789,7 @@ static int parseModifier(
+           p->validJD = 1;
+           p->tzSet = 1;
+         }
++        p->tz = 0;
+         rc = SQLITE_OK;
+       }
+ #endif
