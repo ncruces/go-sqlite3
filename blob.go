@@ -118,8 +118,8 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 		return 0, nil
 	}
 
+	want := int64(1024 * 1024)
 	avail := b.bytes - b.offset
-	want := int64(65536)
 	if want > avail {
 		want = avail
 	}
@@ -175,8 +175,11 @@ func (b *Blob) Write(p []byte) (n int, err error) {
 //
 // https://www.sqlite.org/c3ref/blob_write.html
 func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
+	want := int64(1024 * 1024)
 	avail := b.bytes - b.offset
-	want := int64(65536)
+	if l, ok := r.(*io.LimitedReader); ok && want > l.N {
+		want = l.N
+	}
 	if want > avail {
 		want = avail
 	}

@@ -1,0 +1,34 @@
+# ISO week date specifiers.
+# https://sqlite.org/forum/forumpost/73d99e4497e8e6a7
+--- sqlite3.c.orig
++++ sqlite3.c
+@@ -1373,6 +1373,29 @@ static void strftimeFunc(
+         sqlite3_str_appendchar(&sRes, 1, c);
+         break;
+       }
++      case 'V':  /* Fall thru */
++      case 'G': {
++        DateTime y = x;
++        computeJD(&y);
++        y.validYMD = 0;
++        /* Adjust date to Thursday this week:
++           The number in parentheses is 0 for Monday, 3 for Thursday */
++        y.iJD += (3 - (((y.iJD+43200000)/86400000) % 7))*86400000;
++        computeYMD(&y);
++        if( cf=='G' ){
++          sqlite3_str_appendf(&sRes,"%04d",y.Y);
++        }else{
++          int nDay;             /* Number of days since 1st day of year */
++          i64 tJD = y.iJD;
++          y.validJD = 0;
++          y.M = 1;
++          y.D = 1;
++          computeJD(&y);
++          nDay = (int)((tJD-y.iJD+43200000)/86400000);
++          sqlite3_str_appendf(&sRes,"%02d",nDay/7+1);
++        }
++        break;
++      }
+       case 'Y': {
+         sqlite3_str_appendf(&sRes,"%04d",x.Y);
+         break;

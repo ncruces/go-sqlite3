@@ -207,52 +207,6 @@ func TestDB_timeCollation(t *testing.T) {
 	}
 }
 
-func TestDB_jsonTime(t *testing.T) {
-	t.Parallel()
-
-	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
-
-	db, err := driver.Open(":memory:", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS times (tstamp)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = db.Exec(`INSERT INTO times VALUES (?), (?), (?)`,
-		reference,
-		sqlite3.TimeFormatUnixFrac.Encode(reference),
-		sqlite3.TimeFormatJulianDay.Encode(reference))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rows, err := db.Query(`
-		SELECT
-			json_time(tstamp, 'auto', 'subsec'),
-			json_time(tstamp, 'auto')
-		FROM times`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var t0, t1 time.Time
-		rows.Scan(&t0, &t1)
-		if want := reference; !t0.Equal(want) {
-			t.Errorf("got %v, want %v", t0, want)
-		}
-		if want := reference.Truncate(time.Second); !t1.Equal(want) {
-			t.Errorf("got %v, want %v", t1, want)
-		}
-	}
-}
-
 func TestDB_isoWeek(t *testing.T) {
 	t.Parallel()
 

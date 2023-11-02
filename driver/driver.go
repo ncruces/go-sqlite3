@@ -479,11 +479,7 @@ func (r *rows) Next(dest []driver.Value) error {
 		case sqlite3.TEXT:
 			dest[i] = stringOrTime(r.Stmt.ColumnRawText(i))
 		case sqlite3.NULL:
-			if buf, ok := dest[i].([]byte); ok {
-				dest[i] = buf[0:0]
-			} else {
-				dest[i] = nil
-			}
+			dest[i] = nil
 		default:
 			panic(util.AssertErr())
 		}

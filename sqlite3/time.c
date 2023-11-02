@@ -28,7 +28,7 @@ static int time_collation(void *pArg, int nKey1, const void *pKey1, int nKey2,
 }
 
 static void json_time_func(sqlite3_context *context, int argc,
-                          sqlite3_value **argv) {
+                           sqlite3_value **argv) {
   DateTime x;
   if (isDate(context, argc, argv, &x)) return;
   if (x.tzSet && x.tz) {
