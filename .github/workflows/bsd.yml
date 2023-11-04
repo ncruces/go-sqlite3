@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-12
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         lfs: 'true'
 
@@ -21,7 +21,7 @@ jobs:
       run: GOOS=freebsd go test -c ./...
 
     - name: Test
-      uses: cross-platform-actions/action@v0.20.0
+      uses: cross-platform-actions/action@v0.21.1
       with:
         operating_system: freebsd
         version: '13.2'
