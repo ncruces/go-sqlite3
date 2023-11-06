@@ -95,57 +95,57 @@ func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 }
 
 func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
-	fn := callbackHandle(sqlite, pCtx).(func(ctx Context, arg ...Value))
-	fn(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
+	db := ctx.Value(connKey{}).(*Conn)
+	fn := callbackHandle(db, pCtx).(func(ctx Context, arg ...Value))
+	fn(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
 func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
-	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
-	fn.Step(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
+	db := ctx.Value(connKey{}).(*Conn)
+	fn := callbackAggregate(db, pCtx, nil).(AggregateFunction)
+	fn.Step(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
 func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
-	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
-	fn := callbackAggregate(sqlite, pCtx, &handle).(AggregateFunction)
-	fn.Value(Context{sqlite, pCtx})
+	db := ctx.Value(connKey{}).(*Conn)
+	fn := callbackAggregate(db, pCtx, &handle).(AggregateFunction)
+	fn.Value(Context{db, pCtx})
 	if err := util.DelHandle(ctx, handle); err != nil {
-		Context{sqlite, pCtx}.ResultError(err)
+		Context{db, pCtx}.ResultError(err)
 	}
 }
 
 func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
-	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
-	fn := callbackAggregate(sqlite, pCtx, nil).(AggregateFunction)
-	fn.Value(Context{sqlite, pCtx})
+	db := ctx.Value(connKey{}).(*Conn)
+	fn := callbackAggregate(db, pCtx, nil).(AggregateFunction)
+	fn.Value(Context{db, pCtx})
 }
 
 func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
-	sqlite := ctx.Value(connKey{}).(*Conn).sqlite
-	fn := callbackAggregate(sqlite, pCtx, nil).(WindowFunction)
-	fn.Inverse(Context{sqlite, pCtx}, callbackArgs(sqlite, nArg, pArg)...)
+	db := ctx.Value(connKey{}).(*Conn)
+	fn := callbackAggregate(db, pCtx, nil).(WindowFunction)
+	fn.Inverse(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
-func callbackHandle(sqlite *sqlite, pCtx uint32) any {
-	pApp := uint32(sqlite.call(sqlite.api.userData, uint64(pCtx)))
-	return util.GetHandle(sqlite.ctx, pApp)
+func callbackHandle(db *Conn, pCtx uint32) any {
+	pApp := uint32(db.call(db.api.userData, uint64(pCtx)))
+	return util.GetHandle(db.ctx, pApp)
 }
 
-func callbackAggregate(sqlite *sqlite, pCtx uint32, close *uint32) any {
+func callbackAggregate(db *Conn, pCtx uint32, close *uint32) any {
 	// On close, we're getting rid of the handle.
 	// Don't allocate space to store it.
 	var size uint64
 	if close == nil {
 		size = ptrlen
 	}
-	ptr := uint32(sqlite.call(sqlite.api.aggregateCtx, uint64(pCtx), size))
+	ptr := uint32(db.call(db.api.aggregateCtx, uint64(pCtx), size))
 
 	// Try loading the handle, if we already have one, or want a new one.
 	if ptr != 0 || size != 0 {
-		if handle := util.ReadUint32(sqlite.mod, ptr); handle != 0 {
-			fn := util.GetHandle(sqlite.ctx, handle)
+		if handle := util.ReadUint32(db.mod, ptr); handle != 0 {
+			fn := util.GetHandle(db.ctx, handle)
 			if close != nil {
 				*close = handle
 			}
@@ -156,19 +156,19 @@ func callbackAggregate(sqlite *sqlite, pCtx uint32, close *uint32) any {
 	}
 
 	// Create a new aggregate and store the handle.
-	fn := callbackHandle(sqlite, pCtx).(func() AggregateFunction)()
+	fn := callbackHandle(db, pCtx).(func() AggregateFunction)()
 	if ptr != 0 {
-		util.WriteUint32(sqlite.mod, ptr, util.AddHandle(sqlite.ctx, fn))
+		util.WriteUint32(db.mod, ptr, util.AddHandle(db.ctx, fn))
 	}
 	return fn
 }
 
-func callbackArgs(sqlite *sqlite, nArg, pArg uint32) []Value {
+func callbackArgs(db *Conn, nArg, pArg uint32) []Value {
 	args := make([]Value, nArg)
 	for i := range args {
 		args[i] = Value{
-			sqlite: sqlite,
-			handle: util.ReadUint32(sqlite.mod, pArg+ptrlen*uint32(i)),
+			sqlite: db.sqlite,
+			handle: util.ReadUint32(db.mod, pArg+ptrlen*uint32(i)),
 		}
 	}
 	return args
