@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 // Tx is an in-progress database transaction.
@@ -119,23 +120,35 @@ type Savepoint struct {
 //
 // https://www.sqlite.org/lang_savepoint.html
 func (c *Conn) Savepoint() Savepoint {
-	name := "sqlite3.Savepoint"
-	var pc [1]uintptr
-	if n := runtime.Callers(2, pc[:]); n > 0 {
-		frames := runtime.CallersFrames(pc[:n])
-		frame, _ := frames.Next()
-		if frame.Function != "" {
-			name = frame.Function
-		}
-	}
 	// Names can be reused; this makes catching bugs more likely.
-	name += "#" + strconv.Itoa(int(rand.Int31()))
+	name := saveptName() + "_" + strconv.Itoa(int(rand.Int31()))
 
 	err := c.txExecInterrupted(fmt.Sprintf("SAVEPOINT %q;", name))
 	if err != nil {
 		panic(err)
 	}
 	return Savepoint{c: c, name: name}
+}
+
+func saveptName() (name string) {
+	defer func() {
+		if name == "" {
+			name = "sqlite3.Savepoint"
+		}
+	}()
+
+	var pc [8]uintptr
+	n := runtime.Callers(3, pc[:])
+	if n <= 0 {
+		return ""
+	}
+	frames := runtime.CallersFrames(pc[:n])
+	frame, more := frames.Next()
+	for more && (strings.HasPrefix(frame.Function, "database/sql.") ||
+		strings.HasPrefix(frame.Function, "github.com/ncruces/go-sqlite3/driver.")) {
+		frame, more = frames.Next()
+	}
+	return frame.Function
 }
 
 // Release releases the savepoint rolling back any changes

@@ -21,7 +21,6 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.Remove("demo.db")
 	defer db.Close()
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
