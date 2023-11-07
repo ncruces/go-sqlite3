@@ -148,6 +148,16 @@ func (ctx Context) resultRFC3339Nano(value time.Time) {
 		uint64(ctx.c.api.destructor), _UTF8)
 }
 
+// ResultPointer sets the result of the function to NULL, just like [Context.ResultNull],
+// except that it also associates ptr with that NULL value such that it can be retrieved
+// within an application-defined SQL function using [Value.Pointer].
+//
+// https://www.sqlite.org/c3ref/result_blob.html
+func (ctx Context) ResultPointer(ptr any) {
+	valPtr := util.AddHandle(ctx.c.ctx, ptr)
+	ctx.c.call(ctx.c.api.resultPointer, uint64(valPtr))
+}
+
 // ResultJSON sets the result of the function to the JSON encoding of value.
 //
 // https://www.sqlite.org/c3ref/result_blob.html

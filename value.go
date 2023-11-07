@@ -126,6 +126,13 @@ func (v Value) rawBytes(ptr uint32) []byte {
 	return util.View(v.mod, ptr, r)
 }
 
+// Pointer gets the pointer associated with this value,
+// or nil if it has no associated pointer.
+func (v Value) Pointer() any {
+	r := v.call(v.api.valuePointer, uint64(v.handle))
+	return util.GetHandle(v.ctx, uint32(r))
+}
+
 // JSON parses a JSON-encoded value
 // and stores the result in the value pointed to by ptr.
 func (v Value) JSON(ptr any) error {

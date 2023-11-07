@@ -380,6 +380,8 @@ func (s *stmt) setupBindings(args []driver.NamedValue) error {
 				err = s.Stmt.BindBlob(id, a)
 			case sqlite3.ZeroBlob:
 				err = s.Stmt.BindZeroBlob(id, int64(a))
+			case interface{ Value() any }:
+				err = s.Stmt.BindPointer(id, a.Value())
 			case time.Time:
 				err = s.Stmt.BindTime(id, a, sqlite3.TimeFormatDefault)
 			case json.Marshaler:
@@ -400,7 +402,8 @@ func (s *stmt) setupBindings(args []driver.NamedValue) error {
 func (s *stmt) CheckNamedValue(arg *driver.NamedValue) error {
 	switch arg.Value.(type) {
 	case bool, int, int64, float64, string, []byte,
-		sqlite3.ZeroBlob, time.Time, json.Marshaler, nil:
+		sqlite3.ZeroBlob, interface{ Value() any },
+		time.Time, json.Marshaler, nil:
 		return nil
 	default:
 		return driver.ErrSkip

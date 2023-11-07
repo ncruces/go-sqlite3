@@ -132,6 +132,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		bindText:        getFun("sqlite3_bind_text64"),
 		bindBlob:        getFun("sqlite3_bind_blob64"),
 		bindZeroBlob:    getFun("sqlite3_bind_zeroblob64"),
+		bindPointer:     getFun("sqlite3_bind_pointer_go"),
 		columnCount:     getFun("sqlite3_column_count"),
 		columnName:      getFun("sqlite3_column_name"),
 		columnType:      getFun("sqlite3_column_type"),
@@ -169,12 +170,14 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		valueText:       getFun("sqlite3_value_text"),
 		valueBlob:       getFun("sqlite3_value_blob"),
 		valueBytes:      getFun("sqlite3_value_bytes"),
+		valuePointer:    getFun("sqlite3_value_pointer_go"),
 		resultNull:      getFun("sqlite3_result_null"),
 		resultInteger:   getFun("sqlite3_result_int64"),
 		resultFloat:     getFun("sqlite3_result_double"),
 		resultText:      getFun("sqlite3_result_text64"),
 		resultBlob:      getFun("sqlite3_result_blob64"),
 		resultZeroBlob:  getFun("sqlite3_result_zeroblob64"),
+		resultPointer:   getFun("sqlite3_result_pointer_go"),
 		resultValue:     getFun("sqlite3_result_value"),
 		resultError:     getFun("sqlite3_result_error"),
 		resultErrorCode: getFun("sqlite3_result_error_code"),
@@ -353,6 +356,7 @@ type sqliteAPI struct {
 	bindText        api.Function
 	bindBlob        api.Function
 	bindZeroBlob    api.Function
+	bindPointer     api.Function
 	columnCount     api.Function
 	columnName      api.Function
 	columnType      api.Function
@@ -390,12 +394,14 @@ type sqliteAPI struct {
 	valueText       api.Function
 	valueBlob       api.Function
 	valueBytes      api.Function
+	valuePointer    api.Function
 	resultNull      api.Function
 	resultInteger   api.Function
 	resultFloat     api.Function
 	resultText      api.Function
 	resultBlob      api.Function
 	resultZeroBlob  api.Function
+	resultPointer   api.Function
 	resultValue     api.Function
 	resultError     api.Function
 	resultErrorCode api.Function

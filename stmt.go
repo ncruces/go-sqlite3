@@ -250,6 +250,18 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 	return s.c.error(r)
 }
 
+// BindPointer binds a NULL to the prepared statement, just like [Stmt.BindNull],
+// but it also associates ptr with that NULL value such that it can be retrieved
+// within an application-defined SQL function using [Value.Pointer].
+//
+// https://www.sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindPointer(param int, ptr any) error {
+	valPtr := util.AddHandle(s.c.ctx, ptr)
+	r := s.c.call(s.c.api.bindPointer,
+		uint64(s.handle), uint64(param), uint64(valPtr))
+	return s.c.error(r)
+}
+
 // BindJSON binds the JSON encoding of value to the prepared statement.
 // The leftmost SQL parameter has an index of 1.
 //

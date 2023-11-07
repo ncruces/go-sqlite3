@@ -39,3 +39,17 @@ int sqlite3_create_window_function_go(sqlite3 *db, const char *zName, int nArg,
 void sqlite3_set_auxdata_go(sqlite3_context *ctx, int iArg, void *pAux) {
   sqlite3_set_auxdata(ctx, iArg, pAux, go_destroy);
 }
+
+#define GO_POINTER_TYPE "github.com/ncruces/go-sqlite3.Pointer"
+
+int sqlite3_bind_pointer_go(sqlite3_stmt *stmt, int i, void *pApp) {
+  return sqlite3_bind_pointer(stmt, i, pApp, GO_POINTER_TYPE, go_destroy);
+}
+
+void sqlite3_result_pointer_go(sqlite3_context *ctx, void *pApp) {
+  sqlite3_result_pointer(ctx, pApp, GO_POINTER_TYPE, go_destroy);
+}
+
+void *sqlite3_value_pointer_go(sqlite3_value *val) {
+  return sqlite3_value_pointer(val, GO_POINTER_TYPE);
+}
