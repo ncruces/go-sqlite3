@@ -9,11 +9,12 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/blob"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Example() {
 	// Open the database, registering the extension.
-	db, err := driver.Open(":memory:", func(conn *sqlite3.Conn) error {
+	db, err := driver.Open("file:/test.db?vfs=memdb", func(conn *sqlite3.Conn) error {
 		blob.Register(conn)
 		return nil
 	})

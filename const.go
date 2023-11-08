@@ -97,6 +97,7 @@ const (
 	IOERR_ROLLBACK_ATOMIC   ExtendedErrorCode = xErrorCode(IOERR) | (31 << 8)
 	IOERR_DATA              ExtendedErrorCode = xErrorCode(IOERR) | (32 << 8)
 	IOERR_CORRUPTFS         ExtendedErrorCode = xErrorCode(IOERR) | (33 << 8)
+	IOERR_IN_PAGE           ExtendedErrorCode = xErrorCode(IOERR) | (34 << 8)
 	LOCKED_SHAREDCACHE      ExtendedErrorCode = xErrorCode(LOCKED) | (1 << 8)
 	LOCKED_VTAB             ExtendedErrorCode = xErrorCode(LOCKED) | (2 << 8)
 	BUSY_RECOVERY           ExtendedErrorCode = xErrorCode(BUSY) | (1 << 8)

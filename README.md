@@ -15,16 +15,18 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
 - [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
   embeds a build of SQLite into your application.
+- [`github.com/ncruces/go-sqlite3/ext/blob`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blob)
+  simplifies incremental BLOB I/O.
+- [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
+  registers [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
+- [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
+  registers Unicode aware functions.
 - [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
   wraps the [C SQLite VFS API](https://www.sqlite.org/vfs.html) and provides a pure Go implementation.
 - [`github.com/ncruces/go-sqlite3/vfs/memdb`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb)
   implements an in-memory VFS.
 - [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
   implements a VFS for immutable databases.
-- [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
-  registers Unicode aware functions.
-- [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
-  registers [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
 - [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
   provides a [GORM](https://gorm.io) driver.
 
@@ -87,6 +89,7 @@ Performance is tested by running
   - [x] incremental BLOB I/O
   - [x] online backup
   - [x] JSON support
+  - [ ] virtual tables
   - [ ] session extension
 - [ ] custom VFSes
   - [x] custom VFS API

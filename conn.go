@@ -303,12 +303,9 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 
 // DriverConn is implemented by the SQLite [database/sql] driver connection.
 //
-// It can be used to access advanced SQLite features like
-// [savepoints], [online backup] and [incremental BLOB I/O].
+// It can be used to access SQLite features like [online backup].
 //
-// [savepoints]: https://www.sqlite.org/lang_savepoint.html
 // [online backup]: https://www.sqlite.org/backup.html
-// [incremental BLOB I/O]: https://www.sqlite.org/c3ref/blob_open.html
 type DriverConn interface {
 	Raw() *Conn
 }

@@ -5,10 +5,11 @@ import (
 	"log"
 
 	"github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func ExampleSavepoint() {
-	db, err := driver.Open(":memory:", nil)
+	db, err := driver.Open("file:/test.db?vfs=memdb", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
