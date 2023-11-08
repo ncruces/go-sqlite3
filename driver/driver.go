@@ -272,7 +272,7 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 	if savept, ok := ctx.(*saveptCtx); ok {
 		// Called from driver.Savepoint.
 		savept.Savepoint = c.Savepoint()
-		return resultRowsAffected(-1), nil
+		return resultRowsAffected(0), nil
 	}
 
 	old := c.Conn.SetInterrupt(ctx)
