@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
 
+	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 )
 
@@ -39,7 +40,9 @@ func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 	if dialector.Conn != nil {
 		db.ConnPool = dialector.Conn
 	} else {
-		conn, err := driver.Open(dialector.DSN, nil)
+		conn, err := driver.Open(dialector.DSN, func(c *sqlite3.Conn) error {
+			return c.Exec("PRAGMA foreign_keys = ON")
+		})
 		if err != nil {
 			return err
 		}

@@ -20,12 +20,3 @@ diff --git a/tests/tests_test.go b/tests/tests_test.go
  	"gorm.io/driver/sqlserver"
  	"gorm.io/gorm"
  	"gorm.io/gorm/logger"
-@@ -89,7 +91,7 @@ func OpenTestConnection(cfg *gorm.Config) (db *gorm.DB, err error) {
- 		db, err = gorm.Open(mysql.Open(dbDSN), cfg)
- 	default:
- 		log.Println("testing sqlite3...")
--		db, err = gorm.Open(sqlite.Open(filepath.Join(os.TempDir(), "gorm.db?_foreign_keys=on")), cfg)
-+		db, err = gorm.Open(sqlite.Open("file:"+filepath.Join(os.TempDir(), "gorm.db")+"?_pragma=busy_timeout(1000)&_pragma=foreign_keys(1)"), cfg)
- 	}
- 
- 	if err != nil {
