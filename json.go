@@ -9,26 +9,16 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-// JSON returns:
-// a [json.Marshaler] that can be used as an argument to
-// [database/sql.DB.Exec] and similar methods to
-// store value as JSON; and
-// a [database/sql.Scanner] that can be used as an argument to
-// [database/sql.Row.Scan] and similar methods to
-// decode JSON into value.
+// JSON returns a value that can be used as an argument to
+// [database/sql.DB.Exec], [database/sql.Row.Scan] and similar methods to
+// store value as JSON, or decode JSON into value.
 func JSON(value any) any {
 	return jsonValue{value}
 }
 
 type jsonValue struct{ any }
 
-func (j jsonValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j.any)
-}
-
-func (j jsonValue) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, j.any)
-}
+func (j jsonValue) JSON() any { return j.any }
 
 func (j jsonValue) Scan(value any) error {
 	var buf []byte
@@ -52,5 +42,5 @@ func (j jsonValue) Scan(value any) error {
 		panic(util.AssertErr())
 	}
 
-	return j.UnmarshalJSON(buf)
+	return json.Unmarshal(buf, j.any)
 }

@@ -11,4 +11,4 @@ func Pointer[T any](val T) any {
 
 type pointer[T any] struct{ val T }
 
-func (p pointer[T]) Value() any { return p.val }
+func (p pointer[T]) Pointer() any { return p.val }
