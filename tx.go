@@ -12,14 +12,14 @@ import (
 
 // Tx is an in-progress database transaction.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 type Tx struct {
 	c *Conn
 }
 
 // Begin starts a deferred transaction.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (c *Conn) Begin() Tx {
 	// BEGIN even if interrupted.
 	err := c.txExecInterrupted(`BEGIN DEFERRED`)
@@ -31,7 +31,7 @@ func (c *Conn) Begin() Tx {
 
 // BeginImmediate starts an immediate transaction.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (c *Conn) BeginImmediate() (Tx, error) {
 	err := c.Exec(`BEGIN IMMEDIATE`)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *Conn) BeginImmediate() (Tx, error) {
 
 // BeginExclusive starts an exclusive transaction.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (c *Conn) BeginExclusive() (Tx, error) {
 	err := c.Exec(`BEGIN EXCLUSIVE`)
 	if err != nil {
@@ -63,7 +63,7 @@ func (c *Conn) BeginExclusive() (Tx, error) {
 //		// ... do work in the transaction
 //	}
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (tx Tx) End(errp *error) {
 	recovered := recover()
 	if recovered != nil {
@@ -94,7 +94,7 @@ func (tx Tx) End(errp *error) {
 
 // Commit commits the transaction.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (tx Tx) Commit() error {
 	return tx.c.Exec(`COMMIT`)
 }
@@ -102,7 +102,7 @@ func (tx Tx) Commit() error {
 // Rollback rolls back the transaction,
 // even if the connection has been interrupted.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (tx Tx) Rollback() error {
 	return tx.c.txExecInterrupted(`ROLLBACK`)
 }
@@ -110,7 +110,7 @@ func (tx Tx) Rollback() error {
 // Savepoint is a marker within a transaction
 // that allows for partial rollback.
 //
-// https://www.sqlite.org/lang_savepoint.html
+// https://sqlite.org/lang_savepoint.html
 type Savepoint struct {
 	c    *Conn
 	name string
@@ -118,7 +118,7 @@ type Savepoint struct {
 
 // Savepoint establishes a new transaction savepoint.
 //
-// https://www.sqlite.org/lang_savepoint.html
+// https://sqlite.org/lang_savepoint.html
 func (c *Conn) Savepoint() Savepoint {
 	// Names can be reused; this makes catching bugs more likely.
 	name := saveptName() + "_" + strconv.Itoa(int(rand.Int31()))
@@ -198,7 +198,7 @@ func (s Savepoint) Release(errp *error) {
 // even if the connection has been interrupted.
 // Rollback does not release the savepoint.
 //
-// https://www.sqlite.org/lang_transaction.html
+// https://sqlite.org/lang_transaction.html
 func (s Savepoint) Rollback() error {
 	// ROLLBACK even if interrupted.
 	return s.c.txExecInterrupted(fmt.Sprintf("ROLLBACK TO %q;", s.name))

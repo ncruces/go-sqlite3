@@ -19,7 +19,7 @@ func (c *Conn) AnyCollationNeeded() {
 
 // CreateCollation defines a new collating sequence.
 //
-// https://www.sqlite.org/c3ref/create_collation.html
+// https://sqlite.org/c3ref/create_collation.html
 func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
@@ -34,7 +34,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 
 // CreateFunction defines a new scalar SQL function.
 //
-// https://www.sqlite.org/c3ref/create_function.html
+// https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(ctx Context, arg ...Value)) error {
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
@@ -48,7 +48,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 // If fn returns a [WindowFunction], then an aggregate window function is created.
 // If fn returns an [io.Closer], it will be called to free resources.
 //
-// https://www.sqlite.org/c3ref/create_function.html
+// https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
 	call := c.api.createAggregate
 	namePtr := c.arena.string(name)
@@ -64,7 +64,7 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 
 // AggregateFunction is the interface an aggregate function should implement.
 //
-// https://www.sqlite.org/appfunc.html
+// https://sqlite.org/appfunc.html
 type AggregateFunction interface {
 	// Step is invoked to add a row to the current window.
 	// The function arguments, if any, corresponding to the row being added are passed to Step.
@@ -76,7 +76,7 @@ type AggregateFunction interface {
 
 // WindowFunction is the interface an aggregate window function should implement.
 //
-// https://www.sqlite.org/windowfunctions.html
+// https://sqlite.org/windowfunctions.html
 type WindowFunction interface {
 	AggregateFunction
 

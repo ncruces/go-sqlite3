@@ -15,7 +15,7 @@ import (
 // Conn is a database connection handle.
 // A Conn is not safe for concurrent use by multiple goroutines.
 //
-// https://www.sqlite.org/c3ref/sqlite3.html
+// https://sqlite.org/c3ref/sqlite3.html
 type Conn struct {
 	*sqlite
 
@@ -38,7 +38,7 @@ func Open(filename string) (*Conn, error) {
 //
 //	sqlite3.Open("file:demo.db?_pragma=busy_timeout(10000)")
 //
-// https://www.sqlite.org/c3ref/open.html
+// https://sqlite.org/c3ref/open.html
 func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 	if flags&(OPEN_READONLY|OPEN_READWRITE|OPEN_CREATE) == 0 {
 		flags |= OPEN_READWRITE | OPEN_CREATE
@@ -126,7 +126,7 @@ func (c *Conn) closeDB(handle uint32) {
 //
 // It is safe to close a nil, zero or closed Conn.
 //
-// https://www.sqlite.org/c3ref/close.html
+// https://sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
 	if c == nil || c.handle == 0 {
 		return nil
@@ -148,7 +148,7 @@ func (c *Conn) Close() error {
 // Exec is a convenience function that allows an application to run
 // multiple statements of SQL without having to use a lot of code.
 //
-// https://www.sqlite.org/c3ref/exec.html
+// https://sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
 	c.checkInterrupt()
 	defer c.arena.reset()
@@ -168,7 +168,7 @@ func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 // If the input text contains no SQL (if the input is an empty string or a comment),
 // both stmt and err will be nil.
 //
-// https://www.sqlite.org/c3ref/prepare.html
+// https://sqlite.org/c3ref/prepare.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
 	if emptyStatement(sql) {
 		return nil, "", nil
@@ -199,7 +199,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 
 // GetAutocommit tests the connection for auto-commit mode.
 //
-// https://www.sqlite.org/c3ref/get_autocommit.html
+// https://sqlite.org/c3ref/get_autocommit.html
 func (c *Conn) GetAutocommit() bool {
 	r := c.call(c.api.autocommit, uint64(c.handle))
 	return r != 0
@@ -208,7 +208,7 @@ func (c *Conn) GetAutocommit() bool {
 // LastInsertRowID returns the rowid of the most recent successful INSERT
 // on the database connection.
 //
-// https://www.sqlite.org/c3ref/last_insert_rowid.html
+// https://sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() int64 {
 	r := c.call(c.api.lastRowid, uint64(c.handle))
 	return int64(r)
@@ -218,7 +218,7 @@ func (c *Conn) LastInsertRowID() int64 {
 // by the most recently completed INSERT, UPDATE or DELETE statement
 // on the database connection.
 //
-// https://www.sqlite.org/c3ref/changes.html
+// https://sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() int64 {
 	r := c.call(c.api.changes, uint64(c.handle))
 	return int64(r)
@@ -237,7 +237,7 @@ func (c *Conn) Changes() int64 {
 //
 // SetInterrupt returns the old context assigned to the connection.
 //
-// https://www.sqlite.org/c3ref/interrupt.html
+// https://sqlite.org/c3ref/interrupt.html
 func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// Is it the same context?
 	if ctx == c.interrupt {
@@ -282,7 +282,7 @@ func (c *Conn) checkInterrupt() {
 
 // Pragma executes a PRAGMA statement and returns any results.
 //
-// https://www.sqlite.org/pragma.html
+// https://sqlite.org/pragma.html
 func (c *Conn) Pragma(str string) ([]string, error) {
 	stmt, _, err := c.Prepare(`PRAGMA ` + str)
 	if err != nil {
@@ -305,7 +305,7 @@ func (c *Conn) error(rc uint64, sql ...string) error {
 //
 // It can be used to access SQLite features like [online backup].
 //
-// [online backup]: https://www.sqlite.org/backup.html
+// [online backup]: https://sqlite.org/backup.html
 type DriverConn interface {
 	Raw() *Conn
 }

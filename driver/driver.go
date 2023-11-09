@@ -21,9 +21,9 @@
 // Order matters:
 // busy timeout and locking mode should be the first PRAGMAs set, in that order.
 //
-// [URI]: https://www.sqlite.org/uri.html
-// [PRAGMA]: https://www.sqlite.org/pragma.html
-// [TRANSACTION]: https://www.sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
+// [URI]: https://sqlite.org/uri.html
+// [PRAGMA]: https://sqlite.org/pragma.html
+// [TRANSACTION]: https://sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
 package driver
 
 import (

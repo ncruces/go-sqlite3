@@ -11,7 +11,7 @@ import (
 
 // Value is any value that can be stored in a database table.
 //
-// https://www.sqlite.org/c3ref/value.html
+// https://sqlite.org/c3ref/value.html
 type Value struct {
 	*sqlite
 	handle uint32
@@ -19,7 +19,7 @@ type Value struct {
 
 // Type returns the initial [Datatype] of the value.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Type() Datatype {
 	r := v.call(v.api.valueType, uint64(v.handle))
 	return Datatype(r)
@@ -30,7 +30,7 @@ func (v Value) Type() Datatype {
 // Instead, boolean values are retrieved as integers,
 // with 0 converted to false and any other value to true.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Bool() bool {
 	if i := v.Int64(); i != 0 {
 		return true
@@ -40,14 +40,14 @@ func (v Value) Bool() bool {
 
 // Int returns the value as an int.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Int() int {
 	return int(v.Int64())
 }
 
 // Int64 returns the value as an int64.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Int64() int64 {
 	r := v.call(v.api.valueInteger, uint64(v.handle))
 	return int64(r)
@@ -55,7 +55,7 @@ func (v Value) Int64() int64 {
 
 // Float returns the value as a float64.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Float() float64 {
 	r := v.call(v.api.valueFloat, uint64(v.handle))
 	return math.Float64frombits(r)
@@ -63,7 +63,7 @@ func (v Value) Float() float64 {
 
 // Time returns the value as a [time.Time].
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Time(format TimeFormat) time.Time {
 	var a any
 	switch v.Type() {
@@ -84,7 +84,7 @@ func (v Value) Time(format TimeFormat) time.Time {
 
 // Text returns the value as a string.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Text() string {
 	return string(v.RawText())
 }
@@ -92,7 +92,7 @@ func (v Value) Text() string {
 // Blob appends to buf and returns
 // the value as a []byte.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) Blob(buf []byte) []byte {
 	return append(buf, v.RawBlob()...)
 }
@@ -101,7 +101,7 @@ func (v Value) Blob(buf []byte) []byte {
 // The []byte is owned by SQLite and may be invalidated by
 // subsequent calls to [Value] methods.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawText() []byte {
 	r := v.call(v.api.valueText, uint64(v.handle))
 	return v.rawBytes(uint32(r))
@@ -111,7 +111,7 @@ func (v Value) RawText() []byte {
 // The []byte is owned by SQLite and may be invalidated by
 // subsequent calls to [Value] methods.
 //
-// https://www.sqlite.org/c3ref/value_blob.html
+// https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawBlob() []byte {
 	r := v.call(v.api.valueBlob, uint64(v.handle))
 	return v.rawBytes(uint32(r))

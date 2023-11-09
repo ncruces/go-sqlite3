@@ -4,7 +4,7 @@ package sqlite3
 // that can be used as an argument to
 // [database/sql.DB.Exec] and similar methods.
 //
-// https://www.sqlite.org/bindptr.html
+// https://sqlite.org/bindptr.html
 func Pointer[T any](val T) any {
 	return pointer[T]{val}
 }

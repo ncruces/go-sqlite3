@@ -12,7 +12,7 @@ import (
 // Context is the context in which an SQL function executes.
 // An SQLite [Context] is in no way related to a Go [context.Context].
 //
-// https://www.sqlite.org/c3ref/context.html
+// https://sqlite.org/c3ref/context.html
 type Context struct {
 	c      *Conn
 	handle uint32
@@ -29,7 +29,7 @@ func (ctx Context) Conn() *Conn {
 
 // SetAuxData saves metadata for argument n of the function.
 //
-// https://www.sqlite.org/c3ref/get_auxdata.html
+// https://sqlite.org/c3ref/get_auxdata.html
 func (ctx Context) SetAuxData(n int, data any) {
 	ptr := util.AddHandle(ctx.c.ctx, data)
 	ctx.c.call(ctx.c.api.setAuxData, uint64(ctx.handle), uint64(n), uint64(ptr))
@@ -37,7 +37,7 @@ func (ctx Context) SetAuxData(n int, data any) {
 
 // GetAuxData returns metadata for argument n of the function.
 //
-// https://www.sqlite.org/c3ref/get_auxdata.html
+// https://sqlite.org/c3ref/get_auxdata.html
 func (ctx Context) GetAuxData(n int) any {
 	ptr := uint32(ctx.c.call(ctx.c.api.getAuxData, uint64(ctx.handle), uint64(n)))
 	return util.GetHandle(ctx.c.ctx, ptr)
@@ -47,7 +47,7 @@ func (ctx Context) GetAuxData(n int) any {
 // SQLite does not have a separate boolean storage class.
 // Instead, boolean values are stored as integers 0 (false) and 1 (true).
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultBool(value bool) {
 	var i int64
 	if value {
@@ -58,14 +58,14 @@ func (ctx Context) ResultBool(value bool) {
 
 // ResultInt sets the result of the function to an int.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultInt(value int) {
 	ctx.ResultInt64(int64(value))
 }
 
 // ResultInt64 sets the result of the function to an int64.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultInt64(value int64) {
 	ctx.c.call(ctx.c.api.resultInteger,
 		uint64(ctx.handle), uint64(value))
@@ -73,7 +73,7 @@ func (ctx Context) ResultInt64(value int64) {
 
 // ResultFloat sets the result of the function to a float64.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultFloat(value float64) {
 	ctx.c.call(ctx.c.api.resultFloat,
 		uint64(ctx.handle), math.Float64bits(value))
@@ -81,7 +81,7 @@ func (ctx Context) ResultFloat(value float64) {
 
 // ResultText sets the result of the function to a string.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultText(value string) {
 	ptr := ctx.c.newString(value)
 	ctx.c.call(ctx.c.api.resultText,
@@ -92,7 +92,7 @@ func (ctx Context) ResultText(value string) {
 // ResultBlob sets the result of the function to a []byte.
 // Returning a nil slice is the same as calling [Context.ResultNull].
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultBlob(value []byte) {
 	ptr := ctx.c.newBytes(value)
 	ctx.c.call(ctx.c.api.resultBlob,
@@ -102,7 +102,7 @@ func (ctx Context) ResultBlob(value []byte) {
 
 // BindZeroBlob sets the result of the function to a zero-filled, length n BLOB.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultZeroBlob(n int64) {
 	ctx.c.call(ctx.c.api.resultZeroBlob,
 		uint64(ctx.handle), uint64(n))
@@ -110,7 +110,7 @@ func (ctx Context) ResultZeroBlob(n int64) {
 
 // ResultNull sets the result of the function to NULL.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultNull() {
 	ctx.c.call(ctx.c.api.resultNull,
 		uint64(ctx.handle))
@@ -118,7 +118,7 @@ func (ctx Context) ResultNull() {
 
 // ResultTime sets the result of the function to a [time.Time].
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultTime(value time.Time, format TimeFormat) {
 	if format == TimeFormatDefault {
 		ctx.resultRFC3339Nano(value)
@@ -152,7 +152,7 @@ func (ctx Context) resultRFC3339Nano(value time.Time) {
 // except that it also associates ptr with that NULL value such that it can be retrieved
 // within an application-defined SQL function using [Value.Pointer].
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultPointer(ptr any) {
 	valPtr := util.AddHandle(ctx.c.ctx, ptr)
 	ctx.c.call(ctx.c.api.resultPointer, uint64(valPtr))
@@ -160,7 +160,7 @@ func (ctx Context) ResultPointer(ptr any) {
 
 // ResultJSON sets the result of the function to the JSON encoding of value.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultJSON(value any) {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -174,7 +174,7 @@ func (ctx Context) ResultJSON(value any) {
 
 // ResultValue sets the result of the function a copy of [Value].
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultValue(value Value) {
 	if value.sqlite != ctx.c.sqlite {
 		ctx.ResultError(MISUSE)
@@ -185,7 +185,7 @@ func (ctx Context) ResultValue(value Value) {
 
 // ResultError sets the result of the function an error.
 //
-// https://www.sqlite.org/c3ref/result_blob.html
+// https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultError(err error) {
 	if errors.Is(err, NOMEM) {
 		ctx.c.call(ctx.c.api.resultErrorMem, uint64(ctx.handle))

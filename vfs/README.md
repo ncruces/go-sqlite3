@@ -1,6 +1,6 @@
 # Go SQLite VFS API
 
-This package implements the SQLite [OS Interface](https://www.sqlite.org/vfs.html) (aka VFS).
+This package implements the SQLite [OS Interface](https://sqlite.org/vfs.html) (aka VFS).
 
 It replaces the default SQLite VFS with a pure Go implementation.
 

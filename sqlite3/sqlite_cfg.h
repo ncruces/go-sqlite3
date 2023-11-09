@@ -53,7 +53,7 @@
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.
 // We patch SQLite to use exclusive locking mode instead.
-// https://www.sqlite.org/wal.html#noshm
+// https://sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
 
 // Amalgamated Extensions

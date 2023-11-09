@@ -18,7 +18,7 @@ import (
 var testDB string
 
 func Example_http() {
-	readervfs.Create("demo.db", httpreadat.New("https://www.sanford.io/demo.db"))
+	readervfs.Create("demo.db", httpreadat.New("https://sanford.io/demo.db"))
 	defer readervfs.Delete("demo.db")
 
 	db, err := sql.Open("sqlite3", "file:demo.db?vfs=reader")

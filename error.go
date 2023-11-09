@@ -9,7 +9,7 @@ import (
 
 // Error wraps an SQLite Error Code.
 //
-// https://www.sqlite.org/c3ref/errcode.html
+// https://sqlite.org/c3ref/errcode.html
 type Error struct {
 	str  string
 	msg  string
@@ -19,14 +19,14 @@ type Error struct {
 
 // Code returns the primary error code for this error.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 func (e *Error) Code() ErrorCode {
 	return ErrorCode(e.code)
 }
 
 // ExtendedCode returns the extended error code for this error.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 func (e *Error) ExtendedCode() ExtendedErrorCode {
 	return ExtendedErrorCode(e.code)
 }

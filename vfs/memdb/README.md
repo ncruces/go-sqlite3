@@ -1,6 +1,6 @@
 # Go `"memdb"` SQLite VFS
 
-This package implements the [`"memdb"`](https://www.sqlite.org/src/file/src/memdb.c)
+This package implements the [`"memdb"`](https://sqlite.org/src/file/src/memdb.c)
 SQLite VFS in pure Go.
 
 It has some benefits over the C version:

@@ -18,7 +18,7 @@ const (
 
 // ErrorCode is a result code that [Error.Code] might return.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 type ErrorCode uint8
 
 const (
@@ -54,7 +54,7 @@ const (
 
 // ExtendedErrorCode is a result code that [Error.ExtendedCode] might return.
 //
-// https://www.sqlite.org/rescode.html
+// https://sqlite.org/rescode.html
 type (
 	ExtendedErrorCode uint16
 	xErrorCode        = ExtendedErrorCode
@@ -140,7 +140,7 @@ const (
 
 // OpenFlag is a flag for the [OpenFlags] function.
 //
-// https://www.sqlite.org/c3ref/c_open_autoproxy.html
+// https://sqlite.org/c3ref/c_open_autoproxy.html
 type OpenFlag uint32
 
 const (
@@ -159,7 +159,7 @@ const (
 
 // PrepareFlag is a flag that can be passed to [Conn.PrepareFlags].
 //
-// https://www.sqlite.org/c3ref/c_prepare_normalize.html
+// https://sqlite.org/c3ref/c_prepare_normalize.html
 type PrepareFlag uint32
 
 const (
@@ -170,7 +170,7 @@ const (
 
 // FunctionFlag is a flag that can be passed to [Conn.PrepareFlags].
 //
-// https://www.sqlite.org/c3ref/c_deterministic.html
+// https://sqlite.org/c3ref/c_deterministic.html
 type FunctionFlag uint32
 
 const (
@@ -182,7 +182,7 @@ const (
 
 // Datatype is a fundamental datatype of SQLite.
 //
-// https://www.sqlite.org/c3ref/c_blob.html
+// https://sqlite.org/c3ref/c_blob.html
 type Datatype uint32
 
 const (

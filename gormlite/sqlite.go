@@ -53,7 +53,7 @@ func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 	if err := db.ConnPool.QueryRowContext(context.Background(), "select sqlite_version()").Scan(&version); err != nil {
 		return err
 	}
-	// https://www.sqlite.org/releaselog/3_35_0.html
+	// https://sqlite.org/releaselog/3_35_0.html
 	if compareVersion(version, "3.35.0") >= 0 {
 		callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{
 			CreateClauses:        []string{"INSERT", "VALUES", "ON CONFLICT", "RETURNING"},
@@ -202,7 +202,7 @@ func (dialector _Dialector) DataTypeOf(field *schema.Field) string {
 	case schema.Int, schema.Uint:
 		if field.AutoIncrement {
 			// doesn't check `PrimaryKey`, to keep backward compatibility
-			// https://www.sqlite.org/autoinc.html
+			// https://sqlite.org/autoinc.html
 			return "integer PRIMARY KEY AUTOINCREMENT"
 		} else {
 			return "integer"

@@ -15,12 +15,12 @@ import (
 // See the documentation for the [TimeFormatDefault] constant
 // for formats recognized by SQLite.
 //
-// https://www.sqlite.org/lang_datefunc.html
+// https://sqlite.org/lang_datefunc.html
 type TimeFormat string
 
 // TimeFormats recognized by SQLite to encode/decode time values.
 //
-// https://www.sqlite.org/lang_datefunc.html
+// https://sqlite.org/lang_datefunc.html
 const (
 	TimeFormatDefault TimeFormat = "" // time.RFC3339Nano
 
@@ -83,9 +83,9 @@ const (
 // a float64 for [TimeFormatJulianDay] and [TimeFormatUnixFrac],
 // or an int64 for the other numeric formats.
 //
-// https://www.sqlite.org/lang_datefunc.html
+// https://sqlite.org/lang_datefunc.html
 //
-// [collating sequence]: https://www.sqlite.org/datatype3.html#collating_sequences
+// [collating sequence]: https://sqlite.org/datatype3.html#collating_sequences
 func (f TimeFormat) Encode(t time.Time) any {
 	switch f {
 	// Numeric formats
@@ -136,7 +136,7 @@ func (f TimeFormat) Encode(t time.Time) any {
 // Unix timestamps before 1980 and after 9999 may be misinterpreted as julian day numbers,
 // or have the wrong time unit.
 //
-// https://www.sqlite.org/lang_datefunc.html
+// https://sqlite.org/lang_datefunc.html
 func (f TimeFormat) Decode(v any) (time.Time, error) {
 	switch f {
 	// Numeric formats
