@@ -89,6 +89,16 @@ func (ctx Context) ResultText(value string) {
 		uint64(ctx.c.api.destructor), _UTF8)
 }
 
+// ResultRawText sets the text result of the function to a []byte.
+//
+// https://sqlite.org/c3ref/result_blob.html
+func (ctx Context) ResultRawText(value []byte) {
+	ptr := ctx.c.newBytes(value)
+	ctx.c.call(ctx.c.api.resultText,
+		uint64(ctx.handle), uint64(ptr), uint64(len(value)),
+		uint64(ctx.c.api.destructor), _UTF8)
+}
+
 // ResultBlob sets the result of the function to a []byte.
 // Returning a nil slice is the same as calling [Context.ResultNull].
 //
@@ -100,7 +110,7 @@ func (ctx Context) ResultBlob(value []byte) {
 		uint64(ctx.c.api.destructor))
 }
 
-// BindZeroBlob sets the result of the function to a zero-filled, length n BLOB.
+// ResultZeroBlob sets the result of the function to a zero-filled, length n BLOB.
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultZeroBlob(n int64) {
@@ -166,10 +176,7 @@ func (ctx Context) ResultJSON(value any) {
 	if err != nil {
 		ctx.ResultError(err)
 	}
-	ptr := ctx.c.newBytes(data)
-	ctx.c.call(ctx.c.api.resultText,
-		uint64(ctx.handle), uint64(ptr), uint64(len(data)),
-		uint64(ctx.c.api.destructor))
+	ctx.ResultRawText(data)
 }
 
 // ResultValue sets the result of the function a copy of [Value].

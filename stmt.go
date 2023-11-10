@@ -181,6 +181,19 @@ func (s *Stmt) BindText(param int, value string) error {
 	return s.c.error(r)
 }
 
+// BindRawText binds a []byte to the prepared statement as text.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindRawText(param int, value []byte) error {
+	ptr := s.c.newBytes(value)
+	r := s.c.call(s.c.api.bindText,
+		uint64(s.handle), uint64(param),
+		uint64(ptr), uint64(len(value)),
+		uint64(s.c.api.destructor), _UTF8)
+	return s.c.error(r)
+}
+
 // BindBlob binds a []byte to the prepared statement.
 // The leftmost SQL parameter has an index of 1.
 // Binding a nil slice is the same as calling [Stmt.BindNull].
@@ -271,12 +284,7 @@ func (s *Stmt) BindJSON(param int, value any) error {
 	if err != nil {
 		return err
 	}
-	ptr := s.c.newBytes(data)
-	r := s.c.call(s.c.api.bindText,
-		uint64(s.handle), uint64(param),
-		uint64(ptr), uint64(len(data)),
-		uint64(s.c.api.destructor), _UTF8)
-	return s.c.error(r)
+	return s.BindRawText(param, data)
 }
 
 // ColumnCount returns the number of columns in a result set.

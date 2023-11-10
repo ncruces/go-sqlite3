@@ -74,7 +74,7 @@ func ExampleConn_CreateFunction() {
 	}
 
 	err = db.CreateFunction("upper", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
-		ctx.ResultBlob(bytes.ToUpper(arg[0].RawBlob()))
+		ctx.ResultRawText(bytes.ToUpper(arg[0].RawText()))
 	})
 	if err != nil {
 		log.Fatal(err)
