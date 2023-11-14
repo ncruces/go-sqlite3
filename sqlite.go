@@ -413,11 +413,11 @@ type sqliteAPI struct {
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_progress", callbackProgress)
 	util.ExportFuncVI(env, "go_destroy", callbackDestroy)
-	util.ExportFuncIIIIII(env, "go_compare", callbackCompare)
 	util.ExportFuncVIII(env, "go_func", callbackFunc)
 	util.ExportFuncVIII(env, "go_step", callbackStep)
 	util.ExportFuncVI(env, "go_final", callbackFinal)
 	util.ExportFuncVI(env, "go_value", callbackValue)
 	util.ExportFuncVIII(env, "go_inverse", callbackInverse)
+	util.ExportFuncIIIIII(env, "go_compare", callbackCompare)
 	return env
 }

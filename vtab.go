@@ -1,68 +1,90 @@
 package sqlite3
 
+// https://sqlite.org/vtab.html#xconnect
 type Module interface {
-	Connect(db *Conn, arg ...string) (Vtab, error)
+	Connect(db *Conn, arg ...string) (VTab, error)
 }
 
+// https://sqlite.org/vtab.html#xcreate
 type ModuleCreator interface {
 	Module
-	Create(db *Conn, arg ...string) (Vtab, error)
+	Create(db *Conn, arg ...string) (VTabDestroyer, error)
 }
 
-type ModuleShadowNamer interface {
-	Module
-	ShadowName(suffix string) bool
-}
-
-type Vtab interface {
+type VTab interface {
+	// https://sqlite.org/vtab.html#xbestindex
 	BestIndex(*IndexInfo) error
+	// https://sqlite.org/vtab.html#xdisconnect
 	Disconnect() error
-	Destroy() error
-	Open() (VtabCursor, error)
+	// https://sqlite.org/vtab.html#xopen
+	Open() (VTabCursor, error)
 }
 
-type VtabUpdater interface {
-	Vtab
+// https://sqlite.org/vtab.html#sqlite3_module.xDestroy
+type VTabDestroyer interface {
+	VTab
+	Destroy() error
+}
+
+// https://sqlite.org/vtab.html#xupdate
+type VTabUpdater interface {
+	VTab
 	Update(arg ...Value) (rowid int64, err error)
 }
 
-type VtabRenamer interface {
-	Vtab
+// https://sqlite.org/vtab.html#xrename
+type VTabRenamer interface {
+	VTab
 	Rename(new string) error
 }
 
-type VtabOverloader interface {
-	Vtab
-	FindFunction(arg int, name string) (func(ctx Context, arg ...Value), error)
+// https://sqlite.org/vtab.html#xfindfunction
+type VTabOverloader interface {
+	VTab
+	FindFunction(arg int, name string) (func(ctx Context, arg ...Value), IndexConstraint)
 }
 
-type VtabChecker interface {
-	Vtab
+// https://sqlite.org/vtab.html#xintegrity
+type VTabChecker interface {
+	VTab
 	Integrity(schema, table string, flags int) error
 }
 
-type VtabTx interface {
-	Vtab
+type VTabTx interface {
+	VTab
+	// https://sqlite.org/vtab.html#xBegin
 	Begin() error
+	// https://sqlite.org/vtab.html#xsync
 	Sync() error
+	// https://sqlite.org/vtab.html#xcommit
 	Commit() error
+	// https://sqlite.org/vtab.html#xrollback
 	Rollback() error
 }
 
-type VtabSavepointer interface {
-	VtabTx
-	Savepoint(n int) error
-	Release(n int) error
-	RollbackTo(n int) error
+// https://sqlite.org/vtab.html#xsavepoint
+type VTabSavepointer interface {
+	VTabTx
+	Savepoint(id int) error
+	Release(id int) error
+	RollbackTo(id int) error
 }
 
-type VtabCursor interface {
+type VTabCursor interface {
+	// https://sqlite.org/vtab.html#xclose
 	Close() error
-	Filter(idxNum int, idxStr string, arg ...Value)
+	// https://sqlite.org/vtab.html#xfilter
+	Filter(idxNum int, idxStr string, arg ...Value) error
+	// https://sqlite.org/vtab.html#xnext
 	Next() error
-	Eof() bool
+	// https://sqlite.org/vtab.html#xeof
+	EOF() bool
+	// https://sqlite.org/vtab.html#xcolumn
 	Column(ctx *Context, n int) error
-	Rowid() (int64, error)
+	// https://sqlite.org/vtab.html#xrowid
+	RowID() (int64, error)
 }
 
 type IndexInfo struct{}
+
+type IndexConstraint uint8

@@ -7,7 +7,15 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
-// Register registers the blob_open SQL function.
+// Register registers the blob_open SQL function:
+//
+//	blob_open(schema, table, column, rowid, flags, callback, args...)
+//
+// The callback must be a [sqlite3.Pointer] to an [OpenCallback].
+// Any optional args will be passed to the callback,
+// along with the [sqlite3.Blob] handle.
+//
+// https://sqlite.org/c3ref/blob.html
 func Register(db *sqlite3.Conn) {
 	db.CreateFunction("blob_open", -1,
 		sqlite3.DETERMINISTIC|sqlite3.DIRECTONLY, openBlob)
@@ -56,4 +64,5 @@ func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.SetAuxData(2, blob)
 }
 
+// OpenCallback is the type for the blob_open callback.
 type OpenCallback func(*sqlite3.Blob, ...sqlite3.Value) error

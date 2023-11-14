@@ -25,11 +25,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 	funcPtr := util.AddHandle(c.ctx, fn)
 	r := c.call(c.api.createCollation,
 		uint64(c.handle), uint64(namePtr), uint64(funcPtr))
-	if err := c.error(r); err != nil {
-		util.DelHandle(c.ctx, funcPtr)
-		return err
-	}
-	return nil
+	return c.error(r)
 }
 
 // CreateFunction defines a new scalar SQL function.

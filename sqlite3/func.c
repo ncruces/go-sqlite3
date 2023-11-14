@@ -2,54 +2,48 @@
 
 #include "sqlite3.h"
 
-int go_compare(void *, int, const void *, int, const void *);
+typedef void *go_handle;
+
+void go_destroy(go_handle);
+
+static_assert(sizeof(go_handle) == 4, "Unexpected size");
+
 void go_func(sqlite3_context *, int, sqlite3_value **);
 void go_step(sqlite3_context *, int, sqlite3_value **);
 void go_final(sqlite3_context *);
 void go_value(sqlite3_context *);
 void go_inverse(sqlite3_context *, int, sqlite3_value **);
-void go_destroy(void *);
 
-int sqlite3_create_collation_go(sqlite3 *db, const char *zName, void *pApp) {
-  return sqlite3_create_collation_v2(db, zName, SQLITE_UTF8, pApp, go_compare,
-                                     go_destroy);
+int go_compare(go_handle, int, const void *, int, const void *);
+
+int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {
+  int rc = sqlite3_create_collation_v2(db, name, SQLITE_UTF8, app, go_compare,
+                                       go_destroy);
+  if (rc) go_destroy(app);
+  return rc;
 }
 
-int sqlite3_create_function_go(sqlite3 *db, const char *zName, int nArg,
-                               int flags, void *pApp) {
-  return sqlite3_create_function_v2(db, zName, nArg, SQLITE_UTF8 | flags, pApp,
+int sqlite3_create_function_go(sqlite3 *db, const char *name, int argc,
+                               int flags, go_handle app) {
+  return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, app,
                                     go_func, /*step=*/NULL, /*final=*/NULL,
                                     go_destroy);
 }
 
-int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *zName,
-                                         int nArg, int flags, void *pApp) {
-  return sqlite3_create_window_function(db, zName, nArg, SQLITE_UTF8 | flags,
-                                        pApp, go_step, go_final, /*value=*/NULL,
+int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *name,
+                                         int argc, int flags, go_handle app) {
+  return sqlite3_create_window_function(db, name, argc, SQLITE_UTF8 | flags,
+                                        app, go_step, go_final, /*value=*/NULL,
                                         /*inverse=*/NULL, go_destroy);
 }
 
-int sqlite3_create_window_function_go(sqlite3 *db, const char *zName, int nArg,
-                                      int flags, void *pApp) {
-  return sqlite3_create_window_function(db, zName, nArg, SQLITE_UTF8 | flags,
-                                        pApp, go_step, go_final, go_value,
+int sqlite3_create_window_function_go(sqlite3 *db, const char *name, int argc,
+                                      int flags, go_handle app) {
+  return sqlite3_create_window_function(db, name, argc, SQLITE_UTF8 | flags,
+                                        app, go_step, go_final, go_value,
                                         go_inverse, go_destroy);
 }
 
-void sqlite3_set_auxdata_go(sqlite3_context *ctx, int iArg, void *pAux) {
-  sqlite3_set_auxdata(ctx, iArg, pAux, go_destroy);
-}
-
-#define GO_POINTER_TYPE "github.com/ncruces/go-sqlite3.Pointer"
-
-int sqlite3_bind_pointer_go(sqlite3_stmt *stmt, int i, void *pApp) {
-  return sqlite3_bind_pointer(stmt, i, pApp, GO_POINTER_TYPE, go_destroy);
-}
-
-void sqlite3_result_pointer_go(sqlite3_context *ctx, void *pApp) {
-  sqlite3_result_pointer(ctx, pApp, GO_POINTER_TYPE, go_destroy);
-}
-
-void *sqlite3_value_pointer_go(sqlite3_value *val) {
-  return sqlite3_value_pointer(val, GO_POINTER_TYPE);
+void sqlite3_set_auxdata_go(sqlite3_context *ctx, int i, go_handle aux) {
+  sqlite3_set_auxdata(ctx, i, aux, go_destroy);
 }

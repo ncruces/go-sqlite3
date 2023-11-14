@@ -60,7 +60,7 @@ static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
 
 struct go_file {
   sqlite3_file base;
-  int handle;
+  go_handle handle;
 };
 
 int sqlite3_os_init() {
