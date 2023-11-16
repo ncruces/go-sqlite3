@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "sqlite3.h"
+#include "types.h"
 
 int go_localtime(struct tm *, sqlite3_int64);
 int go_vfs_find(const char *zVfsName);
@@ -82,8 +83,6 @@ int sqlite3_os_init() {
   };
   return sqlite3_vfs_register(&os_vfs, /*default=*/true);
 }
-
-sqlite3_destructor_type malloc_destructor = &free;
 
 int localtime_s(struct tm *const pTm, time_t const *const pTime) {
   return go_localtime(pTm, (sqlite3_int64)*pTime);

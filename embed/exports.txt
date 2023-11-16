@@ -78,3 +78,14 @@ sqlite3_result_error
 sqlite3_result_error_code
 sqlite3_result_error_nomem
 sqlite3_result_error_toobig
+sqlite3_create_module_go
+sqlite3_declare_vtab
+sqlite3_vtab_config_go
+sqlite3_vtab_collation
+sqlite3_vtab_distinct
+sqlite3_vtab_in
+sqlite3_vtab_in_first
+sqlite3_vtab_in_next
+sqlite3_vtab_rhs_value
+sqlite3_vtab_nochange
+sqlite3_vtab_on_conflict

@@ -265,7 +265,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	return old
 }
 
-func callbackProgress(ctx context.Context, mod api.Module, _ uint32) uint32 {
+func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
 		if c.interrupt != nil && c.interrupt.Err() != nil {
 			return 1

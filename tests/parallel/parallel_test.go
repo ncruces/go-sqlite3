@@ -11,7 +11,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestParallel(t *testing.T) {
@@ -96,7 +96,16 @@ func TestChildProcess(t *testing.T) {
 	testParallel(t, name, 1000)
 }
 
-func testParallel(t *testing.T, name string, n int) {
+func BenchmarkMemory(b *testing.B) {
+	memdb.Delete("test.db")
+	name := "file:/test.db?vfs=memdb" +
+		"&_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(memory)" +
+		"&_pragma=synchronous(off)"
+	testParallel(b, name, b.N)
+}
+
+func testParallel(t testing.TB, name string, n int) {
 	writer := func() error {
 		db, err := sqlite3.Open(name)
 		if err != nil {
@@ -174,7 +183,7 @@ func testParallel(t *testing.T, name string, n int) {
 	}
 }
 
-func testIntegrity(t *testing.T, name string) {
+func testIntegrity(t testing.TB, name string) {
 	db, err := sqlite3.Open(name)
 	if err != nil {
 		t.Fatal(err)

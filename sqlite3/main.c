@@ -8,12 +8,15 @@
 #include "ext/series.c"
 #include "ext/uint.c"
 #include "ext/uuid.c"
+// Bindings
 #include "func.c"
 #include "pointer.c"
 #include "progress.c"
 #include "time.c"
 #include "vfs.c"
-// #include "vtab.c"
+#include "vtab.c"
+
+sqlite3_destructor_type malloc_destructor = &free;
 
 __attribute__((constructor)) void init() {
   sqlite3_initialize();

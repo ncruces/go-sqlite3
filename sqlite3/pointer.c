@@ -1,5 +1,6 @@
 
 #include "sqlite3.h"
+#include "types.h"
 
 #define GO_POINTER_TYPE "github.com/ncruces/go-sqlite3.Pointer"
 

@@ -58,7 +58,7 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 	f.Add(639095955742, 222_222_222)  // twosday, year 22222AD
 	f.Add(-763421161058, 222_222_222) // twosday, year 22222BC
 
-	checkTime := func(t *testing.T, date time.Time) {
+	checkTime := func(t testing.TB, date time.Time) {
 		value := stringOrTime([]byte(date.Format(time.RFC3339Nano)))
 
 		switch v := value.(type) {

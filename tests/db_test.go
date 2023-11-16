@@ -46,7 +46,7 @@ func TestDB_vfs(t *testing.T) {
 	testDB(t, "file:test.db?vfs=memdb")
 }
 
-func testDB(t *testing.T, name string) {
+func testDB(t testing.TB, name string) {
 	db, err := sqlite3.Open(name)
 	if err != nil {
 		t.Fatal(err)

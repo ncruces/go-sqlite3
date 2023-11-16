@@ -1,28 +1,30 @@
 #include <stddef.h>
 
 #include "sqlite3.h"
+#include "types.h"
 
 // https://github.com/JuliaLang/julia/blob/v1.9.4/src/julia.h#L67-L68
 #define container_of(ptr, type, member) \
   ((type *)((char *)(ptr)-offsetof(type, member)))
 
-#define SQLITE_MOD_CREATOR_GO /*******/ 0x01
-#define SQLITE_VTAB_UPDATER_GO /******/ 0x02
-#define SQLITE_VTAB_RENAMER_GO /******/ 0x04
-#define SQLITE_VTAB_OVERLOADER_GO /***/ 0x08
-#define SQLITE_VTAB_CHECKER_GO /******/ 0x10
-#define SQLITE_VTAB_TX_GO /***********/ 0x20
-#define SQLITE_VTAB_SAVEPOINTER_GO /**/ 0x40
+#define SQLITE_VTAB_CREATOR_GO /******/ 0x01
+#define SQLITE_VTAB_DESTROYER_GO /****/ 0x02
+#define SQLITE_VTAB_UPDATER_GO /******/ 0x04
+#define SQLITE_VTAB_RENAMER_GO /******/ 0x08
+#define SQLITE_VTAB_OVERLOADER_GO /***/ 0x10
+#define SQLITE_VTAB_CHECKER_GO /******/ 0x20
+#define SQLITE_VTAB_TX_GO /***********/ 0x40
+#define SQLITE_VTAB_SAVEPOINTER_GO /**/ 0x80
 
-int go_mod_create(sqlite3_module *, int argc, const char *const *argv,
-                  sqlite3_vtab **, char **pzErr);
-int go_mod_connect(sqlite3_module *, int argc, const char *const *argv,
+int go_vtab_create(sqlite3_module *, int argc, const char *const *argv,
                    sqlite3_vtab **, char **pzErr);
+int go_vtab_connect(sqlite3_module *, int argc, const char *const *argv,
+                    sqlite3_vtab **, char **pzErr);
 
 int go_vtab_disconnect(sqlite3_vtab *);
 int go_vtab_destroy(sqlite3_vtab *);
 int go_vtab_best_index(sqlite3_vtab *, sqlite3_index_info *);
-int go_vtab_open(sqlite3_vtab *, sqlite3_vtab_cursor **);
+int go_cur_open(sqlite3_vtab *, sqlite3_vtab_cursor **);
 
 int go_cur_close(sqlite3_vtab_cursor *);
 int go_cur_filter(sqlite3_vtab_cursor *, int idxNum, const char *idxStr,
@@ -71,23 +73,7 @@ static void go_mod_destroy(void *pAux) {
   go_destroy(handle);
 }
 
-static int go_mod_create_wrapper(sqlite3 *db, void *pAux, int argc,
-                                 const char *const *argv, sqlite3_vtab **ppVTab,
-                                 char **pzErr) {
-  struct go_vtab *vtab = calloc(1, sizeof(struct go_vtab));
-  if (vtab == NULL) return SQLITE_NOMEM;
-  *ppVTab = &vtab->base;
-
-  struct go_module *mod = (struct go_module *)pAux;
-  int rc = go_mod_create(&mod->base, argc, argv, ppVTab, pzErr);
-  if (rc) {
-    if (*pzErr) *pzErr = sqlite3_mprintf("%s", *pzErr);
-    free(vtab);
-  }
-  return rc;
-}
-
-static int go_mod_connect_wrapper(sqlite3 *db, void *pAux, int argc,
+static int go_vtab_create_wrapper(sqlite3 *db, void *pAux, int argc,
                                   const char *const *argv,
                                   sqlite3_vtab **ppVTab, char **pzErr) {
   struct go_vtab *vtab = calloc(1, sizeof(struct go_vtab));
@@ -95,7 +81,23 @@ static int go_mod_connect_wrapper(sqlite3 *db, void *pAux, int argc,
   *ppVTab = &vtab->base;
 
   struct go_module *mod = (struct go_module *)pAux;
-  int rc = go_mod_connect(&mod->base, argc, argv, ppVTab, pzErr);
+  int rc = go_vtab_create(&mod->base, argc, argv, ppVTab, pzErr);
+  if (rc) {
+    if (*pzErr) *pzErr = sqlite3_mprintf("%s", *pzErr);
+    free(vtab);
+  }
+  return rc;
+}
+
+static int go_vtab_connect_wrapper(sqlite3 *db, void *pAux, int argc,
+                                   const char *const *argv,
+                                   sqlite3_vtab **ppVTab, char **pzErr) {
+  struct go_vtab *vtab = calloc(1, sizeof(struct go_vtab));
+  if (vtab == NULL) return SQLITE_NOMEM;
+  *ppVTab = &vtab->base;
+
+  struct go_module *mod = (struct go_module *)pAux;
+  int rc = go_vtab_connect(&mod->base, argc, argv, ppVTab, pzErr);
   if (rc) {
     free(vtab);
     if (*pzErr) *pzErr = sqlite3_mprintf("%s", *pzErr);
@@ -117,13 +119,13 @@ static int go_vtab_destroy_wrapper(sqlite3_vtab *pVTab) {
   return rc;
 }
 
-static int go_vtab_open_wrapper(sqlite3_vtab *pVTab,
-                                sqlite3_vtab_cursor **ppCursor) {
+static int go_cur_open_wrapper(sqlite3_vtab *pVTab,
+                               sqlite3_vtab_cursor **ppCursor) {
   struct go_cursor *cur = calloc(1, sizeof(struct go_cursor));
   if (cur == NULL) return SQLITE_NOMEM;
   *ppCursor = &cur->base;
 
-  int rc = go_vtab_open(pVTab, ppCursor);
+  int rc = go_cur_open(pVTab, ppCursor);
   if (rc) free(cur);
   return rc;
 }
@@ -158,7 +160,7 @@ static int go_vtab_integrity_wrapper(sqlite3_vtab *pVTab, const char *zSchema,
 }
 
 int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
-                             void *handle) {
+                             go_handle handle) {
   struct go_module *mod = malloc(sizeof(struct go_module));
   if (mod == NULL) {
     go_destroy(handle);
@@ -168,10 +170,10 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
   mod->handle = handle;
   mod->base = (sqlite3_module){
       .iVersion = 4,
-      .xConnect = go_mod_connect_wrapper,
+      .xConnect = go_vtab_connect_wrapper,
       .xDisconnect = go_vtab_disconnect_wrapper,
       .xBestIndex = go_vtab_best_index,
-      .xOpen = go_vtab_open_wrapper,
+      .xOpen = go_cur_open_wrapper,
       .xClose = go_cur_close_wrapper,
       .xFilter = go_cur_filter,
       .xNext = go_cur_next,
@@ -179,9 +181,14 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
       .xColumn = go_cur_column,
       .xRowid = go_cur_rowid,
   };
-  if (flags & SQLITE_MOD_CREATOR_GO) {
-    mod->base.xCreate = go_mod_create_wrapper;
-    mod->base.xDestroy = go_vtab_destroy_wrapper;
+  if (flags & SQLITE_VTAB_CREATOR_GO) {
+    if (flags & SQLITE_VTAB_DESTROYER_GO) {
+      mod->base.xCreate = go_vtab_create_wrapper;
+      mod->base.xDestroy = go_vtab_destroy_wrapper;
+    } else {
+      mod->base.xCreate = mod->base.xConnect;
+      mod->base.xDestroy = mod->base.xDisconnect;
+    }
   }
   if (flags & SQLITE_VTAB_UPDATER_GO) {
     mod->base.xUpdate = go_vtab_update;
@@ -208,6 +215,10 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
   }
 
   return sqlite3_create_module_v2(db, zName, &mod->base, mod, go_mod_destroy);
+}
+
+int sqlite3_vtab_config_go(sqlite3 *db, int op, int constraint) {
+  return sqlite3_vtab_config(db, op, constraint);
 }
 
 static_assert(offsetof(struct go_module, base) == 4, "Unexpected offset");

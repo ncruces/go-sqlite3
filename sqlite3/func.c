@@ -1,12 +1,7 @@
 #include <stddef.h>
 
 #include "sqlite3.h"
-
-typedef void *go_handle;
-
-void go_destroy(go_handle);
-
-static_assert(sizeof(go_handle) == 4, "Unexpected size");
+#include "types.h"
 
 void go_func(sqlite3_context *, int, sqlite3_value **);
 void go_step(sqlite3_context *, int, sqlite3_value **);

@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -134,4 +135,19 @@ func (e ExtendedErrorCode) Temporary() bool {
 // Timeout returns true for [BUSY_TIMEOUT] errors.
 func (e ExtendedErrorCode) Timeout() bool {
 	return e == BUSY_TIMEOUT
+}
+
+func errorCode(err error, def ErrorCode) (code uint32) {
+	var ecode ErrorCode
+	var xcode xErrorCode
+	switch {
+	case errors.As(err, &xcode):
+		return uint32(xcode)
+	case errors.As(err, &ecode):
+		return uint32(ecode)
+	}
+	if err != nil {
+		return uint32(def)
+	}
+	return _OK
 }

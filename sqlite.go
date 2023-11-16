@@ -183,6 +183,8 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		resultErrorCode: getFun("sqlite3_result_error_code"),
 		resultErrorMem:  getFun("sqlite3_result_error_nomem"),
 		resultErrorBig:  getFun("sqlite3_result_error_toobig"),
+		createModule:    getFun("sqlite3_create_module_go"),
+		declareVTab:     getFun("sqlite3_declare_vtab"),
 	}
 	if err != nil {
 		return nil, err
@@ -407,17 +409,42 @@ type sqliteAPI struct {
 	resultErrorCode api.Function
 	resultErrorMem  api.Function
 	resultErrorBig  api.Function
+	createModule    api.Function
+	declareVTab     api.Function
 	destructor      uint32
 }
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.ExportFuncII(env, "go_progress", callbackProgress)
-	util.ExportFuncVI(env, "go_destroy", callbackDestroy)
-	util.ExportFuncVIII(env, "go_func", callbackFunc)
-	util.ExportFuncVIII(env, "go_step", callbackStep)
-	util.ExportFuncVI(env, "go_final", callbackFinal)
-	util.ExportFuncVI(env, "go_value", callbackValue)
-	util.ExportFuncVIII(env, "go_inverse", callbackInverse)
-	util.ExportFuncIIIIII(env, "go_compare", callbackCompare)
+	util.ExportFuncII(env, "go_progress", progressCallback)
+	util.ExportFuncVI(env, "go_destroy", destroyCallback)
+	util.ExportFuncVIII(env, "go_func", funcCallback)
+	util.ExportFuncVIII(env, "go_step", stepCallback)
+	util.ExportFuncVI(env, "go_final", finalCallback)
+	util.ExportFuncVI(env, "go_value", valueCallback)
+	util.ExportFuncVIII(env, "go_inverse", inverseCallback)
+	util.ExportFuncIIIIII(env, "go_compare", compareCallback)
+	util.ExportFuncIIIIII(env, "go_vtab_create", vtabConnectCallback)
+	util.ExportFuncIIIIII(env, "go_vtab_connect", vtabConnectCallback)
+	util.ExportFuncII(env, "go_vtab_disconnect", vtabDisconnectCallback)
+	util.ExportFuncII(env, "go_vtab_destroy", vtabDisconnectCallback)
+	util.ExportFuncIII(env, "go_vtab_best_index", vtabBestIndexCallback)
+	util.ExportFuncIIIII(env, "go_vtab_update", vtabCallbackIIII)
+	util.ExportFuncIII(env, "go_vtab_rename", vtabCallbackII)
+	util.ExportFuncIIIII(env, "go_vtab_find_function", vtabCallbackIIII)
+	util.ExportFuncII(env, "go_vtab_begin", vtabCallbackI)
+	util.ExportFuncII(env, "go_vtab_sync", vtabCallbackI)
+	util.ExportFuncII(env, "go_vtab_commit", vtabCallbackI)
+	util.ExportFuncII(env, "go_vtab_rollback", vtabCallbackI)
+	util.ExportFuncIII(env, "go_vtab_savepoint", vtabCallbackII)
+	util.ExportFuncIII(env, "go_vtab_release", vtabCallbackII)
+	util.ExportFuncIII(env, "go_vtab_rollback_to", vtabCallbackII)
+	util.ExportFuncIIIIII(env, "go_vtab_integrity", vtabIntegrityCallback)
+	util.ExportFuncIII(env, "go_cur_open", cursorOpenCallback)
+	util.ExportFuncII(env, "go_cur_close", cursorCallbackI)
+	util.ExportFuncIIIIII(env, "go_cur_filter", cursorFilterCallback)
+	util.ExportFuncII(env, "go_cur_next", cursorCallbackI)
+	util.ExportFuncII(env, "go_cur_eof", cursorCallbackI)
+	util.ExportFuncIIII(env, "go_cur_column", cursorColumnCallback)
+	util.ExportFuncIII(env, "go_cur_rowid", cursorRowidCallback)
 	return env
 }

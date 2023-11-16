@@ -210,17 +210,8 @@ func (ctx Context) ResultError(err error) {
 		uint64(ctx.handle), uint64(ptr), uint64(len(str)))
 	ctx.c.free(ptr)
 
-	var code uint64
-	var ecode ErrorCode
-	var xcode xErrorCode
-	switch {
-	case errors.As(err, &xcode):
-		code = uint64(xcode)
-	case errors.As(err, &ecode):
-		code = uint64(ecode)
-	}
-	if code != 0 {
+	if code := errorCode(err, _OK); code != _OK {
 		ctx.c.call(ctx.c.api.resultErrorCode,
-			uint64(ctx.handle), code)
+			uint64(ctx.handle), uint64(code))
 	}
 }

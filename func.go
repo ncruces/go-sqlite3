@@ -21,6 +21,7 @@ func (c *Conn) AnyCollationNeeded() {
 //
 // https://sqlite.org/c3ref/create_collation.html
 func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
+	defer c.arena.reset()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
 	r := c.call(c.api.createCollation,
@@ -32,6 +33,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 //
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(ctx Context, arg ...Value)) error {
+	defer c.arena.reset()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
 	r := c.call(c.api.createFunction,
@@ -46,6 +48,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 //
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
+	defer c.arena.reset()
 	call := c.api.createAggregate
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
@@ -81,55 +84,55 @@ type WindowFunction interface {
 	Inverse(ctx Context, arg ...Value)
 }
 
-func callbackDestroy(ctx context.Context, mod api.Module, pApp uint32) {
+func destroyCallback(ctx context.Context, mod api.Module, pApp uint32) {
 	util.DelHandle(ctx, pApp)
 }
 
-func callbackCompare(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nKey2, pKey2 uint32) uint32 {
+func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nKey2, pKey2 uint32) uint32 {
 	fn := util.GetHandle(ctx, pApp).(func(a, b []byte) int)
 	return uint32(fn(util.View(mod, pKey1, uint64(nKey1)), util.View(mod, pKey2, uint64(nKey2))))
 }
 
-func callbackFunc(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func funcCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := callbackHandle(db, pCtx).(func(ctx Context, arg ...Value))
+	fn := userDataHandle(db, pCtx).(func(ctx Context, arg ...Value))
 	fn(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
-func callbackStep(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func stepCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := callbackAggregate(db, pCtx, nil).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, nil).(AggregateFunction)
 	fn.Step(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
-func callbackFinal(ctx context.Context, mod api.Module, pCtx uint32) {
+func finalCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := callbackAggregate(db, pCtx, &handle).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, &handle).(AggregateFunction)
 	fn.Value(Context{db, pCtx})
 	if err := util.DelHandle(ctx, handle); err != nil {
 		Context{db, pCtx}.ResultError(err)
 	}
 }
 
-func callbackValue(ctx context.Context, mod api.Module, pCtx uint32) {
+func valueCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := callbackAggregate(db, pCtx, nil).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, nil).(AggregateFunction)
 	fn.Value(Context{db, pCtx})
 }
 
-func callbackInverse(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func inverseCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := callbackAggregate(db, pCtx, nil).(WindowFunction)
+	fn := aggregateCtxHandle(db, pCtx, nil).(WindowFunction)
 	fn.Inverse(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
-func callbackHandle(db *Conn, pCtx uint32) any {
+func userDataHandle(db *Conn, pCtx uint32) any {
 	pApp := uint32(db.call(db.api.userData, uint64(pCtx)))
 	return util.GetHandle(db.ctx, pApp)
 }
 
-func callbackAggregate(db *Conn, pCtx uint32, close *uint32) any {
+func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) any {
 	// On close, we're getting rid of the handle.
 	// Don't allocate space to store it.
 	var size uint64
@@ -152,7 +155,7 @@ func callbackAggregate(db *Conn, pCtx uint32, close *uint32) any {
 	}
 
 	// Create a new aggregate and store the handle.
-	fn := callbackHandle(db, pCtx).(func() AggregateFunction)()
+	fn := userDataHandle(db, pCtx).(func() AggregateFunction)()
 	if ptr != 0 {
 		util.WriteUint32(db.mod, ptr, util.AddHandle(db.ctx, fn))
 	}
