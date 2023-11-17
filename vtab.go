@@ -189,20 +189,10 @@ type VTabCursor interface {
 // https://sqlite.org/c3ref/index_info.html
 type IndexInfo struct {
 	/* Inputs */
-	Constraint []struct {
-		Column int
-		Op     IndexConstraintOp
-		Usable bool
-	}
-	OrderBy []struct {
-		Column int
-		Desc   bool
-	}
+	Constraint []IndexConstraint
+	OrderBy    []IndexOrderBy
 	/* Outputs */
-	ConstraintUsage []struct {
-		ArgvIndex int
-		Omit      bool
-	}
+	ConstraintUsage []IndexConstraintUsage
 	IdxNum          int
 	IdxStr          string
 	IdxFlags        IndexScanFlag
@@ -210,6 +200,85 @@ type IndexInfo struct {
 	EstimatedCost   float64
 	EstimatedRows   int64
 	ColumnsUsed     int64
+}
+
+// An IndexConstraint describes virtual table indexing constraint information.
+//
+// https://sqlite.org/c3ref/index_info.html
+type IndexConstraint struct {
+	Column int
+	Op     IndexConstraintOp
+	Usable bool
+}
+
+// An IndexOrderBy describes virtual table indexing order by information.
+//
+// https://sqlite.org/c3ref/index_info.html
+type IndexOrderBy struct {
+	Column int
+	Desc   bool
+}
+
+// An IndexConstraintUsage describes how virtual table indexing constraints will be used.
+//
+// https://sqlite.org/c3ref/index_info.html
+type IndexConstraintUsage struct {
+	ArgvIndex int
+	Omit      bool
+}
+
+func (idx *IndexInfo) load(ctx context.Context, mod api.Module, ptr uint32) {
+	// https://sqlite.org/c3ref/index_info.html
+
+	idx.Constraint = make([]IndexConstraint, util.ReadUint32(mod, ptr+0))
+	idx.ConstraintUsage = make([]IndexConstraintUsage, util.ReadUint32(mod, ptr+0))
+	idx.OrderBy = make([]IndexOrderBy, util.ReadUint32(mod, ptr+8))
+
+	constraintPtr := util.ReadUint32(mod, ptr+4)
+	for i := range idx.Constraint {
+		idx.Constraint[i] = IndexConstraint{
+			Column: int(util.ReadUint32(mod, constraintPtr+0)),
+			Op:     IndexConstraintOp(util.ReadUint8(mod, constraintPtr+4)),
+			Usable: util.ReadUint8(mod, constraintPtr+8) != 0,
+		}
+		constraintPtr += 12
+	}
+
+	orderByPtr := util.ReadUint32(mod, ptr+12)
+	for i := range idx.OrderBy {
+		idx.OrderBy[i] = IndexOrderBy{
+			Column: int(util.ReadUint32(mod, orderByPtr+0)),
+			Desc:   util.ReadUint8(mod, orderByPtr+4) != 0,
+		}
+		orderByPtr += 8
+	}
+}
+
+func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
+	// https://sqlite.org/c3ref/index_info.html
+
+	usagePtr := util.ReadUint32(mod, ptr+16)
+	for _, usage := range idx.ConstraintUsage {
+		util.WriteUint32(mod, usagePtr+0, uint32(usage.ArgvIndex))
+		if usage.Omit {
+			util.WriteUint8(mod, usagePtr+4, 1)
+		}
+		usagePtr += 8
+	}
+
+	util.WriteUint32(mod, ptr+20, uint32(idx.IdxNum))
+	if idx.IdxStr != "" {
+		conn := ctx.Value(connKey{}).(*Conn)
+		util.WriteUint32(mod, ptr+24, conn.newString(idx.IdxStr))
+		util.WriteUint32(mod, ptr+28, 1)
+	}
+	if idx.OrderByConsumed {
+		util.WriteUint32(mod, ptr+32, 1)
+	}
+	util.WriteFloat64(mod, ptr+40, idx.EstimatedCost)
+	util.WriteUint64(mod, ptr+48, uint64(idx.EstimatedRows))
+	util.WriteUint32(mod, ptr+56, uint32(idx.IdxFlags))
+	util.WriteUint64(mod, ptr+64, uint64(idx.ColumnsUsed))
 }
 
 // IndexConstraintOp is a virtual table constraint operator code.
@@ -240,83 +309,108 @@ const (
 // IndexScanFlag is a virtual table scan flag.
 //
 // https://www.sqlite.org/c3ref/c_index_scan_unique.html
-type IndexScanFlag uint8
+type IndexScanFlag uint32
 
 const (
 	Unique IndexScanFlag = 1
 )
 
-func vtabConnectCallback(ctx context.Context, mod api.Module, pMod, argc, argv, ppVTab, pzErr uint32) uint32 {
-	const handleOffset = 4
-	handle := util.ReadUint32(mod, pMod-handleOffset)
-	module := util.GetHandle(ctx, handle)
-	db := ctx.Value(connKey{}).(*Conn)
+func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
+	return func(ctx context.Context, mod api.Module, pMod, argc, argv, ppVTab, pzErr uint32) uint32 {
+		module := vtabGetHandle(ctx, mod, pMod)
+		db := ctx.Value(connKey{}).(*Conn)
 
-	arg := make([]reflect.Value, 1+argc)
-	arg[0] = reflect.ValueOf(db)
+		arg := make([]reflect.Value, 1+argc)
+		arg[0] = reflect.ValueOf(db)
 
-	for i := uint32(0); i < argc; i++ {
-		ptr := util.ReadUint32(mod, argv+i*ptrlen)
-		arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_STRING))
+		for i := uint32(0); i < argc; i++ {
+			ptr := util.ReadUint32(mod, argv+i*ptrlen)
+			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_STRING))
+		}
+
+		res := reflect.ValueOf(module).MethodByName(name).Call(arg)
+		err, _ := res[1].Interface().(error)
+		if err == nil {
+			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())
+			return _OK
+		}
+
+		// TODO: error message?
+		return errorCode(err, ERROR)
 	}
-
-	res := reflect.ValueOf(module).MethodByName("Connect").Call(arg)
-	err, _ := res[1].Interface().(error)
-	if err == nil {
-		handle := util.AddHandle(ctx, res[0].Interface())
-		ptr := util.ReadUint32(mod, ppVTab)
-		util.WriteUint32(mod, ptr-handleOffset, handle)
-		return _OK
-	}
-
-	// TODO: error message
-	return errorCode(err, ERROR)
-}
-
-func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
-	const handleOffset = 4
-	handle := util.ReadUint32(mod, pVTab-handleOffset)
-	vtab := util.GetHandle(ctx, handle).(VTab)
-	_ = vtab
-	return 1
 }
 
 func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	return 1
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
+	err := vtab.Disconnect()
+	// TODO: error message?
+	return errorCode(err, _OK)
+}
+
+func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
+	err := vtab.Destroy()
+	// TODO: error message?
+	return errorCode(err, _OK)
+}
+
+func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
+	var info IndexInfo
+	info.load(ctx, mod, pIdxInfo)
+
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
+	err := vtab.BestIndex(&info)
+
+	info.save(ctx, mod, pIdxInfo)
+	// TODO: error message?
+	return errorCode(err, _OK)
 }
 
 func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, zTabName, mFlags, pzErr uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func vtabCallbackI(ctx context.Context, mod api.Module, _ uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func vtabCallbackII(ctx context.Context, mod api.Module, _, _ uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func vtabCallbackIIII(ctx context.Context, mod api.Module, _, _, _, _ uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, argc, argv uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func cursorColumnCallback(ctx context.Context, mod api.Module, pCur, pCtx, n uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func cursorRowidCallback(ctx context.Context, mod api.Module, pCur, pRowid uint32) uint32 {
-	return 1
+	return uint32(ERROR)
 }
 
 func cursorCallbackI(ctx context.Context, mod api.Module, _ uint32) uint32 {
-	return 1
+	return uint32(ERROR)
+}
+
+func vtabGetHandle(ctx context.Context, mod api.Module, ptr uint32) any {
+	const handleOffset = 4
+	handle := util.ReadUint32(mod, ptr-handleOffset)
+	return util.GetHandle(ctx, handle)
+}
+
+func vtabPutHandle(ctx context.Context, mod api.Module, pptr uint32, val any) {
+	const handleOffset = 4
+	handle := util.AddHandle(ctx, val)
+	ptr := util.ReadUint32(mod, pptr)
+	util.WriteUint32(mod, ptr-handleOffset, handle)
 }

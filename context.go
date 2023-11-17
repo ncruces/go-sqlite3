@@ -179,7 +179,7 @@ func (ctx Context) ResultJSON(value any) {
 	ctx.ResultRawText(data)
 }
 
-// ResultValue sets the result of the function a copy of [Value].
+// ResultValue sets the result of the function to a copy of [Value].
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultValue(value Value) {

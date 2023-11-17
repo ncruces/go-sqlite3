@@ -24,6 +24,17 @@ func View(mod api.Module, ptr uint32, size uint64) []byte {
 	return buf
 }
 
+func ReadUint8(mod api.Module, ptr uint32) uint8 {
+	if ptr == 0 {
+		panic(NilErr)
+	}
+	v, ok := mod.Memory().ReadByte(ptr)
+	if !ok {
+		panic(RangeErr)
+	}
+	return v
+}
+
 func ReadUint32(mod api.Module, ptr uint32) uint32 {
 	if ptr == 0 {
 		panic(NilErr)
@@ -33,6 +44,16 @@ func ReadUint32(mod api.Module, ptr uint32) uint32 {
 		panic(RangeErr)
 	}
 	return v
+}
+
+func WriteUint8(mod api.Module, ptr uint32, v uint8) {
+	if ptr == 0 {
+		panic(NilErr)
+	}
+	ok := mod.Memory().WriteByte(ptr, v)
+	if !ok {
+		panic(RangeErr)
+	}
 }
 
 func WriteUint32(mod api.Module, ptr uint32, v uint32) {

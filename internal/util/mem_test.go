@@ -28,6 +28,20 @@ func TestView_overflow(t *testing.T) {
 	t.Error("want panic")
 }
 
+func TestReadUint8_nil(t *testing.T) {
+	defer func() { _ = recover() }()
+	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
+	ReadUint8(mock, 0)
+	t.Error("want panic")
+}
+
+func TestReadUint8_range(t *testing.T) {
+	defer func() { _ = recover() }()
+	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
+	ReadUint8(mock, wazerotest.PageSize)
+	t.Error("want panic")
+}
+
 func TestReadUint32_nil(t *testing.T) {
 	defer func() { _ = recover() }()
 	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
@@ -53,6 +67,20 @@ func TestReadUint64_range(t *testing.T) {
 	defer func() { _ = recover() }()
 	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
 	ReadUint64(mock, wazerotest.PageSize-2)
+	t.Error("want panic")
+}
+
+func TestWriteUint8_nil(t *testing.T) {
+	defer func() { _ = recover() }()
+	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
+	WriteUint8(mock, 0, 1)
+	t.Error("want panic")
+}
+
+func TestWriteUint8_range(t *testing.T) {
+	defer func() { _ = recover() }()
+	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
+	WriteUint8(mock, wazerotest.PageSize, 1)
 	t.Error("want panic")
 }
 
