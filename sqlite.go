@@ -440,11 +440,11 @@ func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncIII(env, "go_vtab_rollback_to", vtabCallbackII)
 	util.ExportFuncIIIIII(env, "go_vtab_integrity", vtabIntegrityCallback)
 	util.ExportFuncIII(env, "go_cur_open", cursorOpenCallback)
-	util.ExportFuncII(env, "go_cur_close", cursorCallbackI)
+	util.ExportFuncII(env, "go_cur_close", cursorCloseCallback)
 	util.ExportFuncIIIIII(env, "go_cur_filter", cursorFilterCallback)
-	util.ExportFuncII(env, "go_cur_next", cursorCallbackI)
-	util.ExportFuncII(env, "go_cur_eof", cursorCallbackI)
+	util.ExportFuncII(env, "go_cur_next", cursorNextCallback)
+	util.ExportFuncII(env, "go_cur_eof", cursorEOFCallback)
 	util.ExportFuncIIII(env, "go_cur_column", cursorColumnCallback)
-	util.ExportFuncIII(env, "go_cur_rowid", cursorRowidCallback)
+	util.ExportFuncIII(env, "go_cur_rowid", cursorRowIDCallback)
 	return env
 }
