@@ -268,8 +268,8 @@ func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
 
 	util.WriteUint32(mod, ptr+20, uint32(idx.IdxNum))
 	if idx.IdxStr != "" {
-		conn := ctx.Value(connKey{}).(*Conn)
-		util.WriteUint32(mod, ptr+24, conn.newString(idx.IdxStr))
+		db := ctx.Value(connKey{}).(*Conn)
+		util.WriteUint32(mod, ptr+24, db.newString(idx.IdxStr))
 		util.WriteUint32(mod, ptr+28, 1)
 	}
 	if idx.OrderByConsumed {
@@ -332,26 +332,22 @@ func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _
 		err, _ := res[1].Interface().(error)
 		if err == nil {
 			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())
-			return _OK
 		}
 
-		// TODO: error message?
-		return errorCode(err, ERROR)
+		return vtabError(ctx, mod, pzErr, _MODULE_ERROR, err)
 	}
 }
 
 func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
 	err := vtab.Disconnect()
-	// TODO: error message?
-	return errorCode(err, _OK)
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
 	err := vtab.Destroy()
-	// TODO: error message?
-	return errorCode(err, _OK)
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
@@ -362,24 +358,23 @@ func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo 
 	err := vtab.BestIndex(&info)
 
 	info.save(ctx, mod, pIdxInfo)
-	// TODO: error message?
-	return errorCode(err, _OK)
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabCallbackI(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	return uint32(INTERNAL)
+}
+
+func vtabCallbackII(ctx context.Context, mod api.Module, pVTab, _ uint32) uint32 {
+	return uint32(INTERNAL)
+}
+
+func vtabCallbackIIII(ctx context.Context, mod api.Module, pVTab, _, _, _ uint32) uint32 {
+	return uint32(INTERNAL)
 }
 
 func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, zTabName, mFlags, pzErr uint32) uint32 {
-	return uint32(ERROR)
-}
-
-func vtabCallbackI(ctx context.Context, mod api.Module, _ uint32) uint32 {
-	return uint32(ERROR)
-}
-
-func vtabCallbackII(ctx context.Context, mod api.Module, _, _ uint32) uint32 {
-	return uint32(ERROR)
-}
-
-func vtabCallbackIIII(ctx context.Context, mod api.Module, _, _, _, _ uint32) uint32 {
-	return uint32(ERROR)
+	return uint32(INTERNAL)
 }
 
 func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32) uint32 {
@@ -390,15 +385,13 @@ func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32
 		vtabPutHandle(ctx, mod, ppCur, cursor)
 	}
 
-	// TODO: error message?
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func cursorCloseCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	err := cursor.Close()
-	// TODO: error message?
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 
 func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, argc, argv uint32) uint32 {
@@ -406,8 +399,7 @@ func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idx
 	db := ctx.Value(connKey{}).(*Conn)
 	args := callbackArgs(db, argc, argv)
 	err := cursor.Filter(int(idxNum), util.ReadString(mod, idxStr, _MAX_STRING), args...)
-	// TODO: error message?
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 
 func cursorEOFCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 {
@@ -421,16 +413,14 @@ func cursorEOFCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 
 func cursorNextCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	err := cursor.Next()
-	// TODO: error message?
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 
 func cursorColumnCallback(ctx context.Context, mod api.Module, pCur, pCtx, n uint32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	db := ctx.Value(connKey{}).(*Conn)
 	err := cursor.Column(&Context{db, pCtx}, int(n))
-	// TODO: error message?
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 
 func cursorRowIDCallback(ctx context.Context, mod api.Module, pCur, pRowID uint32) uint32 {
@@ -441,7 +431,27 @@ func cursorRowIDCallback(ctx context.Context, mod api.Module, pCur, pRowID uint3
 		util.WriteUint64(mod, pRowID, uint64(rowID))
 	}
 
-	// TODO: error message?
+	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
+}
+
+const (
+	_MODULE_ERROR = iota
+	_VTAB_ERROR
+	_CURSOR_ERROR
+)
+
+func vtabError(ctx context.Context, mod api.Module, ptr, kind uint32, err error) uint32 {
+	if err == nil {
+		return _OK
+	}
+	switch kind {
+	case _VTAB_ERROR:
+		ptr = ptr + 8
+	case _CURSOR_ERROR:
+		ptr = util.ReadUint32(mod, ptr) + 8
+	}
+	db := ctx.Value(connKey{}).(*Conn)
+	util.WriteUint32(mod, ptr, db.newString(err.Error()))
 	return errorCode(err, ERROR)
 }
 
