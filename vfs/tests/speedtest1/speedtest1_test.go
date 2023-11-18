@@ -92,7 +92,7 @@ func Benchmark_speedtest1(b *testing.B) {
 		WithRandSource(rand.Reader)
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		b.Error(err)
+		b.Fatal(err)
 	}
 	mod.Close(ctx)
 }

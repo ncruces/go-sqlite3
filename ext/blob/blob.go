@@ -34,7 +34,7 @@ func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if ok {
 		err = blob.Reopen(row)
 		if errors.Is(err, sqlite3.MISUSE) {
-			// Blob was closed (db, table or column changed).
+			// Blob was closed (db, table, column or write changed).
 			ok = false
 		}
 	}
@@ -58,10 +58,11 @@ func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		return
 	}
 
-	// This ensures the blob is closed if db, table or column change.
+	// This ensures the blob is closed if db, table, column or write change.
 	ctx.SetAuxData(0, blob)
 	ctx.SetAuxData(1, blob)
 	ctx.SetAuxData(2, blob)
+	ctx.SetAuxData(4, blob)
 }
 
 // OpenCallback is the type for the blob_open callback.

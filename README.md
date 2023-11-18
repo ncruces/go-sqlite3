@@ -81,21 +81,19 @@ on Linux, macOS, Windows and FreeBSD.
 Performance is tested by running
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
-### Roadmap
+### Features
 
-- [ ] advanced SQLite features
-  - [x] custom functions
-  - [x] nested transactions
+- [x] advanced SQLite features
   - [x] incremental BLOB I/O
+  - [x] nested transactions
+  - [x] custom functions
+  - [x] virtual tables
   - [x] online backup
   - [x] JSON support
-  - [ ] virtual tables
-  - [ ] session extension
-- [ ] custom VFSes
+- [x] custom VFSes
   - [x] custom VFS API
   - [x] in-memory VFS
-  - [x] read-only VFS, wrapping an [`io.ReaderAt`](https://pkg.go.dev/io#ReaderAt)
-  - [ ] cloud-based VFS, based on [Cloud Backed SQLite](https://sqlite.org/cloudsqlite/doc/trunk/www/index.wiki)
+  - [x] read-only VFS
 
 ### Alternatives
 

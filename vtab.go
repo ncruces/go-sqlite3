@@ -133,6 +133,11 @@ type VTabOverloader interface {
 
 // A VTabChecker allows a virtual table to report errors
 // to the PRAGMA integrity_check PRAGMA quick_check commands.
+//
+// Integrity should return an error if it finds problems in the content of the virtual table,
+// but should avoid returning a (wrapped) [Error], [ErrorCode] or [ExtendedErrorCode],
+// as those indicate the Integrity method itself encountered problems
+// while trying to evaluate the virtual table content.
 type VTabChecker interface {
 	VTab
 	// https://sqlite.org/vtab.html#xintegrity
@@ -167,11 +172,11 @@ type VTabSavepointer interface {
 // A VTabCursor describes cursors that point
 // into the virtual table and are used
 // to loop through the virtual table.
+// A VTabCursor may optionally implement
+// [io.Closer] to free resources.
 //
 // http://sqlite.org/c3ref/vtab_cursor.html
 type VTabCursor interface {
-	// https://sqlite.org/vtab.html#xclose
-	Close() error
 	// https://sqlite.org/vtab.html#xfilter
 	Filter(idxNum int, idxStr string, arg ...Value) error
 	// https://sqlite.org/vtab.html#xnext
@@ -308,7 +313,7 @@ const (
 
 // IndexScanFlag is a virtual table scan flag.
 //
-// https://www.sqlite.org/c3ref/c_index_scan_unique.html
+// https://sqlite.org/c3ref/c_index_scan_unique.html
 type IndexScanFlag uint32
 
 const (
@@ -334,20 +339,22 @@ func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _
 			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())
 		}
 
-		return vtabError(ctx, mod, pzErr, _MODULE_ERROR, err)
+		return vtabError(ctx, mod, pzErr, _PTR_ERROR, err)
 	}
 }
 
 func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
 	err := vtab.Disconnect()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+	vtabDelHandle(ctx, mod, pVTab)
+	return errorCode(err, ERROR)
 }
 
 func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
 	err := vtab.Destroy()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+	vtabDelHandle(ctx, mod, pVTab)
+	return errorCode(err, ERROR)
 }
 
 func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
@@ -361,20 +368,89 @@ func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo 
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabCallbackI(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	return uint32(INTERNAL)
+func vtabUpdateCallback(ctx context.Context, mod api.Module, pVTab, argc, argv, pRowID uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabUpdater)
+
+	db := ctx.Value(connKey{}).(*Conn)
+	args := callbackArgs(db, argc, argv)
+	rowID, err := vtab.Update(args...)
+	if err == nil {
+		util.WriteUint64(mod, pRowID, uint64(rowID))
+	}
+
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabCallbackII(ctx context.Context, mod api.Module, pVTab, _ uint32) uint32 {
-	return uint32(INTERNAL)
+func vtabRenameCallback(ctx context.Context, mod api.Module, pVTab, zNew uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabRenamer)
+	err := vtab.Rename(util.ReadString(mod, zNew, _MAX_STRING))
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabCallbackIIII(ctx context.Context, mod api.Module, pVTab, _, _, _ uint32) uint32 {
-	return uint32(INTERNAL)
+func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab, nArg, zName, pxFunc uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabOverloader)
+	fn, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_STRING))
+	if fn != nil {
+		handle := util.AddHandle(ctx, fn)
+		util.WriteUint32(mod, pxFunc, handle)
+		if op == 0 {
+			op = 1
+		}
+	}
+	return uint32(op)
 }
 
 func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, zTabName, mFlags, pzErr uint32) uint32 {
-	return uint32(INTERNAL)
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabChecker)
+	schema := util.ReadString(mod, zSchema, _MAX_STRING)
+	table := util.ReadString(mod, zTabName, _MAX_STRING)
+	err := vtab.Integrity(schema, table, int(mFlags))
+	// xIntegrity should return OK - even if it finds problems in the content of the virtual table.
+	// https://sqlite.org/vtab.html#xintegrity
+	vtabError(ctx, mod, pzErr, _PTR_ERROR, err)
+	return errorCode(err, _OK)
+}
+
+func vtabBeginCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	err := vtab.Begin()
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabSyncCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	err := vtab.Sync()
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabCommitCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	err := vtab.Commit()
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabRollbackCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	err := vtab.Rollback()
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabSavepointCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+	err := vtab.Savepoint(int(id))
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabReleaseCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+	err := vtab.Release(int(id))
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
+}
+
+func vtabRollbackToCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+	err := vtab.RollbackTo(int(id))
+	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32) uint32 {
@@ -389,9 +465,8 @@ func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32
 }
 
 func cursorCloseCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 {
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
-	err := cursor.Close()
-	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
+	err := vtabDelHandle(ctx, mod, pCur)
+	return errorCode(err, ERROR)
 }
 
 func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, argc, argv uint32) uint32 {
@@ -435,7 +510,7 @@ func cursorRowIDCallback(ctx context.Context, mod api.Module, pCur, pRowID uint3
 }
 
 const (
-	_MODULE_ERROR = iota
+	_PTR_ERROR = iota
 	_VTAB_ERROR
 	_CURSOR_ERROR
 )
@@ -459,6 +534,12 @@ func vtabGetHandle(ctx context.Context, mod api.Module, ptr uint32) any {
 	const handleOffset = 4
 	handle := util.ReadUint32(mod, ptr-handleOffset)
 	return util.GetHandle(ctx, handle)
+}
+
+func vtabDelHandle(ctx context.Context, mod api.Module, ptr uint32) error {
+	const handleOffset = 4
+	handle := util.ReadUint32(mod, ptr-handleOffset)
+	return util.DelHandle(ctx, handle)
 }
 
 func vtabPutHandle(ctx context.Context, mod api.Module, pptr uint32, val any) {

@@ -83,10 +83,6 @@ type seriesCursor struct {
 	value int64
 }
 
-func (*seriesCursor) Close() error {
-	return nil
-}
-
 func (cur *seriesCursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	switch len(arg) {
 	case 0:

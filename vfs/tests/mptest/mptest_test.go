@@ -102,7 +102,7 @@ func Test_config01(t *testing.T) {
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
@@ -120,7 +120,7 @@ func Test_config02(t *testing.T) {
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
@@ -135,7 +135,7 @@ func Test_crash01(t *testing.T) {
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
@@ -150,7 +150,7 @@ func Test_multiwrite01(t *testing.T) {
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
@@ -163,7 +163,7 @@ func Test_config01_memory(t *testing.T) {
 		"--timeout", "1000")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
@@ -180,7 +180,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 		"--timeout", "1000")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	mod.Close(ctx)
 }
