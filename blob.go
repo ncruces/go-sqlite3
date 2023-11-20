@@ -92,8 +92,8 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		want = avail
 	}
 
-	defer b.c.arena.reset()
-	ptr := b.c.arena.new(uint64(want))
+	ptr := b.c.new(uint64(want))
+	defer b.c.free(ptr)
 
 	r := b.c.call(b.c.api.blobRead, uint64(b.handle),
 		uint64(ptr), uint64(want), uint64(b.offset))
@@ -158,8 +158,8 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 //
 // https://sqlite.org/c3ref/blob_write.html
 func (b *Blob) Write(p []byte) (n int, err error) {
-	defer b.c.arena.reset()
-	ptr := b.c.arena.bytes(p)
+	ptr := b.c.newBytes(p)
+	defer b.c.free(ptr)
 
 	r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
 		uint64(ptr), uint64(len(p)), uint64(b.offset))

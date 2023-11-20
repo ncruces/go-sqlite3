@@ -15,7 +15,7 @@ func ExampleCreateModule() {
 	}
 	defer db.Close()
 
-	err = sqlite3.CreateModule(db, "generate_series", seriesModule{})
+	err = sqlite3.CreateModule(db, "generate_series", seriesTable{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,68 +38,57 @@ func ExampleCreateModule() {
 	// 8 8
 }
 
-type seriesModule struct{}
+type seriesTable struct{}
 
-func (seriesModule) Connect(c *sqlite3.Conn, arg ...string) (*seriesTable, error) {
-	err := c.DeclareVtab(`CREATE TABLE x(value, start HIDDEN, stop HIDDEN, step HIDDEN)`)
-	if err != nil {
-		return nil, err
-	}
-	return &seriesTable{0, 0, 1}, nil
+func (seriesTable) Connect(c *sqlite3.Conn, arg ...string) (_ seriesTable, err error) {
+	err = c.DeclareVtab(`CREATE TABLE x(value, start HIDDEN, stop HIDDEN, step HIDDEN)`)
+	return
 }
 
-type seriesTable struct {
-	start int64
-	stop  int64
-	step  int64
-}
-
-func (*seriesTable) Disconnect() error {
+func (seriesTable) Disconnect() error {
 	return nil
 }
 
-func (*seriesTable) BestIndex(idx *sqlite3.IndexInfo) error {
-	idx.IdxNum = 0
-	idx.IdxStr = "default"
-	argv := 1
+func (seriesTable) BestIndex(idx *sqlite3.IndexInfo) error {
 	for i, cst := range idx.Constraint {
-		if cst.Op == sqlite3.Eq {
-			idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
-				ArgvIndex: argv,
-				Omit:      true,
+		switch cst.Column {
+		case 1, 2, 3: // start, stop, step
+			if cst.Op == sqlite3.INDEX_CONSTRAINT_EQ && cst.Usable {
+				idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+					ArgvIndex: cst.Column,
+					Omit:      true,
+				}
 			}
-			argv++
 		}
 	}
 	return nil
 }
 
-func (tab *seriesTable) Open() (sqlite3.VTabCursor, error) {
-	return &seriesCursor{tab, 0}, nil
+func (seriesTable) Open() (sqlite3.VTabCursor, error) {
+	return &seriesCursor{}, nil
 }
 
 type seriesCursor struct {
-	*seriesTable
+	start int64
+	stop  int64
+	step  int64
 	value int64
 }
 
 func (cur *seriesCursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	switch len(arg) {
-	case 0:
-		cur.seriesTable.start = 0
-		cur.seriesTable.stop = 1000
-	case 1:
-		cur.seriesTable.start = arg[0].Int64()
-		cur.seriesTable.stop = 1000
-	case 2:
-		cur.seriesTable.start = arg[0].Int64()
-		cur.seriesTable.stop = arg[1].Int64()
-	case 3:
-		cur.seriesTable.start = arg[0].Int64()
-		cur.seriesTable.stop = arg[1].Int64()
-		cur.seriesTable.step = arg[2].Int64()
+	cur.start = 0
+	cur.stop = 1000
+	cur.step = 1
+	if len(arg) > 0 {
+		cur.start = arg[0].Int64()
 	}
-	cur.value = cur.seriesTable.start
+	if len(arg) > 1 {
+		cur.stop = arg[1].Int64()
+	}
+	if len(arg) > 2 {
+		cur.step = arg[2].Int64()
+	}
+	cur.value = cur.start
 	return nil
 }
 

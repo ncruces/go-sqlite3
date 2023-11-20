@@ -66,7 +66,7 @@ func implements[T any](typ reflect.Type) bool {
 }
 
 func (c *Conn) DeclareVtab(sql string) error {
-	defer c.arena.reset()
+	// defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 	r := c.call(c.api.declareVTab, uint64(c.handle), uint64(sqlPtr))
 	return c.error(r)
@@ -193,10 +193,11 @@ type VTabCursor interface {
 //
 // https://sqlite.org/c3ref/index_info.html
 type IndexInfo struct {
-	/* Inputs */
-	Constraint []IndexConstraint
-	OrderBy    []IndexOrderBy
-	/* Outputs */
+	// Inputs
+	Constraint  []IndexConstraint
+	OrderBy     []IndexOrderBy
+	ColumnsUsed int64
+	// Outputs
 	ConstraintUsage []IndexConstraintUsage
 	IdxNum          int
 	IdxStr          string
@@ -204,7 +205,9 @@ type IndexInfo struct {
 	OrderByConsumed bool
 	EstimatedCost   float64
 	EstimatedRows   int64
-	ColumnsUsed     int64
+	// Internal
+	c      *Conn
+	handle uint32
 }
 
 // An IndexConstraint describes virtual table indexing constraint information.
@@ -232,8 +235,28 @@ type IndexConstraintUsage struct {
 	Omit      bool
 }
 
-func (idx *IndexInfo) load(ctx context.Context, mod api.Module, ptr uint32) {
+// RHSValue returns the value of the right-hand operand of a constraint
+// if the right-hand operand is known.
+//
+// https://sqlite.org/c3ref/vtab_rhs_value.html
+func (idx *IndexInfo) RHSValue(column int) (*Value, error) {
+	// defer idx.c.arena.reset()
+	valPtr := idx.c.arena.new(ptrlen)
+	r := idx.c.call(idx.c.api.vtabRHSValue,
+		uint64(idx.handle), uint64(column), uint64(valPtr))
+	if err := idx.c.error(r); err != nil {
+		return nil, err
+	}
+	return &Value{
+		sqlite: idx.c.sqlite,
+		handle: util.ReadUint32(idx.c.mod, valPtr),
+	}, nil
+}
+
+func (idx *IndexInfo) load() {
 	// https://sqlite.org/c3ref/index_info.html
+	mod := idx.c.mod
+	ptr := idx.handle
 
 	idx.Constraint = make([]IndexConstraint, util.ReadUint32(mod, ptr+0))
 	idx.ConstraintUsage = make([]IndexConstraintUsage, util.ReadUint32(mod, ptr+0))
@@ -242,9 +265,9 @@ func (idx *IndexInfo) load(ctx context.Context, mod api.Module, ptr uint32) {
 	constraintPtr := util.ReadUint32(mod, ptr+4)
 	for i := range idx.Constraint {
 		idx.Constraint[i] = IndexConstraint{
-			Column: int(util.ReadUint32(mod, constraintPtr+0)),
+			Column: int(int32(util.ReadUint32(mod, constraintPtr+0))),
 			Op:     IndexConstraintOp(util.ReadUint8(mod, constraintPtr+4)),
-			Usable: util.ReadUint8(mod, constraintPtr+8) != 0,
+			Usable: util.ReadUint8(mod, constraintPtr+5) != 0,
 		}
 		constraintPtr += 12
 	}
@@ -252,15 +275,21 @@ func (idx *IndexInfo) load(ctx context.Context, mod api.Module, ptr uint32) {
 	orderByPtr := util.ReadUint32(mod, ptr+12)
 	for i := range idx.OrderBy {
 		idx.OrderBy[i] = IndexOrderBy{
-			Column: int(util.ReadUint32(mod, orderByPtr+0)),
+			Column: int(int32(util.ReadUint32(mod, orderByPtr+0))),
 			Desc:   util.ReadUint8(mod, orderByPtr+4) != 0,
 		}
 		orderByPtr += 8
 	}
+
+	idx.EstimatedCost = util.ReadFloat64(mod, ptr+40)
+	idx.EstimatedRows = int64(util.ReadUint64(mod, ptr+48))
+	idx.ColumnsUsed = int64(util.ReadUint64(mod, ptr+64))
 }
 
-func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
+func (idx *IndexInfo) save() {
 	// https://sqlite.org/c3ref/index_info.html
+	mod := idx.c.mod
+	ptr := idx.handle
 
 	usagePtr := util.ReadUint32(mod, ptr+16)
 	for _, usage := range idx.ConstraintUsage {
@@ -273,8 +302,7 @@ func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
 
 	util.WriteUint32(mod, ptr+20, uint32(idx.IdxNum))
 	if idx.IdxStr != "" {
-		db := ctx.Value(connKey{}).(*Conn)
-		util.WriteUint32(mod, ptr+24, db.newString(idx.IdxStr))
+		util.WriteUint32(mod, ptr+24, idx.c.newString(idx.IdxStr))
 		util.WriteUint32(mod, ptr+28, 1)
 	}
 	if idx.OrderByConsumed {
@@ -283,7 +311,6 @@ func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
 	util.WriteFloat64(mod, ptr+40, idx.EstimatedCost)
 	util.WriteUint64(mod, ptr+48, uint64(idx.EstimatedRows))
 	util.WriteUint32(mod, ptr+56, uint32(idx.IdxFlags))
-	util.WriteUint64(mod, ptr+64, uint64(idx.ColumnsUsed))
 }
 
 // IndexConstraintOp is a virtual table constraint operator code.
@@ -292,23 +319,23 @@ func (idx *IndexInfo) save(ctx context.Context, mod api.Module, ptr uint32) {
 type IndexConstraintOp uint8
 
 const (
-	Eq        IndexConstraintOp = 2
-	Gt        IndexConstraintOp = 4
-	Le        IndexConstraintOp = 8
-	Lt        IndexConstraintOp = 16
-	Ge        IndexConstraintOp = 32
-	Match     IndexConstraintOp = 64
-	Like      IndexConstraintOp = 65  /* 3.10.0 and later */
-	Glob      IndexConstraintOp = 66  /* 3.10.0 and later */
-	Regexp    IndexConstraintOp = 67  /* 3.10.0 and later */
-	Ne        IndexConstraintOp = 68  /* 3.21.0 and later */
-	IsNot     IndexConstraintOp = 69  /* 3.21.0 and later */
-	IsNotNull IndexConstraintOp = 70  /* 3.21.0 and later */
-	IsNull    IndexConstraintOp = 71  /* 3.21.0 and later */
-	Is        IndexConstraintOp = 72  /* 3.21.0 and later */
-	Limit     IndexConstraintOp = 73  /* 3.38.0 and later */
-	Offset    IndexConstraintOp = 74  /* 3.38.0 and later */
-	Function  IndexConstraintOp = 150 /* 3.25.0 and later */
+	INDEX_CONSTRAINT_EQ        IndexConstraintOp = 2
+	INDEX_CONSTRAINT_GT        IndexConstraintOp = 4
+	INDEX_CONSTRAINT_LE        IndexConstraintOp = 8
+	INDEX_CONSTRAINT_LT        IndexConstraintOp = 16
+	INDEX_CONSTRAINT_GE        IndexConstraintOp = 32
+	INDEX_CONSTRAINT_MATCH     IndexConstraintOp = 64
+	INDEX_CONSTRAINT_LIKE      IndexConstraintOp = 65
+	INDEX_CONSTRAINT_GLOB      IndexConstraintOp = 66
+	INDEX_CONSTRAINT_REGEXP    IndexConstraintOp = 67
+	INDEX_CONSTRAINT_NE        IndexConstraintOp = 68
+	INDEX_CONSTRAINT_ISNOT     IndexConstraintOp = 69
+	INDEX_CONSTRAINT_ISNOTNULL IndexConstraintOp = 70
+	INDEX_CONSTRAINT_ISNULL    IndexConstraintOp = 71
+	INDEX_CONSTRAINT_IS        IndexConstraintOp = 72
+	INDEX_CONSTRAINT_LIMIT     IndexConstraintOp = 73
+	INDEX_CONSTRAINT_OFFSET    IndexConstraintOp = 74
+	INDEX_CONSTRAINT_FUNCTION  IndexConstraintOp = 150
 )
 
 // IndexScanFlag is a virtual table scan flag.
@@ -317,22 +344,20 @@ const (
 type IndexScanFlag uint32
 
 const (
-	Unique IndexScanFlag = 1
+	INDEX_SCAN_UNIQUE IndexScanFlag = 1
 )
 
 func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
 	return func(ctx context.Context, mod api.Module, pMod, argc, argv, ppVTab, pzErr uint32) uint32 {
-		module := vtabGetHandle(ctx, mod, pMod)
-		db := ctx.Value(connKey{}).(*Conn)
-
 		arg := make([]reflect.Value, 1+argc)
-		arg[0] = reflect.ValueOf(db)
+		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
 
 		for i := uint32(0); i < argc; i++ {
 			ptr := util.ReadUint32(mod, argv+i*ptrlen)
 			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_STRING))
 		}
 
+		module := vtabGetHandle(ctx, mod, pMod)
 		res := reflect.ValueOf(module).MethodByName(name).Call(arg)
 		err, _ := res[1].Interface().(error)
 		if err == nil {
@@ -359,12 +384,14 @@ func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint
 
 func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
 	var info IndexInfo
-	info.load(ctx, mod, pIdxInfo)
+	info.handle = pIdxInfo
+	info.c = ctx.Value(connKey{}).(*Conn)
+	info.load()
 
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
 	err := vtab.BestIndex(&info)
 
-	info.save(ctx, mod, pIdxInfo)
+	info.save()
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
@@ -473,7 +500,11 @@ func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idx
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	db := ctx.Value(connKey{}).(*Conn)
 	args := callbackArgs(db, argc, argv)
-	err := cursor.Filter(int(idxNum), util.ReadString(mod, idxStr, _MAX_STRING), args...)
+	var idxName string
+	if idxStr != 0 {
+		idxName = util.ReadString(mod, idxStr, _MAX_STRING)
+	}
+	err := cursor.Filter(int(idxNum), idxName, args...)
 	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 

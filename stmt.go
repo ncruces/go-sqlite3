@@ -266,6 +266,7 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 // BindPointer binds a NULL to the prepared statement, just like [Stmt.BindNull],
 // but it also associates ptr with that NULL value such that it can be retrieved
 // within an application-defined SQL function using [Value.Pointer].
+// The leftmost SQL parameter has an index of 1.
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindPointer(param int, ptr any) error {
