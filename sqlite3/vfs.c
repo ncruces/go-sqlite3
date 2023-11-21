@@ -2,8 +2,8 @@
 #include <stddef.h>
 #include <time.h>
 
+#include "include.h"
 #include "sqlite3.h"
-#include "types.h"
 
 int go_localtime(struct tm *, sqlite3_int64);
 int go_vfs_find(const char *zVfsName);

@@ -1,11 +1,7 @@
 #include <stddef.h>
 
+#include "include.h"
 #include "sqlite3.h"
-#include "types.h"
-
-// https://github.com/JuliaLang/julia/blob/v1.9.4/src/julia.h#L67-L68
-#define container_of(ptr, type, member) \
-  ((type *)((char *)(ptr)-offsetof(type, member)))
 
 #define SQLITE_VTAB_CREATOR_GO /******/ 0x01
 #define SQLITE_VTAB_DESTROYER_GO /****/ 0x02
@@ -67,7 +63,7 @@ struct go_cursor {
 };
 
 static void go_mod_destroy(void *pAux) {
-  struct go_module *mod = (struct go_module *)pAux;
+  struct go_module *mod = pAux;
   void *handle = mod->handle;
   free(mod);
   go_destroy(handle);
@@ -80,7 +76,7 @@ static int go_vtab_create_wrapper(sqlite3 *db, void *pAux, int argc,
   if (vtab == NULL) return SQLITE_NOMEM;
   *ppVTab = &vtab->base;
 
-  struct go_module *mod = (struct go_module *)pAux;
+  struct go_module *mod = pAux;
   int rc = go_vtab_create(&mod->base, argc, argv, ppVTab, pzErr);
   if (rc) {
     if (*pzErr) *pzErr = sqlite3_mprintf("%s", *pzErr);
@@ -96,7 +92,7 @@ static int go_vtab_connect_wrapper(sqlite3 *db, void *pAux, int argc,
   if (vtab == NULL) return SQLITE_NOMEM;
   *ppVTab = &vtab->base;
 
-  struct go_module *mod = (struct go_module *)pAux;
+  struct go_module *mod = pAux;
   int rc = go_vtab_connect(&mod->base, argc, argv, ppVTab, pzErr);
   if (rc) {
     free(vtab);
@@ -225,6 +221,7 @@ static_assert(offsetof(struct go_module, base) == 4, "Unexpected offset");
 static_assert(offsetof(struct go_vtab, base) == 4, "Unexpected offset");
 static_assert(offsetof(struct go_cursor, base) == 4, "Unexpected offset");
 static_assert(sizeof(struct sqlite3_index_info) == 72, "Unexpected size");
-static_assert(sizeof(struct sqlite3_index_constraint) == 12, "Unexpected size");
-static_assert(sizeof(struct sqlite3_index_constraint_usage) == 8, "Unexpected size");
 static_assert(sizeof(struct sqlite3_index_orderby) == 8, "Unexpected size");
+static_assert(sizeof(struct sqlite3_index_constraint) == 12, "Unexpected size");
+static_assert(sizeof(struct sqlite3_index_constraint_usage) == 8,
+              "Unexpected size");

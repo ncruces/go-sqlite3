@@ -1,7 +1,7 @@
 #include <stddef.h>
 
+#include "include.h"
 #include "sqlite3.h"
-#include "types.h"
 
 void go_func(sqlite3_context *, int, sqlite3_value **);
 void go_step(sqlite3_context *, int, sqlite3_value **);

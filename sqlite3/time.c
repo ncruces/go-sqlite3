@@ -82,7 +82,7 @@ int sqlite3_time_init(sqlite3 *db, char **pzErrMsg,
                               time_collation,
                               /*destroy=*/NULL);
   sqlite3_create_function_v2(
-      db, "json_time", -1,
+      db, "json_time", /*nArg=*/-1,
       SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, /*arg=*/NULL,
       json_time_func, /*step=*/NULL, /*final=*/NULL, /*destroy=*/NULL);
   return SQLITE_OK;
