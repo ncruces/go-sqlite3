@@ -15,20 +15,36 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
 - [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
   embeds a build of SQLite into your application.
-- [`github.com/ncruces/go-sqlite3/ext/blob`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blob)
-  simplifies incremental BLOB I/O.
-- [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
-  registers [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
-- [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
-  registers Unicode aware functions.
 - [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
   wraps the [C SQLite VFS API](https://sqlite.org/vfs.html) and provides a pure Go implementation.
+- [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
+  provides a [GORM](https://gorm.io) driver.
+
+### Loadable extensions
+
+- [`github.com/ncruces/go-sqlite3/ext/array`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blob)
+  provides the [`array`](https://sqlite.org/carray.html) table-valued function.
+- [`github.com/ncruces/go-sqlite3/ext/blob`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blob)
+  simplifies [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html).
+- [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
+  provides [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
+- [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
+  provides [Unicode aware](https://sqlite.org/src/dir/ext/icu) functions.
 - [`github.com/ncruces/go-sqlite3/vfs/memdb`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb)
   implements an in-memory VFS.
 - [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
   implements a VFS for immutable databases.
-- [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
-  provides a [GORM](https://gorm.io) driver.
+
+### Advanced features
+
+- [x] [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html)
+- [x] [nested transactions](https://sqlite.org/lang_savepoint.html)
+- [x] [custom functions](https://sqlite.org/c3ref/create_function.html)
+- [x] [virtual tables](https://sqlite.org/vtab.html)
+- [x] [custom VFSes](https://sqlite.org/vfs.html)
+- [x] [online backup](https://sqlite.org/backup.html)
+- [x] [JSON support](https://www.sqlite.org/json1.html)
+- [x] [Unicode support](https://sqlite.org/src/dir/ext/icu)
 
 ### Caveats
 
@@ -80,20 +96,6 @@ The pure Go VFS is tested by running SQLite's
 on Linux, macOS, Windows and FreeBSD.
 Performance is tested by running
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
-
-### Features
-
-- [x] advanced SQLite features
-  - [x] incremental BLOB I/O
-  - [x] nested transactions
-  - [x] custom functions
-  - [x] virtual tables
-  - [x] online backup
-  - [x] JSON support
-- [x] custom VFSes
-  - [x] custom VFS API
-  - [x] in-memory VFS
-  - [x] read-only VFS
 
 ### Alternatives
 

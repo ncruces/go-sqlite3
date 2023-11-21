@@ -372,14 +372,14 @@ func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab uint32) u
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
 	err := vtab.Disconnect()
 	vtabDelHandle(ctx, mod, pVTab)
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, 0, _PTR_ERROR, err)
 }
 
 func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
 	err := vtab.Destroy()
 	vtabDelHandle(ctx, mod, pVTab)
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, 0, _PTR_ERROR, err)
 }
 
 func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo uint32) uint32 {
@@ -435,7 +435,8 @@ func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, 
 	// xIntegrity should return OK - even if it finds problems in the content of the virtual table.
 	// https://sqlite.org/vtab.html#xintegrity
 	vtabError(ctx, mod, pzErr, _PTR_ERROR, err)
-	return errorCode(err, _OK)
+	_, code := errorCode(err, _OK)
+	return code
 }
 
 func vtabBeginCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
@@ -493,7 +494,7 @@ func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur uint32
 
 func cursorCloseCallback(ctx context.Context, mod api.Module, pCur uint32) uint32 {
 	err := vtabDelHandle(ctx, mod, pCur)
-	return errorCode(err, ERROR)
+	return vtabError(ctx, mod, 0, _VTAB_ERROR, err)
 }
 
 func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, argc, argv uint32) uint32 {
@@ -547,18 +548,18 @@ const (
 )
 
 func vtabError(ctx context.Context, mod api.Module, ptr, kind uint32, err error) uint32 {
-	if err == nil {
-		return _OK
+	msg, code := errorCode(err, ERROR)
+	if msg != "" && ptr != 0 {
+		switch kind {
+		case _VTAB_ERROR:
+			ptr = ptr + 8
+		case _CURSOR_ERROR:
+			ptr = util.ReadUint32(mod, ptr) + 8
+		}
+		db := ctx.Value(connKey{}).(*Conn)
+		util.WriteUint32(mod, ptr, db.newString(msg))
 	}
-	switch kind {
-	case _VTAB_ERROR:
-		ptr = ptr + 8
-	case _CURSOR_ERROR:
-		ptr = util.ReadUint32(mod, ptr) + 8
-	}
-	db := ctx.Value(connKey{}).(*Conn)
-	util.WriteUint32(mod, ptr, db.newString(err.Error()))
-	return errorCode(err, ERROR)
+	return code
 }
 
 func vtabGetHandle(ctx context.Context, mod api.Module, ptr uint32) any {

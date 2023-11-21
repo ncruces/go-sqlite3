@@ -34,8 +34,8 @@ func Example_http() {
 	}
 	rows, err := db.Query(`
 		SELECT period, data_value, magntude, units FROM csv
-			WHERE period > '2010'
-			LIMIT 10`)
+		WHERE period > '2010'
+		LIMIT 10`)
 	if err != nil {
 		log.Fatal(err)
 	}

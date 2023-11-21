@@ -204,13 +204,14 @@ func (ctx Context) ResultError(err error) {
 		return
 	}
 
-	str := err.Error()
-	ptr := ctx.c.newString(str)
-	ctx.c.call(ctx.c.api.resultError,
-		uint64(ctx.handle), uint64(ptr), uint64(len(str)))
-	ctx.c.free(ptr)
-
-	if code := errorCode(err, _OK); code != _OK {
+	msg, code := errorCode(err, _OK)
+	if msg != "" {
+		ptr := ctx.c.newString(msg)
+		ctx.c.call(ctx.c.api.resultError,
+			uint64(ctx.handle), uint64(ptr), uint64(len(msg)))
+		ctx.c.free(ptr)
+	}
+	if code != _OK {
 		ctx.c.call(ctx.c.api.resultErrorCode,
 			uint64(ctx.handle), uint64(code))
 	}

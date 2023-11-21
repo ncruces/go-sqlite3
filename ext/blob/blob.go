@@ -5,13 +5,14 @@ import (
 	"errors"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the blob_open SQL function:
 //
 //	blob_open(schema, table, column, rowid, flags, callback, args...)
 //
-// The callback must be a [sqlite3.Pointer] to an [OpenCallback].
+// The callback must be an [sqlite3.Pointer] to an [OpenCallback].
 // Any optional args will be passed to the callback,
 // along with the [sqlite3.Blob] handle.
 //
@@ -23,7 +24,7 @@ func Register(db *sqlite3.Conn) {
 
 func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if len(arg) < 6 {
-		ctx.ResultError(errors.New("wrong number of arguments to function blob_open()"))
+		ctx.ResultError(util.ErrorString("wrong number of arguments to function blob_open()"))
 		return
 	}
 

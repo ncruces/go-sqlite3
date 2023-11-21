@@ -137,17 +137,25 @@ func (e ExtendedErrorCode) Timeout() bool {
 	return e == BUSY_TIMEOUT
 }
 
-func errorCode(err error, def ErrorCode) (code uint32) {
+func errorCode(err error, def ErrorCode) (msg string, code uint32) {
+	switch code := err.(type) {
+	case ErrorCode:
+		return "", uint32(code)
+	case ExtendedErrorCode:
+		return "", uint32(code)
+	case nil:
+		return "", _OK
+	}
+
 	var ecode ErrorCode
 	var xcode xErrorCode
 	switch {
 	case errors.As(err, &xcode):
-		return uint32(xcode)
+		code = uint32(xcode)
 	case errors.As(err, &ecode):
-		return uint32(ecode)
+		code = uint32(ecode)
+	default:
+		code = uint32(def)
 	}
-	if err != nil {
-		return uint32(def)
-	}
-	return _OK
+	return err.Error(), code
 }
