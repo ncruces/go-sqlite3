@@ -8,8 +8,11 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-// CreateModule register a new virtual table module name.
-func CreateModule[T VTab](conn *Conn, name string, module Module[T]) error {
+// CreateModule registers a new virtual table module name.
+// If create is nil, the virtual table is eponymous.
+//
+// https://sqlite.org/c3ref/create_module.html
+func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor[T]) error {
 	var flags int
 
 	const (
@@ -23,13 +26,11 @@ func CreateModule[T VTab](conn *Conn, name string, module Module[T]) error {
 		VTAB_SAVEPOINTER = 0x80
 	)
 
-	create, ok := reflect.TypeOf(module).MethodByName("Create")
-	connect, _ := reflect.TypeOf(module).MethodByName("Connect")
-	if ok && create.Type == connect.Type {
+	if create != nil {
 		flags |= VTAB_CREATOR
 	}
 
-	vtab := connect.Type.Out(0)
+	vtab := reflect.TypeOf(connect).Out(0)
 	if implements[VTabDestroyer](vtab) {
 		flags |= VTAB_DESTROYER
 	}
@@ -52,12 +53,12 @@ func CreateModule[T VTab](conn *Conn, name string, module Module[T]) error {
 		flags |= VTAB_SAVEPOINTER
 	}
 
-	defer conn.arena.reset()
-	namePtr := conn.arena.string(name)
-	modulePtr := util.AddHandle(conn.ctx, module)
-	r := conn.call(conn.api.createModule, uint64(conn.handle),
+	defer db.arena.reset()
+	namePtr := db.arena.string(name)
+	modulePtr := util.AddHandle(db.ctx, module[T]{create, connect})
+	r := db.call(db.api.createModule, uint64(db.handle),
 		uint64(namePtr), uint64(flags), uint64(modulePtr))
-	return conn.error(r)
+	return db.error(r)
 }
 
 func implements[T any](typ reflect.Type) bool {
@@ -72,37 +73,23 @@ func (c *Conn) DeclareVtab(sql string) error {
 	return c.error(r)
 }
 
-// A Module defines the implementation of a virtual table.
-// A Module that doesn't implement [ModuleCreator] provides
-// eponymous-only virtual tables or table-valued functions.
-//
-// https://sqlite.org/c3ref/module.html
-type Module[T VTab] interface {
-	// https://sqlite.org/vtab.html#xconnect
-	Connect(c *Conn, arg ...string) (T, error)
-}
+// VTabConstructor is a virtual table constructor function.
+type VTabConstructor[T VTab] func(db *Conn, arg ...string) (T, error)
 
-// A ModuleCreator allows virtual tables to be created.
-// A persistent virtual table must implement [VTabDestroyer].
-type ModuleCreator[T VTab] interface {
-	Module[T]
-	// https://sqlite.org/vtab.html#xcreate
-	Create(c *Conn, arg ...string) (T, error)
-}
+type module[T VTab] [2]VTabConstructor[T]
 
 // A VTab describes a particular instance of the virtual table.
+// A VTab may optionally implement [io.Closer] to free resources.
 //
 // https://sqlite.org/c3ref/vtab.html
 type VTab interface {
 	// https://sqlite.org/vtab.html#xbestindex
 	BestIndex(*IndexInfo) error
-	// https://sqlite.org/vtab.html#xdisconnect
-	Disconnect() error
 	// https://sqlite.org/vtab.html#xopen
 	Open() (VTabCursor, error)
 }
 
-// A VTabDestroyer allows a persistent virtual table to be destroyed.
+// A VTabDestroyer allows a virtual table to drop persistent state.
 type VTabDestroyer interface {
 	VTab
 	// https://sqlite.org/vtab.html#sqlite3_module.xDestroy
@@ -123,8 +110,7 @@ type VTabRenamer interface {
 	Rename(new string) error
 }
 
-// A VTabOverloader allows a virtual table to overload
-// SQL functions.
+// A VTabOverloader allows a virtual table to overload SQL functions.
 type VTabOverloader interface {
 	VTab
 	// https://sqlite.org/vtab.html#xfindfunction
@@ -347,7 +333,7 @@ const (
 	INDEX_SCAN_UNIQUE IndexScanFlag = 1
 )
 
-func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
+func vtabModuleCallback(i int) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
 	return func(ctx context.Context, mod api.Module, pMod, argc, argv, ppVTab, pzErr uint32) uint32 {
 		arg := make([]reflect.Value, 1+argc)
 		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
@@ -358,7 +344,7 @@ func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _
 		}
 
 		module := vtabGetHandle(ctx, mod, pMod)
-		res := reflect.ValueOf(module).MethodByName(name).Call(arg)
+		res := reflect.ValueOf(module).Index(i).Call(arg)
 		err, _ := res[1].Interface().(error)
 		if err == nil {
 			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())
@@ -369,16 +355,16 @@ func vtabReflectCallback(name string) func(_ context.Context, _ api.Module, _, _
 }
 
 func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
-	err := vtab.Disconnect()
-	vtabDelHandle(ctx, mod, pVTab)
+	err := vtabDelHandle(ctx, mod, pVTab)
 	return vtabError(ctx, mod, 0, _PTR_ERROR, err)
 }
 
 func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
 	err := vtab.Destroy()
-	vtabDelHandle(ctx, mod, pVTab)
+	if cerr := vtabDelHandle(ctx, mod, pVTab); err == nil {
+		err = cerr
+	}
 	return vtabError(ctx, mod, 0, _PTR_ERROR, err)
 }
 

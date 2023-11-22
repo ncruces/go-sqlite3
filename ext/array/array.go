@@ -8,25 +8,20 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
-// Register registers the single-argument array table-valued SQL function.
+// Register registers the array single-argument, table-valued SQL function.
 // The argument must be an [sqlite3.Pointer] to a Go slice or array
 // of ints, floats, bools, strings or blobs.
 //
 // https://sqlite.org/carray.html
 func Register(db *sqlite3.Conn) {
-	sqlite3.CreateModule(db, "array", array{})
+	sqlite3.CreateModule[array](db, "array", nil,
+		func(db *sqlite3.Conn, arg ...string) (array, error) {
+			err := db.DeclareVtab(`CREATE TABLE x(value, array HIDDEN)`)
+			return array{}, err
+		})
 }
 
 type array struct{}
-
-func (array) Connect(c *sqlite3.Conn, arg ...string) (_ array, err error) {
-	err = c.DeclareVtab(`CREATE TABLE x(value, array HIDDEN)`)
-	return
-}
-
-func (array) Disconnect() error {
-	return nil
-}
 
 func (array) BestIndex(idx *sqlite3.IndexInfo) error {
 	for i, cst := range idx.Constraint {

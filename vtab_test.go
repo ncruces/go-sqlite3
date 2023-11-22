@@ -15,7 +15,11 @@ func ExampleCreateModule() {
 	}
 	defer db.Close()
 
-	err = sqlite3.CreateModule(db, "generate_series", seriesTable{})
+	err = sqlite3.CreateModule[seriesTable](db, "generate_series", nil,
+		func(db *sqlite3.Conn, arg ...string) (seriesTable, error) {
+			err := db.DeclareVtab(`CREATE TABLE x(value, start HIDDEN, stop HIDDEN, step HIDDEN)`)
+			return seriesTable{}, err
+		})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,15 +43,6 @@ func ExampleCreateModule() {
 }
 
 type seriesTable struct{}
-
-func (seriesTable) Connect(c *sqlite3.Conn, arg ...string) (_ seriesTable, err error) {
-	err = c.DeclareVtab(`CREATE TABLE x(value, start HIDDEN, stop HIDDEN, step HIDDEN)`)
-	return
-}
-
-func (seriesTable) Disconnect() error {
-	return nil
-}
 
 func (seriesTable) BestIndex(idx *sqlite3.IndexInfo) error {
 	for i, cst := range idx.Constraint {

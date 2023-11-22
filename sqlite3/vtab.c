@@ -178,13 +178,10 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
       .xRowid = go_cur_rowid,
   };
   if (flags & SQLITE_VTAB_CREATOR_GO) {
-    if (flags & SQLITE_VTAB_DESTROYER_GO) {
-      mod->base.xCreate = go_vtab_create_wrapper;
-      mod->base.xDestroy = go_vtab_destroy_wrapper;
-    } else {
-      mod->base.xCreate = mod->base.xConnect;
-      mod->base.xDestroy = mod->base.xDisconnect;
-    }
+    mod->base.xCreate = go_vtab_create_wrapper;
+  }
+  if (flags & SQLITE_VTAB_DESTROYER_GO) {
+    mod->base.xDestroy = go_vtab_destroy_wrapper;
   }
   if (flags & SQLITE_VTAB_UPDATER_GO) {
     mod->base.xUpdate = go_vtab_update;
@@ -208,6 +205,12 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
     mod->base.xSavepoint = go_vtab_savepoint;
     mod->base.xRelease = go_vtab_release;
     mod->base.xRollbackTo = go_vtab_rollback_to;
+  }
+  if (mod->base.xCreate && !mod->base.xDestroy) {
+    mod->base.xDestroy = mod->base.xDisconnect;
+  }
+  if (mod->base.xDestroy && !mod->base.xCreate) {
+    mod->base.xCreate = mod->base.xConnect;
   }
 
   return sqlite3_create_module_v2(db, zName, &mod->base, mod, go_mod_destroy);

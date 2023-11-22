@@ -75,8 +75,8 @@ func TestConn_Open_modeof(t *testing.T) {
 }
 
 func TestConn_Close(t *testing.T) {
-	var conn *sqlite3.Conn
-	conn.Close()
+	var db *sqlite3.Conn
+	db.Close()
 }
 
 func TestConn_Close_BUSY(t *testing.T) {

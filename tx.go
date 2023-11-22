@@ -56,8 +56,8 @@ func (c *Conn) BeginExclusive() (Tx, error) {
 //
 // This is meant to be deferred:
 //
-//	func doWork(conn *sqlite3.Conn) (err error) {
-//		tx := conn.Begin()
+//	func doWork(db *sqlite3.Conn) (err error) {
+//		tx := db.Begin()
 //		defer tx.End(&err)
 //
 //		// ... do work in the transaction
@@ -156,8 +156,8 @@ func saveptName() (name string) {
 //
 // This is meant to be deferred:
 //
-//	func doWork(conn *sqlite3.Conn) (err error) {
-//		savept := conn.Savepoint()
+//	func doWork(db *sqlite3.Conn) (err error) {
+//		savept := db.Savepoint()
 //		defer savept.Release(&err)
 //
 //		// ... do work in the transaction
