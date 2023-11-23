@@ -26,6 +26,8 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   provides the [`array`](https://sqlite.org/carray.html) table-valued function.
 - [`github.com/ncruces/go-sqlite3/ext/blob`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blob)
   simplifies [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html).
+- [`github.com/ncruces/go-sqlite3/ext/csv`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/csv)
+  reads [comma-separated values](https://sqlite.org/csv.html).
 - [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
   provides [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
 - [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
