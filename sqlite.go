@@ -185,6 +185,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		resultErrorBig:  getFun("sqlite3_result_error_toobig"),
 		createModule:    getFun("sqlite3_create_module_go"),
 		declareVTab:     getFun("sqlite3_declare_vtab"),
+		vtabConfig:      getFun("sqlite3_vtab_config_go"),
 		vtabRHSValue:    getFun("sqlite3_vtab_rhs_value"),
 	}
 	if err != nil {
@@ -412,6 +413,7 @@ type sqliteAPI struct {
 	resultErrorBig  api.Function
 	createModule    api.Function
 	declareVTab     api.Function
+	vtabConfig      api.Function
 	vtabRHSValue    api.Function
 	destructor      uint32
 }

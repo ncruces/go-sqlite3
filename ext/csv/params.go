@@ -22,13 +22,13 @@ func uintParam(key, val string) (int, error) {
 }
 
 func boolParam(key, val string) (bool, error) {
-	if val == "" || val == "0" ||
+	if val == "" || val == "1" ||
 		strings.EqualFold(val, "true") ||
 		strings.EqualFold(val, "yes") ||
 		strings.EqualFold(val, "on") {
 		return true, nil
 	}
-	if val == "1" ||
+	if val == "0" ||
 		strings.EqualFold(val, "false") ||
 		strings.EqualFold(val, "no") ||
 		strings.EqualFold(val, "off") {

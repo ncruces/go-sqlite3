@@ -56,6 +56,8 @@ func (seriesTable) BestIndex(idx *sqlite3.IndexInfo) error {
 			}
 		}
 	}
+	idx.IdxNum = 1
+	idx.IdxStr = "idx"
 	return nil
 }
 
@@ -71,6 +73,9 @@ type seriesCursor struct {
 }
 
 func (cur *seriesCursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
+	if idxNum != 1 || idxStr != "idx" {
+		return nil
+	}
 	cur.start = 0
 	cur.stop = 1000
 	cur.step = 1

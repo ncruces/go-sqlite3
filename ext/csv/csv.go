@@ -11,19 +11,24 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
 )
 
 // Register registers the CSV virtual table.
-//
+// If a filename is specified, `os.Open` is used to read it from disk.
+func Register(db *sqlite3.Conn) {
+	RegisterOpen(db, func(name string) (io.ReaderAt, error) {
+		return os.Open(name)
+	})
+}
+
+// RegisterOpen registers the CSV virtual table.
 // If a filename is specified, open is used to open the file.
-// To open the file from disk, use:
-//
-//	csv.Register(c, os.Open)
-func Register[T io.ReaderAt](db *sqlite3.Conn, open func(name string) (T, error)) {
-	declare := func(db *sqlite3.Conn, arg ...string) (*table, error) {
+func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error)) {
+	declare := func(db *sqlite3.Conn, arg ...string) (_ *table, err error) {
 		var (
 			filename string
 			data     string
@@ -31,8 +36,8 @@ func Register[T io.ReaderAt](db *sqlite3.Conn, open func(name string) (T, error)
 			header   bool
 			columns  int  = -1
 			comma    rune = ','
-			err      error
-			done     = map[string]struct{}{}
+
+			done = map[string]struct{}{}
 		)
 
 		for _, arg := range arg[3:] {
@@ -81,19 +86,30 @@ func Register[T io.ReaderAt](db *sqlite3.Conn, open func(name string) (T, error)
 			comma:  comma,
 			header: header,
 		}
+		defer func() {
+			if err != nil {
+				table.Close()
+			}
+		}()
 
 		if schema == "" && (header || columns < 0) {
 			csv := table.newReader()
 			row, err := csv.Read()
 			if err != nil {
-				table.Close()
 				return nil, err
 			}
 			schema = getSchema(header, columns, row)
 		}
 
 		err = db.DeclareVtab(schema)
-		return table, err
+		if err != nil {
+			return nil, err
+		}
+		err = db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
+		if err != nil {
+			return nil, err
+		}
+		return table, nil
 	}
 
 	sqlite3.CreateModule(db, "csv", declare, declare)
@@ -121,6 +137,17 @@ func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
 
 func (t *table) Open() (sqlite3.VTabCursor, error) {
 	return &cursor{table: t}, nil
+}
+
+func (t *table) Rename(new string) error {
+	return nil
+}
+
+func (t *table) Integrity(schema, table string, flags int) (err error) {
+	if flags&1 == 0 {
+		_, err = t.newReader().ReadAll()
+	}
+	return err
 }
 
 func (t *table) newReader() *csv.Reader {

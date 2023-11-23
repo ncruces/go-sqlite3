@@ -97,7 +97,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 	case k == reflect.String:
 		ctx.ResultText(v.String())
 
-	case (k == reflect.Slice || k == reflect.Array) &&
+	case (k == reflect.Slice || k == reflect.Array && v.CanAddr()) &&
 		v.Type().Elem().Kind() == reflect.Uint8:
 		ctx.ResultBlob(v.Bytes())
 

@@ -66,10 +66,39 @@ func implements[T any](typ reflect.Type) bool {
 	return typ.Implements(reflect.TypeOf(ptr).Elem())
 }
 
+// DeclareVtab declares the schema of a virtual table.
+//
+// https://sqlite.org/c3ref/declare_vtab.html
 func (c *Conn) DeclareVtab(sql string) error {
 	// defer c.arena.reset()
 	sqlPtr := c.arena.string(sql)
 	r := c.call(c.api.declareVTab, uint64(c.handle), uint64(sqlPtr))
+	return c.error(r)
+}
+
+// IndexConstraintOp is a virtual table constraint operator code.
+//
+// https://sqlite.org/c3ref/c_vtab_constraint_support.html
+type VtabConfigOption uint8
+
+const (
+	VTAB_CONSTRAINT_SUPPORT VtabConfigOption = 1
+	VTAB_INNOCUOUS          VtabConfigOption = 2
+	VTAB_DIRECTONLY         VtabConfigOption = 3
+	VTAB_USES_ALL_SCHEMAS   VtabConfigOption = 4
+)
+
+// VtabConfig configures various facets of the virtual table interface.
+//
+// https://sqlite.org/c3ref/vtab_config.html
+func (c *Conn) VtabConfig(op VtabConfigOption, args ...any) error {
+	var i uint64
+	if op == VTAB_CONSTRAINT_SUPPORT && len(args) > 0 {
+		if b, ok := args[0].(bool); ok && b {
+			i = 1
+		}
+	}
+	r := c.call(c.api.vtabConfig, uint64(c.handle), uint64(op), i)
 	return c.error(r)
 }
 

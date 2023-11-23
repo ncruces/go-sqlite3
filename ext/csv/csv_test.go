@@ -3,7 +3,7 @@ package csv_test
 import (
 	"fmt"
 	"log"
-	"os"
+	"testing"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -17,12 +17,13 @@ func Example() {
 	}
 	defer db.Close()
 
-	csv.Register(db, os.Open)
+	csv.Register(db)
 
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE IF NOT EXISTS eurofxref USING csv(
-			filename = 'eurofxref.csv',
+			filename = 'testdata/eurofxref.csv',
 			header   = YES,
+			columns  = 42,
 		)`)
 	if err != nil {
 		log.Fatal(err)
@@ -47,4 +48,104 @@ func Example() {
 	}
 	// Output:
 	// On Twosday, 1€ = $1.1342
+}
+
+func TestRegister(t *testing.T) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	csv.Register(db)
+
+	data := `
+"Rob"	"Pike"	rob
+"Ken"	Thompson	ken
+Robert	"Griesemer"	"gri"`
+	err = db.Exec(`
+		CREATE VIRTUAL TABLE temp.users USING csv(
+			data   = ` + sqlite3.Quote(data) + `,
+			schema = 'CREATE TABLE x(first_name, last_name, username)',
+			comma  = '\t'
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT * FROM temp.users WHERE rowid = 1 ORDER BY username`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if !stmt.Step() {
+		t.Fatal("no rows")
+	}
+	if got := stmt.ColumnText(1); got != "Pike" {
+		t.Errorf("got %q want Pike", got)
+	}
+	if stmt.Step() {
+		t.Fatal("more rows")
+	}
+
+	err = db.Exec(`ALTER TABLE temp.users RENAME TO csv`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`PRAGMA integrity_check`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`DROP TABLE temp.csv`)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestRegister_errors(t *testing.T) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	csv.Register(db)
+
+	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv()`)
+	if err == nil {
+		t.Fatal(err)
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', data='abc')`)
+	if err == nil {
+		t.Fatal(err)
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', xpto='abc')`)
+	if err == nil {
+		t.Fatal(err)
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', comma='"')`)
+	if err == nil {
+		t.Fatal(err)
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', header=tru)`)
+	if err == nil {
+		t.Fatal(err)
+	} else {
+		t.Log(err)
+	}
 }
