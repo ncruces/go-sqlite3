@@ -1,8 +1,6 @@
 package sqlite3
 
-import (
-	"testing"
-)
+import "testing"
 
 func Test_emptyStatement(t *testing.T) {
 	t.Parallel()

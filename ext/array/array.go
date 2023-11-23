@@ -109,7 +109,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	array := reflect.ValueOf(arg[0].Pointer())
-	array, err := sliceable(array)
+	array, err := indexable(array)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	return nil
 }
 
-func sliceable(v reflect.Value) (_ reflect.Value, err error) {
+func indexable(v reflect.Value) (_ reflect.Value, err error) {
 	if v.Kind() == reflect.Slice {
 		return v, nil
 	}

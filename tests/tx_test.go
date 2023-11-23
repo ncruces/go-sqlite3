@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 func TestConn_Transaction_exec(t *testing.T) {
