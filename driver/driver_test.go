@@ -297,6 +297,7 @@ func Test_QueryRow_blob_null(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rows.Close()
 
 	want := [][]byte{nil, {0xca, 0xfe}, {0xba, 0xbe}, nil}
 	for i := 0; rows.Next(); i++ {

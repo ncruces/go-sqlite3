@@ -58,6 +58,7 @@ func TestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rows.Close()
 
 	want := []string{
 		"null", "1", "3.141592653589793",

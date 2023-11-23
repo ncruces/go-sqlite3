@@ -59,7 +59,7 @@ func TestRegister(t *testing.T) {
 
 	csv.Register(db)
 
-	data := `
+	const data = `
 "Rob"	"Pike"	rob
 "Ken"	Thompson	ken
 Robert	"Griesemer"	"gri"`
@@ -116,35 +116,35 @@ func TestRegister_errors(t *testing.T) {
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv()`)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', data='abc')`)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', xpto='abc')`)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', comma='"')`)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv(data='abc', header=tru)`)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
