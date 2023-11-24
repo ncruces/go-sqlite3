@@ -101,14 +101,14 @@ func funcCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) 
 
 func stepCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, nil).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, nil)
 	fn.Step(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 
 func finalCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 	var handle uint32
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, &handle).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, &handle)
 	fn.Value(Context{db, pCtx})
 	if err := util.DelHandle(ctx, handle); err != nil {
 		Context{db, pCtx}.ResultError(err)
@@ -117,7 +117,7 @@ func finalCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 
 func valueCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, nil).(AggregateFunction)
+	fn := aggregateCtxHandle(db, pCtx, nil)
 	fn.Value(Context{db, pCtx})
 }
 
@@ -132,8 +132,8 @@ func userDataHandle(db *Conn, pCtx uint32) any {
 	return util.GetHandle(db.ctx, pApp)
 }
 
-func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) any {
-	// On close, we're getting rid of the handle.
+func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) AggregateFunction {
+	// On close, we're getting rid of the aggregate.
 	// Don't allocate space to store it.
 	var size uint64
 	if close == nil {
@@ -141,20 +141,18 @@ func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) any {
 	}
 	ptr := uint32(db.call(db.api.aggregateCtx, uint64(pCtx), size))
 
-	// Try loading the handle, if we already have one, or want a new one.
-	if ptr != 0 || size != 0 {
+	// If we already have an aggregate, return it.
+	if ptr != 0 {
 		if handle := util.ReadUint32(db.mod, ptr); handle != 0 {
-			fn := util.GetHandle(db.ctx, handle)
+			fn := util.GetHandle(db.ctx, handle).(AggregateFunction)
 			if close != nil {
 				*close = handle
 			}
-			if fn != nil {
-				return fn
-			}
+			return fn
 		}
 	}
 
-	// Create a new aggregate and store the handle.
+	// Create a new aggregate, and store it if needed.
 	fn := userDataHandle(db, pCtx).(func() AggregateFunction)()
 	if ptr != 0 {
 		util.WriteUint32(db.mod, ptr, util.AddHandle(db.ctx, fn))
