@@ -123,7 +123,7 @@ func (s *Stmt) BindName(param int) string {
 	if ptr == 0 {
 		return ""
 	}
-	return util.ReadString(s.c.mod, ptr, _MAX_STRING)
+	return util.ReadString(s.c.mod, ptr, _MAX_NAME)
 }
 
 // BindBool binds a bool to the prepared statement.
@@ -173,6 +173,9 @@ func (s *Stmt) BindFloat(param int, value float64) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindText(param int, value string) error {
+	if len(value) > _MAX_LENGTH {
+		return TOOBIG
+	}
 	ptr := s.c.newString(value)
 	r := s.c.call(s.c.api.bindText,
 		uint64(s.handle), uint64(param),
@@ -186,6 +189,9 @@ func (s *Stmt) BindText(param int, value string) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindRawText(param int, value []byte) error {
+	if len(value) > _MAX_LENGTH {
+		return TOOBIG
+	}
 	ptr := s.c.newBytes(value)
 	r := s.c.call(s.c.api.bindText,
 		uint64(s.handle), uint64(param),
@@ -200,6 +206,9 @@ func (s *Stmt) BindRawText(param int, value []byte) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindBlob(param int, value []byte) error {
+	if len(value) > _MAX_LENGTH {
+		return TOOBIG
+	}
 	ptr := s.c.newBytes(value)
 	r := s.c.call(s.c.api.bindBlob,
 		uint64(s.handle), uint64(param),
@@ -309,7 +318,7 @@ func (s *Stmt) ColumnName(col int) string {
 	if ptr == 0 {
 		panic(util.OOMErr)
 	}
-	return util.ReadString(s.c.mod, ptr, _MAX_STRING)
+	return util.ReadString(s.c.mod, ptr, _MAX_NAME)
 }
 
 // ColumnType returns the initial [Datatype] of the result column.

@@ -170,6 +170,9 @@ func (c *Conn) Prepare(sql string) (stmt *Stmt, tail string, err error) {
 //
 // https://sqlite.org/c3ref/prepare.html
 func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail string, err error) {
+	if len(sql) > _MAX_LENGTH {
+		return nil, "", TOOBIG
+	}
 	if emptyStatement(sql) {
 		return nil, "", nil
 	}

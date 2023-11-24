@@ -587,3 +587,56 @@ func TestStmt_ColumnTime(t *testing.T) {
 		}
 	}
 }
+
+func TestStmt_Error(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var blob [1e9 + 1]byte
+
+	_, _, err = db.Prepare(string(blob[:]))
+	if err == nil {
+		t.Errorf("want error")
+	} else {
+		t.Log(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT ?`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.BindText(1, string(blob[:]))
+	if err == nil {
+		t.Errorf("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = stmt.BindBlob(1, blob[:])
+	if err == nil {
+		t.Errorf("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = stmt.BindRawText(1, blob[:])
+	if err == nil {
+		t.Errorf("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = stmt.BindZeroBlob(1, 1e9+1)
+	if err == nil {
+		t.Errorf("want error")
+	} else {
+		t.Log(err)
+	}
+}

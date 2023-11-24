@@ -9,8 +9,9 @@ const (
 
 	_UTF8 = 1
 
-	_MAX_STRING = 512 // Used for short strings: names, error messages…
-
+	_MAX_NAME            = 512 // Used for short strings: names, error messages…
+	_MAX_LENGTH          = 1e9
+	_MAX_SQL_LENGTH      = 1e9
 	_MAX_ALLOCATION_SIZE = 0x7ffffeff
 
 	ptrlen = 4

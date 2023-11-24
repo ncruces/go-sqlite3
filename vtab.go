@@ -70,7 +70,7 @@ func implements[T any](typ reflect.Type) bool {
 //
 // https://sqlite.org/c3ref/declare_vtab.html
 func (c *Conn) DeclareVtab(sql string) error {
-	// defer c.arena.reset()
+	// The arena will be cleared by the prepare or exec method.
 	sqlPtr := c.arena.string(sql)
 	r := c.call(c.api.declareVTab, uint64(c.handle), uint64(sqlPtr))
 	return c.error(r)
@@ -255,7 +255,7 @@ type IndexConstraintUsage struct {
 //
 // https://sqlite.org/c3ref/vtab_rhs_value.html
 func (idx *IndexInfo) RHSValue(column int) (*Value, error) {
-	// defer idx.c.arena.reset()
+	// The arena will be cleared by the prepare or exec method.
 	valPtr := idx.c.arena.new(ptrlen)
 	r := idx.c.call(idx.c.api.vtabRHSValue,
 		uint64(idx.handle), uint64(column), uint64(valPtr))
@@ -369,7 +369,7 @@ func vtabModuleCallback(i int) func(_ context.Context, _ api.Module, _, _, _, _,
 
 		for i := uint32(0); i < argc; i++ {
 			ptr := util.ReadUint32(mod, argv+i*ptrlen)
-			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_STRING))
+			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_SQL_LENGTH))
 		}
 
 		module := vtabGetHandle(ctx, mod, pMod)
@@ -425,13 +425,13 @@ func vtabUpdateCallback(ctx context.Context, mod api.Module, pVTab, argc, argv, 
 
 func vtabRenameCallback(ctx context.Context, mod api.Module, pVTab, zNew uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabRenamer)
-	err := vtab.Rename(util.ReadString(mod, zNew, _MAX_STRING))
+	err := vtab.Rename(util.ReadString(mod, zNew, _MAX_NAME))
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab, nArg, zName, pxFunc uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabOverloader)
-	fn, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_STRING))
+	fn, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_NAME))
 	if fn != nil {
 		handle := util.AddHandle(ctx, fn)
 		util.WriteUint32(mod, pxFunc, handle)
@@ -444,8 +444,8 @@ func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab, nArg, zNam
 
 func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, zTabName, mFlags, pzErr uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabChecker)
-	schema := util.ReadString(mod, zSchema, _MAX_STRING)
-	table := util.ReadString(mod, zTabName, _MAX_STRING)
+	schema := util.ReadString(mod, zSchema, _MAX_NAME)
+	table := util.ReadString(mod, zTabName, _MAX_NAME)
 	err := vtab.Integrity(schema, table, int(mFlags))
 	// xIntegrity should return OK - even if it finds problems in the content of the virtual table.
 	// https://sqlite.org/vtab.html#xintegrity
@@ -518,7 +518,7 @@ func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idx
 	args := callbackArgs(db, argc, argv)
 	var idxName string
 	if idxStr != 0 {
-		idxName = util.ReadString(mod, idxStr, _MAX_STRING)
+		idxName = util.ReadString(mod, idxStr, _MAX_NAME)
 	}
 	err := cursor.Filter(int(idxNum), idxName, args...)
 	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)

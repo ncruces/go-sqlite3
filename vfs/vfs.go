@@ -45,7 +45,7 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 }
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName uint32) uint32 {
-	name := util.ReadString(mod, zVfsName, _MAX_STRING)
+	name := util.ReadString(mod, zVfsName, _MAX_NAME)
 	if vfs := Find(name); vfs != nil && vfs != (vfsOS{}) {
 		return 1
 	}
@@ -371,7 +371,7 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 		if stack[0] == 0 {
 			return params
 		}
-		key := util.ReadString(mod, uint32(stack[0]), _MAX_STRING)
+		key := util.ReadString(mod, uint32(stack[0]), _MAX_NAME)
 		if params.Has(key) {
 			continue
 		}
@@ -384,7 +384,7 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 		if params == nil {
 			params = url.Values{}
 		}
-		params.Set(key, util.ReadString(mod, uint32(stack[0]), _MAX_STRING))
+		params.Set(key, util.ReadString(mod, uint32(stack[0]), _MAX_NAME))
 	}
 }
 
@@ -392,7 +392,7 @@ func vfsGet(mod api.Module, pVfs uint32) VFS {
 	var name string
 	if pVfs != 0 {
 		const zNameOffset = 16
-		name = util.ReadString(mod, util.ReadUint32(mod, pVfs+zNameOffset), _MAX_STRING)
+		name = util.ReadString(mod, util.ReadUint32(mod, pVfs+zNameOffset), _MAX_NAME)
 	}
 	if vfs := Find(name); vfs != nil {
 		return vfs

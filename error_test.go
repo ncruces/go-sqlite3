@@ -136,7 +136,7 @@ func Test_ErrorCode_Error(t *testing.T) {
 	for i := 0; i == int(ErrorCode(i)); i++ {
 		want := "sqlite3: "
 		r := db.call(db.api.errstr, uint64(i))
-		want += util.ReadString(db.mod, uint32(r), _MAX_STRING)
+		want += util.ReadString(db.mod, uint32(r), _MAX_NAME)
 
 		got := ErrorCode(i).Error()
 		if got != want {
@@ -158,7 +158,7 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	for i := 0; i == int(ExtendedErrorCode(i)); i++ {
 		want := "sqlite3: "
 		r := db.call(db.api.errstr, uint64(i))
-		want += util.ReadString(db.mod, uint32(r), _MAX_STRING)
+		want += util.ReadString(db.mod, uint32(r), _MAX_NAME)
 
 		got := ExtendedErrorCode(i).Error()
 		if got != want {

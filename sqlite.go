@@ -210,12 +210,12 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	}
 
 	if r := sqlt.call(sqlt.api.errstr, rc); r != 0 {
-		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
+		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
 	}
 
 	if handle != 0 {
 		if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
-			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_STRING)
+			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
 		}
 
 		if sql != nil {

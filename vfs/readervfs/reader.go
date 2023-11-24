@@ -7,7 +7,6 @@ import (
 
 type readerVFS struct{}
 
-// Open implements the [vfs.VFS] interface.
 func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
 	if flags&vfs.OPEN_MAIN_DB == 0 {
 		return nil, flags, sqlite3.CANTOPEN
@@ -20,17 +19,14 @@ func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, 
 	return nil, flags, sqlite3.CANTOPEN
 }
 
-// Delete implements the [vfs.VFS] interface.
 func (readerVFS) Delete(name string, dirSync bool) error {
 	return sqlite3.IOERR_DELETE
 }
 
-// Access implements the [vfs.VFS] interface.
 func (readerVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 	return false, nil
 }
 
-// FullPathname implements the [vfs.VFS] interface.
 func (readerVFS) FullPathname(name string) (string, error) {
 	return name, nil
 }
