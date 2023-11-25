@@ -97,6 +97,24 @@ func TestParseDDL(t *testing.T) {
 				},
 			},
 		},
+		{
+			"index with \n from .schema sqlite",
+			[]string{
+				"CREATE TABLE `test-d` (`field` integer NOT NULL)",
+				"CREATE INDEX `idx_uq`\n    ON `test-b`(`field`) WHERE field = 0",
+			},
+			1,
+			[]migrator.ColumnType{
+				{
+					NameValue:       sql.NullString{String: "field", Valid: true},
+					DataTypeValue:   sql.NullString{String: "integer", Valid: true},
+					ColumnTypeValue: sql.NullString{String: "integer", Valid: true},
+					PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
+					UniqueValue:     sql.NullBool{Bool: false, Valid: true},
+					NullableValue:   sql.NullBool{Bool: false, Valid: true},
+				},
+			},
+		},
 	}
 
 	for _, p := range params {

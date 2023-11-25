@@ -2,8 +2,8 @@ github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.5 h1:/o9tlHleP7gOFmsnYNz3RGnqzefHA47wQpKrrdTIwXQ=
 github.com/jinzhu/now v1.1.5/go.mod h1:d3SSVoowX0Lcu0IBviAWJpolVfI5UJVZZ7cO71lE/z8=
-github.com/ncruces/go-sqlite3 v0.10.2 h1:TBAhgQFU4rRyqeH1xKrvgAPmflZt0QEjDEJtETIo4vs=
-github.com/ncruces/go-sqlite3 v0.10.2/go.mod h1:8aGu9/G8lLZbvO6TXA0FXTP2liIefFmbpeXuhG4nJLw=
+github.com/ncruces/go-sqlite3 v0.10.5 h1:SPnFFYajDfhTuJNjeNwdOhwVCRSAqB1PdSHsGrdfYjw=
+github.com/ncruces/go-sqlite3 v0.10.5/go.mod h1:8aGu9/G8lLZbvO6TXA0FXTP2liIefFmbpeXuhG4nJLw=
 github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt7M=
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
 github.com/tetratelabs/wazero v1.5.0 h1:Yz3fZHivfDiZFUXnWMPUoiW7s8tC1sjdBtlJn08qYa0=
