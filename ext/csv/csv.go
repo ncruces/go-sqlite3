@@ -85,6 +85,7 @@ func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error))
 			r:      r,
 			comma:  comma,
 			header: header,
+			bom:    -1,
 		}
 		defer func() {
 			if err != nil {
@@ -119,6 +120,7 @@ type table struct {
 	r      io.ReaderAt
 	comma  rune
 	header bool
+	bom    int8
 }
 
 func (t *table) Close() error {
@@ -151,7 +153,16 @@ func (t *table) Integrity(schema, table string, flags int) (err error) {
 }
 
 func (t *table) newReader() *csv.Reader {
-	csv := csv.NewReader(io.NewSectionReader(t.r, 0, math.MaxInt64))
+	if t.bom < 0 {
+		var bom [3]byte
+		t.r.ReadAt(bom[:], 0)
+		if string(bom[:]) == "\xEF\xBB\xBF" {
+			t.bom = 3
+		} else {
+			t.bom = 0
+		}
+	}
+	csv := csv.NewReader(io.NewSectionReader(t.r, int64(t.bom), math.MaxInt64))
 	csv.ReuseRecord = true
 	csv.Comma = t.comma
 	return csv

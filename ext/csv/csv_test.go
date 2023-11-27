@@ -59,7 +59,7 @@ func TestRegister(t *testing.T) {
 
 	csv.Register(db)
 
-	const data = `
+	const data = "\xEF\xBB\xBF" + `
 "Rob"	"Pike"	rob
 "Ken"	Thompson	ken
 Robert	"Griesemer"	"gri"`
