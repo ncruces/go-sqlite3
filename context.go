@@ -175,6 +175,7 @@ func (ctx Context) ResultJSON(value any) {
 	data, err := json.Marshal(value)
 	if err != nil {
 		ctx.ResultError(err)
+		return
 	}
 	ctx.ResultRawText(data)
 }
@@ -185,6 +186,7 @@ func (ctx Context) ResultJSON(value any) {
 func (ctx Context) ResultValue(value Value) {
 	if value.sqlite != ctx.c.sqlite {
 		ctx.ResultError(MISUSE)
+		return
 	}
 	ctx.c.call(ctx.c.api.resultValue,
 		uint64(ctx.handle), uint64(value.handle))

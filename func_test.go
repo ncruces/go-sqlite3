@@ -129,7 +129,7 @@ func ExampleContext_SetAuxData() {
 			ctx.SetAuxData(0, r)
 			re = r
 		}
-		ctx.ResultBool(re.Match(arg[1].RawBlob()))
+		ctx.ResultBool(re.Match(arg[1].RawText()))
 	})
 	if err != nil {
 		log.Fatal(err)

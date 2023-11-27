@@ -113,14 +113,14 @@ func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		re = r
 		ctx.SetAuxData(0, re)
 	}
-	ctx.ResultBool(re.Match(arg[1].RawBlob()))
+	ctx.ResultBool(re.Match(arg[1].RawText()))
 }
 
 func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	escape := rune(-1)
 	if len(arg) == 3 {
 		var size int
-		b := arg[2].RawBlob()
+		b := arg[2].RawText()
 		escape, size = utf8.DecodeRune(b)
 		if size != len(b) {
 			ctx.ResultError(util.ErrorString("ESCAPE expression must be a single character"))
@@ -141,7 +141,7 @@ func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		}
 		ctx.SetAuxData(0, re)
 	}
-	ctx.ResultBool(re.Match(arg[1].RawBlob()))
+	ctx.ResultBool(re.Match(arg[1].RawText()))
 }
 
 func like2regex(pattern string, escape rune) string {

@@ -15,6 +15,9 @@ import (
 //go:embed testdata/wal.db
 var waldb []byte
 
+//go:embed testdata/utf16be.db
+var utf16db []byte
+
 func TestDB_memory(t *testing.T) {
 	t.Parallel()
 	testDB(t, ":memory:")
@@ -34,12 +37,22 @@ func TestDB_nolock(t *testing.T) {
 
 func TestDB_wal(t *testing.T) {
 	t.Parallel()
-	wal := filepath.Join(t.TempDir(), "test.db")
-	err := os.WriteFile(wal, waldb, 0666)
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	err := os.WriteFile(tmp, waldb, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
-	testDB(t, wal)
+	testDB(t, tmp)
+}
+
+func TestDB_utf16(t *testing.T) {
+	t.Parallel()
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	err := os.WriteFile(tmp, utf16db, 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testDB(t, tmp)
 }
 
 func TestDB_vfs(t *testing.T) {

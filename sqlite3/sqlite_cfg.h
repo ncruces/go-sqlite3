@@ -46,9 +46,8 @@
 // Other Options
 
 #define SQLITE_ALLOW_URI_AUTHORITY
-#define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
 #define SQLITE_ENABLE_ATOMIC_WRITE
-#define SQLITE_OMIT_DESERIALIZE
+#define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
 
 // Because WASM does not support shared memory,
 // SQLite disables WAL for WASM builds.

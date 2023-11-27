@@ -95,12 +95,14 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 
 	var r io.Reader
 	data := arg[0]
+	typ := data.Type()
 	if c.reader {
-		if data.Type() == sqlite3.NULL {
+		switch typ {
+		case sqlite3.NULL:
 			if p, ok := data.Pointer().(io.ReaderAt); ok {
 				r = io.NewSectionReader(p, 0, math.MaxInt64)
 			}
-		} else {
+		case sqlite3.TEXT:
 			f, err := os.Open(data.Text())
 			if err != nil {
 				return err
@@ -108,12 +110,17 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 			c.closer = f
 			r = f
 		}
-	} else if data.Type() != sqlite3.NULL {
-		r = bytes.NewReader(data.RawBlob())
+	} else {
+		switch typ {
+		case sqlite3.TEXT:
+			r = bytes.NewReader(data.RawText())
+		case sqlite3.BLOB:
+			r = bytes.NewReader(data.RawBlob())
+		}
 	}
 
 	if r == nil {
-		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, data.Type())
+		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
 	}
 	c.scanner = bufio.NewScanner(r)
 	c.rowID = 0
