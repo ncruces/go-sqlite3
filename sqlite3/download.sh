@@ -8,7 +8,7 @@ unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3* .
 rm -rf sqlite-amalgamation-*
 
-cat *.patch | patch --posix
+cat *.patch | patch --no-backup-if-mismatch
 
 mkdir -p ext/
 cd ext/

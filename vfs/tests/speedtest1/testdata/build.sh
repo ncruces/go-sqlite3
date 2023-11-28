@@ -18,7 +18,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	-Wl,--import-undefined \
 	-D_HAVE_SQLITE_CONFIG_H
 
-"$BINARYEN/wasm-opt" -g --strip -c -O3 \
+"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	speedtest1.wasm -o speedtest1.tmp \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \

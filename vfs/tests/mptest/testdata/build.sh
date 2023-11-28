@@ -23,7 +23,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-20.0/bin"
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid
 
-"$BINARYEN/wasm-opt" -g --strip -c -O3 \
+"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	mptest.wasm -o mptest.tmp \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \
