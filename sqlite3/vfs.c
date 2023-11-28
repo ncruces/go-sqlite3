@@ -10,7 +10,6 @@ int go_vfs_find(const char *zVfsName);
 
 int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
 int go_sleep(sqlite3_vfs *, int microseconds);
-int go_current_time(sqlite3_vfs *, double *);
 int go_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
 
 int go_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
@@ -78,7 +77,6 @@ int sqlite3_os_init() {
 
       .xRandomness = go_randomness,
       .xSleep = go_sleep,
-      .xCurrentTime = go_current_time,
       .xCurrentTimeInt64 = go_current_time_64,
   };
   return sqlite3_vfs_register(&os_vfs, /*default=*/true);
@@ -127,7 +125,6 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
 
           .xRandomness = go_randomness,
           .xSleep = go_sleep,
-          .xCurrentTime = go_current_time,
           .xCurrentTimeInt64 = go_current_time_64,
       };
       return go_vfs_list;

@@ -46,6 +46,8 @@
 // Other Options
 
 #define SQLITE_ALLOW_URI_AUTHORITY
+#define SQLITE_TRUSTED_SCHEMA 0
+#define SQLITE_DEFAULT_FOREIGN_KEYS 1
 #define SQLITE_ENABLE_ATOMIC_WRITE
 #define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
 
@@ -54,6 +56,12 @@
 // We patch SQLite to use exclusive locking mode instead.
 // https://sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
+
+// We have our own memdb VFS.
+// To avoid interactions between the two,
+// omit sqlite3_serialize/sqlite3_deserialize,
+// which we also don't wrap.
+#define SQLITE_OMIT_DESERIALIZE
 
 // Amalgamated Extensions
 

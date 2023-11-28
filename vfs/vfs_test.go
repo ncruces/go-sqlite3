@@ -85,22 +85,6 @@ func Test_vfsSleep(t *testing.T) {
 	}
 }
 
-func Test_vfsCurrentTime(t *testing.T) {
-	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
-	ctx := context.TODO()
-
-	now := time.Now()
-	rc := vfsCurrentTime(ctx, mod, 0, 4)
-	if rc != 0 {
-		t.Fatal("returned", rc)
-	}
-
-	want := julianday.Float(now)
-	if got := util.ReadFloat64(mod, 4); float32(got) != float32(want) {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
 func Test_vfsCurrentTime64(t *testing.T) {
 	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
 	ctx := context.TODO()

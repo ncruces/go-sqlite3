@@ -23,7 +23,6 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 	util.ExportFuncIIJ(env, "go_localtime", vfsLocaltime)
 	util.ExportFuncIIII(env, "go_randomness", vfsRandomness)
 	util.ExportFuncIII(env, "go_sleep", vfsSleep)
-	util.ExportFuncIII(env, "go_current_time", vfsCurrentTime)
 	util.ExportFuncIII(env, "go_current_time_64", vfsCurrentTime64)
 	util.ExportFuncIIIII(env, "go_full_pathname", vfsFullPathname)
 	util.ExportFuncIIII(env, "go_delete", vfsDelete)
@@ -81,12 +80,6 @@ func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint3
 
 func vfsSleep(ctx context.Context, mod api.Module, pVfs, nMicro uint32) _ErrorCode {
 	time.Sleep(time.Duration(nMicro) * time.Microsecond)
-	return _OK
-}
-
-func vfsCurrentTime(ctx context.Context, mod api.Module, pVfs, prNow uint32) _ErrorCode {
-	day := julianday.Float(time.Now())
-	util.WriteFloat64(mod, prNow, day)
 	return _OK
 }
 
