@@ -36,6 +36,12 @@ func Create(name string, data []byte) {
 	db := new(memDB)
 	db.size = int64(len(data))
 
+	// Convert data from WAL to rollback journal.
+	if len(data) >= 20 && data[18] == 2 && data[19] == 2 {
+		data[18] = 1
+		data[19] = 1
+	}
+
 	sectors := divRoundUp(db.size, sectorSize)
 	db.data = make([]*[sectorSize]byte, sectors)
 	for i := range db.data {
