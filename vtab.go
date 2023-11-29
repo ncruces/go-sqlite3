@@ -53,7 +53,7 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 		flags |= VTAB_SAVEPOINTER
 	}
 
-	defer db.arena.reset()
+	defer db.arena.mark()()
 	namePtr := db.arena.string(name)
 	modulePtr := util.AddHandle(db.ctx, module[T]{create, connect})
 	r := db.call(db.api.createModule, uint64(db.handle),
@@ -70,7 +70,7 @@ func implements[T any](typ reflect.Type) bool {
 //
 // https://sqlite.org/c3ref/declare_vtab.html
 func (c *Conn) DeclareVtab(sql string) error {
-	// The arena will be cleared by the prepare or exec method.
+	defer c.arena.mark()()
 	sqlPtr := c.arena.string(sql)
 	r := c.call(c.api.declareVTab, uint64(c.handle), uint64(sqlPtr))
 	return c.error(r)
@@ -255,7 +255,7 @@ type IndexConstraintUsage struct {
 //
 // https://sqlite.org/c3ref/vtab_rhs_value.html
 func (idx *IndexInfo) RHSValue(column int) (*Value, error) {
-	// The arena will be cleared by the prepare or exec method.
+	defer idx.c.arena.mark()()
 	valPtr := idx.c.arena.new(ptrlen)
 	r := idx.c.call(idx.c.api.vtabRHSValue,
 		uint64(idx.handle), uint64(column), uint64(valPtr))
@@ -318,7 +318,7 @@ func (idx *IndexInfo) save() {
 	util.WriteUint32(mod, ptr+20, uint32(idx.IdxNum))
 	if idx.IdxStr != "" {
 		util.WriteUint32(mod, ptr+24, idx.c.newString(idx.IdxStr))
-		util.WriteUint32(mod, ptr+28, 1)
+		util.WriteUint32(mod, ptr+28, 1) // needToFreeIdxStr
 	}
 	if idx.OrderByConsumed {
 		util.WriteUint32(mod, ptr+32, 1)
@@ -567,11 +567,14 @@ func vtabError(ctx context.Context, mod api.Module, ptr, kind uint32, err error)
 	if msg != "" && ptr != 0 {
 		switch kind {
 		case _VTAB_ERROR:
-			ptr = ptr + 8
+			ptr = ptr + 8 // zErrMsg
 		case _CURSOR_ERROR:
-			ptr = util.ReadUint32(mod, ptr) + 8
+			ptr = util.ReadUint32(mod, ptr) + 8 // pVtab->zErrMsg
 		}
 		db := ctx.Value(connKey{}).(*Conn)
+		if ptr := util.ReadUint32(mod, ptr); ptr != 0 {
+			db.free(ptr)
+		}
 		util.WriteUint32(mod, ptr, db.newString(msg))
 	}
 	return code

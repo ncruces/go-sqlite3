@@ -62,7 +62,7 @@ func (src *Conn) BackupInit(srcDB, dstURI string) (*Backup, error) {
 }
 
 func (c *Conn) backupInit(dst uint32, dstName string, src uint32, srcName string) (*Backup, error) {
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	dstPtr := c.arena.string(dstName)
 	srcPtr := c.arena.string(srcName)
 

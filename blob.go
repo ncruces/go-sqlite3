@@ -30,7 +30,7 @@ var _ io.ReadWriteSeeker = &Blob{}
 // https://sqlite.org/c3ref/blob_open.html
 func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob, error) {
 	c.checkInterrupt()
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	blobPtr := c.arena.new(ptrlen)
 	dbPtr := c.arena.string(db)
 	tablePtr := c.arena.string(table)
@@ -92,8 +92,8 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		want = avail
 	}
 
-	ptr := b.c.new(uint64(want))
-	defer b.c.free(ptr)
+	defer b.c.arena.mark()()
+	ptr := b.c.arena.new(uint64(want))
 
 	r := b.c.call(b.c.api.blobRead, uint64(b.handle),
 		uint64(ptr), uint64(want), uint64(b.offset))
@@ -124,8 +124,8 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 		want = avail
 	}
 
-	ptr := b.c.new(uint64(want))
-	defer b.c.free(ptr)
+	defer b.c.arena.mark()()
+	ptr := b.c.arena.new(uint64(want))
 
 	for want > 0 {
 		r := b.c.call(b.c.api.blobRead, uint64(b.handle),
@@ -158,8 +158,8 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 //
 // https://sqlite.org/c3ref/blob_write.html
 func (b *Blob) Write(p []byte) (n int, err error) {
-	ptr := b.c.newBytes(p)
-	defer b.c.free(ptr)
+	defer b.c.arena.mark()()
+	ptr := b.c.arena.bytes(p)
 
 	r := b.c.call(b.c.api.blobWrite, uint64(b.handle),
 		uint64(ptr), uint64(len(p)), uint64(b.offset))
@@ -187,8 +187,8 @@ func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
 		want = 1
 	}
 
-	ptr := b.c.new(uint64(want))
-	defer b.c.free(ptr)
+	defer b.c.arena.mark()()
+	ptr := b.c.arena.new(uint64(want))
 
 	for {
 		mem := util.View(b.c.mod, ptr, uint64(want))

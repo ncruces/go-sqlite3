@@ -104,7 +104,7 @@ func (s *Stmt) BindCount() int {
 //
 // https://sqlite.org/c3ref/bind_parameter_index.html
 func (s *Stmt) BindIndex(name string) int {
-	defer s.c.arena.reset()
+	defer s.c.arena.mark()()
 	namePtr := s.c.arena.string(name)
 	r := s.c.call(s.c.api.bindIndex,
 		uint64(s.handle), uint64(namePtr))

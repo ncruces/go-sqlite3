@@ -21,7 +21,7 @@ func (c *Conn) AnyCollationNeeded() {
 //
 // https://sqlite.org/c3ref/create_collation.html
 func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
 	r := c.call(c.api.createCollation,
@@ -33,7 +33,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 //
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(ctx Context, arg ...Value)) error {
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
 	r := c.call(c.api.createFunction,
@@ -48,7 +48,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 //
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	call := c.api.createAggregate
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)

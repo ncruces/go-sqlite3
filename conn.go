@@ -72,7 +72,7 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 }
 
 func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	connPtr := c.arena.new(ptrlen)
 	namePtr := c.arena.string(filename)
 
@@ -96,7 +96,6 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 			}
 		}
 
-		c.arena.reset()
 		pragmaPtr := c.arena.string(pragmas.String())
 		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
 		if err := c.sqlite.error(r, handle, pragmas.String()); err != nil {
@@ -151,11 +150,11 @@ func (c *Conn) Close() error {
 // https://sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
 	c.checkInterrupt()
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	sqlPtr := c.arena.string(sql)
 
 	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
-	return c.error(r)
+	return c.error(r, sql)
 }
 
 // Prepare calls [Conn.PrepareFlags] with no flags.
@@ -177,7 +176,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 		return nil, "", nil
 	}
 
-	defer c.arena.reset()
+	defer c.arena.mark()()
 	stmtPtr := c.arena.new(ptrlen)
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)

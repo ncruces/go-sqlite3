@@ -208,10 +208,10 @@ func (ctx Context) ResultError(err error) {
 
 	msg, code := errorCode(err, _OK)
 	if msg != "" {
-		ptr := ctx.c.newString(msg)
+		defer ctx.c.arena.mark()()
+		ptr := ctx.c.arena.string(msg)
 		ctx.c.call(ctx.c.api.resultError,
 			uint64(ctx.handle), uint64(ptr), uint64(len(msg)))
-		ctx.c.free(ptr)
 	}
 	if code != _OK {
 		ctx.c.call(ctx.c.api.resultErrorCode,

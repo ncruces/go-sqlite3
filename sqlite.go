@@ -294,17 +294,23 @@ func (a *arena) free() {
 	if a.sqlt == nil {
 		return
 	}
-	a.reset()
+	for _, ptr := range a.ptrs {
+		a.sqlt.free(ptr)
+	}
 	a.sqlt.free(a.base)
 	a.sqlt = nil
 }
 
-func (a *arena) reset() {
-	for _, ptr := range a.ptrs {
-		a.sqlt.free(ptr)
+func (a *arena) mark() (reset func()) {
+	ptrs := len(a.ptrs)
+	next := a.next
+	return func() {
+		for _, ptr := range a.ptrs[ptrs:] {
+			a.sqlt.free(ptr)
+		}
+		a.ptrs = a.ptrs[:ptrs]
+		a.next = next
 	}
-	a.ptrs = nil
-	a.next = 0
 }
 
 func (a *arena) new(size uint64) uint32 {
