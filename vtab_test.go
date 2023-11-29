@@ -16,7 +16,7 @@ func ExampleCreateModule() {
 	defer db.Close()
 
 	err = sqlite3.CreateModule[seriesTable](db, "generate_series", nil,
-		func(db *sqlite3.Conn, arg ...string) (seriesTable, error) {
+		func(db *sqlite3.Conn, module, schema, table string, arg ...string) (seriesTable, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(value, start HIDDEN, stop HIDDEN, step HIDDEN)`)
 			return seriesTable{}, err
 		})

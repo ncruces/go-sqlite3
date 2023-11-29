@@ -15,7 +15,7 @@ import (
 // https://sqlite.org/carray.html
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule[array](db, "array", nil,
-		func(db *sqlite3.Conn, arg ...string) (array, error) {
+		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (array, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(value, array HIDDEN)`)
 			return array{}, err
 		})

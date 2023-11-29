@@ -28,7 +28,7 @@ func Register(db *sqlite3.Conn) {
 // RegisterOpen registers the CSV virtual table.
 // If a filename is specified, open is used to open the file.
 func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error)) {
-	declare := func(db *sqlite3.Conn, arg ...string) (_ *table, err error) {
+	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
 		var (
 			filename string
 			data     string
@@ -40,7 +40,7 @@ func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error))
 			done = map[string]struct{}{}
 		)
 
-		for _, arg := range arg[3:] {
+		for _, arg := range arg {
 			key, val := getParam(arg)
 			if _, ok := done[key]; ok {
 				return nil, fmt.Errorf("csv: more than one %q parameter", key)
@@ -93,11 +93,13 @@ func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error))
 			}
 		}()
 
-		if schema == "" && (header || columns < 0) {
-			csv := table.newReader()
-			row, err := csv.Read()
-			if err != nil {
-				return nil, err
+		if schema == "" {
+			var row []string
+			if header || columns < 0 {
+				row, err = table.newReader().Read()
+				if err != nil {
+					return nil, err
+				}
 			}
 			schema = getSchema(header, columns, row)
 		}

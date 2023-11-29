@@ -17,13 +17,13 @@ import (
 // The lines_read virtual table reads from a file or an [io.ReaderAt].
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule[lines](db, "lines", nil,
-		func(db *sqlite3.Conn, arg ...string) (lines, error) {
+		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VtabConfig(sqlite3.VTAB_INNOCUOUS)
 			return false, err
 		})
 	sqlite3.CreateModule[lines](db, "lines_read", nil,
-		func(db *sqlite3.Conn, arg ...string) (lines, error) {
+		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
 			return true, err

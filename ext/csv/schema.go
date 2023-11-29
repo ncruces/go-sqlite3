@@ -23,12 +23,14 @@ func getSchema(header bool, columns int, row []string) string {
 			str.WriteByte('c')
 			str.WriteString(strconv.Itoa(i + 1))
 		}
+		str.WriteString(" TEXT")
 		sep = ","
 	}
 	for i := len(row); i < columns; i++ {
 		str.WriteString(sep)
 		str.WriteByte('c')
 		str.WriteString(strconv.Itoa(i + 1))
+		str.WriteString(" TEXT")
 		sep = ","
 	}
 	str.WriteByte(')')

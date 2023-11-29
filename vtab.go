@@ -103,7 +103,7 @@ func (c *Conn) VtabConfig(op VtabConfigOption, args ...any) error {
 }
 
 // VTabConstructor is a virtual table constructor function.
-type VTabConstructor[T VTab] func(db *Conn, arg ...string) (T, error)
+type VTabConstructor[T VTab] func(db *Conn, module, schema, table string, arg ...string) (T, error)
 
 type module[T VTab] [2]VTabConstructor[T]
 
