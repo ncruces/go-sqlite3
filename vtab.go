@@ -254,15 +254,15 @@ type IndexConstraintUsage struct {
 // if the right-hand operand is known.
 //
 // https://sqlite.org/c3ref/vtab_rhs_value.html
-func (idx *IndexInfo) RHSValue(column int) (*Value, error) {
+func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 	defer idx.c.arena.mark()()
 	valPtr := idx.c.arena.new(ptrlen)
 	r := idx.c.call(idx.c.api.vtabRHSValue,
 		uint64(idx.handle), uint64(column), uint64(valPtr))
 	if err := idx.c.error(r); err != nil {
-		return nil, err
+		return Value{}, err
 	}
-	return &Value{
+	return Value{
 		sqlite: idx.c.sqlite,
 		handle: util.ReadUint32(idx.c.mod, valPtr),
 	}, nil

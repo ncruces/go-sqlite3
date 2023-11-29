@@ -297,6 +297,19 @@ func (s *Stmt) BindJSON(param int, value any) error {
 	return s.BindRawText(param, data)
 }
 
+// BindValue binds a copy of value to the prepared statement.
+// The leftmost SQL parameter has an index of 1.
+//
+// https://sqlite.org/c3ref/bind_blob.html
+func (s *Stmt) BindValue(param int, value Value) error {
+	if value.sqlite != s.c.sqlite {
+		return MISUSE
+	}
+	r := s.c.call(s.c.api.bindValue,
+		uint64(s.handle), uint64(param), uint64(value.handle))
+	return s.c.error(r)
+}
+
 // ColumnCount returns the number of columns in a result set.
 //
 // https://sqlite.org/c3ref/column_count.html
@@ -473,6 +486,20 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 		panic(util.AssertErr())
 	}
 	return json.Unmarshal(data, ptr)
+}
+
+// ColumnValue returns the unprotected value of the result column.
+// The leftmost column of the result set has the index 0.
+//
+// https://sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnValue(col int) Value {
+	r := s.c.call(s.c.api.columnValue,
+		uint64(s.handle), uint64(col))
+	return Value{
+		unprot: true,
+		sqlite: s.c.sqlite,
+		handle: uint32(r),
+	}
 }
 
 // Return true if stmt is an empty SQL statement.

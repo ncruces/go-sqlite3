@@ -133,6 +133,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		bindBlob:        getFun("sqlite3_bind_blob64"),
 		bindZeroBlob:    getFun("sqlite3_bind_zeroblob64"),
 		bindPointer:     getFun("sqlite3_bind_pointer_go"),
+		bindValue:       getFun("sqlite3_bind_value"),
 		columnCount:     getFun("sqlite3_column_count"),
 		columnName:      getFun("sqlite3_column_name"),
 		columnType:      getFun("sqlite3_column_type"),
@@ -141,6 +142,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		columnText:      getFun("sqlite3_column_text"),
 		columnBlob:      getFun("sqlite3_column_blob"),
 		columnBytes:     getFun("sqlite3_column_bytes"),
+		columnValue:     getFun("sqlite3_column_value"),
 		blobOpen:        getFun("sqlite3_blob_open"),
 		blobClose:       getFun("sqlite3_blob_close"),
 		blobReopen:      getFun("sqlite3_blob_reopen"),
@@ -367,6 +369,7 @@ type sqliteAPI struct {
 	bindBlob        api.Function
 	bindZeroBlob    api.Function
 	bindPointer     api.Function
+	bindValue       api.Function
 	columnCount     api.Function
 	columnName      api.Function
 	columnType      api.Function
@@ -375,6 +378,7 @@ type sqliteAPI struct {
 	columnText      api.Function
 	columnBlob      api.Function
 	columnBytes     api.Function
+	columnValue     api.Function
 	blobOpen        api.Function
 	blobClose       api.Function
 	blobReopen      api.Function

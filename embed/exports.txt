@@ -26,6 +26,7 @@ sqlite3_bind_text64
 sqlite3_bind_blob64
 sqlite3_bind_zeroblob64
 sqlite3_bind_pointer_go
+sqlite3_bind_value
 sqlite3_column_count
 sqlite3_column_name
 sqlite3_column_type
@@ -34,6 +35,7 @@ sqlite3_column_double
 sqlite3_column_text
 sqlite3_column_blob
 sqlite3_column_bytes
+sqlite3_column_value
 sqlite3_blob_open
 sqlite3_blob_close
 sqlite3_blob_reopen

@@ -15,13 +15,21 @@ import (
 type Value struct {
 	*sqlite
 	handle uint32
+	unprot bool
+}
+
+func (v Value) protected() uint64 {
+	if v.unprot {
+		panic(util.ValueErr)
+	}
+	return uint64(v.handle)
 }
 
 // Type returns the initial [Datatype] of the value.
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Type() Datatype {
-	r := v.call(v.api.valueType, uint64(v.handle))
+	r := v.call(v.api.valueType, v.protected())
 	return Datatype(r)
 }
 
@@ -49,7 +57,7 @@ func (v Value) Int() int {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Int64() int64 {
-	r := v.call(v.api.valueInteger, uint64(v.handle))
+	r := v.call(v.api.valueInteger, v.protected())
 	return int64(r)
 }
 
@@ -57,7 +65,7 @@ func (v Value) Int64() int64 {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Float() float64 {
-	r := v.call(v.api.valueFloat, uint64(v.handle))
+	r := v.call(v.api.valueFloat, v.protected())
 	return math.Float64frombits(r)
 }
 
@@ -103,7 +111,7 @@ func (v Value) Blob(buf []byte) []byte {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawText() []byte {
-	r := v.call(v.api.valueText, uint64(v.handle))
+	r := v.call(v.api.valueText, v.protected())
 	return v.rawBytes(uint32(r))
 }
 
@@ -113,7 +121,7 @@ func (v Value) RawText() []byte {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawBlob() []byte {
-	r := v.call(v.api.valueBlob, uint64(v.handle))
+	r := v.call(v.api.valueBlob, v.protected())
 	return v.rawBytes(uint32(r))
 }
 
@@ -122,14 +130,14 @@ func (v Value) rawBytes(ptr uint32) []byte {
 		return nil
 	}
 
-	r := v.call(v.api.valueBytes, uint64(v.handle))
+	r := v.call(v.api.valueBytes, v.protected())
 	return util.View(v.mod, ptr, r)
 }
 
 // Pointer gets the pointer associated with this value,
 // or nil if it has no associated pointer.
 func (v Value) Pointer() any {
-	r := v.call(v.api.valuePointer, uint64(v.handle))
+	r := v.call(v.api.valuePointer, v.protected())
 	return util.GetHandle(v.ctx, uint32(r))
 }
 
