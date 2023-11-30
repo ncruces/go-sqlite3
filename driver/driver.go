@@ -247,17 +247,8 @@ func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, e
 		return nil, err
 	}
 	if tail != "" {
-		// Check if the tail contains any SQL.
-		st, _, err := c.Conn.Prepare(tail)
-		if err != nil {
-			s.Close()
-			return nil, err
-		}
-		if st != nil {
-			s.Close()
-			st.Close()
-			return nil, util.TailErr
-		}
+		s.Close()
+		return nil, util.TailErr
 	}
 	return &stmt{s, c.Conn}, nil
 }

@@ -172,9 +172,6 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	if len(sql) > _MAX_LENGTH {
 		return nil, "", TOOBIG
 	}
-	if emptyStatement(sql) {
-		return nil, "", nil
-	}
 
 	defer c.arena.mark()()
 	stmtPtr := c.arena.new(ptrlen)
@@ -187,8 +184,9 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 
 	stmt = &Stmt{c: c}
 	stmt.handle = util.ReadUint32(c.mod, stmtPtr)
-	i := util.ReadUint32(c.mod, tailPtr)
-	tail = sql[i-sqlPtr:]
+	if sql := sql[util.ReadUint32(c.mod, tailPtr)-sqlPtr:]; sql != "" {
+		tail = sql
+	}
 
 	if err := c.error(r, sql); err != nil {
 		return nil, "", err

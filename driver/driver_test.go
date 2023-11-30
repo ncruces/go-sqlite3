@@ -186,12 +186,6 @@ func Test_Prepare(t *testing.T) {
 	}
 	defer db.Close()
 
-	stmt, err := db.Prepare(`SELECT 1; -- HERE`)
-	if err != nil {
-		t.Error(err)
-	}
-	defer stmt.Close()
-
 	var serr *sqlite3.Error
 	_, err = db.Prepare(`SELECT`)
 	if err == nil {
@@ -207,18 +201,14 @@ func Test_Prepare(t *testing.T) {
 		t.Error("got message:", got)
 	}
 
+	_, err = db.Prepare(`SELECT 1; `)
+	if err.Error() != string(util.TailErr) {
+		t.Error("want tailErr")
+	}
+
 	_, err = db.Prepare(`SELECT 1; SELECT`)
-	if err == nil {
-		t.Error("want error")
-	}
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.ERROR {
-		t.Errorf("got %d, want sqlite3.ERROR", rc)
-	}
-	if got := err.Error(); got != `sqlite3: SQL logic error: incomplete input` {
-		t.Error("got message:", got)
+	if err.Error() != string(util.TailErr) {
+		t.Error("want tailErr")
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT 2`)
