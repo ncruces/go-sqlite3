@@ -28,7 +28,7 @@ func (s *Stmt) Close() error {
 		return nil
 	}
 
-	r := s.c.call(s.c.api.finalize, uint64(s.handle))
+	r := s.c.call("sqlite3_finalize", uint64(s.handle))
 
 	s.handle = 0
 	return s.c.error(r)
@@ -38,7 +38,7 @@ func (s *Stmt) Close() error {
 //
 // https://sqlite.org/c3ref/reset.html
 func (s *Stmt) Reset() error {
-	r := s.c.call(s.c.api.reset, uint64(s.handle))
+	r := s.c.call("sqlite3_reset", uint64(s.handle))
 	s.err = nil
 	return s.c.error(r)
 }
@@ -47,7 +47,7 @@ func (s *Stmt) Reset() error {
 //
 // https://sqlite.org/c3ref/clear_bindings.html
 func (s *Stmt) ClearBindings() error {
-	r := s.c.call(s.c.api.clearBindings, uint64(s.handle))
+	r := s.c.call("sqlite3_clear_bindings", uint64(s.handle))
 	return s.c.error(r)
 }
 
@@ -62,8 +62,7 @@ func (s *Stmt) ClearBindings() error {
 // https://sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
 	s.c.checkInterrupt()
-	step := s.c.mod.ExportedFunction("sqlite3_step")
-	r := s.c.call(step, uint64(s.handle))
+	r := s.c.call("sqlite3_step", uint64(s.handle))
 	switch r {
 	case _ROW:
 		return true
@@ -95,7 +94,7 @@ func (s *Stmt) Exec() error {
 //
 // https://sqlite.org/c3ref/bind_parameter_count.html
 func (s *Stmt) BindCount() int {
-	r := s.c.call(s.c.api.bindCount,
+	r := s.c.call("sqlite3_bind_parameter_count",
 		uint64(s.handle))
 	return int(r)
 }
@@ -107,7 +106,7 @@ func (s *Stmt) BindCount() int {
 func (s *Stmt) BindIndex(name string) int {
 	defer s.c.arena.mark()()
 	namePtr := s.c.arena.string(name)
-	r := s.c.call(s.c.api.bindIndex,
+	r := s.c.call("sqlite3_bind_parameter_index",
 		uint64(s.handle), uint64(namePtr))
 	return int(r)
 }
@@ -117,7 +116,7 @@ func (s *Stmt) BindIndex(name string) int {
 //
 // https://sqlite.org/c3ref/bind_parameter_name.html
 func (s *Stmt) BindName(param int) string {
-	r := s.c.call(s.c.api.bindName,
+	r := s.c.call("sqlite3_bind_parameter_name",
 		uint64(s.handle), uint64(param))
 
 	ptr := uint32(r)
@@ -154,7 +153,7 @@ func (s *Stmt) BindInt(param int, value int) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindInt64(param int, value int64) error {
-	r := s.c.call(s.c.api.bindInteger,
+	r := s.c.call("sqlite3_bind_int64",
 		uint64(s.handle), uint64(param), uint64(value))
 	return s.c.error(r)
 }
@@ -164,7 +163,7 @@ func (s *Stmt) BindInt64(param int, value int64) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindFloat(param int, value float64) error {
-	r := s.c.call(s.c.api.bindFloat,
+	r := s.c.call("sqlite3_bind_double",
 		uint64(s.handle), uint64(param), math.Float64bits(value))
 	return s.c.error(r)
 }
@@ -178,10 +177,10 @@ func (s *Stmt) BindText(param int, value string) error {
 		return TOOBIG
 	}
 	ptr := s.c.newString(value)
-	r := s.c.call(s.c.api.bindText,
+	r := s.c.call("sqlite3_bind_text64",
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
-		uint64(s.c.api.destructor), _UTF8)
+		uint64(s.c.freer), _UTF8)
 	return s.c.error(r)
 }
 
@@ -194,10 +193,10 @@ func (s *Stmt) BindRawText(param int, value []byte) error {
 		return TOOBIG
 	}
 	ptr := s.c.newBytes(value)
-	r := s.c.call(s.c.api.bindText,
+	r := s.c.call("sqlite3_bind_text64",
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
-		uint64(s.c.api.destructor), _UTF8)
+		uint64(s.c.freer), _UTF8)
 	return s.c.error(r)
 }
 
@@ -211,10 +210,10 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 		return TOOBIG
 	}
 	ptr := s.c.newBytes(value)
-	r := s.c.call(s.c.api.bindBlob,
+	r := s.c.call("sqlite3_bind_blob64",
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(value)),
-		uint64(s.c.api.destructor))
+		uint64(s.c.freer))
 	return s.c.error(r)
 }
 
@@ -223,7 +222,7 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindZeroBlob(param int, n int64) error {
-	r := s.c.call(s.c.api.bindZeroBlob,
+	r := s.c.call("sqlite3_bind_zeroblob64",
 		uint64(s.handle), uint64(param), uint64(n))
 	return s.c.error(r)
 }
@@ -233,7 +232,7 @@ func (s *Stmt) BindZeroBlob(param int, n int64) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindNull(param int) error {
-	r := s.c.call(s.c.api.bindNull,
+	r := s.c.call("sqlite3_bind_null",
 		uint64(s.handle), uint64(param))
 	return s.c.error(r)
 }
@@ -266,10 +265,10 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 	buf := util.View(s.c.mod, ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 
-	r := s.c.call(s.c.api.bindText,
+	r := s.c.call("sqlite3_bind_text64",
 		uint64(s.handle), uint64(param),
 		uint64(ptr), uint64(len(buf)),
-		uint64(s.c.api.destructor), _UTF8)
+		uint64(s.c.freer), _UTF8)
 	return s.c.error(r)
 }
 
@@ -281,7 +280,7 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindPointer(param int, ptr any) error {
 	valPtr := util.AddHandle(s.c.ctx, ptr)
-	r := s.c.call(s.c.api.bindPointer,
+	r := s.c.call("sqlite3_bind_pointer_go",
 		uint64(s.handle), uint64(param), uint64(valPtr))
 	return s.c.error(r)
 }
@@ -306,7 +305,7 @@ func (s *Stmt) BindValue(param int, value Value) error {
 	if value.sqlite != s.c.sqlite {
 		return MISUSE
 	}
-	r := s.c.call(s.c.api.bindValue,
+	r := s.c.call("sqlite3_bind_value",
 		uint64(s.handle), uint64(param), uint64(value.handle))
 	return s.c.error(r)
 }
@@ -315,7 +314,7 @@ func (s *Stmt) BindValue(param int, value Value) error {
 //
 // https://sqlite.org/c3ref/column_count.html
 func (s *Stmt) ColumnCount() int {
-	r := s.c.call(s.c.api.columnCount,
+	r := s.c.call("sqlite3_column_count",
 		uint64(s.handle))
 	return int(r)
 }
@@ -325,7 +324,7 @@ func (s *Stmt) ColumnCount() int {
 //
 // https://sqlite.org/c3ref/column_name.html
 func (s *Stmt) ColumnName(col int) string {
-	r := s.c.call(s.c.api.columnName,
+	r := s.c.call("sqlite3_column_name",
 		uint64(s.handle), uint64(col))
 
 	ptr := uint32(r)
@@ -340,7 +339,7 @@ func (s *Stmt) ColumnName(col int) string {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnType(col int) Datatype {
-	r := s.c.call(s.c.api.columnType,
+	r := s.c.call("sqlite3_column_type",
 		uint64(s.handle), uint64(col))
 	return Datatype(r)
 }
@@ -372,7 +371,7 @@ func (s *Stmt) ColumnInt(col int) int {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnInt64(col int) int64 {
-	r := s.c.call(s.c.api.columnInteger,
+	r := s.c.call("sqlite3_column_int64",
 		uint64(s.handle), uint64(col))
 	return int64(r)
 }
@@ -382,7 +381,7 @@ func (s *Stmt) ColumnInt64(col int) int64 {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnFloat(col int) float64 {
-	r := s.c.call(s.c.api.columnFloat,
+	r := s.c.call("sqlite3_column_double",
 		uint64(s.handle), uint64(col))
 	return math.Float64frombits(r)
 }
@@ -436,7 +435,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnRawText(col int) []byte {
-	r := s.c.call(s.c.api.columnText,
+	r := s.c.call("sqlite3_column_text",
 		uint64(s.handle), uint64(col))
 	return s.columnRawBytes(col, uint32(r))
 }
@@ -448,19 +447,19 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnRawBlob(col int) []byte {
-	r := s.c.call(s.c.api.columnBlob,
+	r := s.c.call("sqlite3_column_blob",
 		uint64(s.handle), uint64(col))
 	return s.columnRawBytes(col, uint32(r))
 }
 
 func (s *Stmt) columnRawBytes(col int, ptr uint32) []byte {
 	if ptr == 0 {
-		r := s.c.call(s.c.api.errcode, uint64(s.c.handle))
+		r := s.c.call("sqlite3_errcode", uint64(s.c.handle))
 		s.err = s.c.error(r)
 		return nil
 	}
 
-	r := s.c.call(s.c.api.columnBytes,
+	r := s.c.call("sqlite3_column_bytes",
 		uint64(s.handle), uint64(col))
 	return util.View(s.c.mod, ptr, r)
 }
@@ -494,7 +493,7 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnValue(col int) Value {
-	r := s.c.call(s.c.api.columnValue,
+	r := s.c.call("sqlite3_column_value",
 		uint64(s.handle), uint64(col))
 	return Value{
 		unprot: true,

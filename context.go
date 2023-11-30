@@ -32,14 +32,14 @@ func (ctx Context) Conn() *Conn {
 // https://sqlite.org/c3ref/get_auxdata.html
 func (ctx Context) SetAuxData(n int, data any) {
 	ptr := util.AddHandle(ctx.c.ctx, data)
-	ctx.c.call(ctx.c.api.setAuxData, uint64(ctx.handle), uint64(n), uint64(ptr))
+	ctx.c.call("sqlite3_set_auxdata_go", uint64(ctx.handle), uint64(n), uint64(ptr))
 }
 
 // GetAuxData returns metadata for argument n of the function.
 //
 // https://sqlite.org/c3ref/get_auxdata.html
 func (ctx Context) GetAuxData(n int) any {
-	ptr := uint32(ctx.c.call(ctx.c.api.getAuxData, uint64(ctx.handle), uint64(n)))
+	ptr := uint32(ctx.c.call("sqlite3_get_auxdata", uint64(ctx.handle), uint64(n)))
 	return util.GetHandle(ctx.c.ctx, ptr)
 }
 
@@ -67,7 +67,7 @@ func (ctx Context) ResultInt(value int) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultInt64(value int64) {
-	ctx.c.call(ctx.c.api.resultInteger,
+	ctx.c.call("sqlite3_result_int64",
 		uint64(ctx.handle), uint64(value))
 }
 
@@ -75,7 +75,7 @@ func (ctx Context) ResultInt64(value int64) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultFloat(value float64) {
-	ctx.c.call(ctx.c.api.resultFloat,
+	ctx.c.call("sqlite3_result_double",
 		uint64(ctx.handle), math.Float64bits(value))
 }
 
@@ -84,9 +84,9 @@ func (ctx Context) ResultFloat(value float64) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultText(value string) {
 	ptr := ctx.c.newString(value)
-	ctx.c.call(ctx.c.api.resultText,
+	ctx.c.call("sqlite3_result_text64",
 		uint64(ctx.handle), uint64(ptr), uint64(len(value)),
-		uint64(ctx.c.api.destructor), _UTF8)
+		uint64(ctx.c.freer), _UTF8)
 }
 
 // ResultRawText sets the text result of the function to a []byte.
@@ -94,9 +94,9 @@ func (ctx Context) ResultText(value string) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultRawText(value []byte) {
 	ptr := ctx.c.newBytes(value)
-	ctx.c.call(ctx.c.api.resultText,
+	ctx.c.call("sqlite3_result_text64",
 		uint64(ctx.handle), uint64(ptr), uint64(len(value)),
-		uint64(ctx.c.api.destructor), _UTF8)
+		uint64(ctx.c.freer), _UTF8)
 }
 
 // ResultBlob sets the result of the function to a []byte.
@@ -105,16 +105,16 @@ func (ctx Context) ResultRawText(value []byte) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultBlob(value []byte) {
 	ptr := ctx.c.newBytes(value)
-	ctx.c.call(ctx.c.api.resultBlob,
+	ctx.c.call("sqlite3_result_blob64",
 		uint64(ctx.handle), uint64(ptr), uint64(len(value)),
-		uint64(ctx.c.api.destructor))
+		uint64(ctx.c.freer))
 }
 
 // ResultZeroBlob sets the result of the function to a zero-filled, length n BLOB.
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultZeroBlob(n int64) {
-	ctx.c.call(ctx.c.api.resultZeroBlob,
+	ctx.c.call("sqlite3_result_zeroblob64",
 		uint64(ctx.handle), uint64(n))
 }
 
@@ -122,7 +122,7 @@ func (ctx Context) ResultZeroBlob(n int64) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultNull() {
-	ctx.c.call(ctx.c.api.resultNull,
+	ctx.c.call("sqlite3_result_null",
 		uint64(ctx.handle))
 }
 
@@ -153,9 +153,9 @@ func (ctx Context) resultRFC3339Nano(value time.Time) {
 	buf := util.View(ctx.c.mod, ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 
-	ctx.c.call(ctx.c.api.resultText,
+	ctx.c.call("sqlite3_result_text64",
 		uint64(ctx.handle), uint64(ptr), uint64(len(buf)),
-		uint64(ctx.c.api.destructor), _UTF8)
+		uint64(ctx.c.freer), _UTF8)
 }
 
 // ResultPointer sets the result of the function to NULL, just like [Context.ResultNull],
@@ -165,7 +165,7 @@ func (ctx Context) resultRFC3339Nano(value time.Time) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultPointer(ptr any) {
 	valPtr := util.AddHandle(ctx.c.ctx, ptr)
-	ctx.c.call(ctx.c.api.resultPointer, uint64(valPtr))
+	ctx.c.call("sqlite3_result_pointer_go", uint64(valPtr))
 }
 
 // ResultJSON sets the result of the function to the JSON encoding of value.
@@ -188,7 +188,7 @@ func (ctx Context) ResultValue(value Value) {
 		ctx.ResultError(MISUSE)
 		return
 	}
-	ctx.c.call(ctx.c.api.resultValue,
+	ctx.c.call("sqlite3_result_value",
 		uint64(ctx.handle), uint64(value.handle))
 }
 
@@ -197,12 +197,12 @@ func (ctx Context) ResultValue(value Value) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultError(err error) {
 	if errors.Is(err, NOMEM) {
-		ctx.c.call(ctx.c.api.resultErrorMem, uint64(ctx.handle))
+		ctx.c.call("sqlite3_result_error_nomem", uint64(ctx.handle))
 		return
 	}
 
 	if errors.Is(err, TOOBIG) {
-		ctx.c.call(ctx.c.api.resultErrorBig, uint64(ctx.handle))
+		ctx.c.call("sqlite3_result_error_toobig", uint64(ctx.handle))
 		return
 	}
 
@@ -210,11 +210,11 @@ func (ctx Context) ResultError(err error) {
 	if msg != "" {
 		defer ctx.c.arena.mark()()
 		ptr := ctx.c.arena.string(msg)
-		ctx.c.call(ctx.c.api.resultError,
+		ctx.c.call("sqlite3_result_error",
 			uint64(ctx.handle), uint64(ptr), uint64(len(msg)))
 	}
 	if code != _OK {
-		ctx.c.call(ctx.c.api.resultErrorCode,
+		ctx.c.call("sqlite3_result_error_code",
 			uint64(ctx.handle), uint64(code))
 	}
 }

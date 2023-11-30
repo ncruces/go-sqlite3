@@ -14,7 +14,7 @@ import (
 // This can be used to load schemas that contain
 // one or more unknown collating sequences.
 func (c *Conn) AnyCollationNeeded() {
-	c.call(c.api.anyCollation, uint64(c.handle), 0, 0)
+	c.call("sqlite3_anycollseq_init", uint64(c.handle), 0, 0)
 }
 
 // CreateCollation defines a new collating sequence.
@@ -24,7 +24,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
-	r := c.call(c.api.createCollation,
+	r := c.call("sqlite3_create_collation_go",
 		uint64(c.handle), uint64(namePtr), uint64(funcPtr))
 	return c.error(r)
 }
@@ -36,7 +36,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
-	r := c.call(c.api.createFunction,
+	r := c.call("sqlite3_create_function_go",
 		uint64(c.handle), uint64(namePtr), uint64(nArg),
 		uint64(flag), uint64(funcPtr))
 	return c.error(r)
@@ -49,11 +49,11 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
 	defer c.arena.mark()()
-	call := c.api.createAggregate
+	call := "sqlite3_create_aggregate_function_go"
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
 	if _, ok := fn().(WindowFunction); ok {
-		call = c.api.createWindow
+		call = "sqlite3_create_window_function_go"
 	}
 	r := c.call(call,
 		uint64(c.handle), uint64(namePtr), uint64(nArg),
@@ -128,7 +128,7 @@ func inverseCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint3
 }
 
 func userDataHandle(db *Conn, pCtx uint32) any {
-	pApp := uint32(db.call(db.api.userData, uint64(pCtx)))
+	pApp := uint32(db.call("sqlite3_user_data", uint64(pCtx)))
 	return util.GetHandle(db.ctx, pApp)
 }
 
@@ -139,7 +139,7 @@ func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) AggregateFunction 
 	if close == nil {
 		size = ptrlen
 	}
-	ptr := uint32(db.call(db.api.aggregateCtx, uint64(pCtx), size))
+	ptr := uint32(db.call("sqlite3_aggregate_context", uint64(pCtx), size))
 
 	// If we already have an aggregate, return it.
 	if ptr != 0 {

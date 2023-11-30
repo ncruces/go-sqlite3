@@ -29,7 +29,7 @@ func (v Value) protected() uint64 {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Type() Datatype {
-	r := v.call(v.api.valueType, v.protected())
+	r := v.call("sqlite3_value_type", v.protected())
 	return Datatype(r)
 }
 
@@ -57,7 +57,7 @@ func (v Value) Int() int {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Int64() int64 {
-	r := v.call(v.api.valueInteger, v.protected())
+	r := v.call("sqlite3_value_int64", v.protected())
 	return int64(r)
 }
 
@@ -65,7 +65,7 @@ func (v Value) Int64() int64 {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Float() float64 {
-	r := v.call(v.api.valueFloat, v.protected())
+	r := v.call("sqlite3_value_double", v.protected())
 	return math.Float64frombits(r)
 }
 
@@ -111,7 +111,7 @@ func (v Value) Blob(buf []byte) []byte {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawText() []byte {
-	r := v.call(v.api.valueText, v.protected())
+	r := v.call("sqlite3_value_text", v.protected())
 	return v.rawBytes(uint32(r))
 }
 
@@ -121,7 +121,7 @@ func (v Value) RawText() []byte {
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) RawBlob() []byte {
-	r := v.call(v.api.valueBlob, v.protected())
+	r := v.call("sqlite3_value_blob", v.protected())
 	return v.rawBytes(uint32(r))
 }
 
@@ -130,14 +130,14 @@ func (v Value) rawBytes(ptr uint32) []byte {
 		return nil
 	}
 
-	r := v.call(v.api.valueBytes, v.protected())
+	r := v.call("sqlite3_value_bytes", v.protected())
 	return util.View(v.mod, ptr, r)
 }
 
 // Pointer gets the pointer associated with this value,
 // or nil if it has no associated pointer.
 func (v Value) Pointer() any {
-	r := v.call(v.api.valuePointer, v.protected())
+	r := v.call("sqlite3_value_pointer_go", v.protected())
 	return util.GetHandle(v.ctx, uint32(r))
 }
 

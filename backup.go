@@ -71,12 +71,12 @@ func (c *Conn) backupInit(dst uint32, dstName string, src uint32, srcName string
 		other = src
 	}
 
-	r := c.call(c.api.backupInit,
+	r := c.call("sqlite3_backup_init",
 		uint64(dst), uint64(dstPtr),
 		uint64(src), uint64(srcPtr))
 	if r == 0 {
 		defer c.closeDB(other)
-		r = c.call(c.api.errcode, uint64(dst))
+		r = c.call("sqlite3_errcode", uint64(dst))
 		return nil, c.sqlite.error(r, dst)
 	}
 
@@ -97,7 +97,7 @@ func (b *Backup) Close() error {
 		return nil
 	}
 
-	r := b.c.call(b.c.api.backupFinish, uint64(b.handle))
+	r := b.c.call("sqlite3_backup_finish", uint64(b.handle))
 	b.c.closeDB(b.otherc)
 	b.handle = 0
 	return b.c.error(r)
@@ -108,7 +108,7 @@ func (b *Backup) Close() error {
 //
 // https://sqlite.org/c3ref/backup_finish.html#sqlite3backupstep
 func (b *Backup) Step(nPage int) (done bool, err error) {
-	r := b.c.call(b.c.api.backupStep, uint64(b.handle), uint64(nPage))
+	r := b.c.call("sqlite3_backup_step", uint64(b.handle), uint64(nPage))
 	if r == _DONE {
 		return true, nil
 	}
@@ -120,7 +120,7 @@ func (b *Backup) Step(nPage int) (done bool, err error) {
 //
 // https://sqlite.org/c3ref/backup_finish.html#sqlite3backupremaining
 func (b *Backup) Remaining() int {
-	r := b.c.call(b.c.api.backupRemaining, uint64(b.handle))
+	r := b.c.call("sqlite3_backup_remaining", uint64(b.handle))
 	return int(r)
 }
 
@@ -129,6 +129,6 @@ func (b *Backup) Remaining() int {
 //
 // https://sqlite.org/c3ref/backup_finish.html#sqlite3backuppagecount
 func (b *Backup) PageCount() int {
-	r := b.c.call(b.c.api.backupPageCount, uint64(b.handle))
+	r := b.c.call("sqlite3_backup_pagecount", uint64(b.handle))
 	return int(r)
 }

@@ -57,7 +57,7 @@ func compileSQLite() {
 		}
 	}
 	if bin == nil {
-		instance.err = util.BinaryErr
+		instance.err = util.NoBinaryErr
 		return
 	}
 
@@ -67,7 +67,7 @@ func compileSQLite() {
 type sqlite struct {
 	ctx   context.Context
 	mod   api.Module
-	api   sqliteAPI
+	freer uint32
 	stack [8]uint64
 }
 
@@ -86,110 +86,12 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 		return nil, err
 	}
 
-	getFun := func(name string) api.Function {
-		f := sqlt.mod.ExportedFunction(name)
-		if f == nil {
-			err = util.NoFuncErr + util.ErrorString(name)
-			return nil
-		}
-		return f
+	global := sqlt.mod.ExportedGlobal("malloc_destructor")
+	if global == nil {
+		return nil, util.BadBinaryErr
 	}
 
-	getVal := func(name string) uint32 {
-		g := sqlt.mod.ExportedGlobal(name)
-		if g == nil {
-			err = util.NoGlobalErr + util.ErrorString(name)
-			return 0
-		}
-		return util.ReadUint32(sqlt.mod, uint32(g.Get()))
-	}
-
-	sqlt.api = sqliteAPI{
-		free:            getFun("free"),
-		malloc:          getFun("malloc"),
-		destructor:      getVal("malloc_destructor"),
-		errcode:         getFun("sqlite3_errcode"),
-		errstr:          getFun("sqlite3_errstr"),
-		errmsg:          getFun("sqlite3_errmsg"),
-		erroff:          getFun("sqlite3_error_offset"),
-		open:            getFun("sqlite3_open_v2"),
-		close:           getFun("sqlite3_close"),
-		closeZombie:     getFun("sqlite3_close_v2"),
-		prepare:         getFun("sqlite3_prepare_v3"),
-		finalize:        getFun("sqlite3_finalize"),
-		reset:           getFun("sqlite3_reset"),
-		step:            getFun("sqlite3_step"),
-		exec:            getFun("sqlite3_exec"),
-		interrupt:       getFun("sqlite3_interrupt"),
-		progressHandler: getFun("sqlite3_progress_handler_go"),
-		clearBindings:   getFun("sqlite3_clear_bindings"),
-		bindCount:       getFun("sqlite3_bind_parameter_count"),
-		bindIndex:       getFun("sqlite3_bind_parameter_index"),
-		bindName:        getFun("sqlite3_bind_parameter_name"),
-		bindNull:        getFun("sqlite3_bind_null"),
-		bindInteger:     getFun("sqlite3_bind_int64"),
-		bindFloat:       getFun("sqlite3_bind_double"),
-		bindText:        getFun("sqlite3_bind_text64"),
-		bindBlob:        getFun("sqlite3_bind_blob64"),
-		bindZeroBlob:    getFun("sqlite3_bind_zeroblob64"),
-		bindPointer:     getFun("sqlite3_bind_pointer_go"),
-		bindValue:       getFun("sqlite3_bind_value"),
-		columnCount:     getFun("sqlite3_column_count"),
-		columnName:      getFun("sqlite3_column_name"),
-		columnType:      getFun("sqlite3_column_type"),
-		columnInteger:   getFun("sqlite3_column_int64"),
-		columnFloat:     getFun("sqlite3_column_double"),
-		columnText:      getFun("sqlite3_column_text"),
-		columnBlob:      getFun("sqlite3_column_blob"),
-		columnBytes:     getFun("sqlite3_column_bytes"),
-		columnValue:     getFun("sqlite3_column_value"),
-		blobOpen:        getFun("sqlite3_blob_open"),
-		blobClose:       getFun("sqlite3_blob_close"),
-		blobReopen:      getFun("sqlite3_blob_reopen"),
-		blobBytes:       getFun("sqlite3_blob_bytes"),
-		blobRead:        getFun("sqlite3_blob_read"),
-		blobWrite:       getFun("sqlite3_blob_write"),
-		backupInit:      getFun("sqlite3_backup_init"),
-		backupStep:      getFun("sqlite3_backup_step"),
-		backupFinish:    getFun("sqlite3_backup_finish"),
-		backupRemaining: getFun("sqlite3_backup_remaining"),
-		backupPageCount: getFun("sqlite3_backup_pagecount"),
-		changes:         getFun("sqlite3_changes64"),
-		lastRowid:       getFun("sqlite3_last_insert_rowid"),
-		autocommit:      getFun("sqlite3_get_autocommit"),
-		anyCollation:    getFun("sqlite3_anycollseq_init"),
-		createCollation: getFun("sqlite3_create_collation_go"),
-		createFunction:  getFun("sqlite3_create_function_go"),
-		createAggregate: getFun("sqlite3_create_aggregate_function_go"),
-		createWindow:    getFun("sqlite3_create_window_function_go"),
-		aggregateCtx:    getFun("sqlite3_aggregate_context"),
-		userData:        getFun("sqlite3_user_data"),
-		setAuxData:      getFun("sqlite3_set_auxdata_go"),
-		getAuxData:      getFun("sqlite3_get_auxdata"),
-		valueType:       getFun("sqlite3_value_type"),
-		valueInteger:    getFun("sqlite3_value_int64"),
-		valueFloat:      getFun("sqlite3_value_double"),
-		valueText:       getFun("sqlite3_value_text"),
-		valueBlob:       getFun("sqlite3_value_blob"),
-		valueBytes:      getFun("sqlite3_value_bytes"),
-		valuePointer:    getFun("sqlite3_value_pointer_go"),
-		resultNull:      getFun("sqlite3_result_null"),
-		resultInteger:   getFun("sqlite3_result_int64"),
-		resultFloat:     getFun("sqlite3_result_double"),
-		resultText:      getFun("sqlite3_result_text64"),
-		resultBlob:      getFun("sqlite3_result_blob64"),
-		resultZeroBlob:  getFun("sqlite3_result_zeroblob64"),
-		resultPointer:   getFun("sqlite3_result_pointer_go"),
-		resultValue:     getFun("sqlite3_result_value"),
-		resultError:     getFun("sqlite3_result_error"),
-		resultErrorCode: getFun("sqlite3_result_error_code"),
-		resultErrorMem:  getFun("sqlite3_result_error_nomem"),
-		resultErrorBig:  getFun("sqlite3_result_error_toobig"),
-		createModule:    getFun("sqlite3_create_module_go"),
-		declareVTab:     getFun("sqlite3_declare_vtab"),
-		vtabConfig:      getFun("sqlite3_vtab_config_go"),
-		vtabRHSValue:    getFun("sqlite3_vtab_rhs_value"),
-	}
+	sqlt.freer = util.ReadUint32(sqlt.mod, uint32(global.Get()))
 	if err != nil {
 		return nil, err
 	}
@@ -211,17 +113,17 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 		panic(util.OOMErr)
 	}
 
-	if r := sqlt.call(sqlt.api.errstr, rc); r != 0 {
+	if r := sqlt.call("sqlite3_errstr", rc); r != 0 {
 		err.str = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
 	}
 
 	if handle != 0 {
-		if r := sqlt.call(sqlt.api.errmsg, uint64(handle)); r != 0 {
+		if r := sqlt.call("sqlite3_errmsg", uint64(handle)); r != 0 {
 			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
 		}
 
 		if sql != nil {
-			if r := sqlt.call(sqlt.api.erroff, uint64(handle)); r != math.MaxUint32 {
+			if r := sqlt.call("sqlite3_error_offset", uint64(handle)); r != math.MaxUint32 {
 				err.sql = sql[0][r:]
 			}
 		}
@@ -234,8 +136,9 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
-func (sqlt *sqlite) call(fn api.Function, params ...uint64) uint64 {
+func (sqlt *sqlite) call(name string, params ...uint64) uint64 {
 	copy(sqlt.stack[:], params)
+	fn := sqlt.mod.ExportedFunction(name)
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
 		panic(err)
@@ -247,14 +150,14 @@ func (sqlt *sqlite) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	sqlt.call(sqlt.api.free, uint64(ptr))
+	sqlt.call("free", uint64(ptr))
 }
 
 func (sqlt *sqlite) new(size uint64) uint32 {
 	if size > _MAX_ALLOCATION_SIZE {
 		panic(util.OOMErr)
 	}
-	ptr := uint32(sqlt.call(sqlt.api.malloc, size))
+	ptr := uint32(sqlt.call("malloc", size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
@@ -342,90 +245,7 @@ func (a *arena) string(s string) uint32 {
 }
 
 type sqliteAPI struct {
-	free            api.Function
-	malloc          api.Function
-	errcode         api.Function
-	errstr          api.Function
-	errmsg          api.Function
-	erroff          api.Function
-	open            api.Function
-	close           api.Function
-	closeZombie     api.Function
-	prepare         api.Function
-	finalize        api.Function
-	reset           api.Function
-	step            api.Function
-	exec            api.Function
-	interrupt       api.Function
-	progressHandler api.Function
-	clearBindings   api.Function
-	bindCount       api.Function
-	bindIndex       api.Function
-	bindName        api.Function
-	bindNull        api.Function
-	bindInteger     api.Function
-	bindFloat       api.Function
-	bindText        api.Function
-	bindBlob        api.Function
-	bindZeroBlob    api.Function
-	bindPointer     api.Function
-	bindValue       api.Function
-	columnCount     api.Function
-	columnName      api.Function
-	columnType      api.Function
-	columnInteger   api.Function
-	columnFloat     api.Function
-	columnText      api.Function
-	columnBlob      api.Function
-	columnBytes     api.Function
-	columnValue     api.Function
-	blobOpen        api.Function
-	blobClose       api.Function
-	blobReopen      api.Function
-	blobBytes       api.Function
-	blobRead        api.Function
-	blobWrite       api.Function
-	backupInit      api.Function
-	backupStep      api.Function
-	backupFinish    api.Function
-	backupRemaining api.Function
-	backupPageCount api.Function
-	changes         api.Function
-	lastRowid       api.Function
-	autocommit      api.Function
-	anyCollation    api.Function
-	createCollation api.Function
-	createFunction  api.Function
-	createAggregate api.Function
-	createWindow    api.Function
-	aggregateCtx    api.Function
-	userData        api.Function
-	setAuxData      api.Function
-	getAuxData      api.Function
-	valueType       api.Function
-	valueInteger    api.Function
-	valueFloat      api.Function
-	valueText       api.Function
-	valueBlob       api.Function
-	valueBytes      api.Function
-	valuePointer    api.Function
-	resultNull      api.Function
-	resultInteger   api.Function
-	resultFloat     api.Function
-	resultText      api.Function
-	resultBlob      api.Function
-	resultZeroBlob  api.Function
-	resultPointer   api.Function
-	resultValue     api.Function
-	resultError     api.Function
-	resultErrorCode api.Function
-	resultErrorMem  api.Function
-	resultErrorBig  api.Function
-	createModule    api.Function
-	declareVTab     api.Function
-	vtabConfig      api.Function
-	vtabRHSValue    api.Function
-	destructor      uint32
+	destructor uint32
 }
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
