@@ -62,7 +62,8 @@ func (s *Stmt) ClearBindings() error {
 // https://sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
 	s.c.checkInterrupt()
-	r := s.c.call(s.c.api.step, uint64(s.handle))
+	step := s.c.mod.ExportedFunction("sqlite3_step")
+	r := s.c.call(step, uint64(s.handle))
 	switch r {
 	case _ROW:
 		return true
