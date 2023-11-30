@@ -77,7 +77,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 	namePtr := c.arena.string(filename)
 
 	flags |= OPEN_EXRESCODE
-	r := c.call(c.api.open, uint64(namePtr), uint64(connPtr), uint64(flags), 0)
+	r := c.call("sqlite3_open_v2", uint64(namePtr), uint64(connPtr), uint64(flags), 0)
 
 	handle := util.ReadUint32(c.mod, connPtr)
 	if err := c.sqlite.error(r, handle); err != nil {
@@ -97,7 +97,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 		}
 
 		pragmaPtr := c.arena.string(pragmas.String())
-		r := c.call(c.api.exec, uint64(handle), uint64(pragmaPtr), 0, 0, 0)
+		r := c.call("sqlite3_exec", uint64(handle), uint64(pragmaPtr), 0, 0, 0)
 		if err := c.sqlite.error(r, handle, pragmas.String()); err != nil {
 			if errors.Is(err, ERROR) {
 				err = fmt.Errorf("sqlite3: invalid _pragma: %w", err)
@@ -111,7 +111,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 }
 
 func (c *Conn) closeDB(handle uint32) {
-	r := c.call(c.api.closeZombie, uint64(handle))
+	r := c.call("sqlite3_close_v2", uint64(handle))
 	if err := c.sqlite.error(r, handle); err != nil {
 		panic(err)
 	}
@@ -134,7 +134,7 @@ func (c *Conn) Close() error {
 	c.pending.Close()
 	c.pending = nil
 
-	r := c.call(c.api.close, uint64(c.handle))
+	r := c.call("sqlite3_close", uint64(c.handle))
 	if err := c.error(r); err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (c *Conn) Exec(sql string) error {
 	defer c.arena.mark()()
 	sqlPtr := c.arena.string(sql)
 
-	r := c.call(c.api.exec, uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
+	r := c.call("sqlite3_exec", uint64(c.handle), uint64(sqlPtr), 0, 0, 0)
 	return c.error(r, sql)
 }
 
@@ -178,7 +178,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	tailPtr := c.arena.new(ptrlen)
 	sqlPtr := c.arena.string(sql)
 
-	r := c.call(c.api.prepare, uint64(c.handle),
+	r := c.call("sqlite3_prepare_v3", uint64(c.handle),
 		uint64(sqlPtr), uint64(len(sql)+1), uint64(flags),
 		uint64(stmtPtr), uint64(tailPtr))
 
@@ -201,7 +201,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 //
 // https://sqlite.org/c3ref/get_autocommit.html
 func (c *Conn) GetAutocommit() bool {
-	r := c.call(c.api.autocommit, uint64(c.handle))
+	r := c.call("sqlite3_get_autocommit", uint64(c.handle))
 	return r != 0
 }
 
@@ -210,7 +210,7 @@ func (c *Conn) GetAutocommit() bool {
 //
 // https://sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() int64 {
-	r := c.call(c.api.lastRowid, uint64(c.handle))
+	r := c.call("sqlite3_last_insert_rowid", uint64(c.handle))
 	return int64(r)
 }
 
@@ -220,7 +220,7 @@ func (c *Conn) LastInsertRowID() int64 {
 //
 // https://sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() int64 {
-	r := c.call(c.api.changes, uint64(c.handle))
+	r := c.call("sqlite3_changes64", uint64(c.handle))
 	return int64(r)
 }
 
@@ -256,12 +256,12 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	c.interrupt = ctx
 	// Remove the handler if the context can't be canceled.
 	if ctx == nil || ctx.Done() == nil {
-		c.call(c.api.progressHandler, uint64(c.handle), 0)
+		c.call("sqlite3_progress_handler_go", uint64(c.handle), 0)
 		return old
 	}
 
 	c.pending.Step()
-	c.call(c.api.progressHandler, uint64(c.handle), 100)
+	c.call("sqlite3_progress_handler_go", uint64(c.handle), 100)
 	return old
 }
 
@@ -276,7 +276,7 @@ func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 
 func (c *Conn) checkInterrupt() {
 	if c.interrupt != nil && c.interrupt.Err() != nil {
-		c.call(c.api.interrupt, uint64(c.handle))
+		c.call("sqlite3_interrupt", uint64(c.handle))
 	}
 }
 

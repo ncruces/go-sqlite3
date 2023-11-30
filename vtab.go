@@ -56,7 +56,7 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 	defer db.arena.mark()()
 	namePtr := db.arena.string(name)
 	modulePtr := util.AddHandle(db.ctx, module[T]{create, connect})
-	r := db.call(db.api.createModule, uint64(db.handle),
+	r := db.call("sqlite3_create_module_go", uint64(db.handle),
 		uint64(namePtr), uint64(flags), uint64(modulePtr))
 	return db.error(r)
 }
@@ -72,7 +72,7 @@ func implements[T any](typ reflect.Type) bool {
 func (c *Conn) DeclareVtab(sql string) error {
 	defer c.arena.mark()()
 	sqlPtr := c.arena.string(sql)
-	r := c.call(c.api.declareVTab, uint64(c.handle), uint64(sqlPtr))
+	r := c.call("sqlite3_declare_vtab", uint64(c.handle), uint64(sqlPtr))
 	return c.error(r)
 }
 
@@ -98,7 +98,7 @@ func (c *Conn) VtabConfig(op VtabConfigOption, args ...any) error {
 			i = 1
 		}
 	}
-	r := c.call(c.api.vtabConfig, uint64(c.handle), uint64(op), i)
+	r := c.call("sqlite3_vtab_config_go", uint64(c.handle), uint64(op), i)
 	return c.error(r)
 }
 
@@ -257,7 +257,7 @@ type IndexConstraintUsage struct {
 func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 	defer idx.c.arena.mark()()
 	valPtr := idx.c.arena.new(ptrlen)
-	r := idx.c.call(idx.c.api.vtabRHSValue,
+	r := idx.c.call("sqlite3_vtab_rhs_value",
 		uint64(idx.handle), uint64(column), uint64(valPtr))
 	if err := idx.c.error(r); err != nil {
 		return Value{}, err

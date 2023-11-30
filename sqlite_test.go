@@ -37,7 +37,7 @@ func Test_sqlite_call_closed(t *testing.T) {
 	sqlite.close()
 
 	defer func() { _ = recover() }()
-	sqlite.call(sqlite.api.free)
+	sqlite.call("free")
 	t.Error("want panic")
 }
 
