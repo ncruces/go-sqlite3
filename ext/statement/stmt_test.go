@@ -7,13 +7,9 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/statement"
-	"github.com/tetratelabs/wazero"
 )
 
 func Example() {
-	// This crashes the compiler.
-	sqlite3.RuntimeConfig = wazero.NewRuntimeConfigInterpreter()
-
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
