@@ -72,6 +72,17 @@ func TestDriver(t *testing.T) {
 	}
 	defer rows.Close()
 
+	typs, err := rows.ColumnTypes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := typs[0].DatabaseTypeName(); got != "INT" {
+		t.Errorf("got %s, want INT", got)
+	}
+	if got := typs[1].DatabaseTypeName(); got != "VARCHAR" {
+		t.Errorf("got %s, want INT", got)
+	}
+
 	row := 0
 	ids := []int{0, 1, 2}
 	names := []string{"go", "zig", "whatever"}

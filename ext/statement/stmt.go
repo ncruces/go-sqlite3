@@ -56,7 +56,9 @@ func (t *table) declare() error {
 	if tail != "" {
 		return fmt.Errorf("statement: multiple statements")
 	}
-	// TODO: sqlite3_stmt_readonly
+	if !stmt.ReadOnly() {
+		return fmt.Errorf("statement: statement must be read only")
+	}
 
 	t.inputs = stmt.BindCount()
 	t.outputs = stmt.ColumnCount()
@@ -68,14 +70,17 @@ func (t *table) declare() error {
 		str.WriteString(sep)
 		name := stmt.ColumnName(i)
 		str.WriteString(sqlite3.QuoteIdentifier(name))
-		// TODO: sqlite3_column_decltype
+		if typ := stmt.ColumnDeclType(i); typ != "" {
+			str.WriteByte(' ')
+			str.WriteString(typ)
+		}
 		sep = ","
 	}
 	for i := 1; i <= t.inputs; i++ {
 		str.WriteString(sep)
 		name := stmt.BindName(i)
 		if name == "" {
-			str.WriteByte('\'')
+			str.WriteString("'")
 			str.WriteString(strconv.Itoa(i))
 			str.WriteString("' HIDDEN")
 		} else {
