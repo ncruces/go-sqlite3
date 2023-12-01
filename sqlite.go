@@ -67,8 +67,9 @@ func compileSQLite() {
 type sqlite struct {
 	ctx   context.Context
 	mod   api.Module
-	freer uint32
+	funcs [8]api.Function
 	stack [8]uint64
+	freer uint32
 }
 
 func instantiateSQLite() (sqlt *sqlite, err error) {
@@ -136,13 +137,33 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
+func (sqlt *sqlite) getfn(name string) (api.Function, uint32) {
+	// https://cr.yp.to/cdb/cdb.txt
+	hash := func(s string) uint32 {
+		var hash uint32 = 5381
+		for _, b := range []byte(s) {
+			hash = (hash<<5 + hash) ^ uint32(b)
+		}
+		return hash
+	}(name) % uint32(len(sqlt.funcs))
+
+	fn := sqlt.funcs[hash]
+	if fn == nil || name != fn.Definition().Name() {
+		fn = sqlt.mod.ExportedFunction(name)
+	} else {
+		sqlt.funcs[hash] = nil
+	}
+	return fn, hash
+}
+
 func (sqlt *sqlite) call(name string, params ...uint64) uint64 {
 	copy(sqlt.stack[:], params)
-	fn := sqlt.mod.ExportedFunction(name)
+	fn, hash := sqlt.getfn(name)
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
 		panic(err)
 	}
+	sqlt.funcs[hash] = fn
 	return sqlt.stack[0]
 }
 
@@ -242,10 +263,6 @@ func (a *arena) string(s string) uint32 {
 	ptr := a.new(uint64(len(s) + 1))
 	util.WriteString(a.sqlt.mod, ptr, s)
 	return ptr
-}
-
-type sqliteAPI struct {
-	destructor uint32
 }
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
