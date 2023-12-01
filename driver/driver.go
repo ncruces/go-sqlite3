@@ -458,6 +458,16 @@ func (r *rows) Columns() []string {
 	return columns
 }
 
+func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
+	decltype := r.Stmt.ColumnDeclType(index)
+	if len := len(decltype); len > 0 && decltype[len-1] == ')' {
+		if i := strings.LastIndexByte(decltype, '('); i >= 0 {
+			decltype = decltype[:i]
+		}
+	}
+	return strings.ToUpper(strings.TrimSpace(decltype))
+}
+
 func (r *rows) Next(dest []driver.Value) error {
 	old := r.Conn.SetInterrupt(r.ctx)
 	defer r.Conn.SetInterrupt(old)

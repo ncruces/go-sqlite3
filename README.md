@@ -47,7 +47,7 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
 - [x] [virtual tables](https://sqlite.org/vtab.html)
 - [x] [custom VFSes](https://sqlite.org/vfs.html)
 - [x] [online backup](https://sqlite.org/backup.html)
-- [x] [JSON support](https://www.sqlite.org/json1.html)
+- [x] [JSON support](https://sqlite.org/json1.html)
 - [x] [Unicode support](https://sqlite.org/src/dir/ext/icu)
 
 ### Caveats

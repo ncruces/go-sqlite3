@@ -90,6 +90,15 @@ func (s *Stmt) Exec() error {
 	return s.Reset()
 }
 
+// ReadOnly returns true if and only if the statement
+// makes no direct changes to the content of the database file.
+//
+// https://sqlite.org/c3ref/stmt_readonly.html
+func (s *Stmt) ReadOnly() bool {
+	r := s.c.call("sqlite3_stmt_readonly", uint64(s.handle))
+	return r != 0
+}
+
 // BindCount returns the number of SQL parameters in the prepared statement.
 //
 // https://sqlite.org/c3ref/bind_parameter_count.html
@@ -342,6 +351,19 @@ func (s *Stmt) ColumnType(col int) Datatype {
 	r := s.c.call("sqlite3_column_type",
 		uint64(s.handle), uint64(col))
 	return Datatype(r)
+}
+
+// ColumnDeclType returns the declared datatype of the result column.
+// The leftmost column of the result set has the index 0.
+//
+// https://sqlite.org/c3ref/column_decltype.html
+func (s *Stmt) ColumnDeclType(col int) string {
+	r := s.c.call("sqlite3_column_decltype",
+		uint64(s.handle), uint64(col))
+	if r == 0 {
+		return ""
+	}
+	return util.ReadString(s.c.mod, uint32(r), _MAX_NAME)
 }
 
 // ColumnBool returns the value of the result column as a bool.
