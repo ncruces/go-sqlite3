@@ -3,6 +3,8 @@ package csv
 import "testing"
 
 func Test_getSchema(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		header  bool
 		columns int

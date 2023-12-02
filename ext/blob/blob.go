@@ -60,10 +60,10 @@ func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 
 	// This ensures the blob is closed if db, table, column or write change.
-	ctx.SetAuxData(0, blob)
-	ctx.SetAuxData(1, blob)
-	ctx.SetAuxData(2, blob)
-	ctx.SetAuxData(4, blob)
+	ctx.SetAuxData(0, blob) // db
+	ctx.SetAuxData(1, blob) // table
+	ctx.SetAuxData(2, blob) // column
+	ctx.SetAuxData(4, blob) // write
 }
 
 // OpenCallback is the type for the blob_open callback.

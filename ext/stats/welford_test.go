@@ -6,6 +6,8 @@ import (
 )
 
 func Test_welford(t *testing.T) {
+	t.Parallel()
+
 	var s1, s2 welford
 
 	s1.enqueue(4)
@@ -38,6 +40,8 @@ func Test_welford(t *testing.T) {
 }
 
 func Test_covar(t *testing.T) {
+	t.Parallel()
+
 	var c1, c2 welford2
 
 	c1.enqueue(3, 70)
@@ -64,6 +68,8 @@ func Test_covar(t *testing.T) {
 }
 
 func Test_correlation(t *testing.T) {
+	t.Parallel()
+
 	var c welford2
 	c.enqueue(1, 3)
 	c.enqueue(2, 2)
