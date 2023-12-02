@@ -16,7 +16,7 @@ import (
 // Register registers the statement virtual table.
 func Register(db *sqlite3.Conn) {
 	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
-		if arg == nil || len(arg[0]) < 3 {
+		if len(arg) == 0 || len(arg[0]) < 3 {
 			return nil, fmt.Errorf("statement: no statement provided")
 		}
 		sql := arg[0]
@@ -70,21 +70,19 @@ func (t *table) declare() error {
 		str.WriteString(sep)
 		name := stmt.ColumnName(i)
 		str.WriteString(sqlite3.QuoteIdentifier(name))
-		if typ := stmt.ColumnDeclType(i); typ != "" {
-			str.WriteByte(' ')
-			str.WriteString(typ)
-		}
+		str.WriteByte(' ')
+		str.WriteString(stmt.ColumnDeclType(i))
 		sep = ","
 	}
 	for i := 1; i <= t.inputs; i++ {
 		str.WriteString(sep)
 		name := stmt.BindName(i)
 		if name == "" {
-			str.WriteString("'")
+			str.WriteString("[")
 			str.WriteString(strconv.Itoa(i))
-			str.WriteString("' HIDDEN")
+			str.WriteString("] HIDDEN")
 		} else {
-			str.WriteString(sqlite3.QuoteIdentifier(name))
+			str.WriteString(sqlite3.QuoteIdentifier(name[1:]))
 			str.WriteString(" HIDDEN")
 		}
 		sep = ","

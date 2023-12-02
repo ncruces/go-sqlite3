@@ -189,6 +189,8 @@ func TestRegister_error(t *testing.T) {
 }
 
 func Test_like2regex(t *testing.T) {
+	t.Parallel()
+
 	const prefix = `(?is)\A`
 	const sufix = `\z`
 	tests := []struct {

@@ -51,6 +51,8 @@ func Example() {
 }
 
 func TestRegister(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -106,6 +108,8 @@ Robert	"Griesemer"	"gri"`
 }
 
 func TestRegister_errors(t *testing.T) {
+	t.Parallel()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)

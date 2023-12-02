@@ -52,6 +52,8 @@ func Example() {
 }
 
 func Test_cursor_Column(t *testing.T) {
+	t.Parallel()
+
 	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
 		array.Register(c)
 		return nil

@@ -3,6 +3,8 @@ package csv
 import "testing"
 
 func Test_uintParam(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		arg string
 		key string
