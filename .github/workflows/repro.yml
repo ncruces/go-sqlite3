@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]

@@ -49,14 +49,14 @@ func Fuzz_stringOrTime_1(f *testing.F) {
 // This checks that any [time.Time] can be recovered as a [time.Time],
 // with nanosecond accuracy, and preserving any timezone offset.
 func Fuzz_stringOrTime_2(f *testing.F) {
-	f.Add(0, 0)
-	f.Add(0, 1)
-	f.Add(0, -1)
-	f.Add(0, 999_999_999)
-	f.Add(0, 1_000_000_000)
-	f.Add(7956915742, 222_222_222)    // twosday
-	f.Add(639095955742, 222_222_222)  // twosday, year 22222AD
-	f.Add(-763421161058, 222_222_222) // twosday, year 22222BC
+	f.Add(int64(0), int64(0))
+	f.Add(int64(0), int64(1))
+	f.Add(int64(0), int64(-1))
+	f.Add(int64(0), int64(999_999_999))
+	f.Add(int64(0), int64(1_000_000_000))
+	f.Add(int64(7956915742), int64(222_222_222))    // twosday
+	f.Add(int64(639095955742), int64(222_222_222))  // twosday, year 22222AD
+	f.Add(int64(-763421161058), int64(222_222_222)) // twosday, year 22222BC
 
 	checkTime := func(t testing.TB, date time.Time) {
 		value := stringOrTime([]byte(date.Format(time.RFC3339Nano)))
@@ -80,7 +80,7 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 		}
 	}
 
-	f.Fuzz(func(t *testing.T, sec, nsec int) {
+	f.Fuzz(func(t *testing.T, sec, nsec int64) {
 		// Reduce the search space.
 		if 1e12 < sec || sec < -1e12 {
 			// Dates before 29000BC and after 33000AD; I think we're safe.
@@ -91,7 +91,7 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 			return
 		}
 
-		unix := time.Unix(int64(sec), int64(nsec))
+		unix := time.Unix(sec, nsec)
 		checkTime(t, unix)
 		checkTime(t, unix.UTC())
 		checkTime(t, unix.In(time.FixedZone("", -8*3600)))
