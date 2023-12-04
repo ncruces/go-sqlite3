@@ -250,7 +250,7 @@ func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, e
 		s.Close()
 		return nil, util.TailErr
 	}
-	return &stmt{s, c.Conn}, nil
+	return &stmt{s}, nil
 }
 
 func (c *conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
@@ -281,8 +281,7 @@ func (*conn) CheckNamedValue(arg *driver.NamedValue) error {
 }
 
 type stmt struct {
-	Stmt *sqlite3.Stmt
-	Conn *sqlite3.Conn
+	*sqlite3.Stmt
 }
 
 var (
@@ -291,10 +290,6 @@ var (
 	_ driver.StmtQueryContext  = &stmt{}
 	_ driver.NamedValueChecker = &stmt{}
 )
-
-func (s *stmt) Close() error {
-	return s.Stmt.Close()
-}
 
 func (s *stmt) NumInput() int {
 	n := s.Stmt.BindCount()
@@ -322,15 +317,15 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 		return nil, err
 	}
 
-	old := s.Conn.SetInterrupt(ctx)
-	defer s.Conn.SetInterrupt(old)
+	old := s.Stmt.Conn().SetInterrupt(ctx)
+	defer s.Stmt.Conn().SetInterrupt(old)
 
 	err = s.Stmt.Exec()
 	if err != nil {
 		return nil, err
 	}
 
-	return newResult(s.Conn), nil
+	return newResult(s.Stmt.Conn()), nil
 }
 
 func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
@@ -338,7 +333,7 @@ func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 	if err != nil {
 		return nil, err
 	}
-	return &rows{ctx, s.Stmt, s.Conn}, nil
+	return &rows{ctx, s.Stmt}, nil
 }
 
 func (s *stmt) setupBindings(args []driver.NamedValue) error {
@@ -442,10 +437,10 @@ func (r resultRowsAffected) RowsAffected() (int64, error) {
 type rows struct {
 	ctx  context.Context
 	Stmt *sqlite3.Stmt
-	Conn *sqlite3.Conn
 }
 
 func (r *rows) Close() error {
+	r.Stmt.ClearBindings()
 	return r.Stmt.Reset()
 }
 
@@ -469,8 +464,8 @@ func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
 }
 
 func (r *rows) Next(dest []driver.Value) error {
-	old := r.Conn.SetInterrupt(r.ctx)
-	defer r.Conn.SetInterrupt(old)
+	old := r.Stmt.Conn().SetInterrupt(r.ctx)
+	defer r.Stmt.Conn().SetInterrupt(old)
 
 	if !r.Stmt.Step() {
 		if err := r.Stmt.Err(); err != nil {

@@ -143,7 +143,7 @@ type VTabRenamer interface {
 type VTabOverloader interface {
 	VTab
 	// https://sqlite.org/vtab.html#xfindfunction
-	FindFunction(arg int, name string) (func(ctx Context, arg ...Value), IndexConstraintOp)
+	FindFunction(arg int, name string) (ScalarFunction, IndexConstraintOp)
 }
 
 // A VTabChecker allows a virtual table to report errors
@@ -161,6 +161,11 @@ type VTabChecker interface {
 
 // A VTabTx allows a virtual table to implement
 // transactions with two-phase commit.
+//
+// Anything that is required as part of a commit that may fail
+// should be performed in the Sync() callback.
+// Current versions of SQLite ignore any errors
+// returned by Commit() and Rollback().
 type VTabTx interface {
 	VTab
 	// https://sqlite.org/vtab.html#xBegin

@@ -586,6 +586,10 @@ func TestStmt_ColumnTime(t *testing.T) {
 			t.Errorf("want error")
 		}
 	}
+
+	if got := stmt.Status(sqlite3.STMTSTATUS_RUN, true); got != 1 {
+		t.Errorf("got %d, want 1", got)
+	}
 }
 
 func TestStmt_Error(t *testing.T) {

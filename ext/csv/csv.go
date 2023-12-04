@@ -172,9 +172,9 @@ func (t *table) newReader() *csv.Reader {
 
 type cursor struct {
 	table *table
-	rowID int64
-	row   []string
 	csv   *csv.Reader
+	row   []string
+	rowID int64
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {

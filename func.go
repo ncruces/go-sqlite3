@@ -32,7 +32,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 // CreateFunction defines a new scalar SQL function.
 //
 // https://sqlite.org/c3ref/create_function.html
-func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(ctx Context, arg ...Value)) error {
+func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn ScalarFunction) error {
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	funcPtr := util.AddHandle(c.ctx, fn)
@@ -41,6 +41,9 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn func(
 		uint64(flag), uint64(funcPtr))
 	return c.error(r)
 }
+
+// ScalarFunction is the type of a scalar SQL function.
+type ScalarFunction func(ctx Context, arg ...Value)
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
 // If fn returns a [WindowFunction], then an aggregate window function is created.
@@ -95,7 +98,7 @@ func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 
 func funcCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := userDataHandle(db, pCtx).(func(ctx Context, arg ...Value))
+	fn := userDataHandle(db, pCtx).(ScalarFunction)
 	fn(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
 }
 

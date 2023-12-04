@@ -74,7 +74,9 @@ sqlite3_result_value
 sqlite3_result_zeroblob64
 sqlite3_set_auxdata_go
 sqlite3_step
+sqlite3_stmt_busy
 sqlite3_stmt_readonly
+sqlite3_stmt_status
 sqlite3_uri_key
 sqlite3_uri_parameter
 sqlite3_user_data

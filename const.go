@@ -169,7 +169,8 @@ const (
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
 )
 
-// FunctionFlag is a flag that can be passed to [Conn.PrepareFlags].
+// FunctionFlag is a flag that can be passed to
+// [Conn.CreateFunction] and [Conn.CreateWindowFunction].
 //
 // https://sqlite.org/c3ref/c_deterministic.html
 type FunctionFlag uint32
@@ -179,6 +180,23 @@ const (
 	DIRECTONLY    FunctionFlag = 0x000080000
 	SUBTYPE       FunctionFlag = 0x000100000
 	INNOCUOUS     FunctionFlag = 0x000200000
+)
+
+// StmtStatus name counter values associated with the [Stmt.Status] method.
+//
+// https://sqlite.org/c3ref/c_stmtstatus_counter.html
+type StmtStatus uint32
+
+const (
+	STMTSTATUS_FULLSCAN_STEP StmtStatus = 1
+	STMTSTATUS_SORT          StmtStatus = 2
+	STMTSTATUS_AUTOINDEX     StmtStatus = 3
+	STMTSTATUS_VM_STEP       StmtStatus = 4
+	STMTSTATUS_REPREPARE     StmtStatus = 5
+	STMTSTATUS_RUN           StmtStatus = 6
+	STMTSTATUS_FILTER_MISS   StmtStatus = 7
+	STMTSTATUS_FILTER_HIT    StmtStatus = 8
+	STMTSTATUS_MEMUSED       StmtStatus = 99
 )
 
 // Datatype is a fundamental datatype of SQLite.

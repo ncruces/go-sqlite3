@@ -34,6 +34,22 @@ func (s *Stmt) Close() error {
 	return s.c.error(r)
 }
 
+// Conn returns the database connection to which the prepared statement belongs.
+//
+// https://sqlite.org/c3ref/db_handle.html
+func (s *Stmt) Conn() *Conn {
+	return s.c
+}
+
+// ReadOnly returns true if and only if the statement
+// makes no direct changes to the content of the database file.
+//
+// https://sqlite.org/c3ref/stmt_readonly.html
+func (s *Stmt) ReadOnly() bool {
+	r := s.c.call("sqlite3_stmt_readonly", uint64(s.handle))
+	return r != 0
+}
+
 // Reset resets the prepared statement object.
 //
 // https://sqlite.org/c3ref/reset.html
@@ -43,12 +59,12 @@ func (s *Stmt) Reset() error {
 	return s.c.error(r)
 }
 
-// ClearBindings resets all bindings on the prepared statement.
+// Busy determines if a prepared statement has been reset.
 //
-// https://sqlite.org/c3ref/clear_bindings.html
-func (s *Stmt) ClearBindings() error {
-	r := s.c.call("sqlite3_clear_bindings", uint64(s.handle))
-	return s.c.error(r)
+// https://sqlite.org/c3ref/stmt_busy.html
+func (s *Stmt) Busy() bool {
+	r := s.c.call("sqlite3_stmt_busy", uint64(s.handle))
+	return r != 0
 }
 
 // Step evaluates the SQL statement.
@@ -90,13 +106,25 @@ func (s *Stmt) Exec() error {
 	return s.Reset()
 }
 
-// ReadOnly returns true if and only if the statement
-// makes no direct changes to the content of the database file.
+// Status monitors the performance characteristics of prepared statements.
 //
-// https://sqlite.org/c3ref/stmt_readonly.html
-func (s *Stmt) ReadOnly() bool {
-	r := s.c.call("sqlite3_stmt_readonly", uint64(s.handle))
-	return r != 0
+// https://sqlite.org/c3ref/stmt_status.html
+func (s *Stmt) Status(op StmtStatus, reset bool) int {
+	var i uint64
+	if reset {
+		i = 1
+	}
+	r := s.c.call("sqlite3_stmt_status", uint64(s.handle),
+		uint64(op), i)
+	return int(r)
+}
+
+// ClearBindings resets all bindings on the prepared statement.
+//
+// https://sqlite.org/c3ref/clear_bindings.html
+func (s *Stmt) ClearBindings() error {
+	r := s.c.call("sqlite3_clear_bindings", uint64(s.handle))
+	return s.c.error(r)
 }
 
 // BindCount returns the number of SQL parameters in the prepared statement.

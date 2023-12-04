@@ -52,11 +52,11 @@ func (l lines) Open() (sqlite3.VTabCursor, error) {
 }
 
 type cursor struct {
-	reader  bool
 	scanner *bufio.Scanner
 	closer  io.Closer
 	rowID   int64
 	eof     bool
+	reader  bool
 }
 
 func (c *cursor) Close() (err error) {
