@@ -24,7 +24,7 @@ func Register(db *sqlite3.Conn) {
 
 func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if len(arg) < 6 {
-		ctx.ResultError(util.ErrorString("wrong number of arguments to function blob_open()"))
+		ctx.ResultError(util.ErrorString("blob_open: wrong number of arguments"))
 		return
 	}
 

@@ -143,6 +143,8 @@ func errorCode(err error, def ErrorCode) (msg string, code uint32) {
 		return "", uint32(code)
 	case ExtendedErrorCode:
 		return "", uint32(code)
+	case *Error:
+		return code.msg, uint32(code.code)
 	case nil:
 		return "", _OK
 	}

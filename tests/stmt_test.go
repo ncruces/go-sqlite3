@@ -30,6 +30,10 @@ func TestStmt(t *testing.T) {
 	}
 	defer stmt.Close()
 
+	if got := stmt.ReadOnly(); got != false {
+		t.Error("got true, want false")
+	}
+
 	if got := stmt.BindCount(); got != 1 {
 		t.Errorf("got %d, want 1", got)
 	}
@@ -136,6 +140,10 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
+
+	if got := stmt.ReadOnly(); got != true {
+		t.Error("got false, want true")
+	}
 
 	if stmt.Step() {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
