@@ -44,8 +44,7 @@ func (e *Error) Error() string {
 	}
 
 	if e.msg != "" {
-		b.WriteByte(':')
-		b.WriteByte(' ')
+		b.WriteString(": ")
 		b.WriteString(e.msg)
 	}
 

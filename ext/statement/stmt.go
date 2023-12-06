@@ -15,55 +15,6 @@ import (
 
 // Register registers the statement virtual table.
 func Register(db *sqlite3.Conn) {
-	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
-		if len(arg) != 1 {
-			return nil, fmt.Errorf("statement: wrong number of arguments")
-		}
-
-		sql := "SELECT * FROM\n" + arg[0]
-
-		stmt, _, err := db.Prepare(sql)
-		if err != nil {
-			return nil, err
-		}
-
-		var sep = ""
-		var str strings.Builder
-		str.WriteString(`CREATE TABLE x(`)
-		outputs := stmt.ColumnCount()
-		for i := 0; i < outputs; i++ {
-			name := sqlite3.QuoteIdentifier(stmt.ColumnName(i))
-			str.WriteString(sep)
-			str.WriteString(name)
-			str.WriteByte(' ')
-			str.WriteString(stmt.ColumnDeclType(i))
-			sep = ","
-		}
-		inputs := stmt.BindCount()
-		for i := 1; i <= inputs; i++ {
-			str.WriteString(sep)
-			name := stmt.BindName(i)
-			if name == "" {
-				str.WriteString("[")
-				str.WriteString(strconv.Itoa(i))
-				str.WriteString("] HIDDEN")
-			} else {
-				str.WriteString(sqlite3.QuoteIdentifier(name[1:]))
-				str.WriteString(" HIDDEN")
-			}
-			sep = ","
-		}
-		str.WriteByte(')')
-
-		err = db.DeclareVtab(str.String())
-		if err != nil {
-			stmt.Close()
-			return nil, err
-		}
-
-		return &table{sql: sql, stmt: stmt}, nil
-	}
-
 	sqlite3.CreateModule(db, "statement", declare, declare)
 }
 
@@ -71,6 +22,55 @@ type table struct {
 	stmt  *sqlite3.Stmt
 	sql   string
 	inuse bool
+}
+
+func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
+	if len(arg) != 1 {
+		return nil, fmt.Errorf("statement: wrong number of arguments")
+	}
+
+	sql := "SELECT * FROM\n" + arg[0]
+
+	stmt, _, err := db.Prepare(sql)
+	if err != nil {
+		return nil, err
+	}
+
+	var sep string
+	var str strings.Builder
+	str.WriteString("CREATE TABLE x(")
+	outputs := stmt.ColumnCount()
+	for i := 0; i < outputs; i++ {
+		name := sqlite3.QuoteIdentifier(stmt.ColumnName(i))
+		str.WriteString(sep)
+		str.WriteString(name)
+		str.WriteString(" ")
+		str.WriteString(stmt.ColumnDeclType(i))
+		sep = ","
+	}
+	inputs := stmt.BindCount()
+	for i := 1; i <= inputs; i++ {
+		str.WriteString(sep)
+		name := stmt.BindName(i)
+		if name == "" {
+			str.WriteString("[")
+			str.WriteString(strconv.Itoa(i))
+			str.WriteString("] HIDDEN")
+		} else {
+			str.WriteString(sqlite3.QuoteIdentifier(name[1:]))
+			str.WriteString(" HIDDEN")
+		}
+		sep = ","
+	}
+	str.WriteByte(')')
+
+	err = db.DeclareVtab(str.String())
+	if err != nil {
+		stmt.Close()
+		return nil, err
+	}
+
+	return &table{sql: sql, stmt: stmt}, nil
 }
 
 func (t *table) Close() error {
@@ -120,11 +120,12 @@ func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
 	return nil
 }
 
-func (t *table) Open() (_ sqlite3.VTabCursor, err error) {
+func (t *table) Open() (sqlite3.VTabCursor, error) {
 	stmt := t.stmt
 	if !t.inuse {
 		t.inuse = true
 	} else {
+		var err error
 		stmt, _, err = t.stmt.Conn().Prepare(t.sql)
 		if err != nil {
 			return nil, err
@@ -186,7 +187,6 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 func (c *cursor) Next() error {
 	if c.stmt.Step() {
 		c.rowID++
-		return nil
 	}
 	return c.stmt.Err()
 }

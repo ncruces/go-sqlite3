@@ -16,6 +16,7 @@ type Value struct {
 	*sqlite
 	handle uint32
 	unprot bool
+	copied bool
 }
 
 func (v Value) protected() uint64 {
@@ -23,6 +24,30 @@ func (v Value) protected() uint64 {
 		panic(util.ValueErr)
 	}
 	return uint64(v.handle)
+}
+
+// Dup makes a copy of the SQL value and returns a pointer to that copy.
+//
+// https://sqlite.org/c3ref/value_dup.html
+func (v Value) Dup() *Value {
+	r := v.call("sqlite3_value_dup", uint64(v.handle))
+	return &Value{
+		copied: true,
+		sqlite: v.sqlite,
+		handle: uint32(r),
+	}
+}
+
+// Close frees an SQL value previously obtained by [Value.Dup].
+//
+// https://sqlite.org/c3ref/value_dup.html
+func (dup *Value) Close() error {
+	if !dup.copied {
+		panic(util.ValueErr)
+	}
+	dup.call("sqlite3_value_free", uint64(dup.handle))
+	dup.handle = 0
+	return nil
 }
 
 // Type returns the initial [Datatype] of the value.

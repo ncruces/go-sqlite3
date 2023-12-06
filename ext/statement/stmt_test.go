@@ -95,7 +95,6 @@ func TestRegister(t *testing.T) {
 			t.Errorf("hypot(%d, %d) = %d", x, y, hypot)
 		}
 	}
-
 }
 
 func TestRegister_errors(t *testing.T) {

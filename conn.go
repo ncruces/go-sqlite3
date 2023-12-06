@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"runtime"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -56,8 +55,6 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 	defer func() {
 		if conn == nil {
 			sqlite.close()
-		} else {
-			runtime.SetFinalizer(conn, util.Finalizer[Conn](3))
 		}
 	}()
 
@@ -92,7 +89,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 			for _, p := range query["_pragma"] {
 				pragmas.WriteString(`PRAGMA `)
 				pragmas.WriteString(p)
-				pragmas.WriteByte(';')
+				pragmas.WriteString(`;`)
 			}
 		}
 
@@ -140,7 +137,6 @@ func (c *Conn) Close() error {
 	}
 
 	c.handle = 0
-	runtime.SetFinalizer(c, nil)
 	return c.close()
 }
 
@@ -194,7 +190,7 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	if stmt.handle == 0 {
 		return nil, "", nil
 	}
-	return
+	return stmt, tail, nil
 }
 
 // GetAutocommit tests the connection for auto-commit mode.

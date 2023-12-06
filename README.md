@@ -30,6 +30,10 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   reads [comma-separated values](https://sqlite.org/csv.html).
 - [`github.com/ncruces/go-sqlite3/ext/lines`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/lines)
   reads files [line-by-line](https://github.com/asg017/sqlite-lines).
+- [`github.com/ncruces/go-sqlite3/ext/pivot`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/pivot)
+  creates [pivot tables](https://github.com/jakethaw/pivot_vtab).
+- [`github.com/ncruces/go-sqlite3/ext/statement`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/statement)
+  creates [table-valued functions with SQL](https://github.com/0x09/sqlite-statement-vtab).
 - [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
   provides [statistics functions](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html).
 - [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)

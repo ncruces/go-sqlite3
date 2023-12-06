@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"runtime"
 	"strconv"
 )
@@ -32,14 +31,6 @@ func AssertErr() ErrorString {
 		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
 	}
 	return ErrorString(msg)
-}
-
-func Finalizer[T any](skip int) func(*T) {
-	msg := fmt.Sprintf("sqlite3: %T not closed", new(T))
-	if _, file, line, ok := runtime.Caller(skip + 1); ok && skip >= 0 {
-		msg += " (" + file + ":" + strconv.Itoa(line) + ")"
-	}
-	return func(*T) { panic(ErrorString(msg)) }
 }
 
 func ErrorCodeString(rc uint32) string {

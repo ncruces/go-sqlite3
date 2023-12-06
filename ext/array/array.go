@@ -119,7 +119,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	return nil
 }
 
-func indexable(v reflect.Value) (_ reflect.Value, err error) {
+func indexable(v reflect.Value) (reflect.Value, error) {
 	if v.Kind() == reflect.Slice {
 		return v, nil
 	}

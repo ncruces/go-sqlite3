@@ -81,6 +81,7 @@ func (s *Stmt) Step() bool {
 	r := s.c.call("sqlite3_step", uint64(s.handle))
 	switch r {
 	case _ROW:
+		s.err = nil
 		return true
 	case _DONE:
 		s.err = nil

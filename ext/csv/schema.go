@@ -8,9 +8,9 @@ import (
 )
 
 func getSchema(header bool, columns int, row []string) string {
-	var sep = ""
+	var sep string
 	var str strings.Builder
-	str.WriteString(`CREATE TABLE x(`)
+	str.WriteString("CREATE TABLE x(")
 
 	if 0 <= columns && columns < len(row) {
 		row = row[:columns]
@@ -20,7 +20,7 @@ func getSchema(header bool, columns int, row []string) string {
 		if header && f != "" {
 			str.WriteString(sqlite3.QuoteIdentifier(f))
 		} else {
-			str.WriteByte('c')
+			str.WriteString("c")
 			str.WriteString(strconv.Itoa(i + 1))
 		}
 		str.WriteString(" TEXT")
@@ -28,7 +28,7 @@ func getSchema(header bool, columns int, row []string) string {
 	}
 	for i := len(row); i < columns; i++ {
 		str.WriteString(sep)
-		str.WriteByte('c')
+		str.WriteString("c")
 		str.WriteString(strconv.Itoa(i + 1))
 		str.WriteString(" TEXT")
 		sep = ","

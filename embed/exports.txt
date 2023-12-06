@@ -83,6 +83,8 @@ sqlite3_user_data
 sqlite3_value_blob
 sqlite3_value_bytes
 sqlite3_value_double
+sqlite3_value_dup
+sqlite3_value_free
 sqlite3_value_int64
 sqlite3_value_nochange
 sqlite3_value_pointer_go
