@@ -20,7 +20,7 @@ type TimeFormat string
 
 // TimeFormats recognized by SQLite to encode/decode time values.
 //
-// https://sqlite.org/lang_datefunc.html
+// https://sqlite.org/lang_datefunc.html#time_values
 const (
 	TimeFormatDefault TimeFormat = "" // time.RFC3339Nano
 

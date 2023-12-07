@@ -114,13 +114,7 @@ func Test_Open_txLock(t *testing.T) {
 func Test_Open_txLock_invalid(t *testing.T) {
 	t.Parallel()
 
-	db, err := sql.Open("sqlite3", "file::memory:?_txlock=xclusive")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	_, err = db.Conn(context.TODO())
+	_, err := sql.Open("sqlite3", "file::memory:?_txlock=xclusive")
 	if err == nil {
 		t.Fatal("want error")
 	}
