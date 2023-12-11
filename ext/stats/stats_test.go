@@ -1,4 +1,4 @@
-package stats
+package stats_test
 
 import (
 	"math"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/ext/stats"
 )
 
 func TestRegister_variance(t *testing.T) {
@@ -17,7 +18,7 @@ func TestRegister_variance(t *testing.T) {
 	}
 	defer db.Close()
 
-	Register(db)
+	stats.Register(db)
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (x)`)
 	if err != nil {
@@ -89,7 +90,7 @@ func TestRegister_covariance(t *testing.T) {
 	}
 	defer db.Close()
 
-	Register(db)
+	stats.Register(db)
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (x, y)`)
 	if err != nil {

@@ -18,8 +18,7 @@ import (
 //
 // https://sqlite.org/c3ref/blob.html
 func Register(db *sqlite3.Conn) {
-	db.CreateFunction("blob_open", -1,
-		sqlite3.DETERMINISTIC|sqlite3.DIRECTONLY, openBlob)
+	db.CreateFunction("blob_open", -1, sqlite3.DIRECTONLY, openBlob)
 }
 
 func openBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
