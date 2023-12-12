@@ -28,6 +28,8 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
   simplifies [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html).
 - [`github.com/ncruces/go-sqlite3/ext/csv`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/csv)
   reads [comma-separated values](https://sqlite.org/csv.html).
+- [`github.com/ncruces/go-sqlite3/ext/fileio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/fileio)
+  reads and writes files.
 - [`github.com/ncruces/go-sqlite3/ext/lines`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/lines)
   reads files [line-by-line](https://github.com/asg017/sqlite-lines).
 - [`github.com/ncruces/go-sqlite3/ext/pivot`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/pivot)

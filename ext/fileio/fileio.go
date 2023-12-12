@@ -21,16 +21,16 @@ func Register(db *sqlite3.Conn) {
 // Register registers SQL functions readfile, lsmode,
 // and the eponymous virtual table fsdir;
 // fs will be used to read files and list directories.
-func RegisterFS(db *sqlite3.Conn, fs fs.FS) {
+func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	db.CreateFunction("lsmode", 1, 0, lsmode)
-	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fs))
-	if fs == nil {
+	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fsys))
+	if fsys == nil {
 		db.CreateFunction("writefile", -1, sqlite3.DIRECTONLY, writefile)
 	}
 	sqlite3.CreateModule(db, "fsdir", nil, func(db *sqlite3.Conn, module, schema, table string, arg ...string) (fsdir, error) {
 		err := db.DeclareVtab(`CREATE TABLE x(name,mode,mtime,data,path HIDDEN,dir HIDDEN)`)
 		db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
-		return fsdir{fs}, err
+		return fsdir{fsys}, err
 	})
 }
 
@@ -38,13 +38,13 @@ func lsmode(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultText(fs.FileMode(arg[0].Int()).String())
 }
 
-func readfile(f fs.FS) func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func readfile(fsys fs.FS) func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	return func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		var err error
 		var data []byte
 
-		if f != nil {
-			data, err = fs.ReadFile(f, arg[0].Text())
+		if fsys != nil {
+			data, err = fs.ReadFile(fsys, arg[0].Text())
 		} else {
 			data, err = os.ReadFile(arg[0].Text())
 		}

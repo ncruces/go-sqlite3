@@ -131,5 +131,5 @@ func indexable(v reflect.Value) (reflect.Value, error) {
 			return v, nil
 		}
 	}
-	return v, fmt.Errorf("array: unsupported argument:%.0w %v", sqlite3.MISMATCH, v.Type())
+	return v, fmt.Errorf("array: unsupported argument:%.0w %v", sqlite3.MISMATCH, v)
 }

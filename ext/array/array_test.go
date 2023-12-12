@@ -92,3 +92,29 @@ func Test_cursor_Column(t *testing.T) {
 		log.Fatal(err)
 	}
 }
+
+func Test_array_errors(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	array.Register(db)
+
+	err = db.Exec(`SELECT * FROM array()`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`SELECT * FROM array(?)`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+}

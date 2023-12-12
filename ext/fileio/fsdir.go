@@ -1,7 +1,6 @@
 package fileio
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path"
@@ -11,7 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
-type fsdir struct{ fs.FS }
+type fsdir struct{ fsys fs.FS }
 
 func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 	var root, base bool
@@ -37,21 +36,23 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 			base = true
 		}
 	}
-	if root {
-		idx.EstimatedCost = 100
+	if !root {
+		return sqlite3.CONSTRAINT
 	}
 	if base {
 		idx.EstimatedCost = 10
+	} else {
+		idx.EstimatedCost = 100
 	}
 	return nil
 }
 
 func (d fsdir) Open() (sqlite3.VTabCursor, error) {
-	return &cursor{fs: d.FS}, nil
+	return &cursor{fsys: d.fsys}, nil
 }
 
 type cursor struct {
-	fs    fs.FS
+	fsys  fs.FS
 	base  string
 	rowID int64
 	eof   bool
@@ -81,14 +82,11 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	if err := c.Close(); err != nil {
 		return err
 	}
-	if len(arg) == 0 {
-		return fmt.Errorf("fsdir: wrong number of arguments")
-	}
 
 	root := arg[0].Text()
 	if len(arg) > 1 {
 		base := arg[1].Text()
-		if c.fs != nil {
+		if c.fsys != nil {
 			root = path.Join(base, root)
 			base = path.Clean(base) + "/"
 		} else {
@@ -147,8 +145,8 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 		case typ.IsRegular():
 			var data []byte
 			var err error
-			if c.fs != nil {
-				data, err = fs.ReadFile(c.fs, c.curr.path)
+			if c.fsys != nil {
+				data, err = fs.ReadFile(c.fsys, c.curr.path)
 			} else {
 				data, err = os.ReadFile(c.curr.path)
 			}
@@ -157,7 +155,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 			}
 			ctx.ResultBlob(data)
 
-		case typ&fs.ModeSymlink != 0 && c.fs == nil:
+		case typ&fs.ModeSymlink != 0 && c.fsys == nil:
 			t, err := os.Readlink(c.curr.path)
 			if err != nil {
 				return err
@@ -169,26 +167,12 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 }
 
 func (c *cursor) WalkDir(path string) {
-	var err error
+	defer close(c.next)
 
-	defer func() {
-		if p := recover(); p != nil {
-			if perr, ok := p.(error); ok {
-				err = fmt.Errorf("panic: %w", perr)
-			} else {
-				err = fmt.Errorf("panic: %v", p)
-			}
-		}
-		if err != nil {
-			c.next <- entry{err: err}
-		}
-		close(c.next)
-	}()
-
-	if c.fs != nil {
-		err = fs.WalkDir(c.fs, path, c.WalkDirFunc)
+	if c.fsys != nil {
+		fs.WalkDir(c.fsys, path, c.WalkDirFunc)
 	} else {
-		err = filepath.WalkDir(path, c.WalkDirFunc)
+		filepath.WalkDir(path, c.WalkDirFunc)
 	}
 }
 

@@ -1,6 +1,9 @@
 package fileio_test
 
 import (
+	"bytes"
+	"database/sql"
+	"io/fs"
 	"os"
 	"testing"
 
@@ -42,5 +45,36 @@ func Test_lsmode(t *testing.T) {
 		t.Errorf("got %s", mode)
 	} else {
 		t.Logf("got %s", mode)
+	}
+}
+
+func Test_readfile(t *testing.T) {
+	t.Parallel()
+
+	for _, fsys := range []fs.FS{nil, os.DirFS(".")} {
+		t.Run("", func(t *testing.T) {
+			db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
+				fileio.RegisterFS(c, fsys)
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			rows, err := db.Query(`SELECT readfile('fileio_test.go')`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if rows.Next() {
+				var data sql.RawBytes
+				rows.Scan(&data)
+
+				if !bytes.HasPrefix(data, []byte("package fileio_test")) {
+					t.Errorf("got %s", data[:min(64, len(data))])
+				}
+			}
+		})
 	}
 }
