@@ -60,7 +60,7 @@ func TestMultiProcess(t *testing.T) {
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
 
-	cmd := exec.Command("go", "test", "-v", "-run", "TestChildProcess")
+	cmd := exec.Command(os.Args[0], append(os.Args[1:], "-test.v", "-test.run=TestChildProcess")...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -71,8 +71,10 @@ func TestMultiProcess(t *testing.T) {
 
 	var buf [3]byte
 	// Wait for child to start.
-	if _, err := io.ReadFull(out, buf[:]); err != nil || string(buf[:]) != "===" {
+	if _, err := io.ReadFull(out, buf[:]); err != nil {
 		t.Fatal(err)
+	} else if str := string(buf[:]); str != "===" {
+		t.Fatal(str)
 	}
 
 	testParallel(t, name, 1000)
