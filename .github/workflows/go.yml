@@ -58,7 +58,6 @@ jobs:
       with:
         chart: true
         amend: true
-        reuse-go: true
       if: |
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'

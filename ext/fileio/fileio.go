@@ -1,3 +1,6 @@
+// Package fileio provides SQL functions to read and write files.
+//
+// https://sqlite.org/src/doc/tip/ext/misc/fileio.c
 package fileio
 
 import (
@@ -9,14 +12,25 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
+// Register registers SQL functions readfile, writefile, lsmode,
+// and the eponymous virtual table fsdir.
 func Register(db *sqlite3.Conn) {
+	RegisterFS(db, nil)
+}
+
+// Register registers SQL functions readfile, lsmode,
+// and the eponymous virtual table fsdir;
+// fs will be used to read files and list directories.
+func RegisterFS(db *sqlite3.Conn, fs fs.FS) {
 	db.CreateFunction("lsmode", 1, 0, lsmode)
-	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile)
-	db.CreateFunction("writefile", -1, sqlite3.DIRECTONLY, writefile)
+	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fs))
+	if fs == nil {
+		db.CreateFunction("writefile", -1, sqlite3.DIRECTONLY, writefile)
+	}
 	sqlite3.CreateModule(db, "fsdir", nil, func(db *sqlite3.Conn, module, schema, table string, arg ...string) (fsdir, error) {
 		err := db.DeclareVtab(`CREATE TABLE x(name,mode,mtime,data,path HIDDEN,dir HIDDEN)`)
 		db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
-		return fsdir{}, err
+		return fsdir{fs}, err
 	})
 }
 
@@ -24,14 +38,22 @@ func lsmode(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultText(fs.FileMode(arg[0].Int()).String())
 }
 
-func readfile(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	d, err := os.ReadFile(arg[0].Text())
-	if errors.Is(err, fs.ErrNotExist) {
-		return
-	}
-	if err != nil {
-		ctx.ResultError(fmt.Errorf("readfile: %w", err))
-	} else {
-		ctx.ResultBlob(d)
+func readfile(f fs.FS) func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	return func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		var err error
+		var data []byte
+
+		if f != nil {
+			data, err = fs.ReadFile(f, arg[0].Text())
+		} else {
+			data, err = os.ReadFile(arg[0].Text())
+		}
+
+		switch {
+		case err == nil:
+			ctx.ResultBlob(data)
+		case !errors.Is(err, fs.ErrNotExist):
+			ctx.ResultError(fmt.Errorf("readfile: %w", err))
+		}
 	}
 }

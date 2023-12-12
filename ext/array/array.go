@@ -1,4 +1,6 @@
 // Package array provides the array table-valued SQL function.
+//
+// https://sqlite.org/carray.html
 package array
 
 import (
@@ -11,8 +13,6 @@ import (
 // Register registers the array single-argument, table-valued SQL function.
 // The argument must be an [sqlite3.Pointer] to a Go slice or array
 // of ints, floats, bools, strings or blobs.
-//
-// https://sqlite.org/carray.html
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule[array](db, "array", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (array, error) {

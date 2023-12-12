@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -13,10 +14,10 @@ import (
 type fsdir struct{ fs.FS }
 
 func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
-	var path, dir bool
+	var root, base bool
 	for i, cst := range idx.Constraint {
 		switch cst.Column {
-		case 4: // path
+		case 4: // root
 			if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
 				return sqlite3.CONSTRAINT
 			}
@@ -24,8 +25,8 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 				Omit:      true,
 				ArgvIndex: 1,
 			}
-			path = true
-		case 5: // dir
+			root = true
+		case 5: // base
 			if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
 				return sqlite3.CONSTRAINT
 			}
@@ -33,13 +34,13 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 				Omit:      true,
 				ArgvIndex: 2,
 			}
-			dir = true
+			base = true
 		}
 	}
-	if path {
+	if root {
 		idx.EstimatedCost = 100
 	}
-	if dir {
+	if base {
 		idx.EstimatedCost = 10
 	}
 	return nil
@@ -51,7 +52,7 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	fs    fs.FS
-	dir   string
+	base  string
 	rowID int64
 	eof   bool
 	curr  entry
@@ -60,9 +61,9 @@ type cursor struct {
 }
 
 type entry struct {
-	path  string
-	entry fs.DirEntry
-	err   error
+	path string
+	fs.DirEntry
+	err error
 }
 
 func (c *cursor) Close() error {
@@ -84,21 +85,24 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return fmt.Errorf("fsdir: wrong number of arguments")
 	}
 
-	path := arg[0].Text()
+	root := arg[0].Text()
 	if len(arg) > 1 {
-		if dir := arg[1].RawText(); c.fs != nil {
-			c.dir = string(dir) + "/"
+		base := arg[1].Text()
+		if c.fs != nil {
+			root = path.Join(base, root)
+			base = path.Clean(base) + "/"
 		} else {
-			c.dir = string(dir) + string(filepath.Separator)
+			root = filepath.Join(base, root)
+			base = filepath.Clean(base) + string(filepath.Separator)
 		}
-		path = c.dir + path
+		c.base = base
 	}
 
 	c.rowID = 0
 	c.eof = false
 	c.next = make(chan entry)
 	c.done = make(chan struct{})
-	go c.WalkDir(path)
+	go c.WalkDir(root)
 	return c.Next()
 }
 
@@ -121,32 +125,32 @@ func (c *cursor) RowID() (int64, error) {
 func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 	switch n {
 	case 0: // name
-		name := strings.TrimPrefix(c.curr.path, c.dir)
+		name := strings.TrimPrefix(c.curr.path, c.base)
 		ctx.ResultText(name)
 
 	case 1: // mode
-		i, err := c.curr.entry.Info()
+		i, err := c.curr.Info()
 		if err != nil {
 			return err
 		}
 		ctx.ResultInt64(int64(i.Mode()))
 
 	case 2: // mtime
-		i, err := c.curr.entry.Info()
+		i, err := c.curr.Info()
 		if err != nil {
 			return err
 		}
 		ctx.ResultTime(i.ModTime(), sqlite3.TimeFormatUnixFrac)
 
 	case 3: // data
-		switch typ := c.curr.entry.Type(); {
+		switch typ := c.curr.Type(); {
 		case typ.IsRegular():
 			var data []byte
 			var err error
-			if name := c.curr.entry.Name(); c.fs != nil {
-				data, err = fs.ReadFile(c.fs, name)
+			if c.fs != nil {
+				data, err = fs.ReadFile(c.fs, c.curr.path)
 			} else {
-				data, err = os.ReadFile(name)
+				data, err = os.ReadFile(c.curr.path)
 			}
 			if err != nil {
 				return err
@@ -154,7 +158,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 			ctx.ResultBlob(data)
 
 		case typ&fs.ModeSymlink != 0 && c.fs == nil:
-			t, err := os.Readlink(c.curr.entry.Name())
+			t, err := os.Readlink(c.curr.path)
 			if err != nil {
 				return err
 			}
@@ -188,11 +192,11 @@ func (c *cursor) WalkDir(path string) {
 	}
 }
 
-func (c *cursor) WalkDirFunc(path string, de fs.DirEntry, err error) error {
+func (c *cursor) WalkDirFunc(path string, d fs.DirEntry, err error) error {
 	select {
 	case <-c.done:
 		return fs.SkipAll
-	case c.next <- entry{path, de, err}:
+	case c.next <- entry{path, d, err}:
 		return nil
 	}
 }
