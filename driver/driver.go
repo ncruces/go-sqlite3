@@ -543,7 +543,7 @@ func (r *rows) Next(dest []driver.Value) error {
 }
 
 func (s *stmt) decodeTime(i int) (_ time.Time, _ bool) {
-	if s.tmRead == "" {
+	if s.tmRead == sqlite3.TimeFormatDefault {
 		return
 	}
 	switch s.Stmt.ColumnType(i) {

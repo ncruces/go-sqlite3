@@ -114,34 +114,8 @@ func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
 		if !cst.Usable || !(0 <= cst.Column && cst.Column < len(t.keys)) {
 			continue
 		}
-
-		var op string
-		switch cst.Op {
-		case sqlite3.INDEX_CONSTRAINT_EQ:
-			op = "="
-		case sqlite3.INDEX_CONSTRAINT_LT:
-			op = "<"
-		case sqlite3.INDEX_CONSTRAINT_GT:
-			op = ">"
-		case sqlite3.INDEX_CONSTRAINT_LE:
-			op = "<="
-		case sqlite3.INDEX_CONSTRAINT_GE:
-			op = ">="
-		case sqlite3.INDEX_CONSTRAINT_NE:
-			op = "<>"
-		case sqlite3.INDEX_CONSTRAINT_MATCH:
-			op = "MATCH"
-		case sqlite3.INDEX_CONSTRAINT_LIKE:
-			op = "LIKE"
-		case sqlite3.INDEX_CONSTRAINT_GLOB:
-			op = "GLOB"
-		case sqlite3.INDEX_CONSTRAINT_REGEXP:
-			op = "REGEXP"
-		case sqlite3.INDEX_CONSTRAINT_IS, sqlite3.INDEX_CONSTRAINT_ISNULL:
-			op = "IS"
-		case sqlite3.INDEX_CONSTRAINT_ISNOT, sqlite3.INDEX_CONSTRAINT_ISNOTNULL:
-			op = "IS NOT"
-		default:
+		op := operator(cst.Op)
+		if op == "" {
 			continue
 		}
 
@@ -264,4 +238,35 @@ func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 		ctx.ResultValue(c.cell.ColumnValue(0))
 	}
 	return c.cell.Reset()
+}
+
+func operator(op sqlite3.IndexConstraintOp) string {
+	switch op {
+	case sqlite3.INDEX_CONSTRAINT_EQ:
+		return "="
+	case sqlite3.INDEX_CONSTRAINT_LT:
+		return "<"
+	case sqlite3.INDEX_CONSTRAINT_GT:
+		return ">"
+	case sqlite3.INDEX_CONSTRAINT_LE:
+		return "<="
+	case sqlite3.INDEX_CONSTRAINT_GE:
+		return ">="
+	case sqlite3.INDEX_CONSTRAINT_NE:
+		return "<>"
+	case sqlite3.INDEX_CONSTRAINT_MATCH:
+		return "MATCH"
+	case sqlite3.INDEX_CONSTRAINT_LIKE:
+		return "LIKE"
+	case sqlite3.INDEX_CONSTRAINT_GLOB:
+		return "GLOB"
+	case sqlite3.INDEX_CONSTRAINT_REGEXP:
+		return "REGEXP"
+	case sqlite3.INDEX_CONSTRAINT_IS, sqlite3.INDEX_CONSTRAINT_ISNULL:
+		return "IS"
+	case sqlite3.INDEX_CONSTRAINT_ISNOT, sqlite3.INDEX_CONSTRAINT_ISNOTNULL:
+		return "IS NOT"
+	default:
+		return ""
+	}
 }

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"math"
+	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
@@ -293,5 +294,41 @@ func Test_QueryRow_blob_null(t *testing.T) {
 		if !bytes.Equal(buf, want[i]) {
 			t.Errorf("got %q, want %q", buf, want[i])
 		}
+	}
+}
+
+func Test_time(t *testing.T) {
+	t.Parallel()
+
+	for _, fmt := range []string{"auto", "sqlite", "rfc3339", time.ANSIC} {
+		t.Run(fmt, func(t *testing.T) {
+			db, err := sql.Open("sqlite3", "file::memory:?_timefmt="+url.QueryEscape(fmt))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			twosday := time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
+
+			_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (at DATETIME)`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = db.Exec(`INSERT INTO test VALUES (?)`, twosday)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got time.Time
+			err = db.QueryRow(`SELECT * FROM test`).Scan(&got)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !got.Equal(twosday) {
+				t.Errorf("got: %v", got)
+			}
+		})
 	}
 }

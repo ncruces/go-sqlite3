@@ -60,7 +60,7 @@ func Test_writefile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if mode.IsDir() && mtime != twosday {
+		if mode.IsDir() && !mtime.Equal(twosday) {
 			t.Errorf("got: %v", mtime)
 		}
 		if mode.IsRegular() && data.String != "Hello world!" {
