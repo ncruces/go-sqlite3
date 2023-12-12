@@ -12,21 +12,13 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up
-      uses: actions/setup-go@v5
-      with:
-        go-version: stable
-
-    - name: Build
-      run: GOOS=freebsd go test -c . ./vfs/... ./tests/...
-
     - name: Test
       uses: cross-platform-actions/action@v0.21.1
       with:
         operating_system: freebsd
         version: '13.2'
+        memory: 8G
         sync_files: runner-to-vm
         run: |
-          foreach test ( *.test )
-            ./$test -test.v || exit $?
-          end
+          sudo pkg install -y go121
+          go121 test -v ./...
