@@ -1,4 +1,13 @@
-// Package lines provides a virtual table to read large files line-by-line.
+// Package lines provides a virtual table to read data line-by-line.
+//
+// It is particularly useful for line-oriented datasets,
+// like [ndjson] or [JSON Lines],
+// when paired with SQLite's JSON support.
+//
+// https://github.com/asg017/sqlite-lines
+//
+// [ndjson]: https://ndjson.org/
+// [JSON Lines]: https://jsonlines.org/
 package lines
 
 import (

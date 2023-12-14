@@ -1,4 +1,4 @@
-// Package fileio provides SQL functions to read and write files.
+// Package fileio provides SQL functions to read, write and list files.
 //
 // https://sqlite.org/src/doc/tip/ext/misc/fileio.c
 package fileio

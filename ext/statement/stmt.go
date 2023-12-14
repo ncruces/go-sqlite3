@@ -1,4 +1,7 @@
-// Package statement defines table-valued functions natively using SQL.
+// Package statement defines table-valued functions using SQL.
+//
+// It can be used to create "parametrized views":
+// pre-packaged queries that can be parametrized at query execution time.
 //
 // https://github.com/0x09/sqlite-statement-vtab
 package statement
