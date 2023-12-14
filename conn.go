@@ -103,7 +103,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 			return 0, err
 		}
 	}
-
+	c.call("sqlite3_progress_handler_go", uint64(handle), 100)
 	return handle, nil
 }
 
@@ -252,12 +252,10 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	c.interrupt = ctx
 	// Remove the handler if the context can't be canceled.
 	if ctx == nil || ctx.Done() == nil {
-		c.call("sqlite3_progress_handler_go", uint64(c.handle), 0)
 		return old
 	}
 
 	c.pending.Step()
-	c.call("sqlite3_progress_handler_go", uint64(c.handle), 100)
 	return old
 }
 
