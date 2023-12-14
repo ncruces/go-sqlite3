@@ -7,6 +7,7 @@ import (
 	"math/bits"
 	"os"
 	"sync"
+	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -70,7 +71,7 @@ type sqlite struct {
 	mod   api.Module
 	funcs struct {
 		fn   [32]api.Function
-		id   [32]string
+		id   [32]*byte
 		mask uint32
 	}
 	stack [8]uint64
@@ -143,12 +144,13 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 }
 
 func (sqlt *sqlite) getfn(name string) api.Function {
-	for i, id := range sqlt.funcs.id {
-		if id == name {
-			c := &sqlt.funcs
+	c := &sqlt.funcs
+	p := unsafe.StringData(name)
+	for i, id := range c.id {
+		if id == p {
 			f := c.fn[i]
+			c.id[i] = nil
 			c.fn[i] = nil
-			c.id[i] = ""
 			c.mask &^= uint32(1) << i
 			return f
 		}
@@ -158,14 +160,15 @@ func (sqlt *sqlite) getfn(name string) api.Function {
 
 func (sqlt *sqlite) putfn(name string, fn api.Function) {
 	c := &sqlt.funcs
+	p := unsafe.StringData(name)
 	i := bits.TrailingZeros32(^c.mask)
 	if i < 32 {
+		c.id[i] = p
 		c.fn[i] = fn
-		c.id[i] = name
 		c.mask |= uint32(1) << i
 	} else {
+		c.id[0] = p
 		c.fn[0] = fn
-		c.id[0] = name
 		c.mask = uint32(1)
 	}
 }
