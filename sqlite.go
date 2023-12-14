@@ -4,6 +4,7 @@ package sqlite3
 import (
 	"context"
 	"math"
+	"math/bits"
 	"os"
 	"sync"
 
@@ -67,7 +68,11 @@ func compileSQLite() {
 type sqlite struct {
 	ctx   context.Context
 	mod   api.Module
-	funcs [8]api.Function
+	funcs struct {
+		fn   [32]api.Function
+		id   [32]string
+		mask uint32
+	}
 	stack [8]uint64
 	freer uint32
 }
@@ -137,33 +142,42 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 	return &err
 }
 
-func (sqlt *sqlite) getfn(name string) (api.Function, uint32) {
-	// https://cr.yp.to/cdb/cdb.txt
-	hash := func(s string) uint32 {
-		var hash uint32 = 5381
-		for _, b := range []byte(s) {
-			hash = (hash<<5 + hash) ^ uint32(b)
+func (sqlt *sqlite) getfn(name string) api.Function {
+	for i, id := range sqlt.funcs.id {
+		if id == name {
+			c := &sqlt.funcs
+			f := c.fn[i]
+			c.fn[i] = nil
+			c.id[i] = ""
+			c.mask &^= uint32(1) << i
+			return f
 		}
-		return hash
-	}(name) % uint32(len(sqlt.funcs))
-
-	fn := sqlt.funcs[hash]
-	if fn == nil || name != fn.Definition().Name() {
-		fn = sqlt.mod.ExportedFunction(name)
-	} else {
-		sqlt.funcs[hash] = nil
 	}
-	return fn, hash
+	return sqlt.mod.ExportedFunction(name)
+}
+
+func (sqlt *sqlite) putfn(name string, fn api.Function) {
+	c := &sqlt.funcs
+	i := bits.TrailingZeros32(^c.mask)
+	if i < 32 {
+		c.fn[i] = fn
+		c.id[i] = name
+		c.mask |= uint32(1) << i
+	} else {
+		c.fn[0] = fn
+		c.id[0] = name
+		c.mask = uint32(1)
+	}
 }
 
 func (sqlt *sqlite) call(name string, params ...uint64) uint64 {
 	copy(sqlt.stack[:], params)
-	fn, hash := sqlt.getfn(name)
+	fn := sqlt.getfn(name)
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
 		panic(err)
 	}
-	sqlt.funcs[hash] = fn
+	sqlt.putfn(name, fn)
 	return sqlt.stack[0]
 }
 
