@@ -4,8 +4,14 @@
 [![Go Report](https://goreportcard.com/badge/github.com/ncruces/go-sqlite3)](https://goreportcard.com/report/github.com/ncruces/go-sqlite3)
 [![Go Coverage](https://github.com/ncruces/go-sqlite3/wiki/coverage.svg)](https://github.com/ncruces/go-sqlite3/wiki/Test-coverage-report)
 
-Go module `github.com/ncruces/go-sqlite3` wraps a [WASM](https://webassembly.org/) build of [SQLite](https://sqlite.org/),
-and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
+Go module `github.com/ncruces/go-sqlite3` is `cgo`-free [SQLite](https://sqlite.org/) wrapper.\
+It provides a [`database/sql`](https://pkg.go.dev/database/sql) compatible driver,
+as well as direct access to most of the [C SQLite API](https://sqlite.org/cintro.html).
+
+It wraps a [WASM](https://webassembly.org/) build of SQLite, and uses [wazero](https://wazero.io/) as the runtime.\
+Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ runtime dependencies.
+
+### Packages
 
 - [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
   wraps the [C SQLite API](https://sqlite.org/cintro.html)
@@ -20,7 +26,7 @@ and uses [wazero](https://wazero.io/) to provide `cgo`-free SQLite bindings.
 - [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
   provides a [GORM](https://gorm.io) driver.
 
-### Loadable extensions
+### Extensions
 
 - [`github.com/ncruces/go-sqlite3/ext/array`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/array)
   provides the [`array`](https://sqlite.org/carray.html) table-valued function.
