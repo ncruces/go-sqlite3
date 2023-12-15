@@ -240,8 +240,8 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 		return ctx
 	}
 
-	// An uncompleted SQL statement prevents SQLite from ignoring
-	// an interrupt that comes before any other statements are started.
+	// A busy SQL statement prevents SQLite from ignoring an interrupt
+	// that comes before any other statements are started.
 	if c.pending == nil {
 		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
 	} else {
@@ -250,7 +250,6 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 
 	old = c.interrupt
 	c.interrupt = ctx
-	// Remove the handler if the context can't be canceled.
 	if ctx == nil || ctx.Done() == nil {
 		return old
 	}

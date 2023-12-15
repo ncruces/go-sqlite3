@@ -22,7 +22,7 @@ func Fuzz_stringOrTime_1(f *testing.F) {
 	f.Add("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
 	f.Fuzz(func(t *testing.T, str string) {
-		value := stringOrTime([]byte(str))
+		value := stringOrTime(str)
 
 		switch v := value.(type) {
 		case time.Time:
@@ -59,7 +59,7 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 	f.Add(int64(-763421161058), int64(222_222_222)) // twosday, year 22222BC
 
 	checkTime := func(t testing.TB, date time.Time) {
-		value := stringOrTime([]byte(date.Format(time.RFC3339Nano)))
+		value := stringOrTime(date.Format(time.RFC3339Nano))
 
 		switch v := value.(type) {
 		case time.Time:

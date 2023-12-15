@@ -547,7 +547,7 @@ func (r *rows) Next(dest []driver.Value) error {
 		case sqlite3.BLOB:
 			dest[i] = r.Stmt.ColumnRawBlob(i)
 		case sqlite3.TEXT:
-			dest[i] = stringOrTime(r.Stmt.ColumnRawText(i))
+			dest[i] = stringOrTime(r.Stmt.ColumnText(i))
 		case sqlite3.NULL:
 			dest[i] = nil
 		default:

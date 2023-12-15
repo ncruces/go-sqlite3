@@ -146,13 +146,11 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 func (sqlt *sqlite) getfn(name string) api.Function {
 	c := &sqlt.funcs
 	p := unsafe.StringData(name)
-	for i, id := range c.id {
-		if id == p {
-			f := c.fn[i]
+	for i := range c.id {
+		if c.id[i] == p {
 			c.id[i] = nil
-			c.fn[i] = nil
 			c.mask &^= uint32(1) << i
-			return f
+			return c.fn[i]
 		}
 	}
 	return sqlt.mod.ExportedFunction(name)
