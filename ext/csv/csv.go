@@ -12,21 +12,21 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the CSV virtual table.
-// If a filename is specified, `os.Open` is used to open the file.
+// If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterOpen(db, osfs{})
+	RegisterFS(db, util.OSFS{})
 }
 
-// RegisterOpen registers the CSV virtual table.
+// RegisterFS registers the CSV virtual table.
 // If a filename is specified, fsys is used to open the file.
-func RegisterOpen(db *sqlite3.Conn, fsys fs.FS) {
+func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
 		var (
 			filename string
@@ -106,12 +106,6 @@ func RegisterOpen(db *sqlite3.Conn, fsys fs.FS) {
 	}
 
 	sqlite3.CreateModule(db, "csv", declare, declare)
-}
-
-type osfs struct{}
-
-func (osfs) Open(name string) (fs.File, error) {
-	return os.Open(name)
 }
 
 type table struct {

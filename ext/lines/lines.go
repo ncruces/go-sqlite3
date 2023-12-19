@@ -15,30 +15,42 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the lines and lines_read virtual tables.
 // The lines virtual table reads from a database blob or text.
 // The lines_read virtual table reads from a file or an [io.Reader].
+// If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
+	RegisterFS(db, util.OSFS{})
+}
+
+// RegisterFS registers the lines and lines_read virtual tables.
+// The lines virtual table reads from a database blob or text.
+// The lines_read virtual table reads from a file or an [io.Reader].
+// If a filename is specified, fsys is used to open the file.
+func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	sqlite3.CreateModule[lines](db, "lines", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VtabConfig(sqlite3.VTAB_INNOCUOUS)
-			return false, err
+			return lines{}, err
 		})
 	sqlite3.CreateModule[lines](db, "lines_read", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
-			return true, err
+			return lines{fsys}, err
 		})
 }
 
-type lines bool
+type lines struct {
+	fsys fs.FS
+}
 
 func (l lines) BestIndex(idx *sqlite3.IndexInfo) error {
 	for i, cst := range idx.Constraint {
@@ -56,8 +68,8 @@ func (l lines) BestIndex(idx *sqlite3.IndexInfo) error {
 }
 
 func (l lines) Open() (sqlite3.VTabCursor, error) {
-	if l {
-		return &reader{}, nil
+	if l.fsys != nil {
+		return &reader{fsys: l.fsys}, nil
 	} else {
 		return &buffer{}, nil
 	}
@@ -85,6 +97,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 }
 
 type reader struct {
+	fsys   fs.FS
 	reader *bufio.Reader
 	closer io.Closer
 	cursor
@@ -111,7 +124,7 @@ func (c *reader) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 			r = p
 		}
 	case sqlite3.TEXT:
-		f, err := os.Open(arg[0].Text())
+		f, err := c.fsys.Open(arg[0].Text())
 		if err != nil {
 			return err
 		}
