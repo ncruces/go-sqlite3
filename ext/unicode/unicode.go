@@ -8,7 +8,7 @@
 // The implementation is not 100% compatible with the [ICU extension]:
 //   - upper() and lower() use [strings.ToUpper], [strings.ToLower] and [cases];
 //   - the LIKE operator follows [strings.EqualFold] rules;
-//   - the REGEXP operator uses Go [regex/syntax];
+//   - the REGEXP operator uses Go [regexp/syntax];
 //   - collation sequences use [collate].
 //
 // Expect subtle differences (e.g.) in the handling of Turkish case folding.
