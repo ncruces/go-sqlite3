@@ -20,7 +20,7 @@ func Register(db *sqlite3.Conn) {
 
 // Register registers SQL functions readfile, lsmode,
 // and the eponymous virtual table fsdir;
-// fs will be used to read files and list directories.
+// fsys will be used to read files and list directories.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	db.CreateFunction("lsmode", 1, 0, lsmode)
 	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fsys))

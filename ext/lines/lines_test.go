@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -25,12 +26,11 @@ func Example() {
 	}
 	defer db.Close()
 
-	// https://storage.googleapis.com/quickdraw_dataset/full/simplified/calendar.ndjson
-	f, err := os.Open("calendar.ndjson")
+	res, err := http.Get("https://storage.googleapis.com/quickdraw_dataset/full/simplified/calendar.ndjson")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
+	defer res.Body.Close()
 
 	rows, err := db.Query(`
 		SELECT
@@ -40,7 +40,7 @@ func Example() {
   		GROUP BY 1
   		ORDER BY 2 DESC
   		LIMIT 5`,
-		sqlite3.Pointer(f))
+		sqlite3.Pointer(res.Body))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func Example() {
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	// Sample output:
+	// Output:
 	// US: 141001
 	// GB: 22560
 	// CA: 11759
@@ -78,7 +78,7 @@ func Test_lines(t *testing.T) {
 	}
 	defer db.Close()
 
-	const data = "line 1\nline 2\nline 3"
+	const data = "line 1\nline 2\r\nline 3\n"
 
 	rows, err := db.Query(`SELECT rowid, line FROM lines(?)`, data)
 	if err != nil {
@@ -92,6 +92,9 @@ func Test_lines(t *testing.T) {
 		err := rows.Scan(&id, &line)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if want := fmt.Sprintf("line %d", id); line != want {
+			t.Errorf("got %q, want %q", line, want)
 		}
 	}
 }
@@ -135,7 +138,7 @@ func Test_lines_read(t *testing.T) {
 	}
 	defer db.Close()
 
-	const data = "line 1\nline 2\nline 3"
+	const data = "line 1\nline 2\r\nline 3\n"
 
 	rows, err := db.Query(`SELECT rowid, line FROM lines_read(?)`,
 		sqlite3.Pointer(strings.NewReader(data)))
@@ -150,6 +153,9 @@ func Test_lines_read(t *testing.T) {
 		err := rows.Scan(&id, &line)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if want := fmt.Sprintf("line %d", id); line != want {
+			t.Errorf("got %q, want %q", line, want)
 		}
 	}
 }

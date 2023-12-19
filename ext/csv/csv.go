@@ -7,10 +7,11 @@
 package csv
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"math"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -18,16 +19,14 @@ import (
 )
 
 // Register registers the CSV virtual table.
-// If a filename is specified, `os.Open` is used to read it from disk.
+// If a filename is specified, `os.Open` is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterOpen(db, func(name string) (io.ReaderAt, error) {
-		return os.Open(name)
-	})
+	RegisterOpen(db, osfs{})
 }
 
 // RegisterOpen registers the CSV virtual table.
-// If a filename is specified, open is used to open the file.
-func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error)) {
+// If a filename is specified, fsys is used to open the file.
+func RegisterOpen(db *sqlite3.Conn, fsys fs.FS) {
 	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
 		var (
 			filename string
@@ -71,32 +70,23 @@ func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error))
 			return nil, fmt.Errorf(`csv: must specify either "filename" or "data" but not both`)
 		}
 
-		var r io.ReaderAt
-		if filename != "" {
-			r, err = open(filename)
-		} else {
-			r = strings.NewReader(data)
-		}
-		if err != nil {
-			return nil, err
-		}
-
 		table := &table{
-			r:      r,
+			fsys:   fsys,
+			name:   filename,
+			data:   data,
 			comma:  comma,
 			header: header,
-			bom:    -1,
 		}
-		defer func() {
-			if err != nil {
-				table.Close()
-			}
-		}()
 
 		if schema == "" {
 			var row []string
 			if header || columns < 0 {
-				row, err = table.newReader().Read()
+				csv, close, err := table.newReader()
+				defer close.Close()
+				if err != nil {
+					return nil, err
+				}
+				row, err = csv.Read()
 				if err != nil {
 					return nil, err
 				}
@@ -118,20 +108,18 @@ func RegisterOpen(db *sqlite3.Conn, open func(name string) (io.ReaderAt, error))
 	sqlite3.CreateModule(db, "csv", declare, declare)
 }
 
-type table struct {
-	r      io.ReaderAt
-	comma  rune
-	header bool
-	bom    int8
+type osfs struct{}
+
+func (osfs) Open(name string) (fs.File, error) {
+	return os.Open(name)
 }
 
-func (t *table) Close() error {
-	if c, ok := t.r.(io.Closer); ok {
-		err := c.Close()
-		t.r = nil
-		return err
-	}
-	return nil
+type table struct {
+	fsys   fs.FS
+	name   string
+	data   string
+	comma  rune
+	header bool
 }
 
 func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
@@ -147,38 +135,70 @@ func (t *table) Rename(new string) error {
 	return nil
 }
 
-func (t *table) Integrity(schema, table string, flags int) (err error) {
-	if flags&1 == 0 {
-		_, err = t.newReader().ReadAll()
+func (t *table) Integrity(schema, table string, flags int) error {
+	if flags&1 != 0 {
+		return nil
 	}
+	csv, close, err := t.newReader()
+	if err != nil {
+		return err
+	}
+	if close != nil {
+		defer close.Close()
+	}
+	_, err = csv.ReadAll()
 	return err
 }
 
-func (t *table) newReader() *csv.Reader {
-	if t.bom < 0 {
-		var bom [3]byte
-		t.r.ReadAt(bom[:], 0)
-		if string(bom[:]) == "\xEF\xBB\xBF" {
-			t.bom = 3
-		} else {
-			t.bom = 0
+func (t *table) newReader() (*csv.Reader, io.Closer, error) {
+	var r io.Reader
+	var c io.Closer
+	if t.name != "" {
+		f, err := t.fsys.Open(t.name)
+		if err != nil {
+			return nil, f, err
 		}
+
+		buf := bufio.NewReader(f)
+		bom, err := buf.Peek(3)
+		if err != nil {
+			return nil, f, err
+		}
+		if string(bom) == "\xEF\xBB\xBF" {
+			buf.Discard(3)
+		}
+
+		r = buf
+		c = f
+	} else {
+		r = strings.NewReader(t.data)
+		c = io.NopCloser(r)
 	}
-	csv := csv.NewReader(io.NewSectionReader(t.r, int64(t.bom), math.MaxInt64))
+
+	csv := csv.NewReader(r)
 	csv.ReuseRecord = true
 	csv.Comma = t.comma
-	return csv
+	return csv, c, nil
 }
 
 type cursor struct {
 	table *table
+	close io.Closer
 	csv   *csv.Reader
 	row   []string
 	rowID int64
 }
 
+func (c *cursor) Close() error {
+	return c.close.Close()
+}
+
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	c.csv = c.table.newReader()
+	var err error
+	c.csv, c.close, err = c.table.newReader()
+	if err != nil {
+		return err
+	}
 	if c.table.header {
 		c.Next() // skip header
 	}

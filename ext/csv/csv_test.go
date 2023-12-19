@@ -61,7 +61,7 @@ func TestRegister(t *testing.T) {
 
 	csv.Register(db)
 
-	const data = "\xEF\xBB\xBF" + `
+	const data = `
 "Rob"	"Pike"	rob
 "Ken"	Thompson	ken
 Robert	"Griesemer"	"gri"`
@@ -84,8 +84,8 @@ Robert	"Griesemer"	"gri"`
 	if !stmt.Step() {
 		t.Fatal("no rows")
 	}
-	if got := stmt.ColumnText(1); got != "Pike" {
-		t.Errorf("got %q want Pike", got)
+	if got := stmt.ColumnText(0); got != "Rob" {
+		t.Errorf("got %q want Rob", got)
 	}
 	if stmt.Step() {
 		t.Fatal("more rows")
@@ -98,12 +98,17 @@ Robert	"Griesemer"	"gri"`
 
 	err = db.Exec(`PRAGMA integrity_check`)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
+	}
+
+	err = db.Exec(`PRAGMA quick_check`)
+	if err != nil {
+		t.Error(err)
 	}
 
 	err = db.Exec(`DROP TABLE temp.csv`)
 	if err != nil {
-		log.Fatal(err)
+		t.Error(err)
 	}
 }
 

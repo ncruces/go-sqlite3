@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math"
 	"os"
 
 	"github.com/ncruces/go-sqlite3"
@@ -23,7 +22,7 @@ import (
 
 // Register registers the lines and lines_read virtual tables.
 // The lines virtual table reads from a database blob or text.
-// The lines_read virtual table reads from a file or an [io.ReaderAt].
+// The lines_read virtual table reads from a file or an [io.Reader].
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule[lines](db, "lines", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
@@ -57,33 +56,21 @@ func (l lines) BestIndex(idx *sqlite3.IndexInfo) error {
 }
 
 func (l lines) Open() (sqlite3.VTabCursor, error) {
-	return &cursor{reader: bool(l)}, nil
+	if l {
+		return &reader{}, nil
+	} else {
+		return &buffer{}, nil
+	}
 }
 
 type cursor struct {
-	scanner *bufio.Scanner
-	closer  io.Closer
-	rowID   int64
-	eof     bool
-	reader  bool
-}
-
-func (c *cursor) Close() (err error) {
-	if c.closer != nil {
-		err = c.closer.Close()
-		c.closer = nil
-	}
-	return err
+	line  []byte
+	rowID int64
+	eof   bool
 }
 
 func (c *cursor) EOF() bool {
 	return c.eof
-}
-
-func (c *cursor) Next() error {
-	c.rowID++
-	c.eof = !c.scanner.Scan()
-	return c.scanner.Err()
 }
 
 func (c *cursor) RowID() (int64, error) {
@@ -92,46 +79,102 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 	if n == 0 {
-		ctx.ResultRawText(c.scanner.Bytes())
+		ctx.ResultRawText(c.line)
 	}
 	return nil
 }
 
-func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
+type reader struct {
+	reader *bufio.Reader
+	closer io.Closer
+	cursor
+}
+
+func (c *reader) Close() (err error) {
+	if c.closer != nil {
+		err = c.closer.Close()
+		c.closer = nil
+	}
+	return err
+}
+
+func (c *reader) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	if err := c.Close(); err != nil {
 		return err
 	}
 
 	var r io.Reader
-	data := arg[0]
-	typ := data.Type()
-	if c.reader {
-		switch typ {
-		case sqlite3.NULL:
-			if p, ok := data.Pointer().(io.ReaderAt); ok {
-				r = io.NewSectionReader(p, 0, math.MaxInt64)
-			}
-		case sqlite3.TEXT:
-			f, err := os.Open(data.Text())
-			if err != nil {
-				return err
-			}
-			c.closer = f
-			r = f
+	typ := arg[0].Type()
+	switch typ {
+	case sqlite3.NULL:
+		if p, ok := arg[0].Pointer().(io.Reader); ok {
+			r = p
 		}
-	} else {
-		switch typ {
-		case sqlite3.TEXT:
-			r = bytes.NewReader(data.RawText())
-		case sqlite3.BLOB:
-			r = bytes.NewReader(data.RawBlob())
+	case sqlite3.TEXT:
+		f, err := os.Open(arg[0].Text())
+		if err != nil {
+			return err
 		}
+		r = f
 	}
-
 	if r == nil {
 		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
 	}
-	c.scanner = bufio.NewScanner(r)
+
+	c.reader = bufio.NewReader(r)
+	c.closer, _ = r.(io.Closer)
 	c.rowID = 0
 	return c.Next()
+}
+
+func (c *reader) Next() (err error) {
+	c.line = c.line[:0]
+	for more := true; more; {
+		var line []byte
+		line, more, err = c.reader.ReadLine()
+		c.line = append(c.line, line...)
+	}
+	if err == io.EOF {
+		c.eof = true
+		err = nil
+	}
+	c.rowID++
+	return err
+}
+
+type buffer struct {
+	data []byte
+	cursor
+}
+
+func (c *buffer) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
+	typ := arg[0].Type()
+	switch typ {
+	case sqlite3.TEXT:
+		c.data = arg[0].RawText()
+	case sqlite3.BLOB:
+		c.data = arg[0].RawBlob()
+	default:
+		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
+	}
+
+	c.rowID = 0
+	return c.Next()
+}
+
+func (c *buffer) Next() error {
+	i := bytes.IndexByte(c.data, '\n')
+	j := i + 1
+	switch {
+	case i < 0:
+		i = len(c.data)
+		j = i
+	case i > 0 && c.data[i-1] == '\r':
+		i--
+	}
+	c.eof = len(c.data) == 0
+	c.line = c.data[:i]
+	c.data = c.data[j:]
+	c.rowID++
+	return nil
 }
