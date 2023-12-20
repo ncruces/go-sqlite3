@@ -13,7 +13,7 @@ import (
 	"github.com/ncruces/go-sqlite3/ext/array"
 )
 
-func Example() {
+func Example_driver() {
 	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
 		array.Register(c)
 		return nil
@@ -42,6 +42,42 @@ func Example() {
 		fmt.Printf("%s\n", name)
 	}
 	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+	// Unordered output:
+	// geopoly_regular
+	// geopoly_overlap
+	// geopoly_contains_point
+	// geopoly_within
+}
+
+func Example() {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	array.Register(db)
+
+	stmt, _, err := db.Prepare(`
+		SELECT name
+		FROM pragma_function_list
+		WHERE name like 'geopoly%' AND narg IN array(?)`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.BindPointer(1, [...]int{2, 3, 4})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for stmt.Step() {
+		fmt.Printf("%s\n", stmt.ColumnText(0))
+	}
+	if err := stmt.Err(); err != nil {
 		log.Fatal(err)
 	}
 	// Unordered output:
