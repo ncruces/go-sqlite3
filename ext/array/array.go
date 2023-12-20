@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the array single-argument, table-valued SQL function.
@@ -102,7 +103,7 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 		ctx.ResultBlob(v.Bytes())
 
 	default:
-		return fmt.Errorf("array: unsupported element:%.0w %v", sqlite3.MISMATCH, v.Type())
+		return fmt.Errorf("array: unsupported element:%.0w %v", sqlite3.MISMATCH, util.ReflectType(v))
 	}
 	return nil
 }
@@ -120,16 +121,15 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 }
 
 func indexable(v reflect.Value) (reflect.Value, error) {
-	if v.Kind() == reflect.Slice {
+	switch v.Kind() {
+	case reflect.Slice:
 		return v, nil
-	}
-	if v.Kind() == reflect.Array {
+	case reflect.Array:
 		return v, nil
-	}
-	if v.Kind() == reflect.Pointer {
+	case reflect.Pointer:
 		if v := v.Elem(); v.Kind() == reflect.Array {
 			return v, nil
 		}
 	}
-	return v, fmt.Errorf("array: unsupported argument:%.0w %v", sqlite3.MISMATCH, v)
+	return v, fmt.Errorf("array: unsupported argument:%.0w %v", sqlite3.MISMATCH, util.ReflectType(v))
 }
