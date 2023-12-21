@@ -67,7 +67,7 @@ int sqlite3_os_init() {
   static sqlite3_vfs os_vfs = {
       .iVersion = 2,
       .szOsFile = sizeof(struct go_file),
-      .mxPathname = 512,
+      .mxPathname = 1024,
       .zName = "os",
 
       .xOpen = go_open_wrapper,
@@ -113,7 +113,7 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
     *go_vfs_list = (sqlite3_vfs){
         .iVersion = 2,
         .szOsFile = sizeof(struct go_file),
-        .mxPathname = 512,
+        .mxPathname = 1024,
         .zName = name,
         .pNext = head,
 

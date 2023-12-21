@@ -523,7 +523,7 @@ func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idx
 	args := callbackArgs(db, argc, argv)
 	var idxName string
 	if idxStr != 0 {
-		idxName = util.ReadString(mod, idxStr, _MAX_NAME)
+		idxName = util.ReadString(mod, idxStr, _MAX_LENGTH)
 	}
 	err := cursor.Filter(int(idxNum), idxName, args...)
 	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)

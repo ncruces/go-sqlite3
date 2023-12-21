@@ -3,8 +3,8 @@ package vfs
 import "github.com/ncruces/go-sqlite3/internal/util"
 
 const (
-	_MAX_NAME            = 512 // Used for short strings: names, error messages…
-	_MAX_PATHNAME        = 512
+	_MAX_NAME            = 1e6 // Self-imposed limit for most NUL terminated strings.
+	_MAX_PATHNAME        = 1024
 	_DEFAULT_SECTOR_SIZE = 4096
 )
 

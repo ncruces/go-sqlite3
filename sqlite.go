@@ -126,7 +126,7 @@ func (sqlt *sqlite) error(rc uint64, handle uint32, sql ...string) error {
 
 	if handle != 0 {
 		if r := sqlt.call("sqlite3_errmsg", uint64(handle)); r != 0 {
-			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_NAME)
+			err.msg = util.ReadString(sqlt.mod, uint32(r), _MAX_LENGTH)
 		}
 
 		if sql != nil {
