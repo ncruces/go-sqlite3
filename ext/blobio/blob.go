@@ -23,7 +23,8 @@ import (
 //
 // Opens blobs for reading or writing.
 // The callback is invoked for each open blob,
-// and must be an [sqlite3.Pointer] to an [OpenCallback].
+// and must be bound to an [OpenCallback],
+// using [sqlite3.BindPointer] or [sqlite3.Pointer].
 // The optional args will be passed to the callback,
 // along with the [sqlite3.Blob] handle.
 //

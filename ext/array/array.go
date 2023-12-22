@@ -12,8 +12,9 @@ import (
 )
 
 // Register registers the array single-argument, table-valued SQL function.
-// The argument must be an [sqlite3.Pointer] to a Go slice or array
-// of ints, floats, bools, strings or blobs.
+// The argument must be bound to a Go slice or array of
+// ints, floats, bools, strings or byte slices,
+// using [sqlite3.BindPointer] or [sqlite3.Pointer].
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule[array](db, "array", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (array, error) {
