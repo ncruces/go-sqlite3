@@ -289,3 +289,53 @@ func TestConn_Prepare_invalid(t *testing.T) {
 		t.Error("got message:", got)
 	}
 }
+
+func TestConn_Config(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	o, err := db.Config(sqlite3.DBCONFIG_DEFENSIVE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != false {
+		t.Error("want false")
+	}
+
+	o, err = db.Config(sqlite3.DBCONFIG_DEFENSIVE, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != true {
+		t.Error("want true")
+	}
+
+	o, err = db.Config(sqlite3.DBCONFIG_DEFENSIVE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != true {
+		t.Error("want true")
+	}
+
+	o, err = db.Config(sqlite3.DBCONFIG_DEFENSIVE, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != false {
+		t.Error("want false")
+	}
+
+	o, err = db.Config(sqlite3.DBCONFIG_DEFENSIVE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != false {
+		t.Error("want false")
+	}
+}

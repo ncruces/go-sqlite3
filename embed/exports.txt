@@ -44,6 +44,7 @@ sqlite3_create_collation_go
 sqlite3_create_function_go
 sqlite3_create_module_go
 sqlite3_create_window_function_go
+sqlite3_db_config
 sqlite3_declare_vtab
 sqlite3_errcode
 sqlite3_errmsg

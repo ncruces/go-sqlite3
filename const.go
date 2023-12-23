@@ -200,6 +200,34 @@ const (
 	STMTSTATUS_MEMUSED       StmtStatus = 99
 )
 
+// DBConfig are the available database connection configuration options.
+//
+// https://sqlite.org/c3ref/c_dbconfig_defensive.html
+type DBConfig uint32
+
+const (
+	// DBCONFIG_MAINDBNAME         DBConfig = 1000
+	// DBCONFIG_LOOKASIDE          DBConfig = 1001
+	DBCONFIG_ENABLE_FKEY           DBConfig = 1002
+	DBCONFIG_ENABLE_TRIGGER        DBConfig = 1003
+	DBCONFIG_ENABLE_FTS3_TOKENIZER DBConfig = 1004
+	DBCONFIG_ENABLE_LOAD_EXTENSION DBConfig = 1005
+	DBCONFIG_NO_CKPT_ON_CLOSE      DBConfig = 1006
+	DBCONFIG_ENABLE_QPSG           DBConfig = 1007
+	DBCONFIG_TRIGGER_EQP           DBConfig = 1008
+	DBCONFIG_RESET_DATABASE        DBConfig = 1009
+	DBCONFIG_DEFENSIVE             DBConfig = 1010
+	DBCONFIG_WRITABLE_SCHEMA       DBConfig = 1011
+	DBCONFIG_LEGACY_ALTER_TABLE    DBConfig = 1012
+	DBCONFIG_DQS_DML               DBConfig = 1013
+	DBCONFIG_DQS_DDL               DBConfig = 1014
+	DBCONFIG_ENABLE_VIEW           DBConfig = 1015
+	DBCONFIG_LEGACY_FILE_FORMAT    DBConfig = 1016
+	DBCONFIG_TRUSTED_SCHEMA        DBConfig = 1017
+	DBCONFIG_STMT_SCANSTATUS       DBConfig = 1018
+	DBCONFIG_REVERSE_SCANORDER     DBConfig = 1019
+)
+
 // Datatype is a fundamental datatype of SQLite.
 //
 // https://sqlite.org/c3ref/c_blob.html
