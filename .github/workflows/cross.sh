@@ -12,7 +12,7 @@ echo openbsd       ; GOOS=openbsd   GOARCH=amd64 go build .
 echo plan9         ; GOOS=plan9     GOARCH=amd64 go build .
 echo solaris       ; GOOS=solaris   GOARCH=amd64 go build .
 echo windows       ; GOOS=windows   GOARCH=amd64 go build .
-# echo aix         ; GOOS=aix       GOARCH=ppc64 go build .
+echo aix           ; GOOS=aix       GOARCH=ppc64 go build .
 echo js            ; GOOS=js        GOARCH=wasm  go build .
 echo wasip1        ; GOOS=wasip1    GOARCH=wasm  go build .
 echo darwin-flock  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_flock .
