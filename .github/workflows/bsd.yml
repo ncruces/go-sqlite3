@@ -13,7 +13,7 @@ jobs:
         lfs: 'true'
 
     - name: Test
-      uses: cross-platform-actions/action@v0.21.1
+      uses: cross-platform-actions/action@v0.22.0
       with:
         operating_system: freebsd
         version: '13.2'
