@@ -53,18 +53,18 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	fsys  fs.FS
-	base  string
-	rowID int64
-	eof   bool
 	curr  entry
 	next  chan entry
 	done  chan struct{}
+	base  string
+	rowID int64
+	eof   bool
 }
 
 type entry struct {
-	path string
 	fs.DirEntry
-	err error
+	err  error
+	path string
 }
 
 func (c *cursor) Close() error {
@@ -180,7 +180,7 @@ func (c *cursor) WalkDirFunc(path string, d fs.DirEntry, err error) error {
 	select {
 	case <-c.done:
 		return fs.SkipAll
-	case c.next <- entry{path, d, err}:
+	case c.next <- entry{d, err, path}:
 		return nil
 	}
 }

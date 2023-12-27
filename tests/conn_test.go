@@ -339,3 +339,28 @@ func TestConn_Config(t *testing.T) {
 		t.Error("want false")
 	}
 }
+
+func TestConn_ConfigLog(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var code sqlite3.ExtendedErrorCode
+	err = db.ConfigLog(func(c sqlite3.ExtendedErrorCode, msg string) {
+		t.Log(msg)
+		code = c
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db.Prepare(`SELECT * FRM sqlite_schema`)
+
+	if code != sqlite3.ExtendedErrorCode(sqlite3.ERROR) {
+		t.Error("want sqlite3.ERROR")
+	}
+}

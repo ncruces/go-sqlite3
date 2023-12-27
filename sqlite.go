@@ -282,6 +282,7 @@ func (a *arena) string(s string) uint32 {
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_progress", progressCallback)
+	util.ExportFuncVIII(env, "go_log", logCallback)
 	util.ExportFuncVI(env, "go_destroy", destroyCallback)
 	util.ExportFuncVIII(env, "go_func", funcCallback)
 	util.ExportFuncVIII(env, "go_step", stepCallback)

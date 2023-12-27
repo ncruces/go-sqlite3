@@ -20,6 +20,7 @@ type Conn struct {
 
 	interrupt context.Context
 	pending   *Stmt
+	log       func(code xErrorCode, msg string)
 	arena     arena
 
 	handle uint32
@@ -258,6 +259,12 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	return old
 }
 
+func (c *Conn) checkInterrupt() {
+	if c.interrupt != nil && c.interrupt.Err() != nil {
+		c.call("sqlite3_interrupt", uint64(c.handle))
+	}
+}
+
 func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
 		if c.interrupt != nil && c.interrupt.Err() != nil {
@@ -265,12 +272,6 @@ func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 		}
 	}
 	return 0
-}
-
-func (c *Conn) checkInterrupt() {
-	if c.interrupt != nil && c.interrupt.Err() != nil {
-		c.call("sqlite3_interrupt", uint64(c.handle))
-	}
 }
 
 // Pragma executes a PRAGMA statement and returns any results.

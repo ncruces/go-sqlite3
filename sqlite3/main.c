@@ -10,6 +10,7 @@
 #include "ext/uuid.c"
 // Bindings
 #include "func.c"
+#include "log.c"
 #include "pointer.c"
 #include "progress.c"
 #include "time.c"
