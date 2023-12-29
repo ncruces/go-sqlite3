@@ -1,6 +1,3 @@
-sha3
-sha3_query
-
 ieee754
 ieee754_exponent
 ieee754_from_blob
