@@ -36,6 +36,8 @@ Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ run
   reads [comma-separated values](https://sqlite.org/csv.html).
 - [`github.com/ncruces/go-sqlite3/ext/fileio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/fileio)
   reads, writes and lists files.
+- [`github.com/ncruces/go-sqlite3/ext/hash`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/hash)
+  provides cryptographic hash functions.
 - [`github.com/ncruces/go-sqlite3/ext/lines`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/lines)
   reads data [line-by-line](https://github.com/asg017/sqlite-lines).
 - [`github.com/ncruces/go-sqlite3/ext/pivot`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/pivot)
@@ -53,14 +55,17 @@ Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ run
 
 ### Advanced features
 
-- [x] [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html)
-- [x] [nested transactions](https://sqlite.org/lang_savepoint.html)
-- [x] [custom functions](https://sqlite.org/c3ref/create_function.html)
-- [x] [virtual tables](https://sqlite.org/vtab.html)
-- [x] [custom VFSes](https://sqlite.org/vfs.html)
-- [x] [online backup](https://sqlite.org/backup.html)
-- [x] [JSON support](https://sqlite.org/json1.html)
-- [x] [Unicode support](https://sqlite.org/src/dir/ext/icu)
+- [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html)
+- [nested transactions](https://sqlite.org/lang_savepoint.html)
+- [custom functions](https://sqlite.org/c3ref/create_function.html)
+- [virtual tables](https://sqlite.org/vtab.html)
+- [custom VFSes](https://sqlite.org/vfs.html)
+- [online backup](https://sqlite.org/backup.html)
+- [JSON support](https://sqlite.org/json1.html)
+- [math functions](https://sqlite.org/lang_mathfunc.html)
+- [full-text search](https://sqlite.org/fts5.html)
+- [geospatial search](https://sqlite.org/geopoly.html)
+- [and more…](embed/README.md)
 
 ### Caveats
 
@@ -105,12 +110,22 @@ To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
 with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
-#### Testing
+### Testing
+
+This project aims for [high test coverage](https://github.com/ncruces/go-sqlite3/wiki/Test-coverage-report).
+It also benefits greatly from [SQLite's](https://www.sqlite.org/testing.html) and
+[wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach) thorough testing.
 
 The pure Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
 on Linux, macOS, Windows and FreeBSD.
-Performance is tested by running
+
+### Performance
+
+Perfomance of the [`database/sql`](https://pkg.go.dev/database/sql) driver is
+[competitive](https://github.com/cvilsmeier/go-sqlite-bench) with alternatives.
+
+The WASM and VFS layers are also tested by running SQLite's
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
 ### Alternatives
