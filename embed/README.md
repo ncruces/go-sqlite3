@@ -12,6 +12,7 @@ The following optional features are compiled in:
 - [soundex](https://sqlite.org/lang_corefunc.html#soundex)
 - [base64](https://github.com/sqlite/sqlite/blob/master/ext/misc/base64.c)
 - [decimal](https://github.com/sqlite/sqlite/blob/master/ext/misc/decimal.c)
+- [ieee754](https://github.com/sqlite/sqlite/blob/master/ext/misc/ieee754.c)
 - [regexp](https://github.com/sqlite/sqlite/blob/master/ext/misc/regexp.c)
 - [series](https://github.com/sqlite/sqlite/blob/master/ext/misc/series.c)
 - [uint](https://github.com/sqlite/sqlite/blob/master/ext/misc/uint.c)

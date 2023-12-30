@@ -1,6 +1,6 @@
 // Package hash provides cryptographic hash functions.
 //
-// Functions:
+// Provided functions:
 //   - md4(data)
 //   - md5(data)
 //   - sha1(data)

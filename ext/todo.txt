@@ -1,13 +1,4 @@
-ieee754
-ieee754_exponent
-ieee754_from_blob
-ieee754_inc
-ieee754_mantissa
-ieee754_to_blob
-
 zipfile
 zipfile_cds
 sqlar_compress
 sqlar_uncompress
-
-remember

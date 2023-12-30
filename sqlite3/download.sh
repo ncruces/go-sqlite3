@@ -12,13 +12,14 @@ cat *.patch | patch --no-backup-if-mismatch
 
 mkdir -p ext/
 cd ext/
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/decimal.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/uint.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/uuid.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/anycollseq.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/base64.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/decimal.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/ieee754.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/regexp.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/series.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/anycollseq.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/uint.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.44.2/ext/misc/uuid.c"
 cd ~-
 
 cd ../vfs/tests/mptest/testdata/

@@ -1,6 +1,6 @@
 // Package stats provides aggregate functions for statistics.
 //
-// Functions:
+// Provided functions:
 //   - stddev_pop: population standard deviation
 //   - stddev_samp: sample standard deviation
 //   - var_pop: population variance
@@ -9,8 +9,16 @@
 //   - covar_samp: sample covariance
 //   - corr: correlation coefficient
 //
+// These join the [Built-in Aggregate Functions]:
+//   - count: count rows/values
+//   - sum: sum values
+//   - avg: average value
+//   - min: minimum value
+//   - max: maximum value
+//
 // See: [ANSI SQL Aggregate Functions]
 //
+// [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 package stats
 
