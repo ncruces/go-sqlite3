@@ -1,4 +1,4 @@
-package readervfs
+package ioutil
 
 import (
 	"io"

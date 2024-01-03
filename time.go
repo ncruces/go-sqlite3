@@ -344,7 +344,11 @@ type timeScanner struct {
 	TimeFormat
 }
 
-func (s timeScanner) Scan(src any) (err error) {
-	*s.Time, err = s.Decode(src)
-	return
+func (s timeScanner) Scan(src any) error {
+	var ok bool
+	var err error
+	if *s.Time, ok = src.(time.Time); !ok {
+		*s.Time, err = s.Decode(src)
+	}
+	return err
 }

@@ -1,8 +1,12 @@
 package csv
 
-import "testing"
+import (
+	"testing"
 
-func Test_uintParam(t *testing.T) {
+	"github.com/ncruces/go-sqlite3/util/vtabutil"
+)
+
+func Test_uintArg(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -20,22 +24,22 @@ func Test_uintParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := getParam(tt.arg)
+			key, val := vtabutil.NamedArg(tt.arg)
 			if key != tt.key {
-				t.Errorf("getParam() %v, want err %v", key, tt.key)
+				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}
-			got, err := uintParam(key, val)
+			got, err := uintArg(key, val)
 			if (err != nil) != tt.err {
-				t.Fatalf("uintParam() error = %v, want err %v", err, tt.err)
+				t.Fatalf("uintArg() error = %v, want err %v", err, tt.err)
 			}
 			if got != tt.val {
-				t.Errorf("uintParam() = %v, want %v", got, tt.val)
+				t.Errorf("uintArg() = %v, want %v", got, tt.val)
 			}
 		})
 	}
 }
 
-func Test_boolParam(t *testing.T) {
+func Test_boolArg(t *testing.T) {
 	tests := []struct {
 		arg string
 		key string
@@ -56,22 +60,22 @@ func Test_boolParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := getParam(tt.arg)
+			key, val := vtabutil.NamedArg(tt.arg)
 			if key != tt.key {
-				t.Errorf("getParam() %v, want err %v", key, tt.key)
+				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}
-			got, err := boolParam(key, val)
+			got, err := boolArg(key, val)
 			if (err != nil) != tt.err {
-				t.Fatalf("boolParam() error = %v, want err %v", err, tt.err)
+				t.Fatalf("boolArg() error = %v, want err %v", err, tt.err)
 			}
 			if got != tt.val {
-				t.Errorf("boolParam() = %v, want %v", got, tt.val)
+				t.Errorf("boolArg() = %v, want %v", got, tt.val)
 			}
 		})
 	}
 }
 
-func Test_runeParam(t *testing.T) {
+func Test_runeArg(t *testing.T) {
 	tests := []struct {
 		arg string
 		key string
@@ -88,16 +92,16 @@ func Test_runeParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := getParam(tt.arg)
+			key, val := vtabutil.NamedArg(tt.arg)
 			if key != tt.key {
-				t.Errorf("getParam() %v, want err %v", key, tt.key)
+				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}
-			got, err := runeParam(key, val)
+			got, err := runeArg(key, val)
 			if (err != nil) != tt.err {
-				t.Fatalf("runeParam() error = %v, want err %v", err, tt.err)
+				t.Fatalf("runeArg() error = %v, want err %v", err, tt.err)
 			}
 			if got != tt.val {
-				t.Errorf("runeParam() = %v, want %v", got, tt.val)
+				t.Errorf("runeArg() = %v, want %v", got, tt.val)
 			}
 		})
 	}

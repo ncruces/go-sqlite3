@@ -10,6 +10,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/fsutil"
 )
 
 func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -22,7 +23,7 @@ func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
 
 	var mode fs.FileMode
 	if len(arg) > 2 {
-		mode = fixMode(fs.FileMode(arg[2].Int()))
+		mode = fsutil.FileModeFromValue(arg[2])
 	}
 
 	n, err := createFileAndDir(file, mode, arg[1])
@@ -86,40 +87,6 @@ func createFile(path string, mode fs.FileMode, data sqlite3.Value) (int, error) 
 		return 0, os.Symlink(data.Text(), path)
 	}
 	return 0, fmt.Errorf("invalid mode: %v", mode)
-}
-
-func fixMode(mode fs.FileMode) fs.FileMode {
-	const (
-		S_IFMT   fs.FileMode = 0170000
-		S_IFIFO  fs.FileMode = 0010000
-		S_IFCHR  fs.FileMode = 0020000
-		S_IFDIR  fs.FileMode = 0040000
-		S_IFBLK  fs.FileMode = 0060000
-		S_IFREG  fs.FileMode = 0100000
-		S_IFLNK  fs.FileMode = 0120000
-		S_IFSOCK fs.FileMode = 0140000
-	)
-
-	switch mode & S_IFMT {
-	case S_IFDIR:
-		mode |= fs.ModeDir
-	case S_IFLNK:
-		mode |= fs.ModeSymlink
-	case S_IFBLK:
-		mode |= fs.ModeDevice
-	case S_IFCHR:
-		mode |= fs.ModeCharDevice | fs.ModeDevice
-	case S_IFIFO:
-		mode |= fs.ModeNamedPipe
-	case S_IFSOCK:
-		mode |= fs.ModeSocket
-	case S_IFREG, 0:
-		//
-	default:
-		mode |= fs.ModeIrregular
-	}
-
-	return mode &^ S_IFMT
 }
 
 func fixPerm(mode fs.FileMode, def fs.FileMode) fs.FileMode {

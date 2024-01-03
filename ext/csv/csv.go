@@ -15,13 +15,14 @@ import (
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/fsutil"
+	"github.com/ncruces/go-sqlite3/util/vtabutil"
 )
 
 // Register registers the CSV virtual table.
 // If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterFS(db, util.OSFS{})
+	RegisterFS(db, fsutil.OSFS{})
 }
 
 // RegisterFS registers the CSV virtual table.
@@ -40,23 +41,23 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		)
 
 		for _, arg := range arg {
-			key, val := getParam(arg)
+			key, val := vtabutil.NamedArg(arg)
 			if _, ok := done[key]; ok {
 				return nil, fmt.Errorf("csv: more than one %q parameter", key)
 			}
 			switch key {
 			case "filename":
-				filename = unquoteParam(val)
+				filename = vtabutil.Unquote(val)
 			case "data":
-				data = unquoteParam(val)
+				data = vtabutil.Unquote(val)
 			case "schema":
-				schema = unquoteParam(val)
+				schema = vtabutil.Unquote(val)
 			case "header":
-				header, err = boolParam(key, val)
+				header, err = boolArg(key, val)
 			case "columns":
-				columns, err = uintParam(key, val)
+				columns, err = uintArg(key, val)
 			case "comma":
-				comma, err = runeParam(key, val)
+				comma, err = runeArg(key, val)
 			default:
 				return nil, fmt.Errorf("csv: unknown %q parameter", key)
 			}
@@ -81,8 +82,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		if schema == "" {
 			var row []string
 			if header || columns < 0 {
-				csv, close, err := table.newReader()
-				defer close.Close()
+				csv, c, err := table.newReader()
+				defer c.Close()
 				if err != nil {
 					return nil, err
 				}
@@ -133,13 +134,11 @@ func (t *table) Integrity(schema, table string, flags int) error {
 	if flags&1 != 0 {
 		return nil
 	}
-	csv, close, err := t.newReader()
+	csv, c, err := t.newReader()
 	if err != nil {
 		return err
 	}
-	if close != nil {
-		defer close.Close()
-	}
+	defer c.Close()
 	_, err = csv.ReadAll()
 	return err
 }
@@ -176,20 +175,28 @@ func (t *table) newReader() (*csv.Reader, io.Closer, error) {
 }
 
 type cursor struct {
-	table *table
-	close io.Closer
-	csv   *csv.Reader
-	row   []string
-	rowID int64
+	table  *table
+	closer io.Closer
+	csv    *csv.Reader
+	row    []string
+	rowID  int64
 }
 
-func (c *cursor) Close() error {
-	return c.close.Close()
+func (c *cursor) Close() (err error) {
+	if c.closer != nil {
+		err = c.closer.Close()
+		c.closer = nil
+	}
+	return err
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	var err error
-	c.csv, c.close, err = c.table.newReader()
+	err := c.Close()
+	if err != nil {
+		return err
+	}
+
+	c.csv, c.closer, err = c.table.newReader()
 	if err != nil {
 		return err
 	}

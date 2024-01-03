@@ -2,6 +2,7 @@ package readervfs
 
 import (
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -31,7 +32,7 @@ func (readerVFS) FullPathname(name string) (string, error) {
 	return name, nil
 }
 
-type readerFile struct{ SizeReaderAt }
+type readerFile struct{ ioutil.SizeReaderAt }
 
 func (readerFile) Close() error {
 	return nil

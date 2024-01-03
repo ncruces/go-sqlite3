@@ -18,20 +18,20 @@ import (
 	"io/fs"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/fsutil"
 )
 
-// Register registers the lines and lines_read virtual tables.
-// The lines virtual table reads from a database blob or text.
-// The lines_read virtual table reads from a file or an [io.Reader].
+// Register registers the lines and lines_read table-valued functions.
+// The lines function reads from a database blob or text.
+// The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterFS(db, util.OSFS{})
+	RegisterFS(db, fsutil.OSFS{})
 }
 
-// RegisterFS registers the lines and lines_read virtual tables.
-// The lines virtual table reads from a database blob or text.
-// The lines_read virtual table reads from a file or an [io.Reader].
+// RegisterFS registers the lines and lines_read table-valued functions.
+// The lines function reads from a database blob or text.
+// The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, fsys is used to open the file.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	sqlite3.CreateModule[lines](db, "lines", nil,

@@ -56,7 +56,7 @@ func Test_writefile(t *testing.T) {
 		var mode fs.FileMode
 		var mtime time.Time
 		var data sql.NullString
-		err := rows.Scan(&name, &mode, sqlite3.TimeFormatUnixFrac.Scanner(&mtime), &data)
+		err := rows.Scan(&name, &mode, &mtime, &data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -88,28 +88,5 @@ func Test_writefile(t *testing.T) {
 		t.Fatal("want error")
 	} else {
 		t.Log(err)
-	}
-}
-
-func Test_fixMode(t *testing.T) {
-	tests := []struct {
-		mode fs.FileMode
-		want fs.FileMode
-	}{
-		{0010754, 0754 | fs.ModeNamedPipe},
-		{0020754, 0754 | fs.ModeCharDevice | fs.ModeDevice},
-		{0040754, 0754 | fs.ModeDir},
-		{0060754, 0754 | fs.ModeDevice},
-		{0100754, 0754},
-		{0120754, 0754 | fs.ModeSymlink},
-		{0140754, 0754 | fs.ModeSocket},
-		{0170754, 0754 | fs.ModeIrregular},
-	}
-	for _, tt := range tests {
-		t.Run(tt.mode.String(), func(t *testing.T) {
-			if got := fixMode(tt.mode); got != tt.want {
-				t.Errorf("fixMode() = %o, want %o", got, tt.want)
-			}
-		})
 	}
 }

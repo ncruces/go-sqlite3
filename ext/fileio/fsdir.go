@@ -48,11 +48,11 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 }
 
 func (d fsdir) Open() (sqlite3.VTabCursor, error) {
-	return &cursor{fsys: d.fsys}, nil
+	return &cursor{fsdir: d}, nil
 }
 
 type cursor struct {
-	fsys  fs.FS
+	fsdir
 	curr  entry
 	next  chan entry
 	done  chan struct{}

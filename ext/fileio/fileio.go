@@ -13,13 +13,13 @@ import (
 )
 
 // Register registers SQL functions readfile, writefile, lsmode,
-// and the eponymous virtual table fsdir.
+// and the table-valued function fsdir.
 func Register(db *sqlite3.Conn) {
 	RegisterFS(db, nil)
 }
 
 // Register registers SQL functions readfile, lsmode,
-// and the eponymous virtual table fsdir;
+// and the table-valued function fsdir;
 // fsys will be used to read files and list directories.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	db.CreateFunction("lsmode", 1, 0, lsmode)
@@ -27,8 +27,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	if fsys == nil {
 		db.CreateFunction("writefile", -1, sqlite3.DIRECTONLY, writefile)
 	}
-	sqlite3.CreateModule(db, "fsdir", nil, func(db *sqlite3.Conn, module, schema, table string, arg ...string) (fsdir, error) {
-		err := db.DeclareVtab(`CREATE TABLE x(name,mode,mtime,data,path HIDDEN,dir HIDDEN)`)
+	sqlite3.CreateModule(db, "fsdir", nil, func(db *sqlite3.Conn, _, _, _ string, _ ...string) (fsdir, error) {
+		err := db.DeclareVtab(`CREATE TABLE x(name,mode,mtime TIMESTAMP,data,path HIDDEN,dir HIDDEN)`)
 		db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
 		return fsdir{fsys}, err
 	})
