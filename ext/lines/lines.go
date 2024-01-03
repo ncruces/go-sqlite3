@@ -18,7 +18,7 @@ import (
 	"io/fs"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/util/fsutil"
+	"github.com/ncruces/go-sqlite3/util/osutil"
 )
 
 // Register registers the lines and lines_read table-valued functions.
@@ -26,7 +26,7 @@ import (
 // The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterFS(db, fsutil.OSFS{})
+	RegisterFS(db, osutil.FS{})
 }
 
 // RegisterFS registers the lines and lines_read table-valued functions.

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+
+	"github.com/ncruces/go-sqlite3/util/osutil"
 )
 
 type vfsOS struct{}
@@ -91,7 +93,7 @@ func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, O
 	if name == "" {
 		f, err = os.CreateTemp("", "*.db")
 	} else {
-		f, err = osOpenFile(name, oflags, 0666)
+		f, err = osutil.OpenFile(name, oflags, 0666)
 	}
 	if err != nil {
 		if errors.Is(err, syscall.EISDIR) {

@@ -15,14 +15,14 @@ import (
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/util/fsutil"
+	"github.com/ncruces/go-sqlite3/util/osutil"
 	"github.com/ncruces/go-sqlite3/util/vtabutil"
 )
 
 // Register registers the CSV virtual table.
 // If a filename is specified, [os.Open] is used to open the file.
 func Register(db *sqlite3.Conn) {
-	RegisterFS(db, fsutil.OSFS{})
+	RegisterFS(db, osutil.FS{})
 }
 
 // RegisterFS registers the CSV virtual table.

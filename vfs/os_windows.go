@@ -3,29 +3,11 @@
 package vfs
 
 import (
-	"io/fs"
 	"os"
-	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows"
 )
-
-// osOpenFile is a simplified copy of [os.openFileNolog]
-// that uses syscall.FILE_SHARE_DELETE.
-// https://go.dev/src/os/file_windows.go
-//
-// See: https://go.dev/issue/32088
-func osOpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	if name == "" {
-		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
-	}
-	r, e := syscallOpen(name, flag, uint32(perm.Perm()))
-	if e != nil {
-		return nil, &os.PathError{Op: "open", Path: name, Err: e}
-	}
-	return os.NewFile(uintptr(r), name), nil
-}
 
 func osGetSharedLock(file *os.File) _ErrorCode {
 	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
@@ -182,56 +164,4 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 		}
 	}
 	return def
-}
-
-// syscallOpen is a simplified copy of [syscall.Open]
-// that uses syscall.FILE_SHARE_DELETE.
-// https://go.dev/src/syscall/syscall_windows.go
-func syscallOpen(path string, mode int, perm uint32) (fd syscall.Handle, err error) {
-	if len(path) == 0 {
-		return syscall.InvalidHandle, syscall.ERROR_FILE_NOT_FOUND
-	}
-	pathp, err := syscall.UTF16PtrFromString(path)
-	if err != nil {
-		return syscall.InvalidHandle, err
-	}
-	var access uint32
-	switch mode & (syscall.O_RDONLY | syscall.O_WRONLY | syscall.O_RDWR) {
-	case syscall.O_RDONLY:
-		access = syscall.GENERIC_READ
-	case syscall.O_WRONLY:
-		access = syscall.GENERIC_WRITE
-	case syscall.O_RDWR:
-		access = syscall.GENERIC_READ | syscall.GENERIC_WRITE
-	}
-	if mode&syscall.O_CREAT != 0 {
-		access |= syscall.GENERIC_WRITE
-	}
-	if mode&syscall.O_APPEND != 0 {
-		access &^= syscall.GENERIC_WRITE
-		access |= syscall.FILE_APPEND_DATA
-	}
-	sharemode := uint32(syscall.FILE_SHARE_READ | syscall.FILE_SHARE_WRITE | syscall.FILE_SHARE_DELETE)
-	var createmode uint32
-	switch {
-	case mode&(syscall.O_CREAT|syscall.O_EXCL) == (syscall.O_CREAT | syscall.O_EXCL):
-		createmode = syscall.CREATE_NEW
-	case mode&(syscall.O_CREAT|syscall.O_TRUNC) == (syscall.O_CREAT | syscall.O_TRUNC):
-		createmode = syscall.CREATE_ALWAYS
-	case mode&syscall.O_CREAT == syscall.O_CREAT:
-		createmode = syscall.OPEN_ALWAYS
-	case mode&syscall.O_TRUNC == syscall.O_TRUNC:
-		createmode = syscall.TRUNCATE_EXISTING
-	default:
-		createmode = syscall.OPEN_EXISTING
-	}
-	var attrs uint32 = syscall.FILE_ATTRIBUTE_NORMAL
-	if perm&syscall.S_IWRITE == 0 {
-		attrs = syscall.FILE_ATTRIBUTE_READONLY
-	}
-	if createmode == syscall.OPEN_EXISTING && access == syscall.GENERIC_READ {
-		// Necessary for opening directory handles.
-		attrs |= syscall.FILE_FLAG_BACKUP_SEMANTICS
-	}
-	return syscall.CreateFile(pathp, access, sharemode, nil, createmode, attrs, 0)
 }
