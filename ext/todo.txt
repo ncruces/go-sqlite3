@@ -1,4 +1,0 @@
-zipfile
-zipfile_cds
-sqlar_compress
-sqlar_uncompress

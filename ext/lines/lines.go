@@ -36,14 +36,14 @@ func Register(db *sqlite3.Conn) {
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 	sqlite3.CreateModule[lines](db, "lines", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
-			db.VtabConfig(sqlite3.VTAB_INNOCUOUS)
+			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+			db.VTabConfig(sqlite3.VTAB_INNOCUOUS)
 			return lines{}, err
 		})
 	sqlite3.CreateModule[lines](db, "lines_read", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-			err := db.DeclareVtab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
-			db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
+			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+			db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
 			return lines{fsys}, err
 		})
 }

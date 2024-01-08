@@ -95,11 +95,11 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 			schema = getSchema(header, columns, row)
 		}
 
-		err = db.DeclareVtab(schema)
+		err = db.DeclareVTab(schema)
 		if err != nil {
 			return nil, err
 		}
-		err = db.VtabConfig(sqlite3.VTAB_DIRECTONLY)
+		err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
 		if err != nil {
 			return nil, err
 		}

@@ -67,7 +67,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	}
 	str.WriteByte(')')
 
-	err = db.DeclareVtab(str.String())
+	err = db.DeclareVTab(str.String())
 	if err != nil {
 		stmt.Close()
 		return nil, err

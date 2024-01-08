@@ -87,6 +87,17 @@ type WindowFunction interface {
 	Inverse(ctx Context, arg ...Value)
 }
 
+// OverloadFunction overloads a function for a virtual table.
+//
+// https://sqlite.org/c3ref/overload_function.html
+func (c *Conn) OverloadFunction(name string, nArg int) error {
+	defer c.arena.mark()()
+	namePtr := c.arena.string(name)
+	r := c.call("sqlite3_overload_function",
+		uint64(c.handle), uint64(namePtr), uint64(nArg))
+	return c.error(r)
+}
+
 func destroyCallback(ctx context.Context, mod api.Module, pApp uint32) {
 	util.DelHandle(ctx, pApp)
 }
@@ -167,7 +178,7 @@ func callbackArgs(db *Conn, nArg, pArg uint32) []Value {
 	args := make([]Value, nArg)
 	for i := range args {
 		args[i] = Value{
-			sqlite: db.sqlite,
+			c:      db,
 			handle: util.ReadUint32(db.mod, pArg+ptrlen*uint32(i)),
 		}
 	}

@@ -167,6 +167,26 @@ func TestCreateFunction(t *testing.T) {
 	}
 }
 
+func TestOverloadFunction(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.OverloadFunction("test", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT test()`)
+	if err == nil {
+		t.Fatal("want error")
+	}
+}
+
 func TestAnyCollationNeeded(t *testing.T) {
 	t.Parallel()
 

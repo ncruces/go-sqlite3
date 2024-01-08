@@ -90,7 +90,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 	}
 
 	create.WriteByte(')')
-	err = db.DeclareVtab(create.String())
+	err = db.DeclareVTab(create.String())
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +142,8 @@ func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
 		}
 		idxStr.WriteString(sep)
 		idxStr.WriteString(t.keys[ord.Column])
+		idxStr.WriteString(" COLLATE ")
+		idxStr.WriteString(idx.Collation(ord.Column))
 		if ord.Desc {
 			idxStr.WriteString(" DESC")
 		}

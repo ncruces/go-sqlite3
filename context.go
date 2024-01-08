@@ -184,7 +184,7 @@ func (ctx Context) ResultJSON(value any) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultValue(value Value) {
-	if value.sqlite != ctx.c.sqlite {
+	if value.c != ctx.c {
 		ctx.ResultError(MISUSE)
 		return
 	}
@@ -217,4 +217,13 @@ func (ctx Context) ResultError(err error) {
 		ctx.c.call("sqlite3_result_error_code",
 			uint64(ctx.handle), uint64(code))
 	}
+}
+
+// VTabNoChange may return true if a column is being fetched as part
+// of an update during which the column value will not change.
+//
+// https://www.sqlite.org/c3ref/vtab_nochange.html
+func (ctx Context) VTabNoChange() bool {
+	r := ctx.c.call("sqlite3_vtab_nochange", uint64(ctx.handle))
+	return r != 0
 }

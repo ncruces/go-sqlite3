@@ -33,7 +33,7 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 	return util.ReadUint32(c.mod, argsPtr) != 0, c.error(r)
 }
 
-// ConfigLog sets up the  error logging callback for the connection.
+// ConfigLog sets up the error logging callback for the connection.
 //
 // https://www.sqlite.org/errlog.html
 func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {

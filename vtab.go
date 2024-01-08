@@ -66,32 +66,53 @@ func implements[T any](typ reflect.Type) bool {
 	return typ.Implements(reflect.TypeOf(ptr).Elem())
 }
 
-// DeclareVtab declares the schema of a virtual table.
+// DeclareVTab declares the schema of a virtual table.
 //
 // https://sqlite.org/c3ref/declare_vtab.html
-func (c *Conn) DeclareVtab(sql string) error {
+func (c *Conn) DeclareVTab(sql string) error {
 	defer c.arena.mark()()
 	sqlPtr := c.arena.string(sql)
 	r := c.call("sqlite3_declare_vtab", uint64(c.handle), uint64(sqlPtr))
 	return c.error(r)
 }
 
-// IndexConstraintOp is a virtual table constraint operator code.
+// VTabConflictMode is a virtual table conflict resolution mode.
 //
-// https://sqlite.org/c3ref/c_vtab_constraint_support.html
-type VtabConfigOption uint8
+// https://www.sqlite.org/c3ref/c_fail.html
+type VTabConflictMode uint8
 
 const (
-	VTAB_CONSTRAINT_SUPPORT VtabConfigOption = 1
-	VTAB_INNOCUOUS          VtabConfigOption = 2
-	VTAB_DIRECTONLY         VtabConfigOption = 3
-	VTAB_USES_ALL_SCHEMAS   VtabConfigOption = 4
+	VTAB_ROLLBACK VTabConflictMode = 1
+	VTAB_IGNORE   VTabConflictMode = 2
+	VTAB_FAIL     VTabConflictMode = 3
+	VTAB_ABORT    VTabConflictMode = 4
+	VTAB_REPLACE  VTabConflictMode = 5
 )
 
-// VtabConfig configures various facets of the virtual table interface.
+// VTabOnConflict determines the virtual table conflict policy.
+//
+// https://sqlite.org/c3ref/vtab_on_conflict.html
+func (c *Conn) VTabOnConflict() VTabConflictMode {
+	r := c.call("sqlite3_vtab_on_conflict", uint64(c.handle))
+	return VTabConflictMode(r)
+}
+
+// VTabConfigOption is a virtual table configuration option.
+//
+// https://sqlite.org/c3ref/c_vtab_constraint_support.html
+type VTabConfigOption uint8
+
+const (
+	VTAB_CONSTRAINT_SUPPORT VTabConfigOption = 1
+	VTAB_INNOCUOUS          VTabConfigOption = 2
+	VTAB_DIRECTONLY         VTabConfigOption = 3
+	VTAB_USES_ALL_SCHEMAS   VTabConfigOption = 4
+)
+
+// VTabConfig configures various facets of the virtual table interface.
 //
 // https://sqlite.org/c3ref/vtab_config.html
-func (c *Conn) VtabConfig(op VtabConfigOption, args ...any) error {
+func (c *Conn) VTabConfig(op VTabConfigOption, args ...any) error {
 	var i uint64
 	if op == VTAB_CONSTRAINT_SUPPORT && len(args) > 0 {
 		if b, ok := args[0].(bool); ok && b {
@@ -268,9 +289,34 @@ func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 		return Value{}, err
 	}
 	return Value{
-		sqlite: idx.c.sqlite,
+		c:      idx.c,
 		handle: util.ReadUint32(idx.c.mod, valPtr),
 	}, nil
+}
+
+// Collation returns the name of the collation for a virtual table constraint.
+//
+// https://sqlite.org/c3ref/vtab_collation.html
+func (idx *IndexInfo) Collation(column int) string {
+	r := idx.c.call("sqlite3_vtab_collation",
+		uint64(idx.handle), uint64(column))
+	return util.ReadString(idx.c.mod, uint32(r), _MAX_NAME)
+}
+
+// Distinct determines if a virtual table query is DISTINCT.
+//
+// https://sqlite.org/c3ref/vtab_distinct.html
+func (idx *IndexInfo) Distinct() int {
+	r := idx.c.call("sqlite3_vtab_distinct", uint64(idx.handle))
+	return int(r)
+}
+
+// In identifies and handles IN constraints.
+//
+// https://sqlite.org/c3ref/vtab_in.html
+func (idx *IndexInfo) In(column, handle int) bool {
+	r := idx.c.call("sqlite3_vtab_in", uint64(idx.handle), uint64(column), uint64(handle))
+	return r != 0
 }
 
 func (idx *IndexInfo) load() {
@@ -574,7 +620,7 @@ func vtabError(ctx context.Context, mod api.Module, ptr, kind uint32, err error)
 		case _VTAB_ERROR:
 			ptr = ptr + 8 // zErrMsg
 		case _CURSOR_ERROR:
-			ptr = util.ReadUint32(mod, ptr) + 8 // pVtab->zErrMsg
+			ptr = util.ReadUint32(mod, ptr) + 8 // pVTab->zErrMsg
 		}
 		db := ctx.Value(connKey{}).(*Conn)
 		if ptr := util.ReadUint32(mod, ptr); ptr != 0 {

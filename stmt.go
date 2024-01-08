@@ -340,7 +340,7 @@ func (s *Stmt) BindJSON(param int, value any) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindValue(param int, value Value) error {
-	if value.sqlite != s.c.sqlite {
+	if value.c != s.c {
 		return MISUSE
 	}
 	r := s.c.call("sqlite3_bind_value",
@@ -403,10 +403,7 @@ func (s *Stmt) ColumnDeclType(col int) string {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnBool(col int) bool {
-	if i := s.ColumnInt64(col); i != 0 {
-		return true
-	}
-	return false
+	return s.ColumnInt64(col) != 0
 }
 
 // ColumnInt returns the value of the result column as an int.
@@ -547,8 +544,8 @@ func (s *Stmt) ColumnValue(col int) Value {
 	r := s.c.call("sqlite3_column_value",
 		uint64(s.handle), uint64(col))
 	return Value{
+		c:      s.c,
 		unprot: true,
-		sqlite: s.c.sqlite,
 		handle: uint32(r),
 	}
 }
