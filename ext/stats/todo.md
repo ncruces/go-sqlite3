@@ -25,12 +25,12 @@ https://sqlite.org/lang_aggfunc.html
 
 ## Linear regression
 
-- [ ] `REGR_AVGX(dependent, independent)`
-- [ ] `REGR_AVGY(dependent, independent)`
+- [X] `REGR_AVGX(dependent, independent)`
+- [X] `REGR_AVGY(dependent, independent)`
 - [ ] `REGR_COUNT(dependent, independent)`
-- [ ] `REGR_INTERCEPT(dependent, independent)`
-- [ ] `REGR_R2(dependent, independent)`
-- [ ] `REGR_SLOPE(dependent, independent)`
+- [X] `REGR_INTERCEPT(dependent, independent)`
+- [X] `REGR_R2(dependent, independent)`
+- [X] `REGR_SLOPE(dependent, independent)`
 - [ ] `REGR_SXX(dependent, independent)`
 - [ ] `REGR_SXY(dependent, independent)`
 - [ ] `REGR_SYY(dependent, independent)`

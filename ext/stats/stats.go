@@ -34,6 +34,11 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop))
 	db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp))
 	db.CreateWindowFunction("corr", 2, flags, newCovariance(corr))
+	db.CreateWindowFunction("regr_avgx", 2, flags, newCovariance(regr_avgx))
+	db.CreateWindowFunction("regr_avgy", 2, flags, newCovariance(regr_avgy))
+	db.CreateWindowFunction("regr_r2", 2, flags, newCovariance(regr_r2))
+	db.CreateWindowFunction("regr_slope", 2, flags, newCovariance(regr_slope))
+	db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept))
 }
 
 const (
@@ -42,6 +47,11 @@ const (
 	stddev_pop
 	stddev_samp
 	corr
+	regr_avgx
+	regr_avgy
+	regr_r2
+	regr_slope
+	regr_intercept
 )
 
 func newVariance(kind int) func() sqlite3.AggregateFunction {
@@ -98,6 +108,16 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 		r = fn.covar_samp()
 	case corr:
 		r = fn.correlation()
+	case regr_avgx:
+		r = fn.regr_avgx()
+	case regr_avgy:
+		r = fn.regr_avgy()
+	case regr_r2:
+		r = fn.regr_r2()
+	case regr_slope:
+		r = fn.regr_slope()
+	case regr_intercept:
+		r = fn.regr_intercept()
 	}
 	ctx.ResultFloat(r)
 }

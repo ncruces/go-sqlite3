@@ -48,8 +48,8 @@ func (w *welford) dequeue(x float64) {
 }
 
 type welford2 struct {
-	m1x, m2x kahan
 	m1y, m2y kahan
+	m1x, m2x kahan
 	cov      kahan
 	n        uint64
 }
@@ -63,33 +63,53 @@ func (w welford2) covar_samp() float64 {
 }
 
 func (w welford2) correlation() float64 {
-	return w.cov.hi / math.Sqrt(w.m2x.hi*w.m2y.hi)
+	return w.cov.hi / math.Sqrt(w.m2y.hi*w.m2x.hi)
 }
 
-func (w *welford2) enqueue(x, y float64) {
+func (w welford2) regr_avgy() float64 {
+	return w.m1y.hi
+}
+
+func (w welford2) regr_avgx() float64 {
+	return w.m1x.hi
+}
+
+func (w welford2) regr_slope() float64 {
+	return w.cov.hi / w.m2x.hi
+}
+
+func (w welford2) regr_intercept() float64 {
+	return w.m1y.hi - w.m1x.hi*w.regr_slope()
+}
+
+func (w welford2) regr_r2() float64 {
+	return w.cov.hi * w.cov.hi / (w.m2y.hi * w.m2x.hi)
+}
+
+func (w *welford2) enqueue(y, x float64) {
 	w.n++
-	d1x := x - w.m1x.hi - w.m1x.lo
 	d1y := y - w.m1y.hi - w.m1y.lo
-	w.m1x.add(d1x / float64(w.n))
+	d1x := x - w.m1x.hi - w.m1x.lo
 	w.m1y.add(d1y / float64(w.n))
-	d2x := x - w.m1x.hi - w.m1x.lo
+	w.m1x.add(d1x / float64(w.n))
 	d2y := y - w.m1y.hi - w.m1y.lo
-	w.m2x.add(d1x * d2x)
+	d2x := x - w.m1x.hi - w.m1x.lo
 	w.m2y.add(d1y * d2y)
-	w.cov.add(d1x * d2y)
+	w.m2x.add(d1x * d2x)
+	w.cov.add(d1y * d2x)
 }
 
-func (w *welford2) dequeue(x, y float64) {
+func (w *welford2) dequeue(y, x float64) {
 	w.n--
-	d1x := x - w.m1x.hi - w.m1x.lo
 	d1y := y - w.m1y.hi - w.m1y.lo
-	w.m1x.sub(d1x / float64(w.n))
+	d1x := x - w.m1x.hi - w.m1x.lo
 	w.m1y.sub(d1y / float64(w.n))
-	d2x := x - w.m1x.hi - w.m1x.lo
+	w.m1x.sub(d1x / float64(w.n))
 	d2y := y - w.m1y.hi - w.m1y.lo
-	w.m2x.sub(d1x * d2x)
+	d2x := x - w.m1x.hi - w.m1x.lo
 	w.m2y.sub(d1y * d2y)
-	w.cov.sub(d1x * d2y)
+	w.m2x.sub(d1x * d2x)
+	w.cov.sub(d1y * d2x)
 }
 
 type kahan struct{ hi, lo float64 }
