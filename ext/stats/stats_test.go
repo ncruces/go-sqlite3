@@ -171,3 +171,67 @@ func TestRegister_covariance(t *testing.T) {
 		}
 	}
 }
+
+func Benchmark_average(b *testing.B) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT avg(value) FROM generate_series(0, ?)`)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.BindInt(1, b.N)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	if stmt.Step() {
+		want := float64(b.N) / 2
+		if got := stmt.ColumnFloat(0); got != want {
+			b.Errorf("got %v, want %v", got, want)
+		}
+	}
+
+	err = stmt.Err()
+	if err != nil {
+		b.Error(err)
+	}
+}
+
+func Benchmark_variance(b *testing.B) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer db.Close()
+
+	stats.Register(db)
+
+	stmt, _, err := db.Prepare(`SELECT var_pop(value) FROM generate_series(0, ?)`)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.BindInt(1, b.N)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	if stmt.Step() && b.N > 100 {
+		want := float64(b.N*b.N) / 12
+		if got := stmt.ColumnFloat(0); want > (got-want)*float64(b.N) {
+			b.Errorf("got %v, want %v", got, want)
+		}
+	}
+
+	err = stmt.Err()
+	if err != nil {
+		b.Error(err)
+	}
+}
