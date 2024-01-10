@@ -92,20 +92,22 @@ func TestRegister_covariance(t *testing.T) {
 
 	stats.Register(db)
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (x, y)`)
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (y, x)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = db.Exec(`INSERT INTO data (x, y) VALUES (3, 70), (5, 80), (2, 60), (7, 90), (4, 75)`)
+	err = db.Exec(`INSERT INTO data (y, x) VALUES (3, 70), (5, 80), (2, 60), (7, 90), (4, 75)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	stmt, _, err := db.Prepare(`SELECT
-		corr(x, y), covar_samp(x, y), covar_pop(x, y),
-		regr_avgx(x, y), regr_avgy(x, y), regr_r2(x, y),
-		regr_slope(x, y), regr_intercept(x, y)
+		corr(y, x), covar_samp(y, x), covar_pop(y, x),
+		regr_avgy(y, x), regr_avgx(y, x),
+		regr_syy(y, x), regr_sxx(y, x), regr_sxy(y, x),
+		regr_slope(y, x), regr_intercept(y, x), regr_r2(y, x),
+		regr_count(y, x)
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)
@@ -122,25 +124,37 @@ func TestRegister_covariance(t *testing.T) {
 		if got := stmt.ColumnFloat(2); got != 17 {
 			t.Errorf("got %v, want 17", got)
 		}
-		if got := stmt.ColumnFloat(3); got != 75 {
-			t.Errorf("got %v, want 75", got)
-		}
-		if got := stmt.ColumnFloat(4); got != 4.2 {
+		if got := stmt.ColumnFloat(3); got != 4.2 {
 			t.Errorf("got %v, want 4.2", got)
 		}
-		if got := stmt.ColumnFloat(5); got != 0.9763513513513513 {
-			t.Errorf("got %v, want 0.9763513513513513", got)
+		if got := stmt.ColumnFloat(4); got != 75 {
+			t.Errorf("got %v, want 75", got)
 		}
-		if got := stmt.ColumnFloat(6); got != 0.17 {
+		if got := stmt.ColumnFloat(5); got != 14.8 {
+			t.Errorf("got %v, want 14.8", got)
+		}
+		if got := stmt.ColumnFloat(6); got != 500 {
+			t.Errorf("got %v, want 500", got)
+		}
+		if got := stmt.ColumnFloat(7); got != 85 {
+			t.Errorf("got %v, want 85", got)
+		}
+		if got := stmt.ColumnFloat(8); got != 0.17 {
 			t.Errorf("got %v, want 0.17", got)
 		}
-		if got := stmt.ColumnFloat(7); got != -8.55 {
+		if got := stmt.ColumnFloat(9); got != -8.55 {
 			t.Errorf("got %v, want -8.55", got)
+		}
+		if got := stmt.ColumnFloat(10); got != 0.9763513513513513 {
+			t.Errorf("got %v, want 0.9763513513513513", got)
+		}
+		if got := stmt.ColumnInt(11); got != 5 {
+			t.Errorf("got %v, want 5", got)
 		}
 	}
 
 	{
-		stmt, _, err := db.Prepare(`SELECT covar_samp(x, y) OVER (ROWS 1 PRECEDING) FROM data`)
+		stmt, _, err := db.Prepare(`SELECT covar_samp(y, x) OVER (ROWS 1 PRECEDING) FROM data`)
 		if err != nil {
 			t.Fatal(err)
 		}

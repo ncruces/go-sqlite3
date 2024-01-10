@@ -2,7 +2,7 @@
 
 https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 
-## Built in
+## Built in aggregates
 
 - [x] `COUNT(*)`
 - [x] `COUNT(expression)`
@@ -13,7 +13,7 @@ https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 
 https://sqlite.org/lang_aggfunc.html
 
-## Implemented
+## Statistical aggregates
 
 - [x] `STDDEV_POP(expression)`
 - [x] `STDDEV_SAMP(expression)`
@@ -27,15 +27,15 @@ https://sqlite.org/lang_aggfunc.html
 
 - [X] `REGR_AVGX(dependent, independent)`
 - [X] `REGR_AVGY(dependent, independent)`
-- [ ] `REGR_COUNT(dependent, independent)`
+- [X] `REGR_SXX(dependent, independent)`
+- [X] `REGR_SYY(dependent, independent)`
+- [X] `REGR_SXY(dependent, independent)`
+- [X] `REGR_COUNT(dependent, independent)`
+- [X] `REGR_SLOPE(dependent, independent)`
 - [X] `REGR_INTERCEPT(dependent, independent)`
 - [X] `REGR_R2(dependent, independent)`
-- [X] `REGR_SLOPE(dependent, independent)`
-- [ ] `REGR_SXX(dependent, independent)`
-- [ ] `REGR_SXY(dependent, independent)`
-- [ ] `REGR_SYY(dependent, independent)`
 
-## Other
+## Ordered set aggregates
 
 - [ ] `CUME_DIST(value_list) WITHIN GROUP (ORDER BY sort_list)`
 - [ ] `RANK(value_list) WITHIN GROUP (ORDER BY sort_list)`
