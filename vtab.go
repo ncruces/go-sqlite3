@@ -414,12 +414,12 @@ const (
 )
 
 func vtabModuleCallback(i int) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
-	return func(ctx context.Context, mod api.Module, pMod, argc, argv, ppVTab, pzErr uint32) uint32 {
-		arg := make([]reflect.Value, 1+argc)
+	return func(ctx context.Context, mod api.Module, pMod, nArg, pArg, ppVTab, pzErr uint32) uint32 {
+		arg := make([]reflect.Value, 1+nArg)
 		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
 
-		for i := uint32(0); i < argc; i++ {
-			ptr := util.ReadUint32(mod, argv+i*ptrlen)
+		for i := uint32(0); i < nArg; i++ {
+			ptr := util.ReadUint32(mod, pArg+i*ptrlen)
 			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_SQL_LENGTH))
 		}
 
@@ -461,11 +461,12 @@ func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo 
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabUpdateCallback(ctx context.Context, mod api.Module, pVTab, argc, argv, pRowID uint32) uint32 {
+func vtabUpdateCallback(ctx context.Context, mod api.Module, pVTab, nArg, pArg, pRowID uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabUpdater)
 
 	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, argc, argv)
+	args := make([]Value, nArg)
+	callbackArgs(db, args, pArg)
 	rowID, err := vtab.Update(args...)
 	if err == nil {
 		util.WriteUint64(mod, pRowID, uint64(rowID))
@@ -563,10 +564,11 @@ func cursorCloseCallback(ctx context.Context, mod api.Module, pCur uint32) uint3
 	return vtabError(ctx, mod, 0, _VTAB_ERROR, err)
 }
 
-func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, argc, argv uint32) uint32 {
+func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, nArg, pArg uint32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, argc, argv)
+	args := make([]Value, nArg)
+	callbackArgs(db, args, pArg)
 	var idxName string
 	if idxStr != 0 {
 		idxName = util.ReadString(mod, idxStr, _MAX_LENGTH)

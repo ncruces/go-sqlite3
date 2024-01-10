@@ -93,6 +93,5 @@ func hashFunc(ctx sqlite3.Context, arg sqlite3.Value, fn crypto.Hash) {
 
 	h := fn.New()
 	h.Write(data)
-	var res [64]byte
-	ctx.ResultBlob(h.Sum(res[:0]))
+	ctx.ResultBlob(h.Sum(nil))
 }

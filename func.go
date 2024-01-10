@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"sync"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
@@ -43,6 +44,7 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn Scala
 }
 
 // ScalarFunction is the type of a scalar SQL function.
+// Implementations must not retain arg.
 type ScalarFunction func(ctx Context, arg ...Value)
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
@@ -69,7 +71,8 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 // https://sqlite.org/appfunc.html
 type AggregateFunction interface {
 	// Step is invoked to add a row to the current window.
-	// The function arguments, if any, corresponding to the row being added are passed to Step.
+	// The function arguments, if any, corresponding to the row being added, are passed to Step.
+	// Implementations must not retain arg.
 	Step(ctx Context, arg ...Value)
 
 	// Value is invoked to return the current (or final) value of the aggregate.
@@ -84,6 +87,7 @@ type WindowFunction interface {
 
 	// Inverse is invoked to remove the oldest presently aggregated result of Step from the current window.
 	// The function arguments, if any, are those passed to Step for the row being removed.
+	// Implementations must not retain arg.
 	Inverse(ctx Context, arg ...Value)
 }
 
@@ -108,15 +112,21 @@ func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 }
 
 func funcCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+	args := getFuncArgs()
+	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
 	fn := userDataHandle(db, pCtx).(ScalarFunction)
-	fn(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
+	callbackArgs(db, args[:nArg], pArg)
+	fn(Context{db, pCtx}, args[:nArg]...)
 }
 
 func stepCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+	args := getFuncArgs()
+	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
 	fn := aggregateCtxHandle(db, pCtx, nil)
-	fn.Step(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
+	callbackArgs(db, args[:nArg], pArg)
+	fn.Step(Context{db, pCtx}, args[:nArg]...)
 }
 
 func finalCallback(ctx context.Context, mod api.Module, pCtx uint32) {
@@ -136,9 +146,12 @@ func valueCallback(ctx context.Context, mod api.Module, pCtx uint32) {
 }
 
 func inverseCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+	args := getFuncArgs()
+	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
 	fn := aggregateCtxHandle(db, pCtx, nil).(WindowFunction)
-	fn.Inverse(Context{db, pCtx}, callbackArgs(db, nArg, pArg)...)
+	callbackArgs(db, args[:nArg], pArg)
+	fn.Inverse(Context{db, pCtx}, args[:nArg]...)
 }
 
 func userDataHandle(db *Conn, pCtx uint32) any {
@@ -174,13 +187,25 @@ func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) AggregateFunction 
 	return fn
 }
 
-func callbackArgs(db *Conn, nArg, pArg uint32) []Value {
-	args := make([]Value, nArg)
-	for i := range args {
-		args[i] = Value{
+func callbackArgs(db *Conn, arg []Value, pArg uint32) {
+	for i := range arg {
+		arg[i] = Value{
 			c:      db,
 			handle: util.ReadUint32(db.mod, pArg+ptrlen*uint32(i)),
 		}
 	}
-	return args
+}
+
+var funcArgsPool sync.Pool
+
+func putFuncArgs(p *[_MAX_FUNCTION_ARG]Value) {
+	funcArgsPool.Put(p)
+}
+
+func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
+	if p := funcArgsPool.Get(); p == nil {
+		return new([_MAX_FUNCTION_ARG]Value)
+	} else {
+		return p.(*[_MAX_FUNCTION_ARG]Value)
+	}
 }

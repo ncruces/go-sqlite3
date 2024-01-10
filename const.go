@@ -13,6 +13,7 @@ const (
 	_MAX_LENGTH          = 1e9
 	_MAX_SQL_LENGTH      = 1e9
 	_MAX_ALLOCATION_SIZE = 0x7ffffeff
+	_MAX_FUNCTION_ARG    = 100
 
 	ptrlen = 4
 )
