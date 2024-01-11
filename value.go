@@ -50,7 +50,7 @@ func (dup *Value) Close() error {
 	return nil
 }
 
-// Type returns the initial [Datatype] of the value.
+// Type returns the initial datatype of the value.
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Type() Datatype {
@@ -58,20 +58,12 @@ func (v Value) Type() Datatype {
 	return Datatype(r)
 }
 
-func (v Value) NumericType() (Datatype, int64, float64) {
-	defer v.c.arena.mark()()
-	valPtr := v.c.arena.new(64 / 8)
-	r := v.c.call("sqlite3_value_numeric_type_go", v.protected(), uint64(valPtr))
-	switch t := Datatype(r); t {
-	case INTEGER:
-		i := int64(util.ReadUint64(v.c.mod, valPtr))
-		return t, i, float64(i)
-	case FLOAT:
-		d := util.ReadFloat64(v.c.mod, valPtr)
-		return t, int64(d), d
-	default:
-		return t, 0, 0
-	}
+// Type returns the numeric datatype of the value.
+//
+// https://sqlite.org/c3ref/value_blob.html
+func (v Value) NumericType() Datatype {
+	r := v.c.call("sqlite3_value_numeric_type", v.protected())
+	return Datatype(r)
 }
 
 // Bool returns the value as a bool.
