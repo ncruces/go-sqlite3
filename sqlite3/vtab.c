@@ -141,7 +141,7 @@ static int go_vtab_find_function_wrapper(
   go_handle handle;
   int rc = go_vtab_find_function(pVTab, nArg, zName, &handle);
   if (rc) {
-    *pxFunc = go_func;
+    *pxFunc = go_func_wrapper;
     *ppArg = handle;
   }
   return rc;

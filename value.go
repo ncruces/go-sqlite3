@@ -50,11 +50,19 @@ func (dup *Value) Close() error {
 	return nil
 }
 
-// Type returns the initial [Datatype] of the value.
+// Type returns the initial datatype of the value.
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) Type() Datatype {
 	r := v.c.call("sqlite3_value_type", v.protected())
+	return Datatype(r)
+}
+
+// Type returns the numeric datatype of the value.
+//
+// https://sqlite.org/c3ref/value_blob.html
+func (v Value) NumericType() Datatype {
+	r := v.c.call("sqlite3_value_numeric_type", v.protected())
 	return Datatype(r)
 }
 

@@ -111,80 +111,59 @@ func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nK
 	return uint32(fn(util.View(mod, pKey1, uint64(nKey1)), util.View(mod, pKey2, uint64(nKey2))))
 }
 
-func funcCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp, nArg, pArg uint32) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := userDataHandle(db, pCtx).(ScalarFunction)
+	fn := util.GetHandle(db.ctx, pApp).(ScalarFunction)
 	callbackArgs(db, args[:nArg], pArg)
 	fn(Context{db, pCtx}, args[:nArg]...)
 }
 
-func stepCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp, nArg, pArg uint32) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, nil)
 	callbackArgs(db, args[:nArg], pArg)
+	fn, _ := callbackAggregate(db, pAgg, pApp)
 	fn.Step(Context{db, pCtx}, args[:nArg]...)
 }
 
-func finalCallback(ctx context.Context, mod api.Module, pCtx uint32) {
-	var handle uint32
+func finalCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, &handle)
+	fn, handle := callbackAggregate(db, pAgg, pApp)
 	fn.Value(Context{db, pCtx})
-	if err := util.DelHandle(ctx, handle); err != nil {
-		Context{db, pCtx}.ResultError(err)
-	}
+	util.DelHandle(ctx, handle)
 }
 
-func valueCallback(ctx context.Context, mod api.Module, pCtx uint32) {
+func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, nil)
+	fn := util.GetHandle(db.ctx, pAgg).(AggregateFunction)
 	fn.Value(Context{db, pCtx})
 }
 
-func inverseCallback(ctx context.Context, mod api.Module, pCtx, nArg, pArg uint32) {
+func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg, nArg, pArg uint32) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
-	fn := aggregateCtxHandle(db, pCtx, nil).(WindowFunction)
 	callbackArgs(db, args[:nArg], pArg)
+	fn := util.GetHandle(db.ctx, pAgg).(WindowFunction)
 	fn.Inverse(Context{db, pCtx}, args[:nArg]...)
 }
 
-func userDataHandle(db *Conn, pCtx uint32) any {
-	pApp := uint32(db.call("sqlite3_user_data", uint64(pCtx)))
-	return util.GetHandle(db.ctx, pApp)
-}
-
-func aggregateCtxHandle(db *Conn, pCtx uint32, close *uint32) AggregateFunction {
-	// On close, we're getting rid of the aggregate.
-	// Don't allocate space to store it.
-	var size uint64
-	if close == nil {
-		size = ptrlen
-	}
-	ptr := uint32(db.call("sqlite3_aggregate_context", uint64(pCtx), size))
-
-	// If we already have an aggregate, return it.
-	if ptr != 0 {
-		if handle := util.ReadUint32(db.mod, ptr); handle != 0 {
-			fn := util.GetHandle(db.ctx, handle).(AggregateFunction)
-			if close != nil {
-				*close = handle
-			}
-			return fn
-		}
+func callbackAggregate(db *Conn, pAgg, pApp uint32) (AggregateFunction, uint32) {
+	if pApp == 0 {
+		handle := util.ReadUint32(db.mod, pAgg)
+		return util.GetHandle(db.ctx, handle).(AggregateFunction), handle
 	}
 
-	// Create a new aggregate, and store it if needed.
-	fn := userDataHandle(db, pCtx).(func() AggregateFunction)()
-	if ptr != 0 {
-		util.WriteUint32(db.mod, ptr, util.AddHandle(db.ctx, fn))
+	// We need to create the aggregate.
+	fn := util.GetHandle(db.ctx, pApp).(func() AggregateFunction)()
+	handle := util.AddHandle(db.ctx, fn)
+	if pAgg != 0 {
+		util.WriteUint32(db.mod, pAgg, handle)
 	}
-	return fn
+	return fn, handle
 }
 
 func callbackArgs(db *Conn, arg []Value, pArg uint32) {
