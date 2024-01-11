@@ -168,7 +168,7 @@ type VTabOverloader interface {
 }
 
 // A VTabChecker allows a virtual table to report errors
-// to the PRAGMA integrity_check PRAGMA quick_check commands.
+// to the PRAGMA integrity_check and PRAGMA quick_check commands.
 //
 // Integrity should return an error if it finds problems in the content of the virtual table,
 // but should avoid returning a (wrapped) [Error], [ErrorCode] or [ExtendedErrorCode],
@@ -283,8 +283,8 @@ type IndexConstraintUsage struct {
 func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 	defer idx.c.arena.mark()()
 	valPtr := idx.c.arena.new(ptrlen)
-	r := idx.c.call("sqlite3_vtab_rhs_value",
-		uint64(idx.handle), uint64(column), uint64(valPtr))
+	r := idx.c.call("sqlite3_vtab_rhs_value", uint64(idx.handle),
+		uint64(column), uint64(valPtr))
 	if err := idx.c.error(r); err != nil {
 		return Value{}, err
 	}
@@ -298,8 +298,8 @@ func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 //
 // https://sqlite.org/c3ref/vtab_collation.html
 func (idx *IndexInfo) Collation(column int) string {
-	r := idx.c.call("sqlite3_vtab_collation",
-		uint64(idx.handle), uint64(column))
+	r := idx.c.call("sqlite3_vtab_collation", uint64(idx.handle),
+		uint64(column))
 	return util.ReadString(idx.c.mod, uint32(r), _MAX_NAME)
 }
 
@@ -315,7 +315,8 @@ func (idx *IndexInfo) Distinct() int {
 //
 // https://sqlite.org/c3ref/vtab_in.html
 func (idx *IndexInfo) In(column, handle int) bool {
-	r := idx.c.call("sqlite3_vtab_in", uint64(idx.handle), uint64(column), uint64(handle))
+	r := idx.c.call("sqlite3_vtab_in", uint64(idx.handle),
+		uint64(column), uint64(handle))
 	return r != 0
 }
 
@@ -483,13 +484,14 @@ func vtabRenameCallback(ctx context.Context, mod api.Module, pVTab, zNew uint32)
 
 func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab, nArg, zName, pxFunc uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabOverloader)
-	fn, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_NAME))
-	if fn != nil {
-		handle := util.AddHandle(ctx, fn)
-		util.WriteUint32(mod, pxFunc, handle)
-		if op == 0 {
-			op = 1
-		}
+	f, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_NAME))
+	if op != 0 {
+		var wrapper uint32
+		wrapper = util.AddHandle(ctx, func(c Context, arg ...Value) {
+			defer util.DelHandle(ctx, wrapper)
+			f(c, arg...)
+		})
+		util.WriteUint32(mod, pxFunc, wrapper)
 	}
 	return uint32(op)
 }

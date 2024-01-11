@@ -125,13 +125,13 @@ func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp, nArg, p
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
 	callbackArgs(db, args[:nArg], pArg)
-	fn, _ := aggregateCtxHandle(db, pAgg, pApp)
+	fn, _ := callbackAggregate(db, pAgg, pApp)
 	fn.Step(Context{db, pCtx}, args[:nArg]...)
 }
 
 func finalCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp uint32) {
 	db := ctx.Value(connKey{}).(*Conn)
-	fn, handle := aggregateCtxHandle(db, pAgg, pApp)
+	fn, handle := callbackAggregate(db, pAgg, pApp)
 	fn.Value(Context{db, pCtx})
 	util.DelHandle(ctx, handle)
 }
@@ -151,7 +151,7 @@ func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg, nArg, pArg
 	fn.Inverse(Context{db, pCtx}, args[:nArg]...)
 }
 
-func aggregateCtxHandle(db *Conn, pAgg, pApp uint32) (AggregateFunction, uint32) {
+func callbackAggregate(db *Conn, pAgg, pApp uint32) (AggregateFunction, uint32) {
 	if pApp == 0 {
 		handle := util.ReadUint32(db.mod, pAgg)
 		return util.GetHandle(db.ctx, handle).(AggregateFunction), handle

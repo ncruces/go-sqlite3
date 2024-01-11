@@ -138,14 +138,14 @@ func (e ExtendedErrorCode) Timeout() bool {
 
 func errorCode(err error, def ErrorCode) (msg string, code uint32) {
 	switch code := err.(type) {
+	case nil:
+		return "", _OK
 	case ErrorCode:
 		return "", uint32(code)
-	case ExtendedErrorCode:
+	case xErrorCode:
 		return "", uint32(code)
 	case *Error:
 		return code.msg, uint32(code.code)
-	case nil:
-		return "", _OK
 	}
 
 	var ecode ErrorCode

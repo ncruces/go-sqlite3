@@ -58,6 +58,22 @@ func (v Value) Type() Datatype {
 	return Datatype(r)
 }
 
+func (v Value) NumericType() (Datatype, int64, float64) {
+	defer v.c.arena.mark()()
+	valPtr := v.c.arena.new(64 / 8)
+	r := v.c.call("sqlite3_value_numeric_type_go", v.protected(), uint64(valPtr))
+	switch t := Datatype(r); t {
+	case INTEGER:
+		i := int64(util.ReadUint64(v.c.mod, valPtr))
+		return t, i, float64(i)
+	case FLOAT:
+		d := util.ReadFloat64(v.c.mod, valPtr)
+		return t, int64(d), d
+	default:
+		return t, 0, 0
+	}
+}
+
 // Bool returns the value as a bool.
 // SQLite does not have a separate boolean storage class.
 // Instead, boolean values are retrieved as integers,
