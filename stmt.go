@@ -549,3 +549,39 @@ func (s *Stmt) ColumnValue(col int) Value {
 		handle: uint32(r),
 	}
 }
+
+func (s *Stmt) Columns(dest []any) error {
+	defer s.c.arena.mark()()
+	count := uint64(len(dest))
+	dataPtr := s.c.arena.new(9 * count)
+	typePtr := dataPtr + 8*uint32(count)
+
+	r := s.c.call("sqlite3_column_all",
+		uint64(s.handle), count, uint64(typePtr), uint64(dataPtr))
+	if err := s.c.error(r); err != nil {
+		return err
+	}
+
+	types := util.View(s.c.mod, typePtr, count)
+	for i := range dest {
+		switch Datatype(types[i]) {
+		case INTEGER:
+			dest[i] = int64(util.ReadUint64(s.c.mod, dataPtr+8*uint32(i)))
+		case FLOAT:
+			dest[i] = util.ReadFloat64(s.c.mod, dataPtr+8*uint32(i))
+		case BLOB:
+			ptr := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+0)
+			len := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+4)
+			dest[i] = util.View(s.c.mod, ptr, uint64(len))
+		case TEXT:
+			ptr := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+0)
+			len := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+4)
+			dest[i] = string(util.View(s.c.mod, ptr, uint64(len)))
+		case NULL:
+			dest[i] = nil
+		default:
+			panic(util.AssertErr())
+		}
+	}
+	return nil
+}

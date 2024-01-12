@@ -7,7 +7,7 @@ ROOT=../
 BINARYEN="$ROOT/tools/binaryen-version_116/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk-21.0/bin"
 
-"$WASI_SDK/clang" --target=wasm32-wasi -flto -g0 -O2 \
+"$WASI_SDK/clang" --target=wasm32-wasi -std=c17 -flto -g0 -O2 \
 	-o sqlite3.wasm "$ROOT/sqlite3/main.c" \
 	-I"$ROOT/sqlite3" \
 	-mexec-model=reactor \

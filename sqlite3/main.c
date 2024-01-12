@@ -10,6 +10,7 @@
 #include "ext/uint.c"
 #include "ext/uuid.c"
 // Bindings
+#include "column.c"
 #include "func.c"
 #include "log.c"
 #include "pointer.c"

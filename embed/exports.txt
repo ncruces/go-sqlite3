@@ -29,6 +29,7 @@ sqlite3_changes64
 sqlite3_clear_bindings
 sqlite3_close
 sqlite3_close_v2
+sqlite3_column_all
 sqlite3_column_blob
 sqlite3_column_bytes
 sqlite3_column_count
