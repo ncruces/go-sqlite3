@@ -23,8 +23,9 @@ func stringOrTime(text string) driver.Value {
 	}
 
 	// Slow path.
+	var buf [len(time.RFC3339Nano)]byte
 	date, err := time.Parse(time.RFC3339Nano, text)
-	if err == nil && date.Format(time.RFC3339Nano) == text {
+	if err == nil && text == string(date.AppendFormat(buf[:0], time.RFC3339Nano)) {
 		return date
 	}
 	return text

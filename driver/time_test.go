@@ -67,7 +67,7 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 			if !v.Equal(date) {
 				t.Fatalf("did not round-trip: %v", date)
 			}
-			// Make with the same zone offset:
+			// With the same zone offset:
 			_, off1 := v.Zone()
 			_, off2 := date.Zone()
 			if off1 != off2 {

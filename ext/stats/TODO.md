@@ -23,7 +23,7 @@ https://sqlite.org/lang_aggfunc.html
 - [x] `COVAR_SAMP(dependent, independent)`
 - [x] `CORR(dependent, independent)`
 
-## Linear regression
+## Linear regression aggregates
 
 - [X] `REGR_AVGX(dependent, independent)`
 - [X] `REGR_AVGY(dependent, independent)`
@@ -35,11 +35,13 @@ https://sqlite.org/lang_aggfunc.html
 - [X] `REGR_INTERCEPT(dependent, independent)`
 - [X] `REGR_R2(dependent, independent)`
 
-## Ordered set aggregates
+## Set aggregates
 
-- [ ] `CUME_DIST(value_list) WITHIN GROUP (ORDER BY sort_list)`
-- [ ] `RANK(value_list) WITHIN GROUP (ORDER BY sort_list)`
-- [ ] `DENSE_RANK(value_list) WITHIN GROUP (ORDER BY sort_list)`
-- [ ] `PERCENT_RANK(value_list) WITHIN GROUP (ORDER BY sort_list)`
-- [ ] `PERCENTILE_CONT(percentile) WITHIN GROUP (ORDER BY sort_list)`
-- [ ] `PERCENTILE_DISC(percentile) WITHIN GROUP (ORDER BY sort_list)`
+- [X] `CUME_DIST() OVER window`
+- [X] `RANK() OVER window`
+- [X] `DENSE_RANK() OVER window`
+- [X] `PERCENT_RANK() OVER window`
+- [ ] `PERCENTILE_CONT(percentile) OVER window`
+- [ ] `PERCENTILE_DISC(percentile) OVER window`
+
+https://sqlite.org/windowfunctions.html#builtins
