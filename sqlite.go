@@ -216,6 +216,8 @@ func (sqlt *sqlite) newString(s string) uint32 {
 }
 
 func (sqlt *sqlite) newArena(size uint64) arena {
+	// Ensure the arena's size is a multiple of 8.
+	size = (size + 7) &^ 7
 	return arena{
 		sqlt: sqlt,
 		size: uint32(size),
@@ -255,6 +257,12 @@ func (a *arena) mark() (reset func()) {
 }
 
 func (a *arena) new(size uint64) uint32 {
+	// Align the next address, to 4 or 8 bytes.
+	if size&7 != 0 {
+		a.next = (a.next + 3) &^ 3
+	} else {
+		a.next = (a.next + 7) &^ 7
+	}
 	if size <= uint64(a.size-a.next) {
 		ptr := a.base + a.next
 		a.next += uint32(size)
