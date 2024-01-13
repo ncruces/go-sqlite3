@@ -11,7 +11,7 @@ union sqlite3_data {
   };
 };
 
-int sqlite3_column_all(sqlite3_stmt *stmt, int nCol, char *aType,
+int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
                        union sqlite3_data *aData) {
   if (nCol != sqlite3_column_count(stmt)) {
     return SQLITE_MISUSE;
