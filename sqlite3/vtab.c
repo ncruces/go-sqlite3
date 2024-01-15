@@ -136,8 +136,6 @@ static int go_cur_close_wrapper(sqlite3_vtab_cursor *pCursor) {
 static int go_vtab_find_function_wrapper(
     sqlite3_vtab *pVTab, int nArg, const char *zName,
     void (**pxFunc)(sqlite3_context *, int, sqlite3_value **), void **ppArg) {
-  struct go_vtab *vtab = container_of(pVTab, struct go_vtab, base);
-
   go_handle handle;
   int rc = go_vtab_find_function(pVTab, nArg, zName, &handle);
   if (rc) {

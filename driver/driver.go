@@ -561,5 +561,6 @@ func (r *rows) decodeTime(i int, v any) (_ time.Time, _ bool) {
 	default:
 		return
 	}
-	return r.Stmt.ColumnTime(i, r.tmRead), r.Stmt.Err() == nil
+	t, err := r.tmRead.Decode(v)
+	return t, err == nil
 }
