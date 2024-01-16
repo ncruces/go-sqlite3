@@ -244,18 +244,18 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	// A busy SQL statement prevents SQLite from ignoring an interrupt
 	// that comes before any other statements are started.
 	if c.pending == nil {
-		c.pending, _, _ = c.Prepare(`SELECT 1 UNION ALL SELECT 2`)
-	} else {
-		c.pending.Reset()
+		c.pending, _, _ = c.Prepare(`WITH RECURSIVE c(x) AS (VALUES(0) UNION ALL SELECT x FROM c) SELECT x FROM c`)
 	}
 
 	old = c.interrupt
 	c.interrupt = ctx
-	if ctx == nil || ctx.Done() == nil {
-		return old
-	}
 
-	c.pending.Step()
+	if old != nil && old.Done() != nil && (ctx == nil || ctx.Err() == nil) {
+		c.pending.Reset()
+	}
+	if ctx != nil && ctx.Done() != nil {
+		c.pending.Step()
+	}
 	return old
 }
 
