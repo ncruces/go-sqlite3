@@ -39,6 +39,7 @@ sqlite3_column_name
 sqlite3_column_text
 sqlite3_column_type
 sqlite3_column_value
+sqlite3_columns_go
 sqlite3_config_log_go
 sqlite3_create_aggregate_function_go
 sqlite3_create_collation_go

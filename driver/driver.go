@@ -50,6 +50,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -532,39 +533,20 @@ func (r *rows) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
+	data := unsafe.Slice((*any)(unsafe.SliceData(dest)), len(dest))
+	err := r.Stmt.Columns(data)
 	for i := range dest {
-		t := r.Stmt.ColumnType(i)
-		if tm, ok := r.decodeTime(i, t); ok {
-			dest[i] = tm
-			continue
-		}
-		switch t {
-		case sqlite3.INTEGER:
-			dest[i] = r.Stmt.ColumnInt64(i)
-		case sqlite3.FLOAT:
-			dest[i] = r.Stmt.ColumnFloat(i)
-		case sqlite3.BLOB:
-			dest[i] = r.Stmt.ColumnRawBlob(i)
-		case sqlite3.TEXT:
-			dest[i] = stringOrTime(r.Stmt.ColumnText(i))
-		case sqlite3.NULL:
-			dest[i] = nil
-		default:
-			panic(util.AssertErr())
+		if t, ok := r.decodeTime(i, dest[i]); ok {
+			dest[i] = t
+		} else if s, ok := dest[i].(string); ok {
+			dest[i] = stringOrTime(s)
 		}
 	}
-
-	return r.Stmt.Err()
+	return err
 }
 
-func (r *rows) decodeTime(i int, typ sqlite3.Datatype) (_ time.Time, _ bool) {
+func (r *rows) decodeTime(i int, v any) (_ time.Time, _ bool) {
 	if r.tmRead == sqlite3.TimeFormatDefault {
-		return
-	}
-	switch typ {
-	case sqlite3.INTEGER, sqlite3.FLOAT, sqlite3.TEXT:
-		// maybe
-	default:
 		return
 	}
 	switch r.declType(i) {
@@ -573,5 +555,12 @@ func (r *rows) decodeTime(i int, typ sqlite3.Datatype) (_ time.Time, _ bool) {
 	default:
 		return
 	}
-	return r.Stmt.ColumnTime(i, r.tmRead), r.Stmt.Err() == nil
+	switch v.(type) {
+	case int64, float64, string:
+		// maybe
+	default:
+		return
+	}
+	t, err := r.tmRead.Decode(v)
+	return t, err == nil
 }

@@ -7,7 +7,7 @@ ROOT=../../../../
 BINARYEN="$ROOT/tools/binaryen-version_116/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk-21.0/bin"
 
-"$WASI_SDK/clang" --target=wasm32-wasi -flto -g0 -O2 \
+"$WASI_SDK/clang" --target=wasm32-wasi -std=c17 -flto -g0 -O2 \
 	-o speedtest1.wasm main.c \
 	-I"$ROOT/sqlite3" \
 	-msimd128 -mmutable-globals \

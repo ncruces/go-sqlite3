@@ -549,3 +549,40 @@ func (s *Stmt) ColumnValue(col int) Value {
 		handle: uint32(r),
 	}
 }
+
+func (s *Stmt) Columns(dest []any) error {
+	defer s.c.arena.mark()()
+	count := uint64(len(dest))
+	typePtr := s.c.arena.new(count)
+	dataPtr := s.c.arena.new(8 * count)
+
+	r := s.c.call("sqlite3_columns_go",
+		uint64(s.handle), count, uint64(typePtr), uint64(dataPtr))
+	if err := s.c.error(r); err != nil {
+		return err
+	}
+
+	types := util.View(s.c.mod, typePtr, count)
+	for i := range dest {
+		switch types[i] {
+		case byte(INTEGER):
+			dest[i] = int64(util.ReadUint64(s.c.mod, dataPtr+8*uint32(i)))
+			continue
+		case byte(FLOAT):
+			dest[i] = util.ReadFloat64(s.c.mod, dataPtr+8*uint32(i))
+			continue
+		case byte(NULL):
+			dest[i] = nil
+			continue
+		}
+		ptr := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+0)
+		len := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+4)
+		buf := util.View(s.c.mod, ptr, uint64(len))
+		if types[i] == byte(TEXT) {
+			dest[i] = string(buf)
+		} else {
+			dest[i] = buf
+		}
+	}
+	return nil
+}
