@@ -2,7 +2,6 @@
 package gormlite
 
 import (
-	"context"
 	"database/sql"
 	"strconv"
 
@@ -46,23 +45,12 @@ func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 		db.ConnPool = conn
 	}
 
-	var version string
-	if err := db.ConnPool.QueryRowContext(context.Background(), "select sqlite_version()").Scan(&version); err != nil {
-		return err
-	}
-	// https://sqlite.org/releaselog/3_35_0.html
-	if compareVersion(version, "3.35.0") >= 0 {
-		callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{
-			CreateClauses:        []string{"INSERT", "VALUES", "ON CONFLICT", "RETURNING"},
-			UpdateClauses:        []string{"UPDATE", "SET", "FROM", "WHERE", "RETURNING"},
-			DeleteClauses:        []string{"DELETE", "FROM", "WHERE", "RETURNING"},
-			LastInsertIDReversed: true,
-		})
-	} else {
-		callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{
-			LastInsertIDReversed: true,
-		})
-	}
+	callbacks.RegisterDefaultCallbacks(db, &callbacks.Config{
+		CreateClauses:        []string{"INSERT", "VALUES", "ON CONFLICT", "RETURNING"},
+		UpdateClauses:        []string{"UPDATE", "SET", "FROM", "WHERE", "RETURNING"},
+		DeleteClauses:        []string{"DELETE", "FROM", "WHERE", "RETURNING"},
+		LastInsertIDReversed: true,
+	})
 
 	for k, v := range dialector.ClauseBuilders() {
 		db.ClauseBuilders[k] = v
@@ -230,28 +218,4 @@ func (dialectopr _Dialector) SavePoint(tx *gorm.DB, name string) error {
 func (dialectopr _Dialector) RollbackTo(tx *gorm.DB, name string) error {
 	tx.Exec("ROLLBACK TO SAVEPOINT " + name)
 	return nil
-}
-
-func compareVersion(version1, version2 string) int {
-	n, m := len(version1), len(version2)
-	i, j := 0, 0
-	for i < n || j < m {
-		x := 0
-		for ; i < n && version1[i] != '.'; i++ {
-			x = x*10 + int(version1[i]-'0')
-		}
-		i++
-		y := 0
-		for ; j < m && version2[j] != '.'; j++ {
-			y = y*10 + int(version2[j]-'0')
-		}
-		j++
-		if x > y {
-			return 1
-		}
-		if x < y {
-			return -1
-		}
-	}
-	return 0
 }
