@@ -371,6 +371,12 @@ func TestBlob_Reopen(t *testing.T) {
 		}
 		rowids = append(rowids, db.LastInsertRowID())
 	}
+	if changes := db.Changes(); changes != 1 {
+		t.Errorf("got %d want 1", changes)
+	}
+	if changes := db.TotalChanges(); changes != 100 {
+		t.Errorf("got %d want 100", changes)
+	}
 
 	var blob *sqlite3.Blob
 

@@ -194,6 +194,32 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	return stmt, tail, nil
 }
 
+// DBName returns the schema name for n-th database on the database connection.
+//
+// https://sqlite.org/c3ref/db_name.html
+func (c *Conn) DBName(n int) string {
+	r := c.call("sqlite3_db_name", uint64(c.handle), uint64(n))
+
+	ptr := uint32(r)
+	if ptr == 0 {
+		return ""
+	}
+	return util.ReadString(c.mod, ptr, _MAX_NAME)
+}
+
+// ReadOnly determines if a database is read-only.
+//
+// https://sqlite.org/c3ref/db_readonly.html
+func (c *Conn) ReadOnly(schema string) (ro bool, ok bool) {
+	var ptr uint32
+	if schema != "" {
+		defer c.arena.mark()()
+		ptr = c.arena.string(schema)
+	}
+	r := c.call("sqlite3_db_readonly", uint64(c.handle), uint64(ptr))
+	return int8(r) > 0, int8(r) < 0
+}
+
 // GetAutocommit tests the connection for auto-commit mode.
 //
 // https://sqlite.org/c3ref/get_autocommit.html
@@ -211,6 +237,14 @@ func (c *Conn) LastInsertRowID() int64 {
 	return int64(r)
 }
 
+// SetLastInsertRowID allows the application to set the value returned by
+// [Conn.LastInsertRowID].
+//
+// https://sqlite.org/c3ref/set_last_insert_rowid.html
+func (c *Conn) SetLastInsertRowID(id int64) {
+	c.call("sqlite3_set_last_insert_rowid", uint64(c.handle), uint64(id))
+}
+
 // Changes returns the number of rows modified, inserted or deleted
 // by the most recently completed INSERT, UPDATE or DELETE statement
 // on the database connection.
@@ -219,6 +253,24 @@ func (c *Conn) LastInsertRowID() int64 {
 func (c *Conn) Changes() int64 {
 	r := c.call("sqlite3_changes64", uint64(c.handle))
 	return int64(r)
+}
+
+// TotalChanges returns the number of rows modified, inserted or deleted
+// by all INSERT, UPDATE or DELETE statements completed
+// since the database connection was opened.
+//
+// https://sqlite.org/c3ref/total_changes.html
+func (c *Conn) TotalChanges() int64 {
+	r := c.call("sqlite3_total_changes64", uint64(c.handle))
+	return int64(r)
+}
+
+// ReleaseMemory frees memory used by a database connection.
+//
+// https://sqlite.org/c3ref/db_release_memory.html
+func (c *Conn) ReleaseMemory() error {
+	r := c.call("sqlite3_db_release_memory", uint64(c.handle))
+	return c.error(r)
 }
 
 // SetInterrupt interrupts a long-running query when a context is done.

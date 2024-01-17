@@ -213,3 +213,16 @@ func (c *Conn) txExecInterrupted(sql string) error {
 	}
 	return err
 }
+
+// TxnState starts a deferred transaction.
+//
+// https://sqlite.org/c3ref/txn_state.html
+func (c *Conn) TxnState(schema string) TxnState {
+	var ptr uint32
+	if schema != "" {
+		defer c.arena.mark()()
+		ptr = c.arena.string(schema)
+	}
+	r := c.call("sqlite3_txn_state", uint64(c.handle), uint64(ptr))
+	return TxnState(r)
+}

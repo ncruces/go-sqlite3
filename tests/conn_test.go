@@ -364,3 +364,71 @@ func TestConn_ConfigLog(t *testing.T) {
 		t.Error("want sqlite3.ERROR")
 	}
 }
+
+func TestConn_ReleaseMemory(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.ReleaseMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConn_SetLastInsertRowID(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	db.SetLastInsertRowID(42)
+
+	got := db.LastInsertRowID()
+	if got != 42 {
+		t.Errorf("got %d, want 42", got)
+	}
+}
+
+func TestConn_ReadOnly(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if ro, ok := db.ReadOnly(""); ro != false || ok != false {
+		t.Errorf("got %v,%v", ro, ok)
+	}
+
+	if ro, ok := db.ReadOnly("xpto"); ro != false || ok != true {
+		t.Errorf("got %v,%v", ro, ok)
+	}
+}
+
+func TestConn_DBName(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if name := db.DBName(0); name != "main" {
+		t.Errorf("got %s", name)
+	}
+
+	if name := db.DBName(5); name != "" {
+		t.Errorf("got %s", name)
+	}
+}

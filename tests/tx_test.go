@@ -47,6 +47,10 @@ func TestConn_Transaction_exec(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		if s := db.TxnState("main"); s != sqlite3.TXN_WRITE {
+			t.Errorf("got %d", s)
+		}
+
 		if succeed {
 			return nil
 		}

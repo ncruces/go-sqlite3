@@ -229,6 +229,17 @@ const (
 	DBCONFIG_REVERSE_SCANORDER     DBConfig = 1019
 )
 
+// TxnState are the allowed return values from [Conn.TxnState].
+//
+// https://sqlite.org/c3ref/c_txn_none.html
+type TxnState uint32
+
+const (
+	TXN_NONE  TxnState = 0
+	TXN_READ  TxnState = 1
+	TXN_WRITE TxnState = 2
+)
+
 // Datatype is a fundamental datatype of SQLite.
 //
 // https://sqlite.org/c3ref/c_blob.html
