@@ -10,45 +10,45 @@ import (
 	"strings"
 )
 
-// Tx is an in-progress database transaction.
+// Txn is an in-progress database transaction.
 //
 // https://sqlite.org/lang_transaction.html
-type Tx struct {
+type Txn struct {
 	c *Conn
 }
 
 // Begin starts a deferred transaction.
 //
 // https://sqlite.org/lang_transaction.html
-func (c *Conn) Begin() Tx {
+func (c *Conn) Begin() Txn {
 	// BEGIN even if interrupted.
 	err := c.txExecInterrupted(`BEGIN DEFERRED`)
 	if err != nil {
 		panic(err)
 	}
-	return Tx{c}
+	return Txn{c}
 }
 
 // BeginImmediate starts an immediate transaction.
 //
 // https://sqlite.org/lang_transaction.html
-func (c *Conn) BeginImmediate() (Tx, error) {
+func (c *Conn) BeginImmediate() (Txn, error) {
 	err := c.Exec(`BEGIN IMMEDIATE`)
 	if err != nil {
-		return Tx{}, err
+		return Txn{}, err
 	}
-	return Tx{c}, nil
+	return Txn{c}, nil
 }
 
 // BeginExclusive starts an exclusive transaction.
 //
 // https://sqlite.org/lang_transaction.html
-func (c *Conn) BeginExclusive() (Tx, error) {
+func (c *Conn) BeginExclusive() (Txn, error) {
 	err := c.Exec(`BEGIN EXCLUSIVE`)
 	if err != nil {
-		return Tx{}, err
+		return Txn{}, err
 	}
-	return Tx{c}, nil
+	return Txn{c}, nil
 }
 
 // End calls either [Tx.Commit] or [Tx.Rollback]
@@ -64,7 +64,7 @@ func (c *Conn) BeginExclusive() (Tx, error) {
 //	}
 //
 // https://sqlite.org/lang_transaction.html
-func (tx Tx) End(errp *error) {
+func (tx Txn) End(errp *error) {
 	recovered := recover()
 	if recovered != nil {
 		defer panic(recovered)
@@ -95,7 +95,7 @@ func (tx Tx) End(errp *error) {
 // Commit commits the transaction.
 //
 // https://sqlite.org/lang_transaction.html
-func (tx Tx) Commit() error {
+func (tx Txn) Commit() error {
 	return tx.c.Exec(`COMMIT`)
 }
 
@@ -103,7 +103,7 @@ func (tx Tx) Commit() error {
 // even if the connection has been interrupted.
 //
 // https://sqlite.org/lang_transaction.html
-func (tx Tx) Rollback() error {
+func (tx Txn) Rollback() error {
 	return tx.c.txExecInterrupted(`ROLLBACK`)
 }
 
@@ -226,3 +226,6 @@ func (c *Conn) TxnState(schema string) TxnState {
 	r := c.call("sqlite3_txn_state", uint64(c.handle), uint64(ptr))
 	return TxnState(r)
 }
+
+// Deprecated: renamed for consistency with [Conn.TxnState].
+type Tx = Txn
