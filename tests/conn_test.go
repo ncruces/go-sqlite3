@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -362,6 +363,36 @@ func TestConn_ConfigLog(t *testing.T) {
 
 	if code != sqlite3.ExtendedErrorCode(sqlite3.ERROR) {
 		t.Error("want sqlite3.ERROR")
+	}
+}
+
+func TestConn_Limit(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	l := db.Limit(sqlite3.LIMIT_COLUMN, -1)
+	if l != 2000 {
+		t.Errorf("got %d, want 2000", l)
+	}
+
+	l = db.Limit(sqlite3.LIMIT_COLUMN, 100)
+	if l != 2000 {
+		t.Errorf("got %d, want 2000", l)
+	}
+
+	l = db.Limit(sqlite3.LIMIT_COLUMN, -1)
+	if l != 100 {
+		t.Errorf("got %d, want 100", l)
+	}
+
+	l = db.Limit(math.MaxUint32, -1)
+	if l != -1 {
+		t.Errorf("got %d, want -1", l)
 	}
 }
 

@@ -222,7 +222,7 @@ func (ctx Context) ResultError(err error) {
 // VTabNoChange may return true if a column is being fetched as part
 // of an update during which the column value will not change.
 //
-// https://www.sqlite.org/c3ref/vtab_nochange.html
+// https://sqlite.org/c3ref/vtab_nochange.html
 func (ctx Context) VTabNoChange() bool {
 	r := ctx.c.call("sqlite3_vtab_nochange", uint64(ctx.handle))
 	return r != 0

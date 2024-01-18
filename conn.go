@@ -217,7 +217,7 @@ func (c *Conn) ReadOnly(schema string) (ro bool, ok bool) {
 		ptr = c.arena.string(schema)
 	}
 	r := c.call("sqlite3_db_readonly", uint64(c.handle), uint64(ptr))
-	return int8(r) > 0, int8(r) < 0
+	return int32(r) > 0, int32(r) < 0
 }
 
 // GetAutocommit tests the connection for auto-commit mode.

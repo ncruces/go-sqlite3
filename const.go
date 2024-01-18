@@ -229,6 +229,26 @@ const (
 	DBCONFIG_REVERSE_SCANORDER     DBConfig = 1019
 )
 
+// LimitCategory are the available run-time limit categories.
+//
+// https://sqlite.org/c3ref/c_limit_attached.html
+type LimitCategory uint32
+
+const (
+	LIMIT_LENGTH              LimitCategory = 0
+	LIMIT_SQL_LENGTH          LimitCategory = 1
+	LIMIT_COLUMN              LimitCategory = 2
+	LIMIT_EXPR_DEPTH          LimitCategory = 3
+	LIMIT_COMPOUND_SELECT     LimitCategory = 4
+	LIMIT_VDBE_OP             LimitCategory = 5
+	LIMIT_FUNCTION_ARG        LimitCategory = 6
+	LIMIT_ATTACHED            LimitCategory = 7
+	LIMIT_LIKE_PATTERN_LENGTH LimitCategory = 8
+	LIMIT_VARIABLE_NUMBER     LimitCategory = 9
+	LIMIT_TRIGGER_DEPTH       LimitCategory = 10
+	LIMIT_WORKER_THREADS      LimitCategory = 11
+)
+
 // TxnState are the allowed return values from [Conn.TxnState].
 //
 // https://sqlite.org/c3ref/c_txn_none.html

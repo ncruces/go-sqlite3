@@ -78,7 +78,7 @@ func (c *Conn) DeclareVTab(sql string) error {
 
 // VTabConflictMode is a virtual table conflict resolution mode.
 //
-// https://www.sqlite.org/c3ref/c_fail.html
+// https://sqlite.org/c3ref/c_fail.html
 type VTabConflictMode uint8
 
 const (

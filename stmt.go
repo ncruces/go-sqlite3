@@ -111,6 +111,9 @@ func (s *Stmt) Exec() error {
 //
 // https://sqlite.org/c3ref/stmt_status.html
 func (s *Stmt) Status(op StmtStatus, reset bool) int {
+	if op > STMTSTATUS_FILTER_HIT && op != STMTSTATUS_MEMUSED {
+		return 0
+	}
 	var i uint64
 	if reset {
 		i = 1

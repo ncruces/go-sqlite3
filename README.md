@@ -113,7 +113,7 @@ with `nolock=1` you must disable connection pooling by calling
 ### Testing
 
 This project aims for [high test coverage](https://github.com/ncruces/go-sqlite3/wiki/Test-coverage-report).
-It also benefits greatly from [SQLite's](https://www.sqlite.org/testing.html) and
+It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 [wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach) thorough testing.
 
 The pure Go VFS is tested by running SQLite's

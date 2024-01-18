@@ -204,7 +204,7 @@ func (v Value) NoChange() bool {
 // InFirst returns the first element
 // on the right-hand side of an IN constraint.
 //
-// https://www.sqlite.org/c3ref/vtab_in_first.html
+// https://sqlite.org/c3ref/vtab_in_first.html
 func (v Value) InFirst() (Value, error) {
 	defer v.c.arena.mark()()
 	valPtr := v.c.arena.new(ptrlen)
@@ -221,7 +221,7 @@ func (v Value) InFirst() (Value, error) {
 // InNext returns the next element
 // on the right-hand side of an IN constraint.
 //
-// https://www.sqlite.org/c3ref/vtab_in_first.html
+// https://sqlite.org/c3ref/vtab_in_first.html
 func (v Value) InNext() (Value, error) {
 	defer v.c.arena.mark()()
 	valPtr := v.c.arena.new(ptrlen)

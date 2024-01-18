@@ -35,7 +35,7 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 
 // ConfigLog sets up the error logging callback for the connection.
 //
-// https://www.sqlite.org/errlog.html
+// https://sqlite.org/errlog.html
 func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	var enable uint64
 	if cb != nil {
@@ -54,4 +54,13 @@ func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg uint32) {
 		msg := util.ReadString(mod, zMsg, _MAX_LENGTH)
 		c.log(xErrorCode(iCode), msg)
 	}
+}
+
+// Limit allows the size of various constructs to be
+// limited on a connection by connection basis.
+//
+// https://sqlite.org/c3ref/limit.html
+func (c *Conn) Limit(id LimitCategory, value int) int {
+	r := c.call("sqlite3_limit", uint64(c.handle), uint64(id), uint64(value))
+	return int(int32(r))
 }
