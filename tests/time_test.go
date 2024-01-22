@@ -221,28 +221,6 @@ func TestDB_timeCollation(t *testing.T) {
 func TestDB_isoWeek(t *testing.T) {
 	t.Parallel()
 
-	tests := []time.Time{
-		time.Date(1977, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1977, 1, 2, 0, 0, 0, 0, time.UTC),
-		time.Date(1977, 12, 31, 0, 0, 0, 0, time.UTC),
-		time.Date(1978, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1978, 1, 2, 0, 0, 0, 0, time.UTC),
-		time.Date(1978, 12, 31, 0, 0, 0, 0, time.UTC),
-		time.Date(1979, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1979, 1, 2, 0, 0, 0, 0, time.UTC),
-		time.Date(1979, 12, 31, 0, 0, 0, 0, time.UTC),
-		time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1980, 12, 28, 0, 0, 0, 0, time.UTC),
-		time.Date(1980, 12, 29, 0, 0, 0, 0, time.UTC),
-		time.Date(1980, 12, 30, 0, 0, 0, 0, time.UTC),
-		time.Date(1980, 12, 31, 0, 0, 0, 0, time.UTC),
-		time.Date(1981, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1981, 12, 31, 0, 0, 0, 0, time.UTC),
-		time.Date(1982, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(1982, 1, 2, 0, 0, 0, 0, time.UTC),
-		time.Date(1982, 1, 3, 0, 0, 0, 0, time.UTC),
-	}
-
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
@@ -255,7 +233,9 @@ func TestDB_isoWeek(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	for _, tm := range tests {
+	tend := time.Date(2500, 1, 1, 0, 0, 0, 0, time.UTC)
+	tstart := time.Date(1500, 1, 1, 12, 0, 0, 0, time.UTC)
+	for tm := tstart; tm.Before(tend); tm = tm.AddDate(0, 0, 1) {
 		stmt.BindTime(1, tm, sqlite3.TimeFormatDefault)
 		if stmt.Step() {
 			y, w := tm.ISOWeek()

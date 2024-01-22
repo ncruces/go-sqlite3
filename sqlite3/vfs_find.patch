@@ -1,7 +1,7 @@
 # Wrap sqlite3_vfs_find.
 --- sqlite3.c.orig
 +++ sqlite3.c
-@@ -25394,7 +25394,7 @@
+@@ -26089,7 +26089,7 @@
  ** Locate a VFS by name.  If no name is given, simply return the
  ** first VFS on the list.
  */
