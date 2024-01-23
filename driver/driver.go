@@ -538,8 +538,13 @@ func (r *rows) Next(dest []driver.Value) error {
 	for i := range dest {
 		if t, ok := r.decodeTime(i, dest[i]); ok {
 			dest[i] = t
-		} else if s, ok := dest[i].(string); ok {
-			dest[i] = stringOrTime(s)
+			continue
+		}
+		if s, ok := dest[i].(string); ok {
+			t, ok := maybeTime(s)
+			if ok {
+				dest[i] = t
+			}
 		}
 	}
 	return err

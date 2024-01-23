@@ -22,26 +22,18 @@ func Fuzz_stringOrTime_1(f *testing.F) {
 	f.Add("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
 	f.Fuzz(func(t *testing.T, str string) {
-		value := stringOrTime(str)
-
-		switch v := value.(type) {
-		case time.Time:
+		v, ok := maybeTime(str)
+		if ok {
 			// Make sure times round-trip to the same string:
 			// https://pkg.go.dev/database/sql#Rows.Scan
 			if v.Format(time.RFC3339Nano) != str {
 				t.Fatalf("did not round-trip: %q", str)
 			}
-		case string:
-			if v != str {
-				t.Fatalf("did not round-trip: %q", str)
-			}
-
+		} else {
 			date, err := time.Parse(time.RFC3339Nano, str)
 			if err == nil && date.Format(time.RFC3339Nano) == str {
 				t.Fatalf("would round-trip: %q", str)
 			}
-		default:
-			t.Fatalf("invalid type %T: %q", v, str)
 		}
 	})
 }
@@ -59,10 +51,8 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 	f.Add(int64(-763421161058), int64(222_222_222)) // twosday, year 22222BC
 
 	checkTime := func(t testing.TB, date time.Time) {
-		value := stringOrTime(date.Format(time.RFC3339Nano))
-
-		switch v := value.(type) {
-		case time.Time:
+		v, ok := maybeTime(date.Format(time.RFC3339Nano))
+		if ok {
 			// Make sure times round-trip to the same time:
 			if !v.Equal(date) {
 				t.Fatalf("did not round-trip: %v", date)
@@ -73,10 +63,8 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 			if off1 != off2 {
 				t.Fatalf("did not round-trip: %v", date)
 			}
-		case string:
+		} else {
 			t.Fatalf("was not recovered: %v", date)
-		default:
-			t.Fatalf("invalid type %T: %v", v, date)
 		}
 	}
 
