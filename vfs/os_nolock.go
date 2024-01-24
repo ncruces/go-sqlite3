@@ -4,6 +4,14 @@ package vfs
 
 import "os"
 
+// SupportsFileLocking is false on platforms that do not support file locking.
+// To open a database file in one such platform,
+// you need to use the [nolock] or [immutable] URI parameters.
+//
+// [nolock]: https://sqlite.org/uri.html#urinolock
+// [immutable]: https://sqlite.org/uri.html#uriimmutable
+const SupportsFileLocking = false
+
 func osGetSharedLock(file *os.File) _ErrorCode {
 	return _IOERR_RDLOCK
 }

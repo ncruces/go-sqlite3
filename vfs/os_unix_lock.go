@@ -9,6 +9,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// SupportsFileLocking is false on platforms that do not support file locking.
+// To open a database file in one such platform,
+// you need to use the [nolock] or [immutable] URI parameters.
+//
+// [nolock]: https://sqlite.org/uri.html#urinolock
+// [immutable]: https://sqlite.org/uri.html#uriimmutable
+const SupportsFileLocking = true
+
 func osGetSharedLock(file *os.File) _ErrorCode {
 	// Test the PENDING lock before acquiring a new SHARED lock.
 	if pending, _ := osCheckLock(file, _PENDING_BYTE, 1); pending {

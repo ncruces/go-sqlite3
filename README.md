@@ -100,15 +100,20 @@ On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
 On BSD Unixes, BSD locks are fully compatible with POSIX advisory locks.
 
-On Windows, this module uses `LockFile`, `LockFileEx`, and `UnlockFile`,
+On Windows, this module uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
 
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
+(or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
 to open database files.
+
 To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
 with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
+
+You can use [`vfs.SupportsFileLocking`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsFileLocking)
+to check if your platform supports file locking.
 
 ### Testing
 
