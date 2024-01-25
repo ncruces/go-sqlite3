@@ -17,6 +17,7 @@
 //   - regr_count: count non-null pairs of variables
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
+//   - regr_json: all regr stats in a JSON object
 //
 // These join the [Built-in Aggregate Functions]:
 //   - count: count rows/values
@@ -52,6 +53,7 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("regr_slope", 2, flags, newCovariance(regr_slope))
 	db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept))
 	db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count))
+	db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json))
 }
 
 const (
@@ -69,6 +71,7 @@ const (
 	regr_slope
 	regr_intercept
 	regr_count
+	regr_json
 )
 
 func newVariance(kind int) func() sqlite3.AggregateFunction {
@@ -143,6 +146,9 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 		r = fn.regr_intercept()
 	case regr_count:
 		ctx.ResultInt64(fn.regr_count())
+		return
+	case regr_json:
+		ctx.ResultText(fn.regr_json())
 		return
 	}
 	ctx.ResultFloat(r)

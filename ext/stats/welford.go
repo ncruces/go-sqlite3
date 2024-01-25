@@ -1,6 +1,10 @@
 package stats
 
-import "math"
+import (
+	"math"
+	"strconv"
+	"strings"
+)
 
 // Welford's algorithm with Kahan summation:
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
@@ -106,6 +110,32 @@ func (w welford2) regr_intercept() float64 {
 
 func (w welford2) regr_r2() float64 {
 	return w.cov.hi * w.cov.hi / (w.m2y.hi * w.m2x.hi)
+}
+
+func (w welford2) regr_json() string {
+	var json strings.Builder
+	var num [32]byte
+	json.Grow(128)
+	json.WriteString(`{"count":`)
+	json.Write(strconv.AppendInt(num[:0], w.regr_count(), 10))
+	json.WriteString(`,"avgy":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_avgy(), 'g', -1, 64))
+	json.WriteString(`,"avgx":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_avgx(), 'g', -1, 64))
+	json.WriteString(`,"syy":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_syy(), 'g', -1, 64))
+	json.WriteString(`,"sxx":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_sxx(), 'g', -1, 64))
+	json.WriteString(`,"sxy":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_sxy(), 'g', -1, 64))
+	json.WriteString(`,"slope":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_slope(), 'g', -1, 64))
+	json.WriteString(`,"intercept":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_intercept(), 'g', -1, 64))
+	json.WriteString(`,"r2":`)
+	json.Write(strconv.AppendFloat(num[:0], w.regr_r2(), 'g', -1, 64))
+	json.WriteByte('}')
+	return json.String()
 }
 
 func (w *welford2) enqueue(y, x float64) {

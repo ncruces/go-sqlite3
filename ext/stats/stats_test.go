@@ -107,7 +107,7 @@ func TestRegister_covariance(t *testing.T) {
 		regr_avgy(y, x), regr_avgx(y, x),
 		regr_syy(y, x), regr_sxx(y, x), regr_sxy(y, x),
 		regr_slope(y, x), regr_intercept(y, x), regr_r2(y, x),
-		regr_count(y, x)
+		regr_count(y, x), regr_json(y, x)
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)
@@ -149,6 +149,12 @@ func TestRegister_covariance(t *testing.T) {
 			t.Errorf("got %v, want 0.9763513513513513", got)
 		}
 		if got := stmt.ColumnInt(11); got != 5 {
+			t.Errorf("got %v, want 5", got)
+		}
+		var a map[string]float64
+		if err := stmt.ColumnJSON(12, &a); err != nil {
+			t.Error(err)
+		} else if got := a["count"]; got != 5 {
 			t.Errorf("got %v, want 5", got)
 		}
 	}
