@@ -28,6 +28,7 @@ sqlite3_changes64
 sqlite3_clear_bindings
 sqlite3_close
 sqlite3_close_v2
+sqlite3_collation_needed_go
 sqlite3_column_blob
 sqlite3_column_bytes
 sqlite3_column_count
@@ -39,6 +40,7 @@ sqlite3_column_text
 sqlite3_column_type
 sqlite3_column_value
 sqlite3_columns_go
+sqlite3_commit_hook_go
 sqlite3_config_log_go
 sqlite3_create_aggregate_function_go
 sqlite3_create_collation_go
@@ -78,6 +80,8 @@ sqlite3_result_pointer_go
 sqlite3_result_text64
 sqlite3_result_value
 sqlite3_result_zeroblob64
+sqlite3_rollback_hook_go
+sqlite3_set_authorizer_go
 sqlite3_set_auxdata_go
 sqlite3_set_last_insert_rowid
 sqlite3_step
@@ -86,6 +90,7 @@ sqlite3_stmt_readonly
 sqlite3_stmt_status
 sqlite3_total_changes64
 sqlite3_txn_state
+sqlite3_update_hook_go
 sqlite3_uri_key
 sqlite3_uri_parameter
 sqlite3_value_blob

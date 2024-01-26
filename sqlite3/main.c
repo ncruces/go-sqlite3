@@ -12,9 +12,8 @@
 // Bindings
 #include "column.c"
 #include "func.c"
-#include "log.c"
+#include "hooks.c"
 #include "pointer.c"
-#include "progress.c"
 #include "time.c"
 #include "vfs.c"
 #include "vtab.c"

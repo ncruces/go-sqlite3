@@ -106,6 +106,8 @@ func destroyCallback(ctx context.Context, mod api.Module, pApp uint32) {
 	util.DelHandle(ctx, pApp)
 }
 
+func collationCallback(ctx context.Context, mod api.Module, pArg, pDB, eTextRep, zName uint32) {}
+
 func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nKey2, pKey2 uint32) uint32 {
 	fn := util.GetHandle(ctx, pApp).(func(a, b []byte) int)
 	return uint32(fn(util.View(mod, pKey1, uint64(nKey1)), util.View(mod, pKey2, uint64(nKey2))))

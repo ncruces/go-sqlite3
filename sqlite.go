@@ -290,6 +290,10 @@ func (a *arena) string(s string) uint32 {
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_progress", progressCallback)
+	util.ExportFuncII(env, "go_commit_hook", commitCallback)
+	util.ExportFuncVI(env, "go_rollback_hook", rollbackCallback)
+	util.ExportFuncVIIIIJ(env, "go_update_hook", updateCallback)
+	util.ExportFuncIIIIIII(env, "go_authorizer", authorizerCallback)
 	util.ExportFuncVIII(env, "go_log", logCallback)
 	util.ExportFuncVI(env, "go_destroy", destroyCallback)
 	util.ExportFuncVIIII(env, "go_func", funcCallback)
@@ -297,9 +301,10 @@ func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncVIII(env, "go_final", finalCallback)
 	util.ExportFuncVII(env, "go_value", valueCallback)
 	util.ExportFuncVIIII(env, "go_inverse", inverseCallback)
+	util.ExportFuncVIIII(env, "go_collation_needed", collationCallback)
 	util.ExportFuncIIIIII(env, "go_compare", compareCallback)
-	util.ExportFuncIIIIII(env, "go_vtab_create", vtabModuleCallback(0))
-	util.ExportFuncIIIIII(env, "go_vtab_connect", vtabModuleCallback(1))
+	util.ExportFuncIIIIII(env, "go_vtab_create", vtabModuleCallback(xCreate))
+	util.ExportFuncIIIIII(env, "go_vtab_connect", vtabModuleCallback(xConnect))
 	util.ExportFuncII(env, "go_vtab_disconnect", vtabDisconnectCallback)
 	util.ExportFuncII(env, "go_vtab_destroy", vtabDestroyCallback)
 	util.ExportFuncIII(env, "go_vtab_best_index", vtabBestIndexCallback)

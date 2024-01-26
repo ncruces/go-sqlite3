@@ -64,3 +64,7 @@ func (c *Conn) Limit(id LimitCategory, value int) int {
 	r := c.call("sqlite3_limit", uint64(c.handle), uint64(id), uint64(value))
 	return int(int32(r))
 }
+
+func authorizerCallback(ctx context.Context, mod api.Module, pDB, action, zName3d, zName4th, zSchema, zInnerName uint32) uint32 {
+	return 0
+}

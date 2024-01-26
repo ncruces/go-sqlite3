@@ -128,6 +128,13 @@ type VTabConstructor[T VTab] func(db *Conn, module, schema, table string, arg ..
 
 type module[T VTab] [2]VTabConstructor[T]
 
+type vtabConstructor int
+
+const (
+	xCreate  vtabConstructor = 0
+	xConnect vtabConstructor = 1
+)
+
 // A VTab describes a particular instance of the virtual table.
 // A VTab may optionally implement [io.Closer] to free resources.
 //
@@ -414,7 +421,7 @@ const (
 	INDEX_SCAN_UNIQUE IndexScanFlag = 1
 )
 
-func vtabModuleCallback(i int) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
+func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module, _, _, _, _, _ uint32) uint32 {
 	return func(ctx context.Context, mod api.Module, pMod, nArg, pArg, ppVTab, pzErr uint32) uint32 {
 		arg := make([]reflect.Value, 1+nArg)
 		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
@@ -425,7 +432,7 @@ func vtabModuleCallback(i int) func(_ context.Context, _ api.Module, _, _, _, _,
 		}
 
 		module := vtabGetHandle(ctx, mod, pMod)
-		res := reflect.ValueOf(module).Index(i).Call(arg)
+		res := reflect.ValueOf(module).Index(int(i)).Call(arg)
 		err, _ := res[1].Interface().(error)
 		if err == nil {
 			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())

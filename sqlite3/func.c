@@ -1,7 +1,10 @@
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "include.h"
 #include "sqlite3.h"
+
+void go_collation_needed(void *, sqlite3 *, int, const char *);
 
 int go_compare(go_handle, int, const void *, int, const void *);
 
@@ -42,6 +45,11 @@ void go_value_wrapper(sqlite3_context *ctx) {
 void go_inverse_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
   go_handle *agg = sqlite3_aggregate_context(ctx, 4);
   go_inverse(ctx, *agg, nArg, pArg);
+}
+
+int sqlite3_collation_needed_go(sqlite3 *db, bool enable) {
+  return sqlite3_collation_needed(db, /*arg=*/NULL,
+                                  enable ? go_collation_needed : NULL);
 }
 
 int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {

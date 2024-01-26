@@ -326,9 +326,16 @@ func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 	return 0
 }
 
-// Pragma executes a PRAGMA statement and returns any results.
-//
-// https://sqlite.org/pragma.html
+func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
+	return 0
+}
+
+func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {}
+
+func updateCallback(ctx context.Context, mod api.Module, pDB, action, zSchema, zTabName uint32, rowid uint64) {
+}
+
+// Deprecated: executes a PRAGMA statement and returns results.
 func (c *Conn) Pragma(str string) ([]string, error) {
 	stmt, _, err := c.Prepare(`PRAGMA ` + str)
 	if err != nil {
