@@ -6,11 +6,9 @@ import (
 	"log"
 	"regexp"
 
-	"golang.org/x/text/collate"
-	"golang.org/x/text/language"
-
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/ext/unicode"
 )
 
 func ExampleConn_CreateCollation() {
@@ -30,12 +28,17 @@ func ExampleConn_CreateCollation() {
 		log.Fatal(err)
 	}
 
-	err = db.CreateCollation("french", collate.New(language.French).Compare)
+	err = db.CollationNeeded(func(name string) {
+		err := unicode.RegisterCollation(db, name, name)
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT word FROM words ORDER BY word COLLATE french`)
+	stmt, _, err := db.Prepare(`SELECT word FROM words ORDER BY word COLLATE fr_FR`)
 	if err != nil {
 		log.Fatal(err)
 	}

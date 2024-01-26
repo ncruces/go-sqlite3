@@ -21,6 +21,7 @@ type Conn struct {
 	interrupt context.Context
 	pending   *Stmt
 	log       func(code xErrorCode, msg string)
+	collation func(name string)
 	arena     arena
 
 	handle uint32

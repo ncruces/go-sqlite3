@@ -8,8 +8,25 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-// AnyCollationNeeded registers a fake collating function
-// for any unknown collating sequence.
+// CollationNeeded registers a callback to be invoked
+// whenever an unknown collation sequence is required.
+//
+// https://sqlite.org/c3ref/collation_needed.html
+func (c *Conn) CollationNeeded(cb func(name string)) error {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	r := c.call("sqlite3_collation_needed_go", uint64(c.handle), enable)
+	if err := c.error(r); err != nil {
+		return err
+	}
+	c.collation = cb
+	return nil
+}
+
+// AnyCollationNeeded uses [Conn.CollationNeeded] to register
+// a fake collating function for any unknown collating sequence.
 // The fake collating function works like BINARY.
 //
 // This can be used to load schemas that contain
@@ -106,7 +123,12 @@ func destroyCallback(ctx context.Context, mod api.Module, pApp uint32) {
 	util.DelHandle(ctx, pApp)
 }
 
-func collationCallback(ctx context.Context, mod api.Module, pArg, pDB, eTextRep, zName uint32) {}
+func collationCallback(ctx context.Context, mod api.Module, pArg, pDB, eTextRep, zName uint32) {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.collation != nil {
+		name := util.ReadString(mod, zName, _MAX_NAME)
+		c.collation(name)
+	}
+}
 
 func compareCallback(ctx context.Context, mod api.Module, pApp, nKey1, pKey1, nKey2, pKey2 uint32) uint32 {
 	fn := util.GetHandle(ctx, pApp).(func(a, b []byte) int)
