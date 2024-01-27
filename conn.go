@@ -22,6 +22,8 @@ type Conn struct {
 	pending   *Stmt
 	log       func(code xErrorCode, msg string)
 	collation func(name string)
+	commit    func() bool
+	rollback  func()
 	arena     arena
 
 	handle uint32
@@ -325,15 +327,6 @@ func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
 		}
 	}
 	return 0
-}
-
-func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
-	return 0
-}
-
-func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {}
-
-func updateCallback(ctx context.Context, mod api.Module, pDB, action, zSchema, zTabName uint32, rowid uint64) {
 }
 
 // Deprecated: executes a PRAGMA statement and returns results.

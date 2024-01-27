@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/tetratelabs/wazero/api"
 )
 
 // Txn is an in-progress database transaction.
@@ -229,3 +231,48 @@ func (c *Conn) TxnState(schema string) TxnState {
 
 // Deprecated: renamed for consistency with [Conn.TxnState].
 type Tx = Txn
+
+// CommitHook registers a callback function to be invoked
+// whenever a transaction is committed.
+// Return true to allow the commit operation to continue normally.
+//
+// https://sqlite.org/c3ref/commit_hook.html
+func (c *Conn) CommitHook(cb func() (ok bool)) {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	c.call("sqlite3_commit_hook_go", uint64(c.handle), enable)
+	c.commit = cb
+}
+
+// RollbackHook registers a callback function to be invoked
+// whenever a transaction is rolled back.
+//
+// https://sqlite.org/c3ref/commit_hook.html
+func (c *Conn) RollbackHook(cb func()) {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	c.call("sqlite3_rollback_hook_go", uint64(c.handle), enable)
+	c.rollback = cb
+}
+
+func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
+		if !c.commit() {
+			return 1
+		}
+	}
+	return 0
+}
+
+func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.rollback != nil {
+		c.rollback()
+	}
+}
+
+func updateCallback(ctx context.Context, mod api.Module, pDB, action, zSchema, zTabName uint32, rowid uint64) {
+}

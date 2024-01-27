@@ -18,6 +18,9 @@ func TestConn_Transaction_exec(t *testing.T) {
 	}
 	defer db.Close()
 
+	db.CommitHook(func() (ok bool) { return true })
+	db.RollbackHook(func() {})
+
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
 	if err != nil {
 		t.Fatal(err)
