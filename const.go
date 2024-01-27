@@ -249,6 +249,62 @@ const (
 	LIMIT_WORKER_THREADS      LimitCategory = 11
 )
 
+// AuthorizerActionCode are the integer action codes
+// that the authorizer callback may be passed.
+//
+// https://sqlite.org/c3ref/c_alter_table.html
+type AuthorizerActionCode uint32
+
+const (
+	/************************************************ 3rd ************ 4th ***********/
+	CREATE_INDEX        AuthorizerActionCode = 1  /* Index Name      Table Name      */
+	CREATE_TABLE        AuthorizerActionCode = 2  /* Table Name      NULL            */
+	CREATE_TEMP_INDEX   AuthorizerActionCode = 3  /* Index Name      Table Name      */
+	CREATE_TEMP_TABLE   AuthorizerActionCode = 4  /* Table Name      NULL            */
+	CREATE_TEMP_TRIGGER AuthorizerActionCode = 5  /* Trigger Name    Table Name      */
+	CREATE_TEMP_VIEW    AuthorizerActionCode = 6  /* View Name       NULL            */
+	CREATE_TRIGGER      AuthorizerActionCode = 7  /* Trigger Name    Table Name      */
+	CREATE_VIEW         AuthorizerActionCode = 8  /* View Name       NULL            */
+	DELETE              AuthorizerActionCode = 9  /* Table Name      NULL            */
+	DROP_INDEX          AuthorizerActionCode = 10 /* Index Name      Table Name      */
+	DROP_TABLE          AuthorizerActionCode = 11 /* Table Name      NULL            */
+	DROP_TEMP_INDEX     AuthorizerActionCode = 12 /* Index Name      Table Name      */
+	DROP_TEMP_TABLE     AuthorizerActionCode = 13 /* Table Name      NULL            */
+	DROP_TEMP_TRIGGER   AuthorizerActionCode = 14 /* Trigger Name    Table Name      */
+	DROP_TEMP_VIEW      AuthorizerActionCode = 15 /* View Name       NULL            */
+	DROP_TRIGGER        AuthorizerActionCode = 16 /* Trigger Name    Table Name      */
+	DROP_VIEW           AuthorizerActionCode = 17 /* View Name       NULL            */
+	INSERT              AuthorizerActionCode = 18 /* Table Name      NULL            */
+	PRAGMA              AuthorizerActionCode = 19 /* Pragma Name     1st arg or NULL */
+	READ                AuthorizerActionCode = 20 /* Table Name      Column Name     */
+	SELECT              AuthorizerActionCode = 21 /* NULL            NULL            */
+	TRANSACTION         AuthorizerActionCode = 22 /* Operation       NULL            */
+	UPDATE              AuthorizerActionCode = 23 /* Table Name      Column Name     */
+	ATTACH              AuthorizerActionCode = 24 /* Filename        NULL            */
+	DETACH              AuthorizerActionCode = 25 /* Database Name   NULL            */
+	ALTER_TABLE         AuthorizerActionCode = 26 /* Database Name   Table Name      */
+	REINDEX             AuthorizerActionCode = 27 /* Index Name      NULL            */
+	ANALYZE             AuthorizerActionCode = 28 /* Table Name      NULL            */
+	CREATE_VTABLE       AuthorizerActionCode = 29 /* Table Name      Module Name     */
+	DROP_VTABLE         AuthorizerActionCode = 30 /* Table Name      Module Name     */
+	FUNCTION            AuthorizerActionCode = 31 /* NULL            Function Name   */
+	SAVEPOINT           AuthorizerActionCode = 32 /* Operation       Savepoint Name  */
+	COPY                AuthorizerActionCode = 0  /* No longer used */
+	RECURSIVE           AuthorizerActionCode = 33 /* NULL            NULL            */
+)
+
+// AuthorizerReturnCode are the integer codes
+// that the authorizer callback may return.
+//
+// https://sqlite.org/c3ref/c_deny.html
+type AuthorizerReturnCode uint32
+
+const (
+	AUTH_OK     AuthorizerReturnCode = 0
+	AUTH_DENY   AuthorizerReturnCode = 1 /* Abort the SQL statement with an error */
+	AUTH_IGNORE AuthorizerReturnCode = 2 /* Don't allow access, but don't generate an error */
+)
+
 // TxnState are the allowed return values from [Conn.TxnState].
 //
 // https://sqlite.org/c3ref/c_txn_none.html

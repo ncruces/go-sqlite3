@@ -18,8 +18,9 @@ func TestConn_Transaction_exec(t *testing.T) {
 	}
 	defer db.Close()
 
-	db.CommitHook(func() (ok bool) { return true })
 	db.RollbackHook(func() {})
+	db.CommitHook(func() bool { return true })
+	db.UpdateHook(func(sqlite3.AuthorizerActionCode, string, string, int64) {})
 
 	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
 	if err != nil {

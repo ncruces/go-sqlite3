@@ -28,7 +28,7 @@ func ExampleConn_CreateCollation() {
 		log.Fatal(err)
 	}
 
-	err = db.CollationNeeded(func(name string) {
+	err = db.CollationNeeded(func(db *sqlite3.Conn, name string) {
 		err := unicode.RegisterCollation(db, name, name)
 		if err != nil {
 			log.Fatal(err)

@@ -18,13 +18,15 @@ import (
 type Conn struct {
 	*sqlite
 
-	interrupt context.Context
-	pending   *Stmt
-	log       func(code xErrorCode, msg string)
-	collation func(name string)
-	commit    func() bool
-	rollback  func()
-	arena     arena
+	interrupt  context.Context
+	pending    *Stmt
+	log        func(xErrorCode, string)
+	collation  func(*Conn, string)
+	authorizer func(AuthorizerActionCode, string, string, string, string) AuthorizerReturnCode
+	update     func(AuthorizerActionCode, string, string, int64)
+	commit     func() bool
+	rollback   func()
+	arena      arena
 
 	handle uint32
 }

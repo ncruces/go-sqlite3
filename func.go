@@ -12,7 +12,7 @@ import (
 // whenever an unknown collation sequence is required.
 //
 // https://sqlite.org/c3ref/collation_needed.html
-func (c *Conn) CollationNeeded(cb func(name string)) error {
+func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 	var enable uint64
 	if cb != nil {
 		enable = 1
@@ -126,7 +126,7 @@ func destroyCallback(ctx context.Context, mod api.Module, pApp uint32) {
 func collationCallback(ctx context.Context, mod api.Module, pArg, pDB, eTextRep, zName uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.collation != nil {
 		name := util.ReadString(mod, zName, _MAX_NAME)
-		c.collation(name)
+		c.collation(c, name)
 	}
 }
 

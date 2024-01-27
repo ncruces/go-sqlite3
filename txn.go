@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -259,6 +260,19 @@ func (c *Conn) RollbackHook(cb func()) {
 	c.rollback = cb
 }
 
+// RollbackHook registers a callback function to be invoked
+// whenever a row is updated, inserted or deleted in a rowid table.
+//
+// https://sqlite.org/c3ref/update_hook.html
+func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table string, rowid int64)) {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	c.call("sqlite3_update_hook_go", uint64(c.handle), enable)
+	c.update = cb
+}
+
 func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
 		if !c.commit() {
@@ -274,5 +288,10 @@ func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {
 	}
 }
 
-func updateCallback(ctx context.Context, mod api.Module, pDB, action, zSchema, zTabName uint32, rowid uint64) {
+func updateCallback(ctx context.Context, mod api.Module, pDB uint32, action AuthorizerActionCode, zSchema, zTabName uint32, rowid uint64) {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.update != nil {
+		schema := util.ReadString(mod, zSchema, _MAX_NAME)
+		table := util.ReadString(mod, zTabName, _MAX_NAME)
+		c.update(action, schema, table, int64(rowid))
+	}
 }

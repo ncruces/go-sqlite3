@@ -396,6 +396,28 @@ func TestConn_Limit(t *testing.T) {
 	}
 }
 
+func TestConn_SetAuthorizer(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.SetAuthorizer(func(action sqlite3.AuthorizerActionCode, name3rd, name4th, schema, nameInner string) sqlite3.AuthorizerReturnCode {
+		return sqlite3.AUTH_DENY
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT * FROM sqlite_schema`)
+	if !errors.Is(err, sqlite3.AUTH) {
+		t.Errorf("got %v, want sqlite3.AUTH", err)
+	}
+}
+
 func TestConn_ReleaseMemory(t *testing.T) {
 	t.Parallel()
 
