@@ -25,7 +25,7 @@ type Txn struct {
 // https://sqlite.org/lang_transaction.html
 func (c *Conn) Begin() Txn {
 	// BEGIN even if interrupted.
-	err := c.txExecInterrupted(`BEGIN DEFERRED`)
+	err := c.txnExecInterrupted(`BEGIN DEFERRED`)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func (c *Conn) BeginExclusive() (Txn, error) {
 	return Txn{c}, nil
 }
 
-// End calls either [Tx.Commit] or [Tx.Rollback]
+// End calls either [Txn.Commit] or [Txn.Rollback]
 // depending on whether *error points to a nil or non-nil error.
 //
 // This is meant to be deferred:
@@ -107,7 +107,7 @@ func (tx Txn) Commit() error {
 //
 // https://sqlite.org/lang_transaction.html
 func (tx Txn) Rollback() error {
-	return tx.c.txExecInterrupted(`ROLLBACK`)
+	return tx.c.txnExecInterrupted(`ROLLBACK`)
 }
 
 // Savepoint is a marker within a transaction
@@ -126,7 +126,7 @@ func (c *Conn) Savepoint() Savepoint {
 	// Names can be reused; this makes catching bugs more likely.
 	name := saveptName() + "_" + strconv.Itoa(int(rand.Int31()))
 
-	err := c.txExecInterrupted(fmt.Sprintf("SAVEPOINT %q;", name))
+	err := c.txnExecInterrupted(fmt.Sprintf("SAVEPOINT %q;", name))
 	if err != nil {
 		panic(err)
 	}
@@ -188,7 +188,7 @@ func (s Savepoint) Release(errp *error) {
 		return
 	}
 	// ROLLBACK and RELEASE even if interrupted.
-	err := s.c.txExecInterrupted(fmt.Sprintf(`
+	err := s.c.txnExecInterrupted(fmt.Sprintf(`
 		ROLLBACK TO %[1]q;
 		RELEASE %[1]q;
 	`, s.name))
@@ -204,10 +204,10 @@ func (s Savepoint) Release(errp *error) {
 // https://sqlite.org/lang_transaction.html
 func (s Savepoint) Rollback() error {
 	// ROLLBACK even if interrupted.
-	return s.c.txExecInterrupted(fmt.Sprintf("ROLLBACK TO %q;", s.name))
+	return s.c.txnExecInterrupted(fmt.Sprintf("ROLLBACK TO %q;", s.name))
 }
 
-func (c *Conn) txExecInterrupted(sql string) error {
+func (c *Conn) txnExecInterrupted(sql string) error {
 	err := c.Exec(sql)
 	if errors.Is(err, INTERRUPT) {
 		old := c.SetInterrupt(context.Background())

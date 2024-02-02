@@ -9,7 +9,7 @@
 #define SQLITE_VTAB_RENAMER_GO /******/ 0x08
 #define SQLITE_VTAB_OVERLOADER_GO /***/ 0x10
 #define SQLITE_VTAB_CHECKER_GO /******/ 0x20
-#define SQLITE_VTAB_TX_GO /***********/ 0x40
+#define SQLITE_VTAB_TXN_GO /**********/ 0x40
 #define SQLITE_VTAB_SAVEPOINTER_GO /**/ 0x80
 
 int go_vtab_create(sqlite3_module *, int argc, const char *const *argv,
@@ -193,7 +193,7 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
   if (flags & SQLITE_VTAB_CHECKER_GO) {
     mod->base.xIntegrity = go_vtab_integrity_wrapper;
   }
-  if (flags & SQLITE_VTAB_TX_GO) {
+  if (flags & SQLITE_VTAB_TXN_GO) {
     mod->base.xBegin = go_vtab_begin;
     mod->base.xSync = go_vtab_sync;
     mod->base.xCommit = go_vtab_commit;

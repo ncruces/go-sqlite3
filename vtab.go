@@ -22,7 +22,7 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 		VTAB_RENAMER     = 0x08
 		VTAB_OVERLOADER  = 0x10
 		VTAB_CHECKER     = 0x20
-		VTAB_TX          = 0x40
+		VTAB_TXN         = 0x40
 		VTAB_SAVEPOINTER = 0x80
 	)
 
@@ -46,8 +46,8 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 	if implements[VTabChecker](vtab) {
 		flags |= VTAB_CHECKER
 	}
-	if implements[VTabTx](vtab) {
-		flags |= VTAB_TX
+	if implements[VTabTxn](vtab) {
+		flags |= VTAB_TXN
 	}
 	if implements[VTabSavepointer](vtab) {
 		flags |= VTAB_SAVEPOINTER
@@ -187,14 +187,14 @@ type VTabChecker interface {
 	Integrity(schema, table string, flags int) error
 }
 
-// A VTabTx allows a virtual table to implement
+// A VTabTxn allows a virtual table to implement
 // transactions with two-phase commit.
 //
 // Anything that is required as part of a commit that may fail
 // should be performed in the Sync() callback.
 // Current versions of SQLite ignore any errors
 // returned by Commit() and Rollback().
-type VTabTx interface {
+type VTabTxn interface {
 	VTab
 	// https://sqlite.org/vtab.html#xBegin
 	Begin() error
@@ -206,12 +206,15 @@ type VTabTx interface {
 	Rollback() error
 }
 
+// Deprecated: renamed for consistency with [Conn.TxnState].
+type VTabTx = VTabTxn
+
 // A VTabSavepointer allows a virtual table to implement
 // nested transactions.
 //
 // https://sqlite.org/vtab.html#xsavepoint
 type VTabSavepointer interface {
-	VTabTx
+	VTabTxn
 	Savepoint(id int) error
 	Release(id int) error
 	RollbackTo(id int) error
@@ -516,25 +519,25 @@ func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, 
 }
 
 func vtabBeginCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
 	err := vtab.Begin()
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabSyncCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
 	err := vtab.Sync()
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabCommitCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
 	err := vtab.Commit()
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
 func vtabRollbackCallback(ctx context.Context, mod api.Module, pVTab uint32) uint32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTx)
+	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
 	err := vtab.Rollback()
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
