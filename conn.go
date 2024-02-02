@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
@@ -20,6 +22,7 @@ type Conn struct {
 
 	interrupt  context.Context
 	pending    *Stmt
+	busy       func(int) bool
 	log        func(xErrorCode, string)
 	collation  func(*Conn, string)
 	authorizer func(AuthorizerActionCode, string, string, string, string) AuthorizerReturnCode
@@ -322,9 +325,43 @@ func (c *Conn) checkInterrupt() {
 	}
 }
 
-func progressCallback(ctx context.Context, mod api.Module, _ uint32) uint32 {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
+func progressCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
 		if c.interrupt != nil && c.interrupt.Err() != nil {
+			return 1
+		}
+	}
+	return 0
+}
+
+// BusyTimeout sets a busy timeout.
+//
+// https://sqlite.org/c3ref/busy_timeout.html
+func (c *Conn) BusyTimeout(timeout time.Duration) error {
+	ms := min((timeout+time.Millisecond-1)/time.Millisecond, math.MaxInt32)
+	r := c.call("sqlite3_busy_timeout", uint64(c.handle), uint64(ms))
+	return c.error(r)
+}
+
+// BusyHandler registers a callback to handle [BUSY] errors.
+//
+// https://sqlite.org/c3ref/busy_handler.html
+func (c *Conn) BusyHandler(cb func(count int) (retry bool)) error {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	r := c.call("sqlite3_busy_handler_go", uint64(c.handle), enable)
+	if err := c.error(r); err != nil {
+		return err
+	}
+	c.busy = cb
+	return nil
+}
+
+func busyCallback(ctx context.Context, mod api.Module, pDB, count uint32) uint32 {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.busy != nil {
+		if retry := c.busy(int(count)); retry {
 			return 1
 		}
 	}

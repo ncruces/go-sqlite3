@@ -275,7 +275,7 @@ func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table str
 
 func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
-		if !c.commit() {
+		if ok := c.commit(); !ok {
 			return 1
 		}
 	}

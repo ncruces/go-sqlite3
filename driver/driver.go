@@ -170,7 +170,7 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 	defer c.Conn.SetInterrupt(old)
 
 	if !n.pragmas {
-		err = c.Conn.Exec(`PRAGMA busy_timeout=60000`)
+		err = c.Conn.BusyTimeout(60 * time.Second)
 		if err != nil {
 			return nil, err
 		}

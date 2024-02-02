@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -39,10 +40,7 @@ func TestMemory(t *testing.T) {
 		iter = 5000
 	}
 
-	name := "file:/test.db?vfs=memdb" +
-		"&_pragma=busy_timeout(10000)" +
-		"&_pragma=journal_mode(memory)" +
-		"&_pragma=synchronous(off)"
+	name := "file:/test.db?vfs=memdb"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -100,10 +98,7 @@ func TestChildProcess(t *testing.T) {
 
 func BenchmarkMemory(b *testing.B) {
 	memdb.Delete("test.db")
-	name := "file:/test.db?vfs=memdb" +
-		"&_pragma=busy_timeout(10000)" +
-		"&_pragma=journal_mode(memory)" +
-		"&_pragma=synchronous(off)"
+	name := "file:/test.db?vfs=memdb"
 	testParallel(b, name, b.N)
 }
 
@@ -114,6 +109,14 @@ func testParallel(t testing.TB, name string, n int) {
 			return err
 		}
 		defer db.Close()
+
+		err = db.BusyHandler(func(count int) (retry bool) {
+			time.Sleep(time.Millisecond)
+			return true
+		})
+		if err != nil {
+			return err
+		}
 
 		err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
 		if err != nil {
@@ -135,7 +138,7 @@ func testParallel(t testing.TB, name string, n int) {
 		}
 		defer db.Close()
 
-		err = db.Exec(`PRAGMA busy_timeout=10000`)
+		err = db.BusyTimeout(10 * time.Second)
 		if err != nil {
 			return err
 		}

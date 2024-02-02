@@ -2,7 +2,8 @@
 
 #include "sqlite3.h"
 
-int go_progress(void *);
+int go_progress_handler(void *);
+int go_busy_handler(void *, int);
 
 int go_commit_hook(void *);
 void go_rollback_hook(void *);
@@ -14,7 +15,11 @@ int go_authorizer(void *, int, const char *, const char *, const char *,
 void go_log(void *, int, const char *);
 
 void sqlite3_progress_handler_go(sqlite3 *db, int n) {
-  sqlite3_progress_handler(db, n, go_progress, /*arg=*/db);
+  sqlite3_progress_handler(db, n, go_progress_handler, /*arg=*/db);
+}
+
+int sqlite3_busy_handler_go(sqlite3 *db, bool enable) {
+  return sqlite3_busy_handler(db, enable ? go_busy_handler : NULL, /*arg=*/db);
 }
 
 void sqlite3_commit_hook_go(sqlite3 *db, bool enable) {
