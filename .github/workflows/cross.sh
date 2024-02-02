@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 echo android       ; GOOS=android   GOARCH=amd64 go build .
 echo darwin        ; GOOS=darwin    GOARCH=amd64 go build .

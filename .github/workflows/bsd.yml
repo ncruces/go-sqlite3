@@ -12,13 +12,20 @@ jobs:
       with:
         lfs: 'true'
 
+    - name: Set up
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
+    - name: Build
+      run: .github/workflows/bsd.sh
+
     - name: Test
       uses: cross-platform-actions/action@v0.22.0
       with:
         operating_system: freebsd
         version: '13.2'
         memory: 8G
+        shell: bash
         sync_files: runner-to-vm
-        run: |
-          sudo pkg install -y go121
-          go121 test -v ./...
+        run: source test.sh
