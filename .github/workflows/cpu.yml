@@ -38,3 +38,19 @@ jobs:
 
     - name: Test
       run: GOARCH=arm64 go test -v ./...
+
+  test-m1:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: 'true'
+
+      - name: Set up
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Test
+        run: go test -v ./...
