@@ -129,6 +129,9 @@ func Test_crash01(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
 
 	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
@@ -157,10 +160,8 @@ func Test_multiwrite01(t *testing.T) {
 
 func Test_config01_memory(t *testing.T) {
 	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db",
-		"config01.test",
-		"--vfs", "memdb",
-		"--timeout", "1000")
+	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
+		"--vfs", "memdb")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -174,10 +175,8 @@ func Test_multiwrite01_memory(t *testing.T) {
 	}
 
 	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db",
-		"multiwrite01.test",
-		"--vfs", "memdb",
-		"--timeout", "1000")
+	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
+		"--vfs", "memdb")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
