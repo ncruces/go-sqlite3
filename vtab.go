@@ -628,13 +628,14 @@ const (
 )
 
 func vtabError(ctx context.Context, mod api.Module, ptr, kind uint32, err error) uint32 {
+	const zErrMsgOffset = 8
 	msg, code := errorCode(err, ERROR)
 	if msg != "" && ptr != 0 {
 		switch kind {
 		case _VTAB_ERROR:
-			ptr = ptr + 8 // zErrMsg
+			ptr = ptr + zErrMsgOffset // zErrMsg
 		case _CURSOR_ERROR:
-			ptr = util.ReadUint32(mod, ptr) + 8 // pVTab->zErrMsg
+			ptr = util.ReadUint32(mod, ptr) + zErrMsgOffset // pVTab->zErrMsg
 		}
 		db := ctx.Value(connKey{}).(*Conn)
 		if ptr := util.ReadUint32(mod, ptr); ptr != 0 {

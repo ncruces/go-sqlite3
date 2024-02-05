@@ -128,12 +128,12 @@ func getAuxBlob(ctx sqlite3.Context, arg []sqlite3.Value, write bool) (*sqlite3.
 	return ctx.Conn().OpenBlob(db, table, column, row, write)
 }
 
-func setAuxBlob(ctx sqlite3.Context, blob *sqlite3.Blob, writer bool) {
+func setAuxBlob(ctx sqlite3.Context, blob *sqlite3.Blob, open bool) {
 	// This ensures the blob is closed if db, table, column or write change.
 	ctx.SetAuxData(0, blob) // db
 	ctx.SetAuxData(1, blob) // table
 	ctx.SetAuxData(2, blob) // column
-	if writer {
+	if open {
 		ctx.SetAuxData(4, blob) // write
 	}
 }

@@ -218,6 +218,7 @@ int sqlite3_vtab_config_go(sqlite3 *db, int op, int constraint) {
   return sqlite3_vtab_config(db, op, constraint);
 }
 
+static_assert(offsetof(struct sqlite3_vtab, zErrMsg) == 8, "Unexpected offset");
 static_assert(offsetof(struct go_module, base) == 4, "Unexpected offset");
 static_assert(offsetof(struct go_vtab, base) == 4, "Unexpected offset");
 static_assert(offsetof(struct go_cursor, base) == 4, "Unexpected offset");
