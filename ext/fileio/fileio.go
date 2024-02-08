@@ -22,7 +22,7 @@ func Register(db *sqlite3.Conn) {
 // and the table-valued function fsdir;
 // fsys will be used to read files and list directories.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
-	db.CreateFunction("lsmode", 1, 0, lsmode)
+	db.CreateFunction("lsmode", 1, sqlite3.DETERMINISTIC, lsmode)
 	db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fsys))
 	if fsys == nil {
 		db.CreateFunction("writefile", -1, sqlite3.DIRECTONLY, writefile)
