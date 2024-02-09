@@ -6,7 +6,7 @@ cd -P -- "$(dirname -- "$0")"
 go test
 
 rm -rf gorm/ tests/
-git clone --branch v1.25.6 --filter=blob:none https://github.com/go-gorm/gorm.git
+git clone --branch v1.25.7 --filter=blob:none https://github.com/go-gorm/gorm.git
 mv gorm/tests tests
 rm -rf gorm/
 

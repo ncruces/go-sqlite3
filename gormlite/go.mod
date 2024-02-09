@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/ncruces/go-sqlite3 v0.12.2
-	gorm.io/gorm v1.25.6
+	gorm.io/gorm v1.25.7
 )
 
 require (
@@ -12,5 +12,5 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/tetratelabs/wazero v1.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 )
