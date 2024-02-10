@@ -109,13 +109,12 @@ On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
 (or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
 to open database files.
+You can use [`vfs.SupportsFileLocking`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsFileLocking)
+to check if your platform supports file locking.
 
 To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
 with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
-
-You can use [`vfs.SupportsFileLocking`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsFileLocking)
-to check if your platform supports file locking.
 
 ### Testing
 

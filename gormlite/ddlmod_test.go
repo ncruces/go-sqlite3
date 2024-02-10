@@ -16,11 +16,12 @@ func TestParseDDL(t *testing.T) {
 		columns []migrator.ColumnType
 	}{
 		{"with_fk", []string{
-			"CREATE TABLE `notes` (`id` integer NOT NULL,`text` varchar(500) DEFAULT \"hello\",`age` integer DEFAULT 18,`user_id` integer,PRIMARY KEY (`id`),CONSTRAINT `fk_users_notes` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`))",
+			"CREATE TABLE `notes` (" +
+				"`id` integer NOT NULL,`text` varchar(500) DEFAULT \"hello\",`age` integer DEFAULT 18,`user_id` integer,PRIMARY KEY (`id`),CONSTRAINT `fk_users_notes` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`))",
 			"CREATE UNIQUE INDEX `idx_profiles_refer` ON `profiles`(`text`)",
 		}, 6, []migrator.ColumnType{
 			{NameValue: sql.NullString{String: "id", Valid: true}, DataTypeValue: sql.NullString{String: "integer", Valid: true}, ColumnTypeValue: sql.NullString{String: "integer", Valid: true}, PrimaryKeyValue: sql.NullBool{Bool: true, Valid: true}, NullableValue: sql.NullBool{Valid: true}, UniqueValue: sql.NullBool{Valid: true}, DefaultValueValue: sql.NullString{Valid: false}},
-			{NameValue: sql.NullString{String: "text", Valid: true}, DataTypeValue: sql.NullString{String: "varchar", Valid: true}, LengthValue: sql.NullInt64{Int64: 500, Valid: true}, ColumnTypeValue: sql.NullString{String: "varchar(500)", Valid: true}, DefaultValueValue: sql.NullString{String: "hello", Valid: true}, NullableValue: sql.NullBool{Bool: true, Valid: true}, UniqueValue: sql.NullBool{Bool: true, Valid: true}, PrimaryKeyValue: sql.NullBool{Valid: true}},
+			{NameValue: sql.NullString{String: "text", Valid: true}, DataTypeValue: sql.NullString{String: "varchar", Valid: true}, LengthValue: sql.NullInt64{Int64: 500, Valid: true}, ColumnTypeValue: sql.NullString{String: "varchar(500)", Valid: true}, DefaultValueValue: sql.NullString{String: "hello", Valid: true}, NullableValue: sql.NullBool{Bool: true, Valid: true}, UniqueValue: sql.NullBool{Bool: false, Valid: true}, PrimaryKeyValue: sql.NullBool{Valid: true}},
 			{NameValue: sql.NullString{String: "age", Valid: true}, DataTypeValue: sql.NullString{String: "integer", Valid: true}, ColumnTypeValue: sql.NullString{String: "integer", Valid: true}, DefaultValueValue: sql.NullString{String: "18", Valid: true}, NullableValue: sql.NullBool{Bool: true, Valid: true}, UniqueValue: sql.NullBool{Valid: true}, PrimaryKeyValue: sql.NullBool{Valid: true}},
 			{NameValue: sql.NullString{String: "user_id", Valid: true}, DataTypeValue: sql.NullString{String: "integer", Valid: true}, ColumnTypeValue: sql.NullString{String: "integer", Valid: true}, DefaultValueValue: sql.NullString{Valid: false}, NullableValue: sql.NullBool{Bool: true, Valid: true}, UniqueValue: sql.NullBool{Valid: true}, PrimaryKeyValue: sql.NullBool{Valid: true}},
 		},
@@ -56,28 +57,54 @@ func TestParseDDL(t *testing.T) {
 					ColumnTypeValue:   sql.NullString{String: "int", Valid: true},
 					NullableValue:     sql.NullBool{Bool: false, Valid: true},
 					DefaultValueValue: sql.NullString{Valid: false},
-					UniqueValue:       sql.NullBool{Bool: true, Valid: true},
+					UniqueValue:       sql.NullBool{Bool: false, Valid: true},
 					PrimaryKeyValue:   sql.NullBool{Valid: true},
 				},
 			},
-		},
-		{
+		}, {
 			"unique index",
 			[]string{
 				"CREATE TABLE `test-b` (`field` integer NOT NULL)",
 				"CREATE UNIQUE INDEX `idx_uq` ON `test-b`(`field`) WHERE field = 0",
 			},
 			1,
-			[]migrator.ColumnType{
-				{
-					NameValue:       sql.NullString{String: "field", Valid: true},
-					DataTypeValue:   sql.NullString{String: "integer", Valid: true},
-					ColumnTypeValue: sql.NullString{String: "integer", Valid: true},
-					PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
-					UniqueValue:     sql.NullBool{Bool: true, Valid: true},
-					NullableValue:   sql.NullBool{Bool: false, Valid: true},
-				},
+			[]migrator.ColumnType{{
+				NameValue:       sql.NullString{String: "field", Valid: true},
+				DataTypeValue:   sql.NullString{String: "integer", Valid: true},
+				ColumnTypeValue: sql.NullString{String: "integer", Valid: true},
+				PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
+				UniqueValue:     sql.NullBool{Bool: false, Valid: true},
+				NullableValue:   sql.NullBool{Bool: false, Valid: true},
+			}},
+		}, {
+			"normal index",
+			[]string{
+				"CREATE TABLE `test-c` (`field` integer NOT NULL)",
+				"CREATE INDEX `idx_uq` ON `test-c`(`field`)",
 			},
+			1,
+			[]migrator.ColumnType{{
+				NameValue:       sql.NullString{String: "field", Valid: true},
+				DataTypeValue:   sql.NullString{String: "integer", Valid: true},
+				ColumnTypeValue: sql.NullString{String: "integer", Valid: true},
+				PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
+				UniqueValue:     sql.NullBool{Bool: false, Valid: true},
+				NullableValue:   sql.NullBool{Bool: false, Valid: true},
+			}},
+		}, {
+			"unique constraint",
+			[]string{
+				"CREATE TABLE `unique_struct` (`name` text,CONSTRAINT `uni_unique_struct_name` UNIQUE (`name`))",
+			},
+			2,
+			[]migrator.ColumnType{{
+				NameValue:       sql.NullString{String: "name", Valid: true},
+				DataTypeValue:   sql.NullString{String: "text", Valid: true},
+				ColumnTypeValue: sql.NullString{String: "text", Valid: true},
+				PrimaryKeyValue: sql.NullBool{Bool: false, Valid: true},
+				UniqueValue:     sql.NullBool{Bool: true, Valid: true},
+				NullableValue:   sql.NullBool{Bool: true, Valid: true},
+			}},
 		},
 		{
 			"non-unique index",
