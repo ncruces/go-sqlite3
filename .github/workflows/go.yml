@@ -19,8 +19,7 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: stable
 
@@ -53,8 +52,7 @@ jobs:
       run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
 
-    - name: Coverage report
-      uses: ncruces/go-coverage-report@v0
+    - uses: ncruces/go-coverage-report@v0
       with:
         chart: true
         amend: true

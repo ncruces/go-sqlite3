@@ -12,8 +12,7 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: stable
 
@@ -28,13 +27,11 @@ jobs:
       with:
         lfs: 'true'
 
-    - name: Set up
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: stable
 
-    - name: Install QEMU
-      uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-qemu-action@v3
 
     - name: Test
       run: GOARCH=arm64 go test -v -short ./...
@@ -47,8 +44,7 @@ jobs:
         with:
           lfs: 'true'
 
-      - name: Set up
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
 

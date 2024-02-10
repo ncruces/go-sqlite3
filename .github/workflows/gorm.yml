@@ -1,4 +1,4 @@
-name: Cross compile
+name: GORM
 
 on:
   workflow_dispatch:
@@ -10,8 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: stable
 
