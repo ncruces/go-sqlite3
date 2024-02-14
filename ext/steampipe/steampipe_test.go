@@ -1,7 +1,6 @@
 package steampipe_test
 
 import (
-	"context"
 	"log"
 
 	"github.com/ncruces/go-sqlite3"
@@ -13,8 +12,7 @@ import (
 
 func Example() {
 	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		ctx := context.TODO()
-		return steampipe.Register(c, hackernews.Plugin(ctx))
+		return steampipe.Register(c, "hackernews", hackernews.Plugin)
 	})
 	if err != nil {
 		log.Fatal(err)
