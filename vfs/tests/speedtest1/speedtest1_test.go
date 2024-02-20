@@ -46,6 +46,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	if !strings.HasPrefix(compressed, "BZh") {
+		panic("Please use Git LFS to clone this repo: https://git-lfs.com/")
+	}
 	binary, err := io.ReadAll(bzip2.NewReader(strings.NewReader(compressed)))
 	if err != nil {
 		panic(err)
