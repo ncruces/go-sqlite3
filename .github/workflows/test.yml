@@ -1,4 +1,4 @@
-name: Go
+name: Test
 
 on:
   push:
@@ -16,12 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        lfs: 'true'
+      with: { lfs: 'true' }
 
     - uses: actions/setup-go@v5
-      with:
-        go-version: stable
+      with: { go-version: stable }
 
     - name: Format
       run: gofmt -s -w . && git diff --exit-code
@@ -45,12 +43,15 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: Test no locks
-      run: go test -v -tags sqlite3_nosys ./tests -run TestDB_nolock
-
     - name: Test BSD locks
       run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
+
+    - name: Test no locks
+      run: go test -v -tags sqlite3_nosys ./tests -run TestDB_nolock
+
+    - name: Test GORM
+      run: gormlite/test.sh
 
     - uses: ncruces/go-coverage-report@v0
       with:
@@ -66,12 +67,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        lfs: 'true'
+      with: { lfs: 'true' }
 
     - uses: actions/setup-go@v5
-      with:
-        go-version: stable
+      with: { go-version: stable }
 
     - name: Build
       run: .github/workflows/bsd.sh
@@ -84,3 +83,47 @@ jobs:
         shell: bash
         run: source test.sh
         sync_files: runner-to-vm
+
+  test-m1:
+    runs-on: macos-14
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Test
+      run: go test -v ./...
+
+  test-386:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Test
+      run: GOARCH=386 go test -v -short ./...
+
+  test-arm:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - uses: docker/setup-qemu-action@v3
+
+    - name: Test
+      run: GOARCH=arm64 go test -v -short ./...
