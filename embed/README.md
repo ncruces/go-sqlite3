@@ -5,7 +5,7 @@ This folder includes an embeddable WASM build of SQLite 3.45.1 for use with
 
 The following optional features are compiled in:
 - [math functions](https://sqlite.org/lang_mathfunc.html)
-- [FTS3/4](https://sqlite.org/fts3.html)/[5](https://sqlite.org/fts5.html)
+- [FTS5](https://sqlite.org/fts5.html)
 - [JSON](https://sqlite.org/json1.html)
 - [R*Tree](https://sqlite.org/rtree.html)
 - [GeoPoly](https://sqlite.org/geopoly.html)
