@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/bits"
 	"os"
+	"runtime"
 	"sync"
 	"unsafe"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 )
 
 // Configure SQLite WASM.
@@ -37,7 +39,7 @@ var instance struct {
 
 func compileSQLite() {
 	if RuntimeConfig == nil {
-		RuntimeConfig = wazero.NewRuntimeConfig()
+		RuntimeConfig = wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
 	}
 
 	ctx := context.Background()
@@ -88,7 +90,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 	sqlt.ctx = util.NewContext(context.Background())
 
 	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
-		instance.compiled, wazero.NewModuleConfig())
+		instance.compiled, wazero.NewModuleConfig().WithStartFunctions("_initialize"))
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +291,7 @@ func (a *arena) string(s string) uint32 {
 }
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
+	util.ExportFunc(env, "go_sched", runtime.Gosched)
 	util.ExportFuncIII(env, "go_busy_handler", busyCallback)
 	util.ExportFuncII(env, "go_progress_handler", progressCallback)
 	util.ExportFuncII(env, "go_commit_hook", commitCallback)

@@ -42,6 +42,7 @@
 #define SQLITE_OMIT_DEPRECATED
 #define SQLITE_OMIT_SHARED_CACHE
 #define SQLITE_OMIT_AUTOINIT
+// #define SQLITE_THREADSAFE 0
 // #define SQLITE_OMIT_DECLTYPE
 // #define SQLITE_OMIT_PROGRESS_CALLBACK
 
@@ -58,6 +59,11 @@
 // We patch SQLite to use exclusive locking mode instead.
 // https://sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL
+
+#undef SQLITE_THREADSAFE
+#undef SQLITE_MUTEX_NOOP
+#define SQLITE_THREADSAFE 1
+#define SQLITE_MUTEX_PTHREADS
 
 // We have our own memdb VFS.
 // To avoid interactions between the two,

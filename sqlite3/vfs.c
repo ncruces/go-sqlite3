@@ -5,6 +5,7 @@
 #include "include.h"
 #include "sqlite3.h"
 
+void go_sched();
 int go_localtime(struct tm *, sqlite3_int64);
 int go_vfs_find(const char *zVfsName);
 
@@ -31,6 +32,11 @@ int go_device_characteristics(sqlite3_file *file);
 int go_lock(sqlite3_file *, int eLock);
 int go_unlock(sqlite3_file *, int eLock);
 int go_check_reserved_lock(sqlite3_file *, int *pResOut);
+
+int sched_yield(void) {
+  go_sched();
+  return 0;
+}
 
 static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
                            sqlite3_file *file, int flags, int *pOutFlags) {

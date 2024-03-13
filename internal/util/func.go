@@ -10,6 +10,18 @@ import (
 type i32 interface{ ~int32 | ~uint32 }
 type i64 interface{ ~int64 | ~uint64 }
 
+type funcV func()
+
+func (fn funcV) Call(ctx context.Context, mod api.Module, stack []uint64) {
+	fn()
+}
+
+func ExportFunc(mod wazero.HostModuleBuilder, name string, fn func()) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(funcV(fn), nil, nil).
+		Export(name)
+}
+
 type funcVI[T0 i32] func(context.Context, api.Module, T0)
 
 func (fn funcVI[T0]) Call(ctx context.Context, mod api.Module, stack []uint64) {
