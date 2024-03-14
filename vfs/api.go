@@ -80,6 +80,16 @@ type FileOverwrite interface {
 	Overwrite() error
 }
 
+// FilePersistentWAL extends File to implement the
+// SQLITE_FCNTL_PERSIST_WAL file control opcode.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlpersistwal
+type FilePersistentWAL interface {
+	File
+	PersistentWAL() bool
+	SetPersistentWAL(bool)
+}
+
 // FilePowersafeOverwrite extends File to implement the
 // SQLITE_FCNTL_POWERSAFE_OVERWRITE file control opcode.
 //
@@ -90,7 +100,7 @@ type FilePowersafeOverwrite interface {
 	SetPowersafeOverwrite(bool)
 }
 
-// FilePowersafeOverwrite extends File to implement the
+// FileCommitPhaseTwo extends File to implement the
 // SQLITE_FCNTL_COMMIT_PHASETWO file control opcode.
 //
 // https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlcommitphasetwo

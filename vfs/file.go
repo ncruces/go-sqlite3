@@ -126,9 +126,10 @@ func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, O
 type vfsFile struct {
 	*os.File
 	lock     LockLevel
-	psow     bool
-	syncDir  bool
 	readOnly bool
+	keepWAL  bool
+	syncDir  bool
+	psow     bool
 }
 
 var (
@@ -136,6 +137,7 @@ var (
 	_ FileLockState          = &vfsFile{}
 	_ FileHasMoved           = &vfsFile{}
 	_ FileSizeHint           = &vfsFile{}
+	_ FilePersistentWAL      = &vfsFile{}
 	_ FilePowersafeOverwrite = &vfsFile{}
 )
 
@@ -198,4 +200,6 @@ func (f *vfsFile) HasMoved() (bool, error) {
 
 func (f *vfsFile) LockState() LockLevel            { return f.lock }
 func (f *vfsFile) PowersafeOverwrite() bool        { return f.psow }
+func (f *vfsFile) PersistentWAL() bool             { return f.keepWAL }
 func (f *vfsFile) SetPowersafeOverwrite(psow bool) { f.psow = psow }
+func (f *vfsFile) SetPersistentWAL(keepWAL bool)   { f.keepWAL = keepWAL }

@@ -257,19 +257,26 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return _OK
 		}
 
+	case _FCNTL_PERSIST_WAL:
+		if file, ok := file.(FilePersistentWAL); ok {
+			if i := util.ReadUint32(mod, pArg); int32(i) >= 0 {
+				file.SetPersistentWAL(i != 0)
+			} else if file.PersistentWAL() {
+				util.WriteUint32(mod, pArg, 1)
+			} else {
+				util.WriteUint32(mod, pArg, 0)
+			}
+			return _OK
+		}
+
 	case _FCNTL_POWERSAFE_OVERWRITE:
 		if file, ok := file.(FilePowersafeOverwrite); ok {
-			switch util.ReadUint32(mod, pArg) {
-			case 0:
-				file.SetPowersafeOverwrite(false)
-			case 1:
-				file.SetPowersafeOverwrite(true)
-			default:
-				if file.PowersafeOverwrite() {
-					util.WriteUint32(mod, pArg, 1)
-				} else {
-					util.WriteUint32(mod, pArg, 0)
-				}
+			if i := util.ReadUint32(mod, pArg); int32(i) >= 0 {
+				file.SetPowersafeOverwrite(i != 0)
+			} else if file.PowersafeOverwrite() {
+				util.WriteUint32(mod, pArg, 1)
+			} else {
+				util.WriteUint32(mod, pArg, 0)
 			}
 			return _OK
 		}
@@ -284,12 +291,10 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	case _FCNTL_HAS_MOVED:
 		if file, ok := file.(FileHasMoved); ok {
 			moved, err := file.HasMoved()
-
 			var res uint32
 			if moved {
 				res = 1
 			}
-
 			util.WriteUint32(mod, pArg, res)
 			return vfsErrorCode(err, _IOERR_FSTAT)
 		}
@@ -326,6 +331,8 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	// Consider also implementing these opcodes (in use by SQLite):
 	//  _FCNTL_BUSYHANDLER
 	//  _FCNTL_CHUNK_SIZE
+	//  _FCNTL_CKPT_DONE
+	//  _FCNTL_CKPT_START
 	//  _FCNTL_PRAGMA
 	//  _FCNTL_SYNC
 	return _NOTFOUND
