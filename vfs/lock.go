@@ -65,14 +65,20 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock <= LOCK_NONE || f.lock >= LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
+		reserved := f.lock == LOCK_RESERVED
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
 		if f.lock < LOCK_PENDING {
-			if rc := osGetPendingLock(f.File, f.lock); rc != _OK {
+			// If we're already RESERVED, we can block indefinitely,
+			// since only new readers may briefly hold the PENDING lock.
+			if rc := osGetPendingLock(f.File, reserved /* block */); rc != _OK {
 				return rc
 			}
 			f.lock = LOCK_PENDING
 		}
-		if rc := osGetExclusiveLock(f.File); rc != _OK {
+		// We already have PENDING, so we're just waiting for readers to leave.
+		// If we were RESERVED, we can wait for a little while, before invoking
+		// the busy handler; we will only do this once.
+		if rc := osGetExclusiveLock(f.File, reserved /* wait */); rc != _OK {
 			return rc
 		}
 		f.lock = LOCK_EXCLUSIVE

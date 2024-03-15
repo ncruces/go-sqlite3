@@ -31,18 +31,22 @@ func osGetReservedLock(file *os.File) _ErrorCode {
 	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
 }
 
-func osGetPendingLock(file *os.File, state LockLevel) _ErrorCode {
-	// Acquire the PENDING lock.
+func osGetPendingLock(file *os.File, block bool) _ErrorCode {
 	var timeout time.Duration
-	if state >= LOCK_RESERVED {
+	if block {
 		timeout = -1
 	}
+	// Acquire the PENDING lock.
 	return osWriteLock(file, _PENDING_BYTE, 1, timeout)
 }
 
-func osGetExclusiveLock(file *os.File) _ErrorCode {
+func osGetExclusiveLock(file *os.File, wait bool) _ErrorCode {
+	var timeout time.Duration
+	if wait {
+		timeout = time.Millisecond
+	}
 	// Acquire the EXCLUSIVE lock.
-	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
+	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
 func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {

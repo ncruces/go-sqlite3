@@ -20,11 +20,11 @@ func osGetReservedLock(_ *os.File) _ErrorCode {
 	return _IOERR_LOCK
 }
 
-func osGetPendingLock(_ *os.File, _ LockLevel) _ErrorCode {
+func osGetPendingLock(_ *os.File, _ bool) _ErrorCode {
 	return _IOERR_LOCK
 }
 
-func osGetExclusiveLock(_ *os.File) _ErrorCode {
+func osGetExclusiveLock(_ *os.File, _ bool) _ErrorCode {
 	return _IOERR_LOCK
 }
 

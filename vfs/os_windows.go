@@ -36,21 +36,27 @@ func osGetReservedLock(file *os.File) _ErrorCode {
 	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
 }
 
-func osGetPendingLock(file *os.File, state LockLevel) _ErrorCode {
-	// Acquire the PENDING lock.
+func osGetPendingLock(file *os.File, block bool) _ErrorCode {
 	var timeout time.Duration
-	if state >= LOCK_RESERVED {
+	if block {
 		timeout = -1
 	}
+
+	// Acquire the PENDING lock.
 	return osWriteLock(file, _PENDING_BYTE, 1, timeout)
 }
 
-func osGetExclusiveLock(file *os.File) _ErrorCode {
+func osGetExclusiveLock(file *os.File, wait bool) _ErrorCode {
+	var timeout time.Duration
+	if wait {
+		timeout = time.Millisecond
+	}
+
 	// Release the SHARED lock.
 	osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 	// Acquire the EXCLUSIVE lock.
-	rc := osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
+	rc := osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 
 	if rc != _OK {
 		// Reacquire the SHARED lock.
@@ -179,9 +185,13 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 
 func osSleep(d time.Duration) {
 	if d > 0 {
-		period := uint32(max(1, min(d/(2*time.Millisecond), 16)))
-		windows.TimeBeginPeriod(period)
+		period := max(1, d/(5*time.Millisecond))
+		if period < 16 {
+			windows.TimeBeginPeriod(uint32(period))
+		}
 		time.Sleep(d)
-		windows.TimeEndPeriod(period)
+		if period < 16 {
+			windows.TimeEndPeriod(uint32(period))
+		}
 	}
 }
