@@ -12,30 +12,30 @@ import "os"
 // [immutable]: https://sqlite.org/uri.html#uriimmutable
 const SupportsFileLocking = false
 
-func osGetSharedLock(file *os.File) _ErrorCode {
+func osGetSharedLock(_ *os.File) _ErrorCode {
 	return _IOERR_RDLOCK
 }
 
-func osGetReservedLock(file *os.File) _ErrorCode {
+func osGetReservedLock(_ *os.File) _ErrorCode {
 	return _IOERR_LOCK
 }
 
-func osGetPendingLock(file *os.File) _ErrorCode {
+func osGetPendingLock(_ *os.File, _ LockLevel) _ErrorCode {
 	return _IOERR_LOCK
 }
 
-func osGetExclusiveLock(file *os.File) _ErrorCode {
+func osGetExclusiveLock(_ *os.File) _ErrorCode {
 	return _IOERR_LOCK
 }
 
-func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+func osDowngradeLock(_ *os.File, _ LockLevel) _ErrorCode {
 	return _IOERR_RDLOCK
 }
 
-func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
+func osReleaseLock(_ *os.File, _ LockLevel) _ErrorCode {
 	return _IOERR_UNLOCK
 }
 
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+func osCheckReservedLock(_ *os.File) (bool, _ErrorCode) {
 	return false, _IOERR_CHECKRESERVEDLOCK
 }

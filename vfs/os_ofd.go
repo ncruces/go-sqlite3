@@ -27,17 +27,24 @@ func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, d
 		Start: start,
 		Len:   len,
 	}
-	before := time.Now()
 	var err error
-	for {
+	switch {
+	case timeout == 0:
 		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
-		if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
-			break
+	case timeout < 0:
+		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLKW, &lock)
+	default:
+		before := time.Now()
+		for {
+			err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+			if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
+				break
+			}
+			if timeout <= 0 || timeout < time.Since(before) {
+				break
+			}
+			osSleep(time.Millisecond)
 		}
-		if timeout <= 0 || timeout < time.Since(before) {
-			break
-		}
-		time.Sleep(time.Millisecond)
 	}
 	return osLockErrorCode(err, def)
 }

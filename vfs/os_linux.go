@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func osSync(file *os.File, fullsync, dataonly bool) error {
+func osSync(file *os.File, _ /*fullsync*/, dataonly bool) error {
 	if dataonly {
 		_, _, err := unix.Syscall(unix.SYS_FDATASYNC, file.Fd(), 0, 0)
 		if err != 0 {

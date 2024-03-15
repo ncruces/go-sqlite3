@@ -36,9 +36,13 @@ func osGetReservedLock(file *os.File) _ErrorCode {
 	return osWriteLock(file, _RESERVED_BYTE, 1, 0)
 }
 
-func osGetPendingLock(file *os.File) _ErrorCode {
+func osGetPendingLock(file *os.File, state LockLevel) _ErrorCode {
 	// Acquire the PENDING lock.
-	return osWriteLock(file, _PENDING_BYTE, 1, 0)
+	var timeout time.Duration
+	if state >= LOCK_RESERVED {
+		timeout = -1
+	}
+	return osWriteLock(file, _PENDING_BYTE, 1, timeout)
 }
 
 func osGetExclusiveLock(file *os.File) _ErrorCode {
@@ -110,44 +114,43 @@ func osUnlock(file *os.File, start, len uint32) _ErrorCode {
 }
 
 func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def _ErrorCode) _ErrorCode {
-	before := time.Now()
 	var err error
-	for {
-		err = windows.LockFileEx(windows.Handle(file.Fd()), flags,
-			0, len, 0, &windows.Overlapped{Offset: start})
-		if errno, _ := err.(windows.Errno); errno != windows.ERROR_LOCK_VIOLATION {
-			break
-		}
-		if timeout <= 0 || timeout < time.Since(before) {
-			break
-		}
-		if err := windows.TimeBeginPeriod(1); err != nil {
-			break
-		}
-		time.Sleep(time.Millisecond)
-		if err := windows.TimeEndPeriod(1); err != nil {
-			break
+	switch {
+	case timeout == 0:
+		err = osLockEx(file, flags|windows.LOCKFILE_FAIL_IMMEDIATELY, start, len)
+	case timeout < 0:
+		err = osLockEx(file, flags, start, len)
+	default:
+		before := time.Now()
+		for {
+			err = osLockEx(file, flags|windows.LOCKFILE_FAIL_IMMEDIATELY, start, len)
+			if errno, _ := err.(windows.Errno); errno != windows.ERROR_LOCK_VIOLATION {
+				break
+			}
+			if timeout <= 0 || timeout < time.Since(before) {
+				break
+			}
+			osSleep(time.Millisecond)
 		}
 	}
 	return osLockErrorCode(err, def)
 }
 
+func osLockEx(file *os.File, flags, start, len uint32) error {
+	return windows.LockFileEx(windows.Handle(file.Fd()), flags,
+		0, len, 0, &windows.Overlapped{Offset: start})
+}
+
 func osReadLock(file *os.File, start, len uint32, timeout time.Duration) _ErrorCode {
-	return osLock(file,
-		windows.LOCKFILE_FAIL_IMMEDIATELY,
-		start, len, timeout, _IOERR_RDLOCK)
+	return osLock(file, 0, start, len, timeout, _IOERR_RDLOCK)
 }
 
 func osWriteLock(file *os.File, start, len uint32, timeout time.Duration) _ErrorCode {
-	return osLock(file,
-		windows.LOCKFILE_FAIL_IMMEDIATELY|windows.LOCKFILE_EXCLUSIVE_LOCK,
-		start, len, timeout, _IOERR_LOCK)
+	return osLock(file, windows.LOCKFILE_EXCLUSIVE_LOCK, start, len, timeout, _IOERR_LOCK)
 }
 
 func osCheckLock(file *os.File, start, len uint32) (bool, _ErrorCode) {
-	rc := osLock(file,
-		windows.LOCKFILE_FAIL_IMMEDIATELY,
-		start, len, 0, _IOERR_CHECKRESERVEDLOCK)
+	rc := osLock(file, 0, start, len, 0, _IOERR_CHECKRESERVEDLOCK)
 	if rc == _BUSY {
 		return true, _OK
 	}
@@ -172,4 +175,13 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 		}
 	}
 	return def
+}
+
+func osSleep(d time.Duration) {
+	if d > 0 {
+		period := uint32(max(1, min(d/(2*time.Millisecond), 16)))
+		windows.TimeBeginPeriod(period)
+		time.Sleep(d)
+		windows.TimeEndPeriod(period)
+	}
 }

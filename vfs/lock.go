@@ -67,7 +67,7 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		}
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
 		if f.lock < LOCK_PENDING {
-			if rc := osGetPendingLock(f.File); rc != _OK {
+			if rc := osGetPendingLock(f.File, f.lock); rc != _OK {
 				return rc
 			}
 			f.lock = LOCK_PENDING
