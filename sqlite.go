@@ -99,8 +99,8 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 	}
 
 	sqlt.freer = util.ReadUint32(sqlt.mod, uint32(global.Get()))
-	if err != nil {
-		return nil, err
+	if sqlt.freer == 0 {
+		return nil, util.BadBinaryErr
 	}
 	return sqlt, nil
 }
