@@ -127,3 +127,13 @@ jobs:
 
     - name: Test
       run: GOARCH=arm64 go test -v -short ./...
+
+  test-f2fs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - name: Mount F2FS
+      run: .github/workflows/f2fs.sh
