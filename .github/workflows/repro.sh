@@ -13,7 +13,7 @@ elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
 fi
 
 # Download tools
-mkdir -p tools
+mkdir -p tools/
 [ -d "tools/wasi-sdk"* ]         || curl -#L "$WASI_SDK" | tar xzC tools &
 [ -d "tools/binaryen-version"* ] || curl -#L "$BINARYEN" | tar xzC tools &
 wait
