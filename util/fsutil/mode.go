@@ -1,3 +1,4 @@
+// Package fsutil implements filesystem utility functions.
 package fsutil
 
 import (

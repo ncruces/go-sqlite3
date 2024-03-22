@@ -553,6 +553,14 @@ func (s *Stmt) ColumnValue(col int) Value {
 	}
 }
 
+// Columns populates result columns into the provided slice.
+// The slice must have [Stmt.ColumnCount] length.
+//
+// [INTEGER] columns will be retrieved as int64 values,
+// [FLOAT] as float64, [NULL] as nil,
+// [TEXT] as string, and [BLOB] as []byte.
+// Any []byte are owned by SQLite and may be invalidated by
+// subsequent calls to [Stmt] methods.
 func (s *Stmt) Columns(dest []any) error {
 	defer s.c.arena.mark()()
 	count := uint64(len(dest))
