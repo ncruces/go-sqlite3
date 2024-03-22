@@ -368,21 +368,6 @@ func busyCallback(ctx context.Context, mod api.Module, pDB, count uint32) uint32
 	return 0
 }
 
-// Deprecated: executes a PRAGMA statement and returns results.
-func (c *Conn) Pragma(str string) ([]string, error) {
-	stmt, _, err := c.Prepare(`PRAGMA ` + str)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	var pragmas []string
-	for stmt.Step() {
-		pragmas = append(pragmas, stmt.ColumnText(0))
-	}
-	return pragmas, stmt.Close()
-}
-
 func (c *Conn) error(rc uint64, sql ...string) error {
 	return c.sqlite.error(rc, c.handle, sql...)
 }

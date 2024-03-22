@@ -230,9 +230,6 @@ func (c *Conn) TxnState(schema string) TxnState {
 	return TxnState(r)
 }
 
-// Deprecated: renamed for consistency with [Conn.TxnState].
-type Tx = Txn
-
 // CommitHook registers a callback function to be invoked
 // whenever a transaction is committed.
 // Return true to allow the commit operation to continue normally.

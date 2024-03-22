@@ -206,9 +206,6 @@ type VTabTxn interface {
 	Rollback() error
 }
 
-// Deprecated: renamed for consistency with [Conn.TxnState].
-type VTabTx = VTabTxn
-
 // A VTabSavepointer allows a virtual table to implement
 // nested transactions.
 //

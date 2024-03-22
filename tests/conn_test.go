@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -107,41 +106,6 @@ func TestConn_Close_BUSY(t *testing.T) {
 		t.Error("not temporary", err)
 	}
 	if got := err.Error(); got != `sqlite3: database is locked: unable to close due to unfinalized statements or unfinished backups` {
-		t.Error("got message:", got)
-	}
-}
-
-func TestConn_Pragma(t *testing.T) {
-	t.Parallel()
-
-	db, err := sqlite3.Open("file::memory:?_pragma=busy_timeout(1000)")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	got, err := db.Pragma("busy_timeout")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []string{"1000"}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, want %v", got, want)
-	}
-
-	var serr *sqlite3.Error
-	_, err = db.Pragma("+")
-	if err == nil {
-		t.Error("want: error")
-	}
-	if !errors.As(err, &serr) {
-		t.Fatalf("got %T, want sqlite3.Error", err)
-	}
-	if rc := serr.Code(); rc != sqlite3.ERROR {
-		t.Errorf("got %d, want sqlite3.ERROR", rc)
-	}
-	if got := err.Error(); got != `sqlite3: SQL logic error: near "+": syntax error` {
 		t.Error("got message:", got)
 	}
 }
