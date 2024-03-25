@@ -15,14 +15,14 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-// Configure SQLite WASM.
+// Configure SQLite Wasm.
 //
-// Importing package embed initializes these
+// Importing package embed initializes [Binary]
 // with an appropriate build of SQLite:
 //
 //	import _ "github.com/ncruces/go-sqlite3/embed"
 var (
-	Binary []byte // WASM binary to load.
+	Binary []byte // Wasm binary to load.
 	Path   string // Path to load the binary from.
 
 	RuntimeConfig wazero.RuntimeConfig
@@ -274,7 +274,7 @@ func (a *arena) new(size uint64) uint32 {
 }
 
 func (a *arena) bytes(b []byte) uint32 {
-	if b == nil {
+	if (*[0]byte)(b) == nil {
 		return 0
 	}
 	ptr := a.new(uint64(len(b)))

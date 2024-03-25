@@ -57,8 +57,8 @@
 #define SQLITE_ENABLE_ATOMIC_WRITE
 #define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
 
-// Because WASM does not support shared memory,
-// SQLite disables WAL for WASM builds.
+// Because Wasm does not support shared memory,
+// SQLite disables WAL for Wasm builds.
 // We patch SQLite to use exclusive locking mode instead.
 // https://sqlite.org/wal.html#noshm
 #undef SQLITE_OMIT_WAL

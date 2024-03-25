@@ -8,7 +8,7 @@ Go module `github.com/ncruces/go-sqlite3` is `cgo`-free [SQLite](https://sqlite.
 It provides a [`database/sql`](https://pkg.go.dev/database/sql) compatible driver,
 as well as direct access to most of the [C SQLite API](https://sqlite.org/cintro.html).
 
-It wraps a [WASM](https://webassembly.org/) build of SQLite, and uses [wazero](https://wazero.io/) as the runtime.\
+It wraps a [Wasm](https://webassembly.org/) build of SQLite, and uses [wazero](https://wazero.io/) as the runtime.\
 Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ runtime dependencies.
 
 ### Packages
@@ -77,7 +77,7 @@ This has benefits, but also comes with some drawbacks.
 
 #### Write-Ahead Logging
 
-Because WASM does not support shared memory,
+Because Wasm does not support shared memory,
 [WAL](https://sqlite.org/wal.html) support is [limited](https://sqlite.org/wal.html#noshm).
 
 To work around this limitation, SQLite is [patched](sqlite3/locking_mode.patch)
@@ -131,7 +131,7 @@ on Linux, macOS, Windows and FreeBSD.
 Perfomance of the [`database/sql`](https://pkg.go.dev/database/sql) driver is
 [competitive](https://github.com/cvilsmeier/go-sqlite-bench) with alternatives.
 
-The WASM and VFS layers are also tested by running SQLite's
+The Wasm and VFS layers are also tested by running SQLite's
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
 ### Alternatives

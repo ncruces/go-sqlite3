@@ -19,5 +19,5 @@ mkdir -p tools/
 wait
 
 sqlite3/download.sh   # Download SQLite
-embed/build.sh        # Build WASM
+embed/build.sh        # Build Wasm
 git diff --exit-code  # Check diffs
