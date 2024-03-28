@@ -32,10 +32,15 @@ int go_lock(sqlite3_file *, int eLock);
 int go_unlock(sqlite3_file *, int eLock);
 int go_check_reserved_lock(sqlite3_file *, int *pResOut);
 
+int go_shm_map(sqlite3_file *, int iPg, int pgsz, int, void volatile **);
+int go_shm_lock(sqlite3_file *, int offset, int n, int flags);
+int go_shm_unmap(sqlite3_file *, int deleteFlag);
+void go_shm_barrier(sqlite3_file *);
+
 static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
                            sqlite3_file *file, int flags, int *pOutFlags) {
   static const sqlite3_io_methods os_io = {
-      .iVersion = 1,
+      .iVersion = 2,
       .xClose = go_close,
       .xRead = go_read,
       .xWrite = go_write,
@@ -48,6 +53,10 @@ static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
       .xFileControl = go_file_control,
       .xSectorSize = go_sector_size,
       .xDeviceCharacteristics = go_device_characteristics,
+      .xShmMap = go_shm_map,
+      .xShmLock = go_shm_lock,
+      .xShmBarrier = go_shm_barrier,
+      .xShmUnmap = go_shm_unmap,
   };
   memset(file, 0, vfs->szOsFile);
   int rc = go_open(vfs, zName, file, flags, pOutFlags);
