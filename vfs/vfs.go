@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -40,6 +41,10 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 	util.ExportFuncIII(env, "go_lock", vfsLock)
 	util.ExportFuncIII(env, "go_unlock", vfsUnlock)
 	util.ExportFuncIII(env, "go_check_reserved_lock", vfsCheckReservedLock)
+	util.ExportFuncIIIIII(env, "go_shm_map", vfsShmMap)
+	util.ExportFuncIIIII(env, "go_shm_lock", vfsShmLock)
+	util.ExportFuncIII(env, "go_shm_unmap", vfsShmUnmap)
+	util.ExportFuncVI(env, "go_shm_barrier", vfsShmBarrier)
 	return env
 }
 
@@ -346,6 +351,32 @@ func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
 func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) DeviceCharacteristic {
 	file := vfsFileGet(ctx, mod, pFile)
 	return file.DeviceCharacteristics()
+}
+
+var shmBarrier sync.Mutex
+
+func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bExtend, pp uint32) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	err := file.ShmMap()
+	return vfsErrorCode(err, _IOERR_SHMMAP)
+}
+
+func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	err := file.ShmLock()
+	return vfsErrorCode(err, _IOERR_SHMLOCK)
+}
+
+func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	file.ShmUnmap()
+	return _OK
+}
+
+func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
+	shmBarrier.Lock()
+	//lint:ignore SA2001 empty critical section implies a memory barrier.
+	shmBarrier.Unlock()
 }
 
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {

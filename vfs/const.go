@@ -37,6 +37,10 @@ const (
 	_IOERR_CHECKRESERVEDLOCK _ErrorCode = util.IOERR_CHECKRESERVEDLOCK
 	_IOERR_LOCK              _ErrorCode = util.IOERR_LOCK
 	_IOERR_CLOSE             _ErrorCode = util.IOERR_CLOSE
+	_IOERR_SHMOPEN           _ErrorCode = util.IOERR_SHMOPEN
+	_IOERR_SHMSIZE           _ErrorCode = util.IOERR_SHMSIZE
+	_IOERR_SHMLOCK           _ErrorCode = util.IOERR_SHMLOCK
+	_IOERR_SHMMAP            _ErrorCode = util.IOERR_SHMMAP
 	_IOERR_SEEK              _ErrorCode = util.IOERR_SEEK
 	_IOERR_DELETE_NOENT      _ErrorCode = util.IOERR_DELETE_NOENT
 	_IOERR_BEGIN_ATOMIC      _ErrorCode = util.IOERR_BEGIN_ATOMIC
@@ -212,4 +216,14 @@ const (
 	_FCNTL_EXTERNAL_READER       _FcntlOpcode = 40
 	_FCNTL_CKSM_FILE             _FcntlOpcode = 41
 	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
+)
+
+// https://sqlite.org/c3ref/c_shm_exclusive.html
+type _ShmFlag uint32
+
+const (
+	_SHM_UNLOCK    _ShmFlag = 1
+	_SHM_LOCK      _ShmFlag = 2
+	_SHM_SHARED    _ShmFlag = 4
+	_SHM_EXCLUSIVE _ShmFlag = 8
 )
