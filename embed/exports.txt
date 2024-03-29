@@ -1,6 +1,7 @@
 free
 malloc
 malloc_destructor
+aligned_alloc
 sqlite3_anycollseq_init
 sqlite3_backup_finish
 sqlite3_backup_init

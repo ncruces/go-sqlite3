@@ -357,8 +357,12 @@ var shmBarrier sync.Mutex
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bExtend, pp uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
-	err := file.ShmMap()
-	return vfsErrorCode(err, _IOERR_SHMMAP)
+	p, err := file.ShmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
+	if err != nil {
+		return vfsErrorCode(err, _IOERR_SHMMAP)
+	}
+	util.WriteUint32(mod, pp, p)
+	return _OK
 }
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
