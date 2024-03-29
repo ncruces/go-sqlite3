@@ -130,6 +130,7 @@ type vfsFile struct {
 	keepWAL  bool
 	syncDir  bool
 	psow     bool
+	shm      vfsShm
 }
 
 var (

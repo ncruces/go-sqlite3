@@ -356,7 +356,7 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 var shmBarrier sync.Mutex
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bExtend, pp uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	file := vfsFileGet(ctx, mod, pFile).(*vfsFile)
 	p, err := file.ShmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	if err != nil {
 		return vfsErrorCode(err, _IOERR_SHMMAP)
@@ -366,13 +366,13 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bE
 }
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	file := vfsFileGet(ctx, mod, pFile).(*vfsFile)
 	err := file.ShmLock()
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
 }
 
 func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(vfsShm)
+	file := vfsFileGet(ctx, mod, pFile).(*vfsFile)
 	file.ShmUnmap()
 	return _OK
 }
