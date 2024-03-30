@@ -367,13 +367,13 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bE
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-	err := file.ShmLock()
+	err := file.ShmLock(offset, n, flags)
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
 }
 
 func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(*vfsFile)
-	file.ShmUnmap()
+	file.ShmUnmap(bDelete != 0)
 	return _OK
 }
 

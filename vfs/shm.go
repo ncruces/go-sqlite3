@@ -11,26 +11,45 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type vfsShm []vfsShmRegion
+type vfsShm struct {
+	*os.File
+	regions []shmRegion
+}
 
-type vfsShmRegion struct {
+type shmRegion struct {
 	addr   uintptr
 	length uint32
 }
 
-func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (uint32, error) {
+const (
+	_SHM_BASE = 120
+	_SHM_DMS  = 128
+)
+
+func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
 	if unix.Getpagesize() > int(size) {
 		return 0, _IOERR_SHMMAP
 	}
 
-	m, err := os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
-	if err != nil {
-		return 0, _IOERR_SHMOPEN
+	if f.shm.File == nil {
+		f.shm.File, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+		if err != nil {
+			return 0, _IOERR_SHMOPEN
+		}
 	}
-	defer m.Close()
+
+	if rc := osReadLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
+		return 0, rc
+	}
+	if rc := osWriteLock(f.shm.File, _SHM_DMS, 1, 0); rc == _OK {
+		if err := f.shm.File.Truncate(0); err != nil {
+			return 0, _IOERR_SHMOPEN
+		}
+		osReadLock(f.shm.File, _SHM_DMS, 1, 0)
+	}
 
 	// Check if file is big enough.
-	s, err := m.Seek(0, io.SeekEnd)
+	s, err := f.shm.Seek(0, io.SeekEnd)
 	if err != nil {
 		return 0, _IOERR_SHMSIZE
 	}
@@ -38,7 +57,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 		if !extend {
 			return 0, nil
 		}
-		err := osAllocate(m, n)
+		err := osAllocate(f.shm.File, n)
 		if err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
@@ -58,25 +77,39 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	p := util.View(mod, uint32(stack[0]), uint64(size))
 	a, err := mmap(uintptr(unsafe.Pointer(&p[0])), uintptr(size),
 		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED,
-		int(m.Fd()), int64(id)*int64(size))
+		int(f.shm.Fd()), int64(id)*int64(size))
 	if err != nil {
 		return 0, _IOERR_SHMMAP
 	}
 
-	f.shm = append(f.shm, vfsShmRegion{a, size})
+	f.shm.regions = append(f.shm.regions, shmRegion{a, size})
 	return uint32(stack[0]), nil
 }
 
-func (f *vfsFile) ShmLock() error {
-	return _IOERR_SHMLOCK
+func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
+	switch {
+	case flags&_SHM_UNLOCK != 0:
+		return osUnlock(f.shm.File, _SHM_BASE+int64(offset), int64(n))
+	case flags&_SHM_SHARED != 0:
+		return osReadLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
+	case flags&_SHM_EXCLUSIVE != 0:
+		return osWriteLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
+	default:
+		panic(util.AssertErr())
+	}
 }
 
-func (f *vfsFile) ShmUnmap() {
+func (f *vfsFile) ShmUnmap(delete bool) {
 	// TODO: recycle the malloc'd memory pages.
-	for _, r := range f.shm {
+	for _, r := range f.shm.regions {
 		munmap(r.addr, uintptr(r.length))
 	}
-	f.shm = f.shm[:0]
+	f.shm.regions = f.shm.regions[:0]
+	if delete {
+		os.Remove(f.shm.Name())
+	}
+	f.shm.Close()
+	f.shm.File = nil
 }
 
 //go:linkname mmap syscall.mmap
