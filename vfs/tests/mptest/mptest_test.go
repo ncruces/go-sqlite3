@@ -39,7 +39,8 @@ var (
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	rt = wazero.NewRuntime(ctx)
+	rt = wazero.NewRuntimeWithConfig(ctx,
+		wazero.NewRuntimeConfig().WithMemoryCapacityFromMax(true))
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
@@ -180,6 +181,72 @@ func Test_multiwrite01_memory(t *testing.T) {
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_config01_wal(t *testing.T) {
+	ctx := util.NewContext(newContext(t))
+	name := filepath.Join(t.TempDir(), "test.db")
+	cfg := config(ctx).WithArgs("mptest", name, "config01.test",
+		"--journalmode", "wal")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_config02_wal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+
+	ctx := util.NewContext(newContext(t))
+	name := filepath.Join(t.TempDir(), "test.db")
+	cfg := config(ctx).WithArgs("mptest", name, "config02.test",
+		"--journalmode", "wal")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_wal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+
+	ctx := util.NewContext(newContext(t))
+	name := filepath.Join(t.TempDir(), "test.db")
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+		"--journalmode", "wal")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_multiwrite01_wal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	ctx := util.NewContext(newContext(t))
+	name := filepath.Join(t.TempDir(), "test.db")
+	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test",
+		"--journalmode", "wal")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
