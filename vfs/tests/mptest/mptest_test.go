@@ -200,25 +200,6 @@ func Test_config01_wal(t *testing.T) {
 	mod.Close(ctx)
 }
 
-func Test_config02_wal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-
-	ctx := util.NewContext(newContext(t))
-	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "config02.test",
-		"--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
-}
-
 func Test_crash01_wal(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")

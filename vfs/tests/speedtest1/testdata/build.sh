@@ -17,7 +17,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-21.0/bin"
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
 	-D_HAVE_SQLITE_CONFIG_H \
-  -Wl,--export=aligned_alloc
+	-Wl,--export=aligned_alloc
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	speedtest1.wasm -o speedtest1.tmp \

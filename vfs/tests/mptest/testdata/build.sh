@@ -22,7 +22,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-21.0/bin"
 	-DHAVE_USLEEP -DSQLITE_NO_SYNC \
 	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
-  -Wl,--export=aligned_alloc
+	-Wl,--export=aligned_alloc
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	mptest.wasm -o mptest.tmp \

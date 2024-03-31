@@ -27,10 +27,13 @@ const (
 )
 
 func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
+	// TODO: don't even support shared memory if this is the case.
 	if unix.Getpagesize() > int(size) {
 		return 0, _IOERR_SHMMAP
 	}
 
+	// TODO: handle the read-only case.
+	// TODO: should we close the file on error?
 	if f.shm.File == nil {
 		f.shm.File, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 		if err != nil {
@@ -38,6 +41,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 		}
 	}
 
+	// Dead man's switch.
 	if rc := osReadLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
 		return 0, rc
 	}
@@ -76,7 +80,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	// Map the file into the allocated pages.
 	p := util.View(mod, uint32(stack[0]), uint64(size))
 	a, err := mmap(uintptr(unsafe.Pointer(&p[0])), uintptr(size),
-		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED,
+		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_FIXED,
 		int(f.shm.Fd()), int64(id)*int64(size))
 	if err != nil {
 		return 0, _IOERR_SHMMAP
@@ -87,6 +91,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 }
 
 func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
+	// TODO: assert invariants.
 	switch {
 	case flags&_SHM_UNLOCK != 0:
 		return osUnlock(f.shm.File, _SHM_BASE+int64(offset), int64(n))
@@ -101,15 +106,21 @@ func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
 
 func (f *vfsFile) ShmUnmap(delete bool) {
 	// TODO: recycle the malloc'd memory pages.
+
+	// Unmap pages.
 	for _, r := range f.shm.regions {
 		munmap(r.addr, uintptr(r.length))
 	}
 	f.shm.regions = f.shm.regions[:0]
-	if delete {
-		os.Remove(f.shm.Name())
+
+	// Close the file.
+	if f.shm.File != nil {
+		if delete {
+			os.Remove(f.shm.Name())
+		}
+		f.shm.Close()
+		f.shm.File = nil
 	}
-	f.shm.Close()
-	f.shm.File = nil
 }
 
 //go:linkname mmap syscall.mmap

@@ -142,6 +142,11 @@ var (
 	_ FilePowersafeOverwrite = &vfsFile{}
 )
 
+func (f *vfsFile) Close() error {
+	f.ShmUnmap(false)
+	return f.File.Close()
+}
+
 func (f *vfsFile) Sync(flags SyncFlag) error {
 	dataonly := (flags & SYNC_DATAONLY) != 0
 	fullsync := (flags & 0x0f) == SYNC_FULL
