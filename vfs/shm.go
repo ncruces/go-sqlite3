@@ -1,3 +1,5 @@
+//go:build (linux || darwin) && (amd64 || arm64) && !sqlite3_nosys
+
 package vfs
 
 import (
