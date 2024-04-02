@@ -379,8 +379,7 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 
 func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
 	shmBarrier.Lock()
-	//lint:ignore SA2001 empty critical section implies a memory barrier.
-	shmBarrier.Unlock()
+	defer shmBarrier.Unlock()
 }
 
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {

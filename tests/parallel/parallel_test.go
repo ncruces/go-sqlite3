@@ -187,10 +187,8 @@ func testParallel(t testing.TB, name string, n int) {
 	group.SetLimit(6)
 	for i := 0; i < n; i++ {
 		if i&7 != 7 {
-			t.Log("reader", i)
 			group.Go(reader)
 		} else {
-			t.Log("writer", i)
 			group.Go(writer)
 		}
 	}
