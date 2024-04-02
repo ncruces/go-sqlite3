@@ -40,7 +40,7 @@ var (
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	rt = wazero.NewRuntimeWithConfig(ctx,
-		wazero.NewRuntimeConfig().WithMemoryCapacityFromMax(true))
+		wazero.NewRuntimeConfig().WithMemoryLimitPages(1024).WithMemoryCapacityFromMax(true))
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
