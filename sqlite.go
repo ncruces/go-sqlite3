@@ -37,7 +37,7 @@ var instance struct {
 
 func compileSQLite() {
 	if RuntimeConfig == nil {
-		RuntimeConfig = wazero.NewRuntimeConfig().WithMemoryLimitPages(1024).WithMemoryCapacityFromMax(true)
+		RuntimeConfig = wazero.NewRuntimeConfig()
 	}
 
 	ctx := context.Background()

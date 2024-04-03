@@ -39,8 +39,11 @@ var (
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	rt = wazero.NewRuntimeWithConfig(ctx,
-		wazero.NewRuntimeConfig().WithMemoryLimitPages(1024).WithMemoryCapacityFromMax(true))
+	cfg := wazero.NewRuntimeConfig()
+	if vfs.SupportsSharedMemory {
+		cfg = cfg.WithMemoryLimitPages(1024).WithMemoryCapacityFromMax(true)
+	}
+	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
@@ -189,6 +192,11 @@ func Test_multiwrite01_memory(t *testing.T) {
 }
 
 func Test_config01_wal(t *testing.T) {
+	// TODO: reconsider this.
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test",
@@ -201,6 +209,11 @@ func Test_config01_wal(t *testing.T) {
 }
 
 func Test_crash01_wal(t *testing.T) {
+	// TODO: reconsider this.
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -220,6 +233,11 @@ func Test_crash01_wal(t *testing.T) {
 }
 
 func Test_multiwrite01_wal(t *testing.T) {
+	// TODO: reconsider this.
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}

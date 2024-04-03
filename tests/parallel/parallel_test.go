@@ -12,8 +12,19 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/tetratelabs/wazero"
 )
+
+func TestMain(m *testing.M) {
+	if vfs.SupportsSharedMemory {
+		sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().
+			WithMemoryCapacityFromMax(true).
+			WithMemoryLimitPages(1024)
+	}
+	os.Exit(m.Run())
+}
 
 func TestParallel(t *testing.T) {
 	var iter int
@@ -33,6 +44,10 @@ func TestParallel(t *testing.T) {
 }
 
 func TestWAL(t *testing.T) {
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	name := "file:" +
 		filepath.Join(t.TempDir(), "test.db") +
 		"?_pragma=busy_timeout(10000)" +

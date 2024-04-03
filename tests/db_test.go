@@ -9,6 +9,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -36,6 +37,11 @@ func TestDB_nolock(t *testing.T) {
 }
 
 func TestDB_wal(t *testing.T) {
+	// TODO: reconsider this.
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	t.Parallel()
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	err := os.WriteFile(tmp, waldb, 0666)
