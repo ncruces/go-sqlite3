@@ -2,11 +2,7 @@
 
 package vfs
 
-import (
-	"context"
-
-	"github.com/tetratelabs/wazero/api"
-)
+import "github.com/tetratelabs/wazero/api"
 
 // SupportsSharedMemory is true on platforms that support shared memory.
 // To enable shared memory support on those platforms,
@@ -18,14 +14,8 @@ import (
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = false
 
+func vfsVersion(mod api.Module) uint32 { return 0 }
+
 type vfsShm struct{}
 
-func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (uint32, error) {
-	return 0, _IOERR_SHMMAP
-}
-
-func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
-	return _IOERR_SHMLOCK
-}
-
-func (f *vfsFile) ShmUnmap(delete bool) {}
+func (vfsShm) free() {}

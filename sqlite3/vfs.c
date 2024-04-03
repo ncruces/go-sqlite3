@@ -13,7 +13,7 @@ int go_sleep(sqlite3_vfs *, int microseconds);
 int go_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
 
 int go_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
-            int *pOutFlags);
+            int *pOutFlags, int *pOutVersion);
 int go_delete(sqlite3_vfs *, const char *zName, int syncDir);
 int go_access(sqlite3_vfs *, const char *zName, int flags, int *pResOut);
 int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
@@ -39,31 +39,48 @@ void go_shm_barrier(sqlite3_file *);
 
 static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
                            sqlite3_file *file, int flags, int *pOutFlags) {
-  static const sqlite3_io_methods os_io = {
-      .iVersion = 2,
-      .xClose = go_close,
-      .xRead = go_read,
-      .xWrite = go_write,
-      .xTruncate = go_truncate,
-      .xSync = go_sync,
-      .xFileSize = go_file_size,
-      .xLock = go_lock,
-      .xUnlock = go_unlock,
-      .xCheckReservedLock = go_check_reserved_lock,
-      .xFileControl = go_file_control,
-      .xSectorSize = go_sector_size,
-      .xDeviceCharacteristics = go_device_characteristics,
-      .xShmMap = go_shm_map,
-      .xShmLock = go_shm_lock,
-      .xShmBarrier = go_shm_barrier,
-      .xShmUnmap = go_shm_unmap,
-  };
+  static const sqlite3_io_methods go_io[2] = {
+      {
+          .iVersion = 1,
+          .xClose = go_close,
+          .xRead = go_read,
+          .xWrite = go_write,
+          .xTruncate = go_truncate,
+          .xSync = go_sync,
+          .xFileSize = go_file_size,
+          .xLock = go_lock,
+          .xUnlock = go_unlock,
+          .xCheckReservedLock = go_check_reserved_lock,
+          .xFileControl = go_file_control,
+          .xSectorSize = go_sector_size,
+          .xDeviceCharacteristics = go_device_characteristics,
+      },
+      {
+          .iVersion = 2,
+          .xClose = go_close,
+          .xRead = go_read,
+          .xWrite = go_write,
+          .xTruncate = go_truncate,
+          .xSync = go_sync,
+          .xFileSize = go_file_size,
+          .xLock = go_lock,
+          .xUnlock = go_unlock,
+          .xCheckReservedLock = go_check_reserved_lock,
+          .xFileControl = go_file_control,
+          .xSectorSize = go_sector_size,
+          .xDeviceCharacteristics = go_device_characteristics,
+          .xShmMap = go_shm_map,
+          .xShmLock = go_shm_lock,
+          .xShmBarrier = go_shm_barrier,
+          .xShmUnmap = go_shm_unmap,
+      }};
+  int version = 0;
   memset(file, 0, vfs->szOsFile);
-  int rc = go_open(vfs, zName, file, flags, pOutFlags);
+  int rc = go_open(vfs, zName, file, flags, pOutFlags, &version);
   if (rc) {
     return rc;
   }
-  file->pMethods = &os_io;
+  file->pMethods = &go_io[version];
   return SQLITE_OK;
 }
 

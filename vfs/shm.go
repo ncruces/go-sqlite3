@@ -23,9 +23,41 @@ import (
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = true
 
+func vfsVersion(mod api.Module) uint32 {
+	pagesize := unix.Getpagesize()
+
+	// 32KB pages must be a multiple of the system's page size.
+	if (32*1024)%pagesize != 0 {
+		return 0
+	}
+
+	// The module's memory must be page aligned.
+	b, ok := mod.Memory().Read(0, 1)
+	if ok && uintptr(unsafe.Pointer(&b[0]))%uintptr(pagesize) != 0 {
+		return 0
+	}
+
+	// TODO: feeling lucky.
+	return 1
+}
+
 type vfsShm struct {
-	*os.File
+	file    *os.File
 	regions []shmRegion
+}
+
+func (s *vfsShm) free() {
+	// Unmap pages.
+	for _, r := range s.regions {
+		munmap(r.addr, uintptr(r.length))
+	}
+
+	// Close the file.
+	if s.file != nil {
+		s.file.Close()
+	}
+
+	*s = vfsShm{}
 }
 
 type shmRegion struct {
@@ -39,7 +71,7 @@ const (
 	_SHM_DMS   = _SHM_BASE + _SHM_NLOCK
 )
 
-func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
+func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
 	// Ensure size is a multiple of the OS page size.
 	// TODO: don't implement shared memory if this isn't the case.
 	if int(size)%unix.Getpagesize() != 0 {
@@ -48,8 +80,8 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 
 	// TODO: handle the read-only case.
 	// TODO: should we close the file on error?
-	if f.shm.File == nil {
-		f.shm.File, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+	if f.shm.file == nil {
+		f.shm.file, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 		if err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
@@ -57,18 +89,18 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 
 	// Dead man's switch.
 	// TODO: fix race condition.
-	if rc := osReadLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
+	if rc := osReadLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
 		return 0, rc
 	}
-	if rc := osWriteLock(f.shm.File, _SHM_DMS, 1, 0); rc == _OK {
-		if err := f.shm.File.Truncate(0); err != nil {
+	if rc := osWriteLock(f.shm.file, _SHM_DMS, 1, 0); rc == _OK {
+		if err := f.shm.file.Truncate(0); err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
-		osReadLock(f.shm.File, _SHM_DMS, 1, 0)
+		osReadLock(f.shm.file, _SHM_DMS, 1, 0)
 	}
 
 	// Check if file is big enough.
-	s, err := f.shm.Seek(0, io.SeekEnd)
+	s, err := f.shm.file.Seek(0, io.SeekEnd)
 	if err != nil {
 		return 0, _IOERR_SHMSIZE
 	}
@@ -76,7 +108,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 		if !extend {
 			return 0, nil
 		}
-		err := osAllocate(f.shm.File, n)
+		err := osAllocate(f.shm.file, n)
 		if err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
@@ -99,7 +131,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	p := util.View(mod, uint32(stack[0]), uint64(size))
 	a, err := mmap(uintptr(unsafe.Pointer(&p[0])), uintptr(size),
 		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_FIXED,
-		int(f.shm.Fd()), int64(id)*int64(size))
+		int(f.shm.file.Fd()), int64(id)*int64(size))
 	if err != nil {
 		return 0, _IOERR_SHMMAP
 	}
@@ -108,7 +140,7 @@ func (f *vfsFile) ShmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	return uint32(stack[0]), nil
 }
 
-func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
+func (f *vfsFile) shmLock(offset, n uint32, flags _ShmFlag) error {
 	// Argument check.
 	if n == 0 || offset+n > _SHM_NLOCK {
 		panic(util.AssertErr())
@@ -129,33 +161,32 @@ func (f *vfsFile) ShmLock(offset, n uint32, flags _ShmFlag) error {
 
 	switch {
 	case flags&_SHM_UNLOCK != 0:
-		return osUnlock(f.shm.File, _SHM_BASE+int64(offset), int64(n))
+		return osUnlock(f.shm.file, _SHM_BASE+int64(offset), int64(n))
 	case flags&_SHM_SHARED != 0:
-		return osReadLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
+		return osReadLock(f.shm.file, _SHM_BASE+int64(offset), int64(n), 0)
 	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
+		return osWriteLock(f.shm.file, _SHM_BASE+int64(offset), int64(n), 0)
 	default:
 		panic(util.AssertErr())
 	}
 }
 
-func (f *vfsFile) ShmUnmap(delete bool) {
+func (f *vfsFile) shmUnmap(delete bool) {
 	// TODO: recycle the malloc'd memory pages.
 
-	// Unmap pages.
+	// Protect pages.
 	for _, r := range f.shm.regions {
-		// mmap(r.addr, uintptr(r.length), unix.PROT_NONE, unix.MAP_ANON|unix.MAP_FIXED, -1, 0)
-		munmap(r.addr, uintptr(r.length))
+		mmap(r.addr, uintptr(r.length), unix.PROT_NONE, unix.MAP_ANON|unix.MAP_FIXED, -1, 0)
 	}
 	f.shm.regions = f.shm.regions[:0]
 
 	// Close the file.
-	if f.shm.File != nil {
+	if f.shm.file != nil {
 		if delete {
-			os.Remove(f.shm.Name())
+			os.Remove(f.shm.file.Name())
 		}
-		f.shm.Close()
-		f.shm.File = nil
+		f.shm.file.Close()
+		f.shm.file = nil
 	}
 }
 

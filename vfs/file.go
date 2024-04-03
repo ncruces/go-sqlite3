@@ -143,7 +143,7 @@ var (
 )
 
 func (f *vfsFile) Close() error {
-	f.ShmUnmap(false)
+	f.shm.free()
 	return f.File.Close()
 }
 

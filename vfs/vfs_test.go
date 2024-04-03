@@ -212,7 +212,7 @@ func Test_vfsFile(t *testing.T) {
 	ctx := util.NewContext(context.TODO())
 
 	// Open a temporary file.
-	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -284,7 +284,7 @@ func Test_vfsFile_psow(t *testing.T) {
 	ctx := util.NewContext(context.TODO())
 
 	// Open a temporary file.
-	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

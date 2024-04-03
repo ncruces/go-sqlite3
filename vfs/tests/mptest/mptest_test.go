@@ -192,11 +192,6 @@ func Test_multiwrite01_memory(t *testing.T) {
 }
 
 func Test_config01_wal(t *testing.T) {
-	// TODO: reconsider this.
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
 	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test",
@@ -209,16 +204,14 @@ func Test_config01_wal(t *testing.T) {
 }
 
 func Test_crash01_wal(t *testing.T) {
-	// TODO: reconsider this.
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
 	if os.Getenv("CI") != "" {
 		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
 	}
 
 	ctx := util.NewContext(newContext(t))
@@ -233,13 +226,11 @@ func Test_crash01_wal(t *testing.T) {
 }
 
 func Test_multiwrite01_wal(t *testing.T) {
-	// TODO: reconsider this.
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
 	if testing.Short() {
 		t.Skip("skipping in short mode")
+	}
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
 	}
 
 	ctx := util.NewContext(newContext(t))
