@@ -37,8 +37,7 @@ func vfsVersion(mod api.Module) uint32 {
 		return 0
 	}
 
-	// TODO: feeling lucky.
-	return 1
+	return 1 // TODO: feeling lucky?
 }
 
 type vfsShm struct {
@@ -73,7 +72,6 @@ const (
 
 func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
 	// Ensure size is a multiple of the OS page size.
-	// TODO: don't implement shared memory if this isn't the case.
 	if int(size)%unix.Getpagesize() != 0 {
 		return 0, _IOERR_SHMMAP
 	}
@@ -88,15 +86,20 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	}
 
 	// Dead man's switch.
-	// TODO: fix race condition.
-	if rc := osReadLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
-		return 0, rc
-	}
-	if rc := osWriteLock(f.shm.file, _SHM_DMS, 1, 0); rc == _OK {
+	if lock, rc := osGetLock(f.shm.file, _SHM_DMS, 1); rc != _OK {
+		return 0, _IOERR_LOCK
+	} else if lock == unix.F_WRLCK {
+		return 0, _BUSY
+	} else if lock == unix.F_UNLCK {
+		if rc := osWriteLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
+			return 0, rc
+		}
 		if err := f.shm.file.Truncate(0); err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
-		osReadLock(f.shm.file, _SHM_DMS, 1, 0)
+	}
+	if rc := osReadLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
+		return 0, rc
 	}
 
 	// Check if file is big enough.

@@ -14,7 +14,7 @@ import "github.com/tetratelabs/wazero/api"
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = false
 
-func vfsVersion(mod api.Module) uint32 { return 0 }
+func vfsVersion(api.Module) uint32 { return 0 }
 
 type vfsShm struct{}
 
