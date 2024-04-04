@@ -20,7 +20,7 @@ func TestBackup(t *testing.T) {
 		}
 		defer db.Close()
 
-		err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+		err = db.Exec(`CREATE TABLE users (id INT, name VARCHAR(10))`)
 		if err != nil {
 			t.Fatal(err)
 		}

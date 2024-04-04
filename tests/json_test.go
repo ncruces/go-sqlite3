@@ -31,7 +31,7 @@ func TestJSON(t *testing.T) {
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS test (col)`)
+	_, err = conn.ExecContext(ctx, `CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}

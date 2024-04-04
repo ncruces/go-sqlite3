@@ -19,7 +19,7 @@ func TestStmt(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}

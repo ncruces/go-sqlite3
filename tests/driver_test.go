@@ -27,7 +27,7 @@ func TestDriver(t *testing.T) {
 	defer conn.Close()
 
 	res, err := conn.ExecContext(ctx,
-		`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+		`CREATE TABLE users (id INT, name VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
 	}

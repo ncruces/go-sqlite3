@@ -27,7 +27,7 @@ func Example() {
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	_, err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,8 +79,8 @@ func Test_readblob(t *testing.T) {
 	}
 
 	err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS test1 (col);
-		CREATE TABLE IF NOT EXISTS test2 (col);
+		CREATE TABLE test1 (col);
+		CREATE TABLE test2 (col);
 		INSERT INTO test1 VALUES (x'cafe');
 		INSERT INTO test2 VALUES (x'babe');
 	`)
@@ -139,8 +139,8 @@ func Test_openblob(t *testing.T) {
 	}
 
 	err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS test1 (col);
-		CREATE TABLE IF NOT EXISTS test2 (col);
+		CREATE TABLE test1 (col);
+		CREATE TABLE test2 (col);
 		INSERT INTO test1 VALUES (x'cafe');
 		INSERT INTO test2 VALUES (x'babe');
 	`)

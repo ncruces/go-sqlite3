@@ -18,7 +18,7 @@ func Example_json() {
 	defer db.Close()
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS orders (
+		CREATE TABLE orders (
 			cart_id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
 			cart    TEXT

@@ -16,7 +16,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+	err = db.Exec(`CREATE TABLE users (id INT, name VARCHAR(10))`)
 	if err != nil {
 		log.Fatal(err)
 	}

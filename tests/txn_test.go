@@ -22,7 +22,7 @@ func TestConn_Transaction_exec(t *testing.T) {
 	db.CommitHook(func() bool { return true })
 	db.UpdateHook(func(sqlite3.AuthorizerActionCode, string, string, int64) {})
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestConn_Transaction_panic(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +255,7 @@ func TestConn_Transaction_rollback(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +301,7 @@ func TestConn_Savepoint_exec(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +369,7 @@ func TestConn_Savepoint_panic(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,7 +426,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -506,7 +506,7 @@ func TestConn_Savepoint_rollback(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}

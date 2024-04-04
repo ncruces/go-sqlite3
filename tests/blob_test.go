@@ -22,7 +22,7 @@ func TestBlob(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestBlob_large(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestBlob_overflow(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestBlob_invalid(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestBlob_Write_readonly(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestBlob_Read_expired(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestBlob_Seek(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +358,7 @@ func TestBlob_Reopen(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -20,7 +20,7 @@ func Example() {
 	csv.Register(db)
 
 	err = db.Exec(`
-		CREATE VIRTUAL TABLE IF NOT EXISTS eurofxref USING csv(
+		CREATE VIRTUAL TABLE eurofxref USING csv(
 			filename = 'testdata/eurofxref.csv',
 			header   = YES,
 			columns  = 42,

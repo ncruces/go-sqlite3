@@ -146,8 +146,7 @@ func TestTimeFormat_Scanner(t *testing.T) {
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(ctx,
-		`CREATE TABLE IF NOT EXISTS test (col)`)
+	_, err = conn.ExecContext(ctx, `CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +177,7 @@ func TestDB_timeCollation(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS times (tstamp COLLATE TIME)`)
+	err = db.Exec(`CREATE TABLE times (tstamp COLLATE TIME)`)
 	if err != nil {
 		t.Fatal(err)
 	}

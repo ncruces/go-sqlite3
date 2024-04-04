@@ -81,7 +81,7 @@ func TestRegister_collation(t *testing.T) {
 
 	Register(db)
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
+	err = db.Exec(`CREATE TABLE words (word VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
 	}

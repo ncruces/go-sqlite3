@@ -153,7 +153,7 @@ func Test_BeginTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = tx1.Exec(`CREATE TABLE IF NOT EXISTS test (col)`)
+	_, err = tx1.Exec(`CREATE TABLE test (col)`)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -310,7 +310,7 @@ func Test_time(t *testing.T) {
 
 			twosday := time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
 
-			_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (at DATETIME)`)
+			_, err = db.Exec(`CREATE TABLE test (at DATETIME)`)
 			if err != nil {
 				t.Fatal(err)
 			}

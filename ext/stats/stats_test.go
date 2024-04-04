@@ -20,7 +20,7 @@ func TestRegister_variance(t *testing.T) {
 
 	stats.Register(db)
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (x)`)
+	err = db.Exec(`CREATE TABLE data (x)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestRegister_covariance(t *testing.T) {
 
 	stats.Register(db)
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS data (y, x)`)
+	err = db.Exec(`CREATE TABLE data (y, x)`)
 	if err != nil {
 		t.Fatal(err)
 	}

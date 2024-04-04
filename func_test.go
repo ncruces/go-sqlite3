@@ -18,7 +18,7 @@ func ExampleConn_CreateCollation() {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
+	err = db.Exec(`CREATE TABLE words (word VARCHAR(10))`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func ExampleConn_CreateFunction() {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
+	err = db.Exec(`CREATE TABLE words (word VARCHAR(10))`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func ExampleContext_SetAuxData() {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE IF NOT EXISTS words (word VARCHAR(10))`)
+	err = db.Exec(`CREATE TABLE words (word VARCHAR(10))`)
 	if err != nil {
 		log.Fatal(err)
 	}
