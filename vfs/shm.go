@@ -6,7 +6,7 @@ import (
 	"context"
 	"io"
 	"os"
-	"unsafe"
+	"reflect"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
@@ -24,20 +24,16 @@ import (
 const SupportsSharedMemory = true
 
 func vfsVersion(mod api.Module) uint32 {
-	pagesize := unix.Getpagesize()
-
 	// 32KB pages must be a multiple of the system's page size.
-	if (32*1024)%pagesize != 0 {
+	if (32*1024)%unix.Getpagesize() != 0 {
 		return 0
 	}
 
-	// The module's memory must be page aligned.
-	b, ok := mod.Memory().Read(0, 1)
-	if ok && uintptr(unsafe.Pointer(&b[0]))%uintptr(pagesize) != 0 {
+	// Memory must have been mmaped.
+	if reflect.ValueOf(mod.Memory()).Elem().FieldByName("mmappedBuffer").IsNil() {
 		return 0
 	}
-
-	return 1 // TODO: feeling lucky?
+	return 1
 }
 
 type vfsShm struct {

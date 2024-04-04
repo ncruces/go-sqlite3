@@ -73,11 +73,7 @@ func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, si
 }
 
 func (r *MappedRegion) Close() error {
-	if addr := r.addr; addr != 0 {
-		r.addr = 0
-		return munmap(addr, uintptr(r.size))
-	}
-	return nil
+	return munmap(r.addr, uintptr(r.size))
 }
 
 func (r *MappedRegion) Unmap() error {
