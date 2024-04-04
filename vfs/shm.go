@@ -151,9 +151,3 @@ func (f *vfsFile) shmUnmap(delete bool) {
 	f.shm.Close()
 	f.shm.File = nil
 }
-
-//go:linkname mmap syscall.mmap
-func mmap(addr, length uintptr, prot, flag, fd int, pos int64) (uintptr, error)
-
-//go:linkname munmap syscall.munmap
-func munmap(addr, length uintptr) error
