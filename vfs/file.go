@@ -143,7 +143,7 @@ var (
 )
 
 func (f *vfsFile) Close() error {
-	f.shm.free()
+	f.shm.Close()
 	return f.File.Close()
 }
 

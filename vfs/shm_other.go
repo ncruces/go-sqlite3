@@ -18,4 +18,4 @@ func vfsVersion(api.Module) uint32 { return 0 }
 
 type vfsShm struct{}
 
-func (vfsShm) free() {}
+func (vfsShm) Close() error { return nil }

@@ -41,27 +41,8 @@ func vfsVersion(mod api.Module) uint32 {
 }
 
 type vfsShm struct {
-	file    *os.File
-	regions []shmRegion
-}
-
-func (s *vfsShm) free() {
-	// Unmap pages.
-	for _, r := range s.regions {
-		munmap(r.addr, uintptr(r.length))
-	}
-
-	// Close the file.
-	if s.file != nil {
-		s.file.Close()
-	}
-
-	*s = vfsShm{}
-}
-
-type shmRegion struct {
-	addr   uintptr
-	length uint32
+	*os.File
+	regions []*util.MappedRegion
 }
 
 const (
@@ -77,33 +58,32 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	}
 
 	// TODO: handle the read-only case.
-	// TODO: should we close the file on error?
-	if f.shm.file == nil {
-		f.shm.file, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+	if f.shm.File == nil {
+		f.shm.File, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 		if err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
 	}
 
 	// Dead man's switch.
-	if lock, rc := osGetLock(f.shm.file, _SHM_DMS, 1); rc != _OK {
+	if lock, rc := osGetLock(f.shm.File, _SHM_DMS, 1); rc != _OK {
 		return 0, _IOERR_LOCK
 	} else if lock == unix.F_WRLCK {
 		return 0, _BUSY
 	} else if lock == unix.F_UNLCK {
-		if rc := osWriteLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
+		if rc := osWriteLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
 			return 0, rc
 		}
-		if err := f.shm.file.Truncate(0); err != nil {
+		if err := f.shm.Truncate(0); err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
 	}
-	if rc := osReadLock(f.shm.file, _SHM_DMS, 1, 0); rc != _OK {
+	if rc := osReadLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
 		return 0, rc
 	}
 
 	// Check if file is big enough.
-	s, err := f.shm.file.Seek(0, io.SeekEnd)
+	s, err := f.shm.Seek(0, io.SeekEnd)
 	if err != nil {
 		return 0, _IOERR_SHMSIZE
 	}
@@ -111,36 +91,18 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 		if !extend {
 			return 0, nil
 		}
-		err := osAllocate(f.shm.file, n)
+		err := osAllocate(f.shm.File, n)
 		if err != nil {
 			return 0, _IOERR_SHMOPEN
 		}
 	}
 
-	// Allocate some page aligned memmory.
-	alloc := mod.ExportedFunction("aligned_alloc")
-	stack := [2]uint64{
-		uint64(unix.Getpagesize()),
-		uint64(size),
-	}
-	if err := alloc.CallWithStack(ctx, stack[:]); err != nil {
-		panic(err)
-	}
-	if stack[0] == 0 {
-		panic(util.OOMErr)
-	}
-
-	// Map the file into the allocated pages.
-	p := util.View(mod, uint32(stack[0]), uint64(size))
-	a, err := mmap(uintptr(unsafe.Pointer(&p[0])), uintptr(size),
-		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_FIXED,
-		int(f.shm.file.Fd()), int64(id)*int64(size))
+	r, err := util.MapRegion(ctx, mod, f.shm.File, int64(id)*int64(size), size)
 	if err != nil {
-		return 0, _IOERR_SHMMAP
+		return 0, err
 	}
-
-	f.shm.regions = append(f.shm.regions, shmRegion{a, size})
-	return uint32(stack[0]), nil
+	f.shm.regions = append(f.shm.regions, r)
+	return r.Ptr, nil
 }
 
 func (f *vfsFile) shmLock(offset, n uint32, flags _ShmFlag) error {
@@ -164,33 +126,30 @@ func (f *vfsFile) shmLock(offset, n uint32, flags _ShmFlag) error {
 
 	switch {
 	case flags&_SHM_UNLOCK != 0:
-		return osUnlock(f.shm.file, _SHM_BASE+int64(offset), int64(n))
+		return osUnlock(f.shm.File, _SHM_BASE+int64(offset), int64(n))
 	case flags&_SHM_SHARED != 0:
-		return osReadLock(f.shm.file, _SHM_BASE+int64(offset), int64(n), 0)
+		return osReadLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
 	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(f.shm.file, _SHM_BASE+int64(offset), int64(n), 0)
+		return osWriteLock(f.shm.File, _SHM_BASE+int64(offset), int64(n), 0)
 	default:
 		panic(util.AssertErr())
 	}
 }
 
 func (f *vfsFile) shmUnmap(delete bool) {
-	// TODO: recycle the malloc'd memory pages.
-
-	// Protect pages.
+	// Unmap regions.
 	for _, r := range f.shm.regions {
-		mmap(r.addr, uintptr(r.length), unix.PROT_NONE, unix.MAP_ANON|unix.MAP_FIXED, -1, 0)
+		r.Unmap()
 	}
+	clear(f.shm.regions)
 	f.shm.regions = f.shm.regions[:0]
 
 	// Close the file.
-	if f.shm.file != nil {
-		if delete {
-			os.Remove(f.shm.file.Name())
-		}
-		f.shm.file.Close()
-		f.shm.file = nil
+	if delete && f.shm.File != nil {
+		os.Remove(f.shm.Name())
 	}
+	f.shm.Close()
+	f.shm.File = nil
 }
 
 //go:linkname mmap syscall.mmap
