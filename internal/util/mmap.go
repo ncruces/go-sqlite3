@@ -8,12 +8,21 @@ import (
 	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 	"golang.org/x/sys/unix"
 )
 
 type mmapState struct {
 	regions []*MappedRegion
 	enabled bool
+}
+
+func (s *mmapState) init(ctx context.Context, enabled bool) context.Context {
+	if enabled {
+		s.enabled = enabled
+		return experimental.WithMemoryAllocator(ctx, mappableMemoryAllocator{})
+	}
+	return ctx
 }
 
 func (s *mmapState) closeNotify() {
