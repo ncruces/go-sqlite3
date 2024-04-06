@@ -13,6 +13,7 @@ import (
 
 type mmapState struct {
 	regions []*MappedRegion
+	enabled bool
 }
 
 func (s *mmapState) closeNotify() {
@@ -20,6 +21,11 @@ func (s *mmapState) closeNotify() {
 		r.Close()
 	}
 	s.regions = nil
+}
+
+func CanMap(ctx context.Context) bool {
+	s := ctx.Value(moduleKey{}).(*moduleState)
+	return s.mmapState.enabled
 }
 
 func (s *mmapState) new(ctx context.Context, mod api.Module, size uint32) *MappedRegion {
@@ -95,8 +101,28 @@ func (r *MappedRegion) mmap(f *os.File, offset int64) error {
 	return err
 }
 
+type mappableMemoryAllocator struct{}
+
+func (mappableMemoryAllocator) Make(min, cap, max uint64) []byte {
+	addr, err := mmap(0, uintptr(max),
+		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON,
+		-1, 0)
+	if err != nil {
+		panic(OOMErr)
+	}
+	return unsafe.Slice(addr, max)[:min]
+}
+
+func (mappableMemoryAllocator) Grow(old []byte, more uint64) []byte {
+	panic(OOMErr)
+}
+
+func (mappableMemoryAllocator) Free(buf []byte) {
+	munmap(uintptr(unsafe.Pointer(&buf[0])), uintptr(cap(buf)))
+}
+
 //go:linkname mmap syscall.mmap
-func mmap(addr, length uintptr, prot, flag, fd int, pos int64) (uintptr, error)
+func mmap(addr, length uintptr, prot, flag, fd int, pos int64) (*byte, error)
 
 //go:linkname munmap syscall.munmap
 func munmap(addr, length uintptr) error

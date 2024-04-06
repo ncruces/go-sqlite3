@@ -25,7 +25,8 @@ var (
 	Binary []byte // Wasm binary to load.
 	Path   string // Path to load the binary from.
 
-	RuntimeConfig wazero.RuntimeConfig
+	RuntimeConfig  wazero.RuntimeConfig
+	MappableMemory bool
 )
 
 var instance struct {
@@ -85,7 +86,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 	}
 
 	sqlt = new(sqlite)
-	sqlt.ctx = util.NewContext(context.Background())
+	sqlt.ctx = util.NewContext(context.Background(), MappableMemory)
 
 	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
 		instance.compiled, wazero.NewModuleConfig())

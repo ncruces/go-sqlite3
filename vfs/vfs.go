@@ -170,8 +170,8 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
-	if pOutVersion != 0 {
-		util.WriteUint32(mod, pOutVersion, vfsVersion(mod))
+	if pOutVersion != 0 && util.CanMap(ctx) {
+		util.WriteUint32(mod, pOutVersion, 1)
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK

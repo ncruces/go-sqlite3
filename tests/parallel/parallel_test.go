@@ -19,9 +19,8 @@ import (
 
 func TestMain(m *testing.M) {
 	if vfs.SupportsSharedMemory {
-		sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().
-			WithMemoryCapacityFromMax(true).
-			WithMemoryLimitPages(1024)
+		sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().WithMemoryLimitPages(1024)
+		sqlite3.MappableMemory = true
 	}
 	os.Exit(m.Run())
 }

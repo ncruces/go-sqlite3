@@ -6,7 +6,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"reflect"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
@@ -22,19 +21,6 @@ import (
 // [WAL without shared-memory]: https://sqlite.org/wal.html#noshm
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = true
-
-func vfsVersion(mod api.Module) uint32 {
-	// 32KB pages must be a multiple of the system's page size.
-	if (32*1024)%unix.Getpagesize() != 0 {
-		return 0
-	}
-
-	// Memory must have been mmaped.
-	if reflect.ValueOf(mod.Memory()).Elem().FieldByName("mmappedBuffer").IsNil() {
-		return 0
-	}
-	return 1
-}
 
 type vfsShm struct {
 	*os.File
