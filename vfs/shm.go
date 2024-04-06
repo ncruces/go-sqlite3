@@ -33,18 +33,24 @@ const (
 	_SHM_DMS   = _SHM_BASE + _SHM_NLOCK
 )
 
-func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (_ uint32, err error) {
+func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (uint32, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)%unix.Getpagesize() != 0 {
 		return 0, _IOERR_SHMMAP
 	}
 
-	// TODO: handle the read-only case.
 	if f.shm.File == nil {
-		f.shm.File, err = os.OpenFile(f.Name()+"-shm", unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
-		if err != nil {
-			return 0, _IOERR_SHMOPEN
+		var flag int
+		if f.readOnly {
+			flag = unix.O_RDONLY | unix.O_NOFOLLOW
+		} else {
+			flag = unix.O_RDWR | unix.O_CREAT | unix.O_NOFOLLOW
 		}
+		s, err := os.OpenFile(f.Name()+"-shm", flag, 0666)
+		if err != nil {
+			return 0, _CANTOPEN
+		}
+		f.shm.File = s
 	}
 
 	// Dead man's switch.
@@ -53,6 +59,9 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	} else if lock == unix.F_WRLCK {
 		return 0, _BUSY
 	} else if lock == unix.F_UNLCK {
+		if f.readOnly {
+			return 0, _READONLY_CANTINIT
+		}
 		if rc := osWriteLock(f.shm.File, _SHM_DMS, 1, 0); rc != _OK {
 			return 0, rc
 		}
@@ -75,7 +84,7 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 		}
 		err := osAllocate(f.shm.File, n)
 		if err != nil {
-			return 0, _IOERR_SHMOPEN
+			return 0, _IOERR_SHMSIZE
 		}
 	}
 

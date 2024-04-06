@@ -48,6 +48,7 @@ const (
 	_IOERR_ROLLBACK_ATOMIC   _ErrorCode = util.IOERR_ROLLBACK_ATOMIC
 	_CANTOPEN_FULLPATH       _ErrorCode = util.CANTOPEN_FULLPATH
 	_CANTOPEN_ISDIR          _ErrorCode = util.CANTOPEN_ISDIR
+	_READONLY_CANTINIT       _ErrorCode = util.READONLY_CANTINIT
 	_OK_SYMLINK              _ErrorCode = util.OK_SYMLINK
 )
 
