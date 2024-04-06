@@ -20,7 +20,7 @@ type mmapState struct {
 func (s *mmapState) init(ctx context.Context, enabled bool) context.Context {
 	if enabled {
 		s.enabled = enabled
-		return experimental.WithMemoryAllocator(ctx, mappableMemoryAllocator{})
+		return experimental.WithMemoryAllocator(ctx, &mappableMemoryAllocator{})
 	}
 	return ctx
 }
@@ -110,24 +110,29 @@ func (r *MappedRegion) mmap(f *os.File, offset int64) error {
 	return err
 }
 
-type mappableMemoryAllocator struct{}
+type mappableMemoryAllocator struct {
+	addr *byte
+	size uintptr
+}
 
-func (mappableMemoryAllocator) Make(min, cap, max uint64) []byte {
-	addr, err := mmap(0, uintptr(max),
+func (m *mappableMemoryAllocator) Make(min, cap, max uint64) []byte {
+	var err error
+	m.size = uintptr(max)
+	m.addr, err = mmap(0, m.size,
 		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON,
 		-1, 0)
 	if err != nil {
 		panic(OOMErr)
 	}
-	return unsafe.Slice(addr, max)[:min]
+	return unsafe.Slice(m.addr, max)[:min]
 }
 
-func (mappableMemoryAllocator) Grow(old []byte, more uint64) []byte {
+func (m *mappableMemoryAllocator) Free() {
+	munmap(uintptr(unsafe.Pointer(m.addr)), m.size)
+}
+
+func (mappableMemoryAllocator) Grow(uint64) []byte {
 	panic(OOMErr)
-}
-
-func (mappableMemoryAllocator) Free(buf []byte) {
-	munmap(uintptr(unsafe.Pointer(&buf[0])), uintptr(cap(buf)))
 }
 
 //go:linkname mmap syscall.mmap
