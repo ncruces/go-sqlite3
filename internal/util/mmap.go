@@ -18,18 +18,10 @@ type mmapState struct {
 }
 
 func (s *mmapState) init(ctx context.Context, enabled bool) context.Context {
-	if enabled {
-		s.enabled = enabled
-		return experimental.WithMemoryAllocator(ctx, &mappableMemoryAllocator{})
+	if s.enabled = enabled; enabled {
+		return experimental.WithMemoryAllocator(ctx, &MmapedMemoryAllocator{})
 	}
 	return ctx
-}
-
-func (s *mmapState) closeNotify() {
-	for _, r := range s.regions {
-		r.Close()
-	}
-	s.regions = nil
 }
 
 func CanMap(ctx context.Context) bool {
@@ -87,10 +79,6 @@ func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, si
 	return r, nil
 }
 
-func (r *MappedRegion) Close() error {
-	return munmap(r.addr, uintptr(r.size))
-}
-
 func (r *MappedRegion) Unmap() error {
 	// We can't munmap the region, otherwise it could be remaped.
 	// Instead, convert it to a protected, private, anonymous mapping.
@@ -108,31 +96,6 @@ func (r *MappedRegion) mmap(f *os.File, offset int64) error {
 		int(f.Fd()), offset)
 	r.used = err == nil
 	return err
-}
-
-type mappableMemoryAllocator struct {
-	addr *byte
-	size uintptr
-}
-
-func (m *mappableMemoryAllocator) Make(min, cap, max uint64) []byte {
-	var err error
-	m.size = uintptr(max)
-	m.addr, err = mmap(0, m.size,
-		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANON,
-		-1, 0)
-	if err != nil {
-		panic(OOMErr)
-	}
-	return unsafe.Slice(m.addr, max)[:min]
-}
-
-func (m *mappableMemoryAllocator) Free() {
-	munmap(uintptr(unsafe.Pointer(m.addr)), m.size)
-}
-
-func (mappableMemoryAllocator) Grow(uint64) []byte {
-	panic(OOMErr)
 }
 
 //go:linkname mmap syscall.mmap

@@ -21,6 +21,6 @@ func NewContext(ctx context.Context, mappableMemory bool) context.Context {
 }
 
 func (s *moduleState) CloseNotify(ctx context.Context, exitCode uint32) {
-	s.handleState.closeNotify()
-	s.mmapState.closeNotify()
+	s.handleState.close()
+	*s = moduleState{}
 }
