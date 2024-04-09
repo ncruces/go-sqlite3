@@ -1,53 +1,68 @@
-//go:build (linux || darwin) && (amd64 || arm64)
+//go:build unix
 
 package util
 
 import (
 	"math"
-	"syscall"
+
+	"github.com/tetratelabs/wazero/experimental"
+	"golang.org/x/sys/unix"
 )
 
-type MmapedMemoryAllocator []byte
-
-func (m *MmapedMemoryAllocator) Make(min, cap, max uint64) []byte {
+func mmappedAllocator(min, cap, max uint64) experimental.MemoryBuffer {
 	if max > math.MaxInt {
 		// This ensures int(max) overflows to a negative value,
-		// and syscall.Mmap returns EINVAL.
+		// and unix.Mmap returns EINVAL.
 		max = math.MaxUint64
 	}
 	// Reserve the full max bytes of address space, to ensure we don't need to move it.
 	// A protected, private, anonymous mapping should not commit memory.
-	b, err := syscall.Mmap(-1, 0, int(max), syscall.PROT_NONE, syscall.MAP_PRIVATE|syscall.MAP_ANON)
+	b, err := unix.Mmap(-1, 0, int(max), unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
 		panic(err)
 	}
-	// Commit the initial min bytes of memory.
-	err = syscall.Mprotect(b[:min], syscall.PROT_READ|syscall.PROT_WRITE)
+	// Commit the initial cap bytes of memory.
+	err = unix.Mprotect(b[:cap], unix.PROT_READ|unix.PROT_WRITE)
 	if err != nil {
-		syscall.Munmap(b)
+		unix.Munmap(b)
 		panic(err)
 	}
-	b = b[:min]
-	*m = b
-	return b
+	return &mmappedBuffer{
+		buf: b[:cap],
+		cur: min,
+	}
 }
 
-func (m *MmapedMemoryAllocator) Grow(size uint64) []byte {
-	b := *m
+// The slice covers the entire mmapped memory:
+//   - len(buf) is the already committed memory,
+//   - cap(buf) is the reserved address space,
+//   - cur is the already requested size.
+type mmappedBuffer struct {
+	buf []byte
+	cur uint64
+}
+
+func (m *mmappedBuffer) Buffer() []byte {
+	// Limit capacity because bytes beyond len(m.buf)
+	// have not yet been committed.
+	return m.buf[:m.cur:len(m.buf)]
+}
+
+func (m *mmappedBuffer) Grow(size uint64) []byte {
 	// Commit additional memory up to size bytes.
-	err := syscall.Mprotect(b[len(b):size], syscall.PROT_READ|syscall.PROT_WRITE)
+	err := unix.Mprotect(m.buf[len(m.buf):size], unix.PROT_READ|unix.PROT_WRITE)
 	if err != nil {
 		panic(err)
 	}
-	b = b[:size]
-	*m = b
-	return b
+	m.buf = m.buf[:size]
+	m.cur = size
+	return m.Buffer()
 }
 
-func (m *MmapedMemoryAllocator) Free() {
-	err := syscall.Munmap(*m)
+func (m *mmappedBuffer) Free() {
+	err := unix.Munmap(m.buf)
 	if err != nil {
 		panic(err)
 	}
-	*m = nil
+	m.buf = nil
 }

@@ -14,4 +14,4 @@ require (
 
 retract v0.4.0 // tagged from the wrong branch
 
-replace github.com/tetratelabs/wazero => github.com/ncruces/wazero v0.0.0-20240406121256-0283488c26c8
+replace github.com/tetratelabs/wazero => github.com/ncruces/wazero v0.0.0-20240409112346-f2be6da37a3d
