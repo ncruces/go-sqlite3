@@ -1,5 +1,5 @@
-github.com/ncruces/wazero v0.0.0-20240409112346-f2be6da37a3d h1:t3S5uhR50fDxrCgoMLcVDFo2jpYdKjq5VWbXFUMHv0w=
-github.com/ncruces/wazero v0.0.0-20240409112346-f2be6da37a3d/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
+github.com/ncruces/wazero v0.0.0-20240409122832-a4dd11a09060 h1:dkYSDM1fMCDttJ6sCdlUHP/BiBzG3hJxDnA+k6zUdyY=
+github.com/ncruces/wazero v0.0.0-20240409122832-a4dd11a09060/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
 golang.org/x/mod v0.8.0 h1:LUYupSeNrTNCGzR/hVBk2NHZO4hXcVaW1k4Qx7rjPx8=
 golang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/net v0.21.0 h1:AQyQV4dYCvJ7vGmJyKki9+PBdyvhkSd8EIx/qb0AYv4=

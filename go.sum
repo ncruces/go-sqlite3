@@ -1,7 +1,7 @@
 github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt7M=
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
-github.com/ncruces/wazero v0.0.0-20240409112346-f2be6da37a3d h1:t3S5uhR50fDxrCgoMLcVDFo2jpYdKjq5VWbXFUMHv0w=
-github.com/ncruces/wazero v0.0.0-20240409112346-f2be6da37a3d/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
+github.com/ncruces/wazero v0.0.0-20240409122832-a4dd11a09060 h1:dkYSDM1fMCDttJ6sCdlUHP/BiBzG3hJxDnA+k6zUdyY=
+github.com/ncruces/wazero v0.0.0-20240409122832-a4dd11a09060/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
 github.com/psanford/httpreadat v0.1.0 h1:VleW1HS2zO7/4c7c7zNl33fO6oYACSagjJIyMIwZLUE=
 github.com/psanford/httpreadat v0.1.0/go.mod h1:Zg7P+TlBm3bYbyHTKv/EdtSJZn3qwbPwpfZ/I9GKCRE=
 golang.org/x/crypto v0.22.0 h1:g1v0xeRhjcugydODzvb3mEM9SQ0HGp9s/nh3COQ/C30=

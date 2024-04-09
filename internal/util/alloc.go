@@ -10,12 +10,17 @@ import (
 )
 
 func mmappedAllocator(min, cap, max uint64) experimental.MemoryBuffer {
+	// Round up to the page size.
+	rnd := uint64(unix.Getpagesize() - 1)
+	max = (max + rnd) &^ rnd
+	cap = (cap + rnd) &^ rnd
+
 	if max > math.MaxInt {
 		// This ensures int(max) overflows to a negative value,
 		// and unix.Mmap returns EINVAL.
 		max = math.MaxUint64
 	}
-	// Reserve the full max bytes of address space, to ensure we don't need to move it.
+	// Reserve max bytes of address space, to ensure we won't need to move it.
 	// A protected, private, anonymous mapping should not commit memory.
 	b, err := unix.Mmap(-1, 0, int(max), unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
@@ -49,18 +54,26 @@ func (m *mmappedBuffer) Buffer() []byte {
 }
 
 func (m *mmappedBuffer) Grow(size uint64) []byte {
-	// Commit additional memory up to size bytes.
-	err := unix.Mprotect(m.buf[len(m.buf):size], unix.PROT_READ|unix.PROT_WRITE)
-	if err != nil {
-		panic(err)
+	if com := uint64(len(m.buf)); com < size {
+		// Round up to the page size.
+		rnd := uint64(unix.Getpagesize() - 1)
+		new := (size + rnd) &^ rnd
+
+		// Commit additional memory up to new bytes.
+		err := unix.Mprotect(m.buf[com:new], unix.PROT_READ|unix.PROT_WRITE)
+		if err != nil {
+			panic(err)
+		}
+
+		// Update commited memory.
+		m.buf = m.buf[:new]
 	}
-	m.buf = m.buf[:size]
 	m.cur = size
 	return m.Buffer()
 }
 
 func (m *mmappedBuffer) Free() {
-	err := unix.Munmap(m.buf)
+	err := unix.Munmap(m.buf[:cap(m.buf)])
 	if err != nil {
 		panic(err)
 	}
