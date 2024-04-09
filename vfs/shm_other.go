@@ -1,8 +1,6 @@
-//go:build !(linux || darwin) || !(amd64 || arm64) || sqlite3_flock || sqlite3_nosys
+//go:build !(linux || darwin) || !(amd64 || arm64) || sqlite3_flock || sqlite3_noshm || sqlite3_nosys
 
 package vfs
-
-import "github.com/tetratelabs/wazero/api"
 
 // SupportsSharedMemory is true on platforms that support shared memory.
 // To enable shared memory support on those platforms,
@@ -13,8 +11,6 @@ import "github.com/tetratelabs/wazero/api"
 // [WAL without shared-memory]: https://sqlite.org/wal.html#noshm
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = false
-
-func vfsVersion(api.Module) uint32 { return 0 }
 
 type vfsShm struct{}
 
