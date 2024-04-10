@@ -13,7 +13,7 @@ int go_sleep(sqlite3_vfs *, int microseconds);
 int go_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
 
 int go_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
-            int *pOutFlags, int *pOutVersion);
+            int *pOutFlags, int *pOutVFS);
 int go_delete(sqlite3_vfs *, const char *zName, int syncDir);
 int go_access(sqlite3_vfs *, const char *zName, int flags, int *pResOut);
 int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
@@ -74,13 +74,13 @@ static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
           .xShmBarrier = go_shm_barrier,
           .xShmUnmap = go_shm_unmap,
       }};
-  int version = 0;
+  int vfsID = 0;
   memset(file, 0, vfs->szOsFile);
-  int rc = go_open(vfs, zName, file, flags, pOutFlags, &version);
+  int rc = go_open(vfs, zName, file, flags, pOutFlags, &vfsID);
   if (rc) {
     return rc;
   }
-  file->pMethods = &go_io[version];
+  file->pMethods = &go_io[vfsID];
   return SQLITE_OK;
 }
 
