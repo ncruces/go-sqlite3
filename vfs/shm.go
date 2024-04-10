@@ -35,7 +35,7 @@ const (
 
 func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (uint32, error) {
 	// Ensure size is a multiple of the OS page size.
-	if int(size)%unix.Getpagesize() != 0 {
+	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
 	}
 
