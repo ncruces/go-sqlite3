@@ -47,6 +47,10 @@ jobs:
       run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
 
+    - name: Test no shared memory
+      run: go test -v -tags sqlite3_noshm ./...
+      if: matrix.os == 'ubuntu-latest'
+
     - name: Test no locks
       run: go test -v -tags sqlite3_nosys ./tests -run TestDB_nolock
 

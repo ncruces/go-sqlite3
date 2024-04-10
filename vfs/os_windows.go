@@ -9,18 +9,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// SupportsFileLocking is false on platforms that do not support file locking.
-// To open a database file in one such platform,
-// you need to use the [nolock] or [immutable] URI parameters.
-//
-// [nolock]: https://sqlite.org/uri.html#urinolock
-// [immutable]: https://sqlite.org/uri.html#uriimmutable
-const SupportsFileLocking = true
-
 func osGetSharedLock(file *os.File) _ErrorCode {
 	// Acquire the PENDING lock temporarily before acquiring a new SHARED lock.
 	rc := osReadLock(file, _PENDING_BYTE, 1, 0)
-
 	if rc == _OK {
 		// Acquire the SHARED lock.
 		rc = osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, 0)
@@ -104,7 +95,15 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 
 func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
 	// Test the RESERVED lock.
-	return osCheckLock(file, _RESERVED_BYTE, 1)
+	rc := osLock(file, 0, _RESERVED_BYTE, 1, 0, _IOERR_CHECKRESERVEDLOCK)
+	if rc == _BUSY {
+		return true, _OK
+	}
+	if rc == _OK {
+		// Release the RESERVED lock.
+		osUnlock(file, _RESERVED_BYTE, 1)
+	}
+	return false, rc
 }
 
 func osUnlock(file *os.File, start, len uint32) _ErrorCode {
@@ -153,17 +152,6 @@ func osReadLock(file *os.File, start, len uint32, timeout time.Duration) _ErrorC
 
 func osWriteLock(file *os.File, start, len uint32, timeout time.Duration) _ErrorCode {
 	return osLock(file, windows.LOCKFILE_EXCLUSIVE_LOCK, start, len, timeout, _IOERR_LOCK)
-}
-
-func osCheckLock(file *os.File, start, len uint32) (bool, _ErrorCode) {
-	rc := osLock(file, 0, start, len, 0, _IOERR_CHECKRESERVEDLOCK)
-	if rc == _BUSY {
-		return true, _OK
-	}
-	if rc == _OK {
-		osUnlock(file, start, len)
-	}
-	return false, rc
 }
 
 func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -27,7 +28,7 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 	util.ExportFuncIIIII(env, "go_full_pathname", vfsFullPathname)
 	util.ExportFuncIIII(env, "go_delete", vfsDelete)
 	util.ExportFuncIIIII(env, "go_access", vfsAccess)
-	util.ExportFuncIIIIII(env, "go_open", vfsOpen)
+	util.ExportFuncIIIIIII(env, "go_open", vfsOpen)
 	util.ExportFuncII(env, "go_close", vfsClose)
 	util.ExportFuncIIIIJ(env, "go_read", vfsRead)
 	util.ExportFuncIIIIJ(env, "go_write", vfsWrite)
@@ -40,6 +41,10 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 	util.ExportFuncIII(env, "go_lock", vfsLock)
 	util.ExportFuncIII(env, "go_unlock", vfsUnlock)
 	util.ExportFuncIII(env, "go_check_reserved_lock", vfsCheckReservedLock)
+	util.ExportFuncIIIIII(env, "go_shm_map", vfsShmMap)
+	util.ExportFuncIIIII(env, "go_shm_lock", vfsShmLock)
+	util.ExportFuncIII(env, "go_shm_unmap", vfsShmUnmap)
+	util.ExportFuncVI(env, "go_shm_barrier", vfsShmBarrier)
 	return env
 }
 
@@ -129,7 +134,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath uint32, flags Ac
 	return vfsErrorCode(err, _IOERR_ACCESS)
 }
 
-func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, flags OpenFlag, pOutFlags uint32) _ErrorCode {
+func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, flags OpenFlag, pOutFlags, pOutVFS uint32) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 
 	var path string
@@ -164,6 +169,9 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
+	}
+	if pOutVFS != 0 && util.CanMap(ctx) {
+		util.WriteUint32(mod, pOutVFS, 1)
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
@@ -348,6 +356,35 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 	return file.DeviceCharacteristics()
 }
 
+var shmBarrier sync.Mutex
+
+func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bExtend, pp uint32) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	p, err := file.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
+	if err != nil {
+		return vfsErrorCode(err, _IOERR_SHMMAP)
+	}
+	util.WriteUint32(mod, pp, p)
+	return _OK
+}
+
+func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	err := file.shmLock(offset, n, flags)
+	return vfsErrorCode(err, _IOERR_SHMLOCK)
+}
+
+func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
+	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	file.shmUnmap(bDelete != 0)
+	return _OK
+}
+
+func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
+	shmBarrier.Lock()
+	defer shmBarrier.Unlock()
+}
+
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
 	if flags&OPEN_URI == 0 {
 		return nil
@@ -427,4 +464,10 @@ func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 		return _ErrorCode(v.Uint())
 	}
 	return def
+}
+
+type fileShm interface {
+	shmMap(context.Context, api.Module, uint32, uint32, bool) (uint32, error)
+	shmLock(uint32, uint32, _ShmFlag) error
+	shmUnmap(bool)
 }

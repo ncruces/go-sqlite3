@@ -1,6 +1,16 @@
+//go:build (linux || darwin || windows || freebsd || openbsd || netbsd || dragonfly || illumos) && !sqlite3_nosys
+
 package vfs
 
 import "github.com/ncruces/go-sqlite3/internal/util"
+
+// SupportsFileLocking is false on platforms that do not support file locking.
+// To open a database file on those platforms,
+// you need to use the [nolock] or [immutable] URI parameters.
+//
+// [nolock]: https://sqlite.org/uri.html#urinolock
+// [immutable]: https://sqlite.org/uri.html#uriimmutable
+const SupportsFileLocking = true
 
 const (
 	_PENDING_BYTE  = 0x40000000

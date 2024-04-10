@@ -32,14 +32,14 @@ func osWriteLock(file *os.File, _ /*start*/, _ /*len*/ int64, _ /*timeout*/ time
 	return osLock(file, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK)
 }
 
-func osCheckLock(file *os.File, start, len int64) (bool, _ErrorCode) {
+func osGetLock(file *os.File, start, len int64) (int16, _ErrorCode) {
 	lock := unix.Flock_t{
-		Type:  unix.F_RDLCK,
+		Type:  unix.F_WRLCK,
 		Start: start,
 		Len:   len,
 	}
 	if unix.FcntlFlock(file.Fd(), unix.F_GETLK, &lock) != nil {
-		return false, _IOERR_CHECKRESERVEDLOCK
+		return 0, _IOERR_CHECKRESERVEDLOCK
 	}
-	return lock.Type != unix.F_UNLCK, _OK
+	return lock.Type, _OK
 }

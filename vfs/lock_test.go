@@ -33,7 +33,7 @@ func Test_vfsLock(t *testing.T) {
 		pOutput = 32
 	)
 	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
-	ctx := util.NewContext(context.TODO())
+	ctx := util.NewContext(context.TODO(), false)
 
 	vfsFileRegister(ctx, mod, pFile1, &vfsFile{File: file1})
 	vfsFileRegister(ctx, mod, pFile2, &vfsFile{File: file2})

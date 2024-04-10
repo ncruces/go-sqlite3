@@ -3,21 +3,11 @@ package util
 import (
 	"context"
 	"io"
-
-	"github.com/tetratelabs/wazero/experimental"
 )
 
-type handleKey struct{}
 type handleState struct {
 	handles []any
-	empty   int
-}
-
-func NewContext(ctx context.Context) context.Context {
-	state := new(handleState)
-	ctx = experimental.WithCloseNotifier(ctx, state)
-	ctx = context.WithValue(ctx, handleKey{}, state)
-	return ctx
+	holes   int
 }
 
 func (s *handleState) CloseNotify(ctx context.Context, exitCode uint32) {
@@ -27,14 +17,14 @@ func (s *handleState) CloseNotify(ctx context.Context, exitCode uint32) {
 		}
 	}
 	s.handles = nil
-	s.empty = 0
+	s.holes = 0
 }
 
 func GetHandle(ctx context.Context, id uint32) any {
 	if id == 0 {
 		return nil
 	}
-	s := ctx.Value(handleKey{}).(*handleState)
+	s := ctx.Value(moduleKey{}).(*moduleState)
 	return s.handles[^id]
 }
 
@@ -42,10 +32,10 @@ func DelHandle(ctx context.Context, id uint32) error {
 	if id == 0 {
 		return nil
 	}
-	s := ctx.Value(handleKey{}).(*handleState)
+	s := ctx.Value(moduleKey{}).(*moduleState)
 	a := s.handles[^id]
 	s.handles[^id] = nil
-	s.empty++
+	s.holes++
 	if c, ok := a.(io.Closer); ok {
 		return c.Close()
 	}
@@ -56,13 +46,13 @@ func AddHandle(ctx context.Context, a any) (id uint32) {
 	if a == nil {
 		panic(NilErr)
 	}
-	s := ctx.Value(handleKey{}).(*handleState)
+	s := ctx.Value(moduleKey{}).(*moduleState)
 
 	// Find an empty slot.
-	if s.empty > cap(s.handles)-len(s.handles) {
+	if s.holes > cap(s.handles)-len(s.handles) {
 		for id, h := range s.handles {
 			if h == nil {
-				s.empty--
+				s.holes--
 				s.handles[id] = a
 				return ^uint32(id)
 			}

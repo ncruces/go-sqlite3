@@ -209,10 +209,10 @@ func Test_vfsAccess(t *testing.T) {
 
 func Test_vfsFile(t *testing.T) {
 	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
-	ctx := util.NewContext(context.TODO())
+	ctx := util.NewContext(context.TODO(), false)
 
 	// Open a temporary file.
-	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -281,10 +281,10 @@ func Test_vfsFile(t *testing.T) {
 
 func Test_vfsFile_psow(t *testing.T) {
 	mod := wazerotest.NewModule(wazerotest.NewMemory(wazerotest.PageSize))
-	ctx := util.NewContext(context.TODO())
+	ctx := util.NewContext(context.TODO(), false)
 
 	// Open a temporary file.
-	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0)
+	rc := vfsOpen(ctx, mod, 0, 0, 4, OPEN_CREATE|OPEN_EXCLUSIVE|OPEN_READWRITE|OPEN_DELETEONCLOSE, 0, 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}

@@ -130,6 +130,7 @@ type vfsFile struct {
 	keepWAL  bool
 	syncDir  bool
 	psow     bool
+	shm      vfsShm
 }
 
 var (
@@ -140,6 +141,11 @@ var (
 	_ FilePersistentWAL      = &vfsFile{}
 	_ FilePowersafeOverwrite = &vfsFile{}
 )
+
+func (f *vfsFile) Close() error {
+	f.shm.Close()
+	return f.File.Close()
+}
 
 func (f *vfsFile) Sync(flags SyncFlag) error {
 	dataonly := (flags & SYNC_DATAONLY) != 0
