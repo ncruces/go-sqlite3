@@ -77,13 +77,13 @@ func vfsLocaltime(ctx context.Context, mod api.Module, pTm uint32, t int64) _Err
 	return _OK
 }
 
-func vfsRandomness(ctx context.Context, mod api.Module, pVfs, nByte, zByte uint32) uint32 {
+func vfsRandomness(ctx context.Context, mod api.Module, pVfs uint32, nByte int32, zByte uint32) uint32 {
 	mem := util.View(mod, zByte, uint64(nByte))
 	n, _ := rand.Reader.Read(mem)
 	return uint32(n)
 }
 
-func vfsSleep(ctx context.Context, mod api.Module, pVfs, nMicro uint32) _ErrorCode {
+func vfsSleep(ctx context.Context, mod api.Module, pVfs uint32, nMicro int32) _ErrorCode {
 	osSleep(time.Duration(nMicro) * time.Microsecond)
 	return _OK
 }
@@ -95,19 +95,16 @@ func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow uint32) _
 	return _OK
 }
 
-func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative, nFull, zFull uint32) _ErrorCode {
+func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative uint32, nFull int32, zFull uint32) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zRelative, _MAX_PATHNAME)
 
 	path, err := vfs.FullPathname(path)
 
-	size := uint64(len(path) + 1)
-	if size > uint64(nFull) {
+	if len(path) >= int(nFull) {
 		return _CANTOPEN_FULLPATH
 	}
-	mem := util.View(mod, zFull, size)
-	mem[len(path)] = 0
-	copy(mem, path)
+	util.WriteString(mod, zFull, path)
 
 	return vfsErrorCode(err, _CANTOPEN_FULLPATH)
 }
@@ -185,7 +182,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) _ErrorCode {
 	return _OK
 }
 
-func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) _ErrorCode {
+func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
@@ -200,7 +197,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfs
 	return _IOERR_SHORT_READ
 }
 
-func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf, iAmt uint32, iOfst int64) _ErrorCode {
+func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile)
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
@@ -358,7 +355,12 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 
 var shmBarrier sync.Mutex
 
-func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bExtend, pp uint32) _ErrorCode {
+func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
+	shmBarrier.Lock()
+	defer shmBarrier.Unlock()
+}
+
+func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szRegion int32, bExtend, pp uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(fileShm)
 	p, err := file.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	if err != nil {
@@ -368,7 +370,7 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile, iRegion, szRegion, bE
 	return _OK
 }
 
-func vfsShmLock(ctx context.Context, mod api.Module, pFile, offset, n uint32, flags _ShmFlag) _ErrorCode {
+func vfsShmLock(ctx context.Context, mod api.Module, pFile uint32, offset, n int32, flags _ShmFlag) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(fileShm)
 	err := file.shmLock(offset, n, flags)
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
@@ -378,11 +380,6 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 	file := vfsFileGet(ctx, mod, pFile).(fileShm)
 	file.shmUnmap(bDelete != 0)
 	return _OK
-}
-
-func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
-	shmBarrier.Lock()
-	defer shmBarrier.Unlock()
 }
 
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
@@ -464,10 +461,4 @@ func vfsErrorCode(err error, def _ErrorCode) _ErrorCode {
 		return _ErrorCode(v.Uint())
 	}
 	return def
-}
-
-type fileShm interface {
-	shmMap(context.Context, api.Module, uint32, uint32, bool) (uint32, error)
-	shmLock(uint32, uint32, _ShmFlag) error
-	shmUnmap(bool)
 }

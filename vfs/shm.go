@@ -33,7 +33,7 @@ const (
 	_SHM_DMS   = _SHM_BASE + _SHM_NLOCK
 )
 
-func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, extend bool) (uint32, error) {
+func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
@@ -96,9 +96,9 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size uint32, e
 	return r.Ptr, nil
 }
 
-func (f *vfsFile) shmLock(offset, n uint32, flags _ShmFlag) error {
+func (f *vfsFile) shmLock(offset, n int32, flags _ShmFlag) error {
 	// Argument check.
-	if n == 0 || offset+n > _SHM_NLOCK {
+	if n <= 0 || offset < 0 || offset+n > _SHM_NLOCK {
 		panic(util.AssertErr())
 	}
 	switch flags {

@@ -14,7 +14,6 @@ const (
 	// https://github.com/apple/darwin-xnu/blob/main/bsd/sys/fcntl.h
 	_F_OFD_SETLK         = 90
 	_F_OFD_SETLKW        = 91
-	_F_OFD_GETLK         = 92
 	_F_OFD_SETLKWTIMEOUT = 93
 )
 
@@ -93,16 +92,4 @@ func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCo
 
 func osWriteLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
 	return osLock(file, unix.F_WRLCK, start, len, timeout, _IOERR_LOCK)
-}
-
-func osGetLock(file *os.File, start, len int64) (int16, _ErrorCode) {
-	lock := unix.Flock_t{
-		Type:  unix.F_WRLCK,
-		Start: start,
-		Len:   len,
-	}
-	if unix.FcntlFlock(file.Fd(), _F_OFD_GETLK, &lock) != nil {
-		return 0, _IOERR_CHECKRESERVEDLOCK
-	}
-	return lock.Type, _OK
 }

@@ -132,7 +132,7 @@ func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def 
 			if errno, _ := err.(windows.Errno); errno != windows.ERROR_LOCK_VIOLATION {
 				break
 			}
-			if timeout <= 0 || timeout < time.Since(before) {
+			if timeout < time.Since(before) {
 				break
 			}
 			osSleep(time.Millisecond)

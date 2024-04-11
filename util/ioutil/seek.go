@@ -8,8 +8,8 @@ import (
 // SeekingReaderAt implements [io.ReaderAt]
 // through an underlying [io.ReadSeeker].
 type SeekingReaderAt struct {
-	l sync.Mutex
 	r io.ReadSeeker
+	l sync.Mutex
 }
 
 // NewSeekingReaderAt creates a new SeekingReaderAt.

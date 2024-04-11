@@ -5,8 +5,8 @@
 #include "include.h"
 #include "sqlite3.h"
 
-int go_localtime(struct tm *, sqlite3_int64);
 int go_vfs_find(const char *zVfsName);
+int go_localtime(struct tm *, sqlite3_int64);
 
 int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
 int go_sleep(sqlite3_vfs *, int microseconds);

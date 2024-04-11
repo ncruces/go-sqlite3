@@ -68,6 +68,18 @@ func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
 	return lock == unix.F_WRLCK, rc
 }
 
+func osGetLock(file *os.File, start, len int64) (int16, _ErrorCode) {
+	lock := unix.Flock_t{
+		Type:  unix.F_WRLCK,
+		Start: start,
+		Len:   len,
+	}
+	if unix.FcntlFlock(file.Fd(), unix.F_GETLK, &lock) != nil {
+		return 0, _IOERR_CHECKRESERVEDLOCK
+	}
+	return lock.Type, _OK
+}
+
 func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 	if err == nil {
 		return _OK

@@ -40,7 +40,7 @@ func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, d
 			if errno, _ := err.(unix.Errno); errno != unix.EAGAIN {
 				break
 			}
-			if timeout <= 0 || timeout < time.Since(before) {
+			if timeout < time.Since(before) {
 				break
 			}
 			osSleep(time.Millisecond)
@@ -55,16 +55,4 @@ func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCo
 
 func osWriteLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
 	return osLock(file, unix.F_WRLCK, start, len, timeout, _IOERR_LOCK)
-}
-
-func osGetLock(file *os.File, start, len int64) (int16, _ErrorCode) {
-	lock := unix.Flock_t{
-		Type:  unix.F_WRLCK,
-		Start: start,
-		Len:   len,
-	}
-	if unix.FcntlFlock(file.Fd(), unix.F_OFD_GETLK, &lock) != nil {
-		return 0, _IOERR_CHECKRESERVEDLOCK
-	}
-	return lock.Type, _OK
 }

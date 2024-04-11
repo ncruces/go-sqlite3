@@ -225,7 +225,7 @@ func Test_vfsFile(t *testing.T) {
 	// Write stuff.
 	text := "Hello world!"
 	util.WriteString(mod, 16, text)
-	rc = vfsWrite(ctx, mod, 4, 16, uint32(len(text)), 0)
+	rc = vfsWrite(ctx, mod, 4, 16, int32(len(text)), 0)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
@@ -240,7 +240,7 @@ func Test_vfsFile(t *testing.T) {
 	}
 
 	// Partial read at offset.
-	rc = vfsRead(ctx, mod, 4, 16, uint32(len(text)), 4)
+	rc = vfsRead(ctx, mod, 4, 16, int32(len(text)), 4)
 	if rc != _IOERR_SHORT_READ {
 		t.Fatal("returned", rc)
 	}

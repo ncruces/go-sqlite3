@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/ncruces/go-sqlite3/util/osutil"
+	"github.com/tetratelabs/wazero/api"
 )
 
 type vfsOS struct{}
@@ -125,12 +127,12 @@ func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, O
 
 type vfsFile struct {
 	*os.File
+	shm      vfsShm
 	lock     LockLevel
 	readOnly bool
 	keepWAL  bool
 	syncDir  bool
 	psow     bool
-	shm      vfsShm
 }
 
 var (
@@ -213,3 +215,9 @@ func (f *vfsFile) PowersafeOverwrite() bool        { return f.psow }
 func (f *vfsFile) PersistentWAL() bool             { return f.keepWAL }
 func (f *vfsFile) SetPowersafeOverwrite(psow bool) { f.psow = psow }
 func (f *vfsFile) SetPersistentWAL(keepWAL bool)   { f.keepWAL = keepWAL }
+
+type fileShm interface {
+	shmMap(context.Context, api.Module, int32, int32, bool) (uint32, error)
+	shmLock(int32, int32, _ShmFlag) error
+	shmUnmap(bool)
+}

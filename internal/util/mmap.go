@@ -29,7 +29,7 @@ func CanMap(ctx context.Context) bool {
 	return s.mmapState.enabled
 }
 
-func (s *mmapState) new(ctx context.Context, mod api.Module, size uint32) *MappedRegion {
+func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *MappedRegion {
 	// Find unused region.
 	for _, r := range s.regions {
 		if !r.used && r.size == size {
@@ -65,11 +65,11 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size uint32) *Mappe
 type MappedRegion struct {
 	addr uintptr
 	Ptr  uint32
-	size uint32
+	size int32
 	used bool
 }
 
-func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, size uint32) (*MappedRegion, error) {
+func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, size int32) (*MappedRegion, error) {
 	s := ctx.Value(moduleKey{}).(*moduleState)
 	r := s.new(ctx, mod, size)
 	err := r.mmap(f, offset)
@@ -98,8 +98,8 @@ func (r *MappedRegion) mmap(f *os.File, offset int64) error {
 	return err
 }
 
+// We need the low level mmap for MAP_FIXED to work.
+// Bind the syscall version hoping that it is more stable.
+
 //go:linkname mmap syscall.mmap
 func mmap(addr, length uintptr, prot, flag, fd int, pos int64) (*byte, error)
-
-//go:linkname munmap syscall.munmap
-func munmap(addr, length uintptr) error
