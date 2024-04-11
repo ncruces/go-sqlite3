@@ -72,49 +72,10 @@ Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ run
 ### Caveats
 
 This module replaces the SQLite [OS Interface](https://sqlite.org/vfs.html)
-(aka VFS) with a [pure Go](vfs/) implementation.
-This has benefits, but also comes with some drawbacks.
+(aka VFS) with a [pure Go](vfs/) implementation,
+which has advantages and disadvantages.
 
-#### Write-Ahead Logging
-
-Because Wasm does not support shared memory,
-[WAL](https://sqlite.org/wal.html) support is [limited](https://sqlite.org/wal.html#noshm).
-
-To work around this limitation, SQLite is [patched](sqlite3/locking_mode.patch)
-to always use `EXCLUSIVE` locking mode for WAL databases.
-
-Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
-to use the [`database/sql`](https://pkg.go.dev/database/sql) driver
-with WAL mode databases you should disable connection pooling by calling
-[`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
-
-#### File Locking
-
-POSIX advisory locks, which SQLite uses on Unix, are
-[broken by design](https://sqlite.org/src/artifact/2e8b12?ln=1073-1161).
-
-On Linux, macOS and illumos, this module uses
-[OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
-to synchronize access to database files.
-OFD locks are fully compatible with POSIX advisory locks.
-
-On BSD Unixes, this module uses
-[BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-On BSD Unixes, BSD locks are fully compatible with POSIX advisory locks.
-
-On Windows, this module uses `LockFileEx` and `UnlockFileEx`,
-like SQLite.
-
-On all other platforms, file locking is not supported, and you must use
-[`nolock=1`](https://sqlite.org/uri.html#urinolock)
-(or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
-to open database files.
-You can use [`vfs.SupportsFileLocking`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsFileLocking)
-to check if your platform supports file locking.
-
-To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
-with `nolock=1` you must disable connection pooling by calling
-[`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
+Read more about the Go VFS design [here](vfs/README.md).
 
 ### Testing
 
@@ -122,7 +83,7 @@ This project aims for [high test coverage](https://github.com/ncruces/go-sqlite3
 It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 [wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach) thorough testing.
 
-The pure Go VFS is tested by running SQLite's
+The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
 on Linux, macOS, Windows and FreeBSD.
 

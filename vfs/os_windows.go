@@ -3,6 +3,7 @@
 package vfs
 
 import (
+	"math/rand"
 	"os"
 	"time"
 
@@ -135,7 +136,7 @@ func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def 
 			if timeout < time.Since(before) {
 				break
 			}
-			osSleep(time.Millisecond)
+			osSleep(time.Duration(rand.Int63n(int64(time.Millisecond))))
 		}
 	}
 	return osLockErrorCode(err, def)

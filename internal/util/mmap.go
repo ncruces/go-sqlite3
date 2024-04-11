@@ -1,4 +1,4 @@
-//go:build (linux || darwin) && (amd64 || arm64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
+//go:build (darwin || linux || illumos) && (amd64 || arm64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
 
 package util
 
