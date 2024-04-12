@@ -489,7 +489,7 @@ func vtabRenameCallback(ctx context.Context, mod api.Module, pVTab, zNew uint32)
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab, nArg, zName, pxFunc uint32) uint32 {
+func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab uint32, nArg int32, zName, pxFunc uint32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabOverloader)
 	f, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_NAME))
 	if op != 0 {
@@ -539,19 +539,19 @@ func vtabRollbackCallback(ctx context.Context, mod api.Module, pVTab uint32) uin
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabSavepointCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+func vtabSavepointCallback(ctx context.Context, mod api.Module, pVTab uint32, id int32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
 	err := vtab.Savepoint(int(id))
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabReleaseCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+func vtabReleaseCallback(ctx context.Context, mod api.Module, pVTab uint32, id int32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
 	err := vtab.Release(int(id))
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
 }
 
-func vtabRollbackToCallback(ctx context.Context, mod api.Module, pVTab, id uint32) uint32 {
+func vtabRollbackToCallback(ctx context.Context, mod api.Module, pVTab uint32, id int32) uint32 {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
 	err := vtab.RollbackTo(int(id))
 	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err)
@@ -573,7 +573,7 @@ func cursorCloseCallback(ctx context.Context, mod api.Module, pCur uint32) uint3
 	return vtabError(ctx, mod, 0, _VTAB_ERROR, err)
 }
 
-func cursorFilterCallback(ctx context.Context, mod api.Module, pCur, idxNum, idxStr, nArg, pArg uint32) uint32 {
+func cursorFilterCallback(ctx context.Context, mod api.Module, pCur uint32, idxNum int32, idxStr, nArg, pArg uint32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	db := ctx.Value(connKey{}).(*Conn)
 	args := make([]Value, nArg)
@@ -600,7 +600,7 @@ func cursorNextCallback(ctx context.Context, mod api.Module, pCur uint32) uint32
 	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err)
 }
 
-func cursorColumnCallback(ctx context.Context, mod api.Module, pCur, pCtx, n uint32) uint32 {
+func cursorColumnCallback(ctx context.Context, mod api.Module, pCur, pCtx uint32, n int32) uint32 {
 	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
 	db := ctx.Value(connKey{}).(*Conn)
 	err := cursor.Column(&Context{db, pCtx}, int(n))

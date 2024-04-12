@@ -11,6 +11,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestConn_Open_dir(t *testing.T) {
@@ -447,5 +448,37 @@ func TestConn_DBName(t *testing.T) {
 
 	if name := db.DBName(5); name != "" {
 		t.Errorf("got %s", name)
+	}
+}
+
+func TestConn_AutoVacuumPages(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open("file:test.db?vfs=memdb&_pragma=auto_vacuum(FULL)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.AutoVacuumPages(func(schema string, dbPages, freePages, bytesPerPage uint) uint {
+		return freePages
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`CREATE TABLE test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`INSERT INTO test VALUES (zeroblob(1024*1024))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`DROP TABLE test`)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

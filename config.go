@@ -82,7 +82,7 @@ func (c *Conn) SetAuthorizer(cb func(action AuthorizerActionCode, name3rd, name4
 
 }
 
-func authorizerCallback(ctx context.Context, mod api.Module, pDB uint32, action AuthorizerActionCode, zName3rd, zName4th, zSchema, zNameInner uint32) AuthorizerReturnCode {
+func authorizerCallback(ctx context.Context, mod api.Module, pDB uint32, action AuthorizerActionCode, zName3rd, zName4th, zSchema, zNameInner uint32) (rc AuthorizerReturnCode) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.authorizer != nil {
 		var name3rd, name4th, schema, nameInner string
 		if zName3rd != 0 {
@@ -97,7 +97,68 @@ func authorizerCallback(ctx context.Context, mod api.Module, pDB uint32, action 
 		if zNameInner != 0 {
 			nameInner = util.ReadString(mod, zNameInner, _MAX_NAME)
 		}
-		return c.authorizer(action, name3rd, name4th, schema, nameInner)
+		rc = c.authorizer(action, name3rd, name4th, schema, nameInner)
 	}
-	return AUTH_OK
+	return rc
+}
+
+// WalCheckpoint checkpoints a WAL database.
+//
+// https://sqlite.org/c3ref/wal_checkpoint_v2.html
+func (c *Conn) WalCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt int, err error) {
+	defer c.arena.mark()()
+	nLogPtr := c.arena.new(ptrlen)
+	nCkptPtr := c.arena.new(ptrlen)
+	schemaPtr := c.arena.string(schema)
+	r := c.call("sqlite3_wal_checkpoint_v2",
+		uint64(c.handle), uint64(schemaPtr), uint64(mode),
+		uint64(nLogPtr), uint64(nCkptPtr))
+	nLog = int(int32(util.ReadUint32(c.mod, nLogPtr)))
+	nCkpt = int(int32(util.ReadUint32(c.mod, nCkptPtr)))
+	return nLog, nCkpt, c.error(r)
+}
+
+// WalAutoCheckpoint configures WAL auto-checkpoints.
+//
+// https://sqlite.org/c3ref/wal_autocheckpoint.html
+func (c *Conn) WalAutoCheckpoint(pages int) error {
+	r := c.call("sqlite3_wal_autocheckpoint", uint64(c.handle), uint64(pages))
+	return c.error(r)
+}
+
+// WalHook registers a callback function to be invoked
+// each time data is committed to a database in WAL mode.
+//
+// https://sqlite.org/c3ref/wal_hook.html
+func (c *Conn) WalHook(cb func(db *Conn, schema string, pages int) error) {
+	var enable uint64
+	if cb != nil {
+		enable = 1
+	}
+	c.call("sqlite3_wal_hook_go", uint64(c.handle), enable)
+	c.wal = cb
+}
+
+func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema uint32, pages int32) (rc uint32) {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.wal != nil {
+		schema := util.ReadString(mod, zSchema, _MAX_NAME)
+		err := c.wal(c, schema, int(pages))
+		_, rc = errorCode(err, ERROR)
+	}
+	return rc
+}
+
+// AutoVacuumPages registers a autovacuum compaction amount callback.
+//
+// https://sqlite.org/c3ref/autovacuum_pages.html
+func (c *Conn) AutoVacuumPages(cb func(schema string, dbPages, freePages, bytesPerPage uint) uint) error {
+	funcPtr := util.AddHandle(c.ctx, cb)
+	r := c.call("sqlite3_autovacuum_pages_go", uint64(c.handle), uint64(funcPtr))
+	return c.error(r)
+}
+
+func autoVacuumCallback(ctx context.Context, mod api.Module, pApp, zSchema, nDbPage, nFreePage, nBytePerPage uint32) uint32 {
+	fn := util.GetHandle(ctx, pApp).(func(schema string, dbPages, freePages, bytesPerPage uint) uint)
+	schema := util.ReadString(mod, zSchema, _MAX_NAME)
+	return uint32(fn(schema, uint(nDbPage), uint(nFreePage), uint(nBytePerPage)))
 }

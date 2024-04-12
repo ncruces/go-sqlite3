@@ -29,6 +29,7 @@ type Conn struct {
 	update     func(AuthorizerActionCode, string, string, int64)
 	commit     func() bool
 	rollback   func()
+	wal        func(*Conn, string, int) error
 	arena      arena
 
 	handle uint32
@@ -281,6 +282,12 @@ func (c *Conn) ReleaseMemory() error {
 	return c.error(r)
 }
 
+// GetInterrupt gets the context set with [Conn.SetInterrupt],
+// or nil if none was set.
+func (c *Conn) GetInterrupt() context.Context {
+	return c.interrupt
+}
+
 // SetInterrupt interrupts a long-running query when a context is done.
 //
 // Subsequent uses of the connection will return [INTERRUPT]
@@ -325,13 +332,13 @@ func (c *Conn) checkInterrupt() {
 	}
 }
 
-func progressCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
+func progressCallback(ctx context.Context, mod api.Module, pDB uint32) (interrupt uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
 		if c.interrupt != nil && c.interrupt.Err() != nil {
-			return 1
+			interrupt = 1
 		}
 	}
-	return 0
+	return interrupt
 }
 
 // BusyTimeout sets a busy timeout.
@@ -359,13 +366,13 @@ func (c *Conn) BusyHandler(cb func(count int) (retry bool)) error {
 	return nil
 }
 
-func busyCallback(ctx context.Context, mod api.Module, pDB, count uint32) uint32 {
+func busyCallback(ctx context.Context, mod api.Module, pDB uint32, count int32) (retry uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.busy != nil {
-		if retry := c.busy(int(count)); retry {
-			return 1
+		if c.busy(int(count)) {
+			retry = 1
 		}
 	}
-	return 0
+	return retry
 }
 
 func (c *Conn) error(rc uint64, sql ...string) error {

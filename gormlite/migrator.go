@@ -334,7 +334,7 @@ type _Index struct {
 // GetIndexes return Indexes []gorm.Index and execErr error,
 // See the [doc]
 //
-// [doc]: https://www.sqlite.org/pragma.html#pragma_index_list
+// [doc]: https://sqlite.org/pragma.html#pragma_index_list
 func (m _Migrator) GetIndexes(value interface{}) ([]gorm.Index, error) {
 	indexes := make([]gorm.Index, 0)
 	err := m.RunWithValue(value, func(stmt *gorm.Statement) error {

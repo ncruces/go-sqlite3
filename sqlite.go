@@ -294,6 +294,8 @@ func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_commit_hook", commitCallback)
 	util.ExportFuncVI(env, "go_rollback_hook", rollbackCallback)
 	util.ExportFuncVIIIIJ(env, "go_update_hook", updateCallback)
+	util.ExportFuncIIIII(env, "go_wal_hook", walCallback)
+	util.ExportFuncIIIIII(env, "go_autovacuum_pages", autoVacuumCallback)
 	util.ExportFuncIIIIIII(env, "go_authorizer", authorizerCallback)
 	util.ExportFuncVIII(env, "go_log", logCallback)
 	util.ExportFuncVI(env, "go_destroy", destroyCallback)

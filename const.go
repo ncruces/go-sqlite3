@@ -305,6 +305,18 @@ const (
 	AUTH_IGNORE AuthorizerReturnCode = 2 /* Don't allow access, but don't generate an error */
 )
 
+// CheckpointMode are all the checkpoint mode values.
+//
+// https://sqlite.org/c3ref/c_checkpoint_full.html
+type CheckpointMode uint32
+
+const (
+	CHECKPOINT_PASSIVE  CheckpointMode = 0 /* Do as much as possible w/o blocking */
+	CHECKPOINT_FULL     CheckpointMode = 1 /* Wait for writers, then checkpoint */
+	CHECKPOINT_RESTART  CheckpointMode = 2 /* Like FULL but wait for readers */
+	CHECKPOINT_TRUNCATE CheckpointMode = 3 /* Like RESTART but also truncate WAL */
+)
+
 // TxnState are the allowed return values from [Conn.TxnState].
 //
 // https://sqlite.org/c3ref/c_txn_none.html

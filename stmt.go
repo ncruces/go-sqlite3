@@ -120,7 +120,7 @@ func (s *Stmt) Status(op StmtStatus, reset bool) int {
 	}
 	r := s.c.call("sqlite3_stmt_status", uint64(s.handle),
 		uint64(op), i)
-	return int(r)
+	return int(int32(r))
 }
 
 // ClearBindings resets all bindings on the prepared statement.
@@ -137,7 +137,7 @@ func (s *Stmt) ClearBindings() error {
 func (s *Stmt) BindCount() int {
 	r := s.c.call("sqlite3_bind_parameter_count",
 		uint64(s.handle))
-	return int(r)
+	return int(int32(r))
 }
 
 // BindIndex returns the index of a parameter in the prepared statement
@@ -149,7 +149,7 @@ func (s *Stmt) BindIndex(name string) int {
 	namePtr := s.c.arena.string(name)
 	r := s.c.call("sqlite3_bind_parameter_index",
 		uint64(s.handle), uint64(namePtr))
-	return int(r)
+	return int(int32(r))
 }
 
 // BindName returns the name of a parameter in the prepared statement.
@@ -357,7 +357,7 @@ func (s *Stmt) BindValue(param int, value Value) error {
 func (s *Stmt) ColumnCount() int {
 	r := s.c.call("sqlite3_column_count",
 		uint64(s.handle))
-	return int(r)
+	return int(int32(r))
 }
 
 // ColumnName returns the name of the result column.

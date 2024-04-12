@@ -257,7 +257,7 @@ func (c *Conn) RollbackHook(cb func()) {
 	c.rollback = cb
 }
 
-// RollbackHook registers a callback function to be invoked
+// UpdateHook registers a callback function to be invoked
 // whenever a row is updated, inserted or deleted in a rowid table.
 //
 // https://sqlite.org/c3ref/update_hook.html
@@ -270,13 +270,13 @@ func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table str
 	c.update = cb
 }
 
-func commitCallback(ctx context.Context, mod api.Module, pDB uint32) uint32 {
+func commitCallback(ctx context.Context, mod api.Module, pDB uint32) (rollback uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
-		if ok := c.commit(); !ok {
-			return 1
+		if !c.commit() {
+			rollback = 1
 		}
 	}
-	return 0
+	return rollback
 }
 
 func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {

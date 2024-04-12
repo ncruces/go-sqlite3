@@ -1,8 +1,9 @@
+aligned_alloc
 free
 malloc
 malloc_destructor
-aligned_alloc
 sqlite3_anycollseq_init
+sqlite3_autovacuum_pages_go
 sqlite3_backup_finish
 sqlite3_backup_init
 sqlite3_backup_pagecount
@@ -116,3 +117,6 @@ sqlite3_vtab_in_next
 sqlite3_vtab_nochange
 sqlite3_vtab_on_conflict
 sqlite3_vtab_rhs_value
+sqlite3_wal_autocheckpoint
+sqlite3_wal_checkpoint_v2
+sqlite3_wal_hook_go
