@@ -19,7 +19,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -162,6 +162,7 @@ func Test_multiwrite01(t *testing.T) {
 }
 
 func Test_config01_memory(t *testing.T) {
+	memdb.Delete("test.db")
 	ctx := util.NewContext(newContext(t), false)
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
 		"--vfs", "memdb")
@@ -177,6 +178,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
+	memdb.Delete("test.db")
 	ctx := util.NewContext(newContext(t), false)
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
