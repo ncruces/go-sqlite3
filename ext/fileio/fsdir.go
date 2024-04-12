@@ -59,6 +59,7 @@ type cursor struct {
 	base  string
 	rowID int64
 	eof   bool
+	open  bool
 }
 
 type entry struct {
@@ -68,11 +69,10 @@ type entry struct {
 }
 
 func (c *cursor) Close() error {
-	if c.done != nil {
+	if c.open {
 		close(c.done)
 		s := <-c.next
-		c.done = nil
-		c.next = nil
+		c.open = false
 		return s.err
 	}
 	return nil
@@ -98,6 +98,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 
 	c.rowID = 0
 	c.eof = false
+	c.open = true
 	c.next = make(chan entry)
 	c.done = make(chan struct{})
 	go c.WalkDir(root)
