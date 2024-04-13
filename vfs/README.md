@@ -49,19 +49,18 @@ On 64-bit Linux, macOS and illumos, this module uses `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
 
-To allow `mmap` to work, each connection needs to reserve a lot of address space.\
+To allow `mmap` to work, each connection needs to reserve up to 4GB of address space.\
 To limit the amount of address space each connection needs,
 use [`WithMemoryLimitPages`](../tests/parallel/parallel_test.go#L21).
 
 On all other platforms, [WAL](https://sqlite.org/wal.html) support is
 [limited](https://sqlite.org/wal.html#noshm).
 
-To work around that limitation, SQLite is [patched](sqlite3/locking_mode.patch)
+To work around this limitation, SQLite is [patched](sqlite3/locking_mode.patch)
 to automatically use `EXCLUSIVE` locking mode for WAL databases on such platforms.
 
-Because connection pooling is incompatible with `EXCLUSIVE` locking mode,
-to use the [`database/sql`](https://pkg.go.dev/database/sql) driver
-with WAL mode databases you should disable connection pooling by calling
+To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
+with `EXCLUSIVE` locking mode you should disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 You can use [`vfs.SupportsSharedMemory`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsSharedMemory)

@@ -1,10 +1,12 @@
 package tests
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func TestWAL_enter_exit(t *testing.T) {
@@ -29,6 +31,36 @@ func TestWAL_enter_exit(t *testing.T) {
 	`)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestWAL_readonly(t *testing.T) {
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
+	t.Parallel()
+
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	err := os.WriteFile(tmp, waldb, 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sqlite3.OpenFlags(tmp, sqlite3.OPEN_READONLY)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT * FROM sqlite_master`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt.Step() {
+		t.Error("want no rows")
 	}
 }
 

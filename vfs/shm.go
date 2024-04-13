@@ -1,4 +1,4 @@
-//go:build (linux || darwin) && (amd64 || arm64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
+//go:build (darwin || linux || illumos) && (amd64 || arm64 || riscv64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
 
 package vfs
 
@@ -42,11 +42,12 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size int32, ex
 	if f.shm.File == nil {
 		var flag int
 		if f.readOnly {
-			flag = unix.O_RDONLY | unix.O_NOFOLLOW
+			flag = unix.O_RDONLY
 		} else {
-			flag = unix.O_RDWR | unix.O_CREAT | unix.O_NOFOLLOW
+			flag = unix.O_RDWR
 		}
-		s, err := os.OpenFile(f.Name()+"-shm", flag, 0666)
+		s, err := os.OpenFile(f.Name()+"-shm",
+			flag|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 		if err != nil {
 			return 0, _CANTOPEN
 		}
@@ -88,7 +89,13 @@ func (f *vfsFile) shmMap(ctx context.Context, mod api.Module, id, size int32, ex
 		}
 	}
 
-	r, err := util.MapRegion(ctx, mod, f.shm.File, int64(id)*int64(size), size)
+	var prot int
+	if f.readOnly {
+		prot = unix.PROT_READ
+	} else {
+		prot = unix.PROT_READ | unix.PROT_WRITE
+	}
+	r, err := util.MapRegion(ctx, mod, f.shm.File, int64(id)*int64(size), size, prot)
 	if err != nil {
 		return 0, err
 	}

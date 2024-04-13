@@ -1,4 +1,4 @@
-//go:build (darwin || linux || illumos) && (amd64 || arm64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
+//go:build (darwin || linux || illumos) && (amd64 || arm64 || riscv64) && !sqlite3_flock && !sqlite3_noshm && !sqlite3_nosys
 
 package util
 
@@ -69,10 +69,10 @@ type MappedRegion struct {
 	used bool
 }
 
-func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, size int32) (*MappedRegion, error) {
+func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, size int32, prot int) (*MappedRegion, error) {
 	s := ctx.Value(moduleKey{}).(*moduleState)
 	r := s.new(ctx, mod, size)
-	err := r.mmap(f, offset)
+	err := r.mmap(f, offset, prot)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +90,9 @@ func (r *MappedRegion) Unmap() error {
 	return err
 }
 
-func (r *MappedRegion) mmap(f *os.File, offset int64) error {
+func (r *MappedRegion) mmap(f *os.File, offset int64, prot int) error {
 	_, err := mmap(r.addr, uintptr(r.size),
-		unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_FIXED,
+		prot, unix.MAP_SHARED|unix.MAP_FIXED,
 		int(f.Fd()), offset)
 	r.used = err == nil
 	return err
