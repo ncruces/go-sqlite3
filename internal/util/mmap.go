@@ -19,7 +19,8 @@ type mmapState struct {
 
 func (s *mmapState) init(ctx context.Context, enabled bool) context.Context {
 	if s.enabled = enabled; enabled {
-		return experimental.WithMemoryAllocator(ctx, mmappedAllocator)
+		return experimental.WithMemoryAllocator(ctx,
+			experimental.MemoryAllocatorFunc(mmappedAllocator))
 	}
 	return ctx
 }

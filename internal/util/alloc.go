@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func mmappedAllocator(min, cap, max uint64) experimental.MemoryBuffer {
+func mmappedAllocator(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(unix.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd
@@ -32,28 +32,17 @@ func mmappedAllocator(min, cap, max uint64) experimental.MemoryBuffer {
 		unix.Munmap(b)
 		panic(err)
 	}
-	return &mmappedBuffer{
-		buf: b[:cap],
-		cur: min,
-	}
+	return &mmappedMemory{buf: b[:cap]}
 }
 
 // The slice covers the entire mmapped memory:
 //   - len(buf) is the already committed memory,
-//   - cap(buf) is the reserved address space,
-//   - cur is the already requested size.
-type mmappedBuffer struct {
+//   - cap(buf) is the reserved address space.
+type mmappedMemory struct {
 	buf []byte
-	cur uint64
 }
 
-func (m *mmappedBuffer) Buffer() []byte {
-	// Limit capacity because bytes beyond len(m.buf)
-	// have not yet been committed.
-	return m.buf[:m.cur:len(m.buf)]
-}
-
-func (m *mmappedBuffer) Grow(size uint64) []byte {
+func (m *mmappedMemory) Reallocate(size uint64) []byte {
 	if com := uint64(len(m.buf)); com < size {
 		// Round up to the page size.
 		rnd := uint64(unix.Getpagesize() - 1)
@@ -68,11 +57,12 @@ func (m *mmappedBuffer) Grow(size uint64) []byte {
 		// Update commited memory.
 		m.buf = m.buf[:new]
 	}
-	m.cur = size
-	return m.Buffer()
+	// Limit returned capacity because bytes beyond
+	// len(m.buf) have not yet been committed.
+	return m.buf[:size:len(m.buf)]
 }
 
-func (m *mmappedBuffer) Free() {
+func (m *mmappedMemory) Free() {
 	err := unix.Munmap(m.buf[:cap(m.buf)])
 	if err != nil {
 		panic(err)
