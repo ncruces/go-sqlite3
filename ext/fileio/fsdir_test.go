@@ -12,6 +12,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/fileio"
+	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 )
 
 func Test_fsdir(t *testing.T) {

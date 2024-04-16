@@ -12,15 +12,10 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
-	"github.com/tetratelabs/wazero"
 )
-
-func TestMain(m *testing.M) {
-	sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().WithMemoryLimitPages(1024)
-	os.Exit(m.Run())
-}
 
 func TestParallel(t *testing.T) {
 	var iter int

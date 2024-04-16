@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	_ "github.com/ncruces/go-sqlite3/embed"
+	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
