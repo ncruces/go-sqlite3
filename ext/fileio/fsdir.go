@@ -53,13 +53,12 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	fsdir
-	curr  entry
-	next  chan entry
-	done  chan struct{}
-	base  string
-	rowID int64
-	eof   bool
-	open  bool
+	base   string
+	resume func(struct{}) (entry, bool)
+	cancel func()
+	curr   entry
+	eof    bool
+	rowID  int64
 }
 
 type entry struct {
@@ -69,11 +68,8 @@ type entry struct {
 }
 
 func (c *cursor) Close() error {
-	if c.open {
-		close(c.done)
-		s := <-c.next
-		c.open = false
-		return s.err
+	if c.cancel != nil {
+		c.cancel()
 	}
 	return nil
 }
@@ -96,17 +92,25 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		c.base = base
 	}
 
-	c.rowID = 0
+	c.resume, c.cancel = coroNew(func(_ struct{}, yield func(entry) struct{}) entry {
+		walkDir := func(path string, d fs.DirEntry, err error) error {
+			yield(entry{d, err, path})
+			return nil
+		}
+		if c.fsys != nil {
+			fs.WalkDir(c.fsys, root, walkDir)
+		} else {
+			filepath.WalkDir(root, walkDir)
+		}
+		return entry{}
+	})
 	c.eof = false
-	c.open = true
-	c.next = make(chan entry)
-	c.done = make(chan struct{})
-	go c.WalkDir(root)
+	c.rowID = 0
 	return c.Next()
 }
 
 func (c *cursor) Next() error {
-	curr, ok := <-c.next
+	curr, ok := c.resume(struct{}{})
 	c.curr = curr
 	c.eof = !ok
 	c.rowID++
@@ -165,23 +169,4 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 		}
 	}
 	return nil
-}
-
-func (c *cursor) WalkDir(path string) {
-	defer close(c.next)
-
-	if c.fsys != nil {
-		fs.WalkDir(c.fsys, path, c.WalkDirFunc)
-	} else {
-		filepath.WalkDir(path, c.WalkDirFunc)
-	}
-}
-
-func (c *cursor) WalkDirFunc(path string, d fs.DirEntry, err error) error {
-	select {
-	case <-c.done:
-		return fs.SkipAll
-	case c.next <- entry{d, err, path}:
-		return nil
-	}
 }

@@ -28,7 +28,7 @@ func Test_fsdir(t *testing.T) {
 			}
 			defer db.Close()
 
-			rows, err := db.Query(`SELECT * FROM fsdir('.', '.') LIMIT 4`)
+			rows, err := db.Query(`SELECT * FROM fsdir('.', '.')`)
 			if err != nil {
 				t.Fatal(err)
 			}
