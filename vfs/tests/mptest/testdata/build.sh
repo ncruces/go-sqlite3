@@ -8,7 +8,7 @@ BINARYEN="$ROOT/tools/binaryen-version_117/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c17 -flto -g0 -O2 \
-  -o mptest.wasm main.c \
+	-o mptest.wasm main.c \
 	-I"$ROOT/sqlite3" \
 	-msimd128 -mmutable-globals \
 	-mbulk-memory -mreference-types \
@@ -16,11 +16,11 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
-	-D_HAVE_SQLITE_CONFIG_H \
+	-D_HAVE_SQLITE_CONFIG_H -DHAVE_USLEEP \
 	-DSQLITE_DEFAULT_SYNCHRONOUS=0 \
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
-	-DHAVE_USLEEP -DSQLITE_NO_SYNC \
-	-DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
+	-DSQLITE_NO_SYNC -DSQLITE_THREADSAFE=0 \
+	-DSQLITE_OMIT_LOAD_EXTENSION \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
 	-Wl,--export=aligned_alloc
 

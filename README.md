@@ -4,7 +4,7 @@
 [![Go Report](https://goreportcard.com/badge/github.com/ncruces/go-sqlite3)](https://goreportcard.com/report/github.com/ncruces/go-sqlite3)
 [![Go Coverage](https://github.com/ncruces/go-sqlite3/wiki/coverage.svg)](https://github.com/ncruces/go-sqlite3/wiki/Test-coverage-report)
 
-Go module `github.com/ncruces/go-sqlite3` is `cgo`-free [SQLite](https://sqlite.org/) wrapper.\
+Go module `github.com/ncruces/go-sqlite3` is a `cgo`-free [SQLite](https://sqlite.org/) wrapper.\
 It provides a [`database/sql`](https://pkg.go.dev/database/sql) compatible driver,
 as well as direct access to most of the [C SQLite API](https://sqlite.org/cintro.html).
 
