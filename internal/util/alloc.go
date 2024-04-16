@@ -54,7 +54,7 @@ func (m *mmappedMemory) Reallocate(size uint64) []byte {
 			panic(err)
 		}
 
-		// Update commited memory.
+		// Update committed memory.
 		m.buf = m.buf[:new]
 	}
 	// Limit returned capacity because bytes beyond

@@ -66,6 +66,11 @@ with `EXCLUSIVE` locking mode you should disable connection pooling by calling
 You can use [`vfs.SupportsSharedMemory`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsSharedMemory)
 to check if your platform supports shared memory.
 
+### Batch-Atomic Write
+
+On 64-bit Linux, this module supports [batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
+on the F2FS filesystem.
+
 ### Build tags
 
 The VFS can be customized with a few build tags:
