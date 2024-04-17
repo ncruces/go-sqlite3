@@ -57,7 +57,7 @@ func TestDB_utf16(t *testing.T) {
 	testDB(t, tmp)
 }
 
-func TestDB_vfs(t *testing.T) {
+func TestDB_memdb(t *testing.T) {
 	t.Parallel()
 	testDB(t, "file:test.db?vfs=memdb")
 }
