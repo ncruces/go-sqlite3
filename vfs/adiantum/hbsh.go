@@ -11,6 +11,16 @@ import (
 	"lukechampine.com/adiantum/hbsh"
 )
 
+// HBSHCreator creates an [hbsh.HBSH] cipher,
+// given key material.
+type HBSHCreator interface {
+	// KDF maps a secret (text) to a key of the appropriate size.
+	KDF(text string) (key []byte)
+
+	// HBSH creates an HBSH cipher given an appropriate key.
+	HBSH(key []byte) *hbsh.HBSH
+}
+
 type hbshVFS struct {
 	vfs.VFS
 	hbsh HBSHCreator
@@ -26,7 +36,11 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 	} else {
 		file, flags, err = h.Open(name, flags)
 	}
-	if err != nil {
+	if err != nil || flags&(0|
+		vfs.OPEN_MAIN_DB|
+		vfs.OPEN_MAIN_JOURNAL|
+		vfs.OPEN_SUBJOURNAL|
+		vfs.OPEN_WAL) == 0 {
 		return file, flags, err
 	}
 
