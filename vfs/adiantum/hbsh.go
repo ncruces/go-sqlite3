@@ -62,6 +62,7 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		block := h.block[:]
 		tweak := h.tweak[:]
 
+		// Read full block.
 		m, err := h.File.ReadAt(block, min)
 		if m != blockSize {
 			return n, err
@@ -83,7 +84,75 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 }
 
 func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
-	return 0, sqlite3.READONLY
+	min := (off) &^ (blockSize - 1)                                 // round down
+	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
+
+	if min < off {
+		block := h.block[:]
+		tweak := h.tweak[:]
+
+		// Read full block.
+		m, err := h.File.ReadAt(block, min)
+		if m != blockSize {
+			return n, err
+		}
+
+		// Partial update.
+		binary.LittleEndian.PutUint64(tweak, uint64(min))
+		h.hbsh.Decrypt(block, tweak)
+		t := copy(h.block[off-min:], p[n:])
+		h.hbsh.Encrypt(block, tweak)
+
+		// Write full block.
+		m, err = h.File.WriteAt(h.block[:], min)
+		if m != blockSize {
+			return n, err
+		}
+		n += t
+	}
+	for min += blockSize; min+blockSize < max; min += blockSize {
+		block := h.block[:]
+		tweak := h.tweak[:]
+
+		binary.LittleEndian.PutUint64(tweak, uint64(min))
+		t := copy(h.block[:], p[n:])
+		h.hbsh.Encrypt(block, tweak)
+
+		// Write full block.
+		m, err := h.File.WriteAt(h.block[:], min)
+		if m != blockSize {
+			return n, err
+		}
+		n += t
+	}
+	if min < max {
+		block := h.block[:]
+		tweak := h.tweak[:]
+
+		// Read full block.
+		m, err := h.File.ReadAt(block, min)
+		if m != blockSize {
+			return n, err
+		}
+
+		// Partial update.
+		binary.LittleEndian.PutUint64(tweak, uint64(min))
+		h.hbsh.Decrypt(block, tweak)
+		t := copy(h.block[:], p[n:])
+		h.hbsh.Encrypt(block, tweak)
+
+		// Write full block.
+		m, err = h.File.WriteAt(h.block[:], min)
+		if m != blockSize {
+			return n, err
+		}
+		n += t
+	}
+
+	if n != len(p) {
+		panic(util.AssertErr())
+	}
+	return n, nil
 }
 
 func (h *hbshFile) Truncate(size int64) error {
@@ -98,7 +167,6 @@ func (h *hbshFile) SectorSize() int {
 func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 	return h.File.DeviceCharacteristics() & (0 |
 		// The only safe flags are these:
-		vfs.IOCAP_SEQUENTIAL |
 		vfs.IOCAP_UNDELETABLE_WHEN_OPEN |
 		vfs.IOCAP_IMMUTABLE |
 		vfs.IOCAP_BATCH_ATOMIC)
