@@ -101,7 +101,10 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 	min := (off) &^ (blockSize - 1)                                 // round down
 	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
 
-	if min < off {
+	// TODO: this is broken.
+	// Writing is *also* a partial update if p is too small.
+
+	for ; min < off; min += blockSize {
 		block := h.block[:]
 		tweak := h.tweak[:]
 
@@ -124,7 +127,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		}
 		n += t
 	}
-	for min += blockSize; min+blockSize < max; min += blockSize {
+	for ; min+blockSize <= max; min += blockSize {
 		block := h.block[:]
 		tweak := h.tweak[:]
 
@@ -139,7 +142,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		}
 		n += t
 	}
-	if min < max {
+	for ; min < max; min += blockSize {
 		block := h.block[:]
 		tweak := h.tweak[:]
 

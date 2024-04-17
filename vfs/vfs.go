@@ -383,18 +383,30 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 }
 
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
-	if flags&OPEN_URI == 0 {
+	switch {
+	case flags&(OPEN_URI|OPEN_MAIN_DB) == OPEN_URI|OPEN_MAIN_DB:
+		// database file
+	case flags&(OPEN_MAIN_JOURNAL|OPEN_SUBJOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0:
+		// journal or WAL file
+	default:
 		return nil
 	}
 
-	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+	nameDB := mod.ExportedFunction("sqlite3_filename_database")
 	uriKey := mod.ExportedFunction("sqlite3_uri_key")
-	if uriParam == nil || uriKey == nil {
+	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+	if nameDB == nil || uriKey == nil || uriParam == nil {
 		return nil
 	}
 
 	var stack [2]uint64
 	var params url.Values
+
+	stack[0] = uint64(zPath)
+	if err := nameDB.CallWithStack(ctx, stack[:]); err != nil {
+		panic(err)
+	}
+	zPath = uint32(stack[0])
 
 	for i := 0; ; i++ {
 		stack[1] = uint64(i)
