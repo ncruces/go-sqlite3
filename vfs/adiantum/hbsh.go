@@ -154,6 +154,11 @@ func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 		vfs.IOCAP_BATCH_ATOMIC)
 }
 
+// This is needed for shared memory.
+func (h *hbshFile) Unwrap() vfs.File {
+	return h.File
+}
+
 // Wrap optional methods.
 
 func (h *hbshFile) SizeHint(size int64) error {

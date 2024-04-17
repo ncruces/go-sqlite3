@@ -65,9 +65,9 @@ func Test_memdb(t *testing.T) {
 func Test_adiantum(t *testing.T) {
 	var iter int
 	if testing.Short() {
-		iter = 100
+		iter = 1000
 	} else {
-		iter = 500
+		iter = 5000
 	}
 
 	name := "file:" +

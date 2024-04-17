@@ -20,9 +20,9 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-DSQLITE_DEFAULT_SYNCHRONOUS=0 \
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
 	-DSQLITE_NO_SYNC -DSQLITE_THREADSAFE=0 \
-	-DSQLITE_OMIT_LOAD_EXTENSION \
+	-DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_USE_URI \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
-	-Wl,--export=aligned_alloc
+	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	mptest.wasm -o mptest.tmp \

@@ -8,6 +8,7 @@ import (
 // SeekingReaderAt implements [io.ReaderAt]
 // through an underlying [io.ReadSeeker].
 type SeekingReaderAt struct {
+	// +checklocks:l
 	r io.ReadSeeker
 	l sync.Mutex
 }

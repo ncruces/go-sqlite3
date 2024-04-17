@@ -1,0 +1,8 @@
+aligned_alloc
+free
+malloc
+sqlite3_filename_database
+sqlite3_filename_journal
+sqlite3_filename_wal
+sqlite3_uri_key
+sqlite3_uri_parameter

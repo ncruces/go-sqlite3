@@ -19,6 +19,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
+	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -224,6 +225,49 @@ func Test_multiwrite01_wal(t *testing.T) {
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test",
 		"--journalmode", "wal")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_adiantum(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+
+	ctx := util.NewContext(newContext(t), true)
+	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
+		"?textkey=correct+horse+battery+staple"
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+		"--vfs", "adiantum")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_adiantum_wal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
+	ctx := util.NewContext(newContext(t), true)
+	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
+		"?textkey=correct+horse+battery+staple"
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+		"--vfs", "adiantum", "--journalmode", "wal")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
