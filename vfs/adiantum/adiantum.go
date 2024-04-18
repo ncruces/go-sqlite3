@@ -8,7 +8,7 @@ import (
 	"lukechampine.com/adiantum/hbsh"
 )
 
-const salt = "github.com/ncruces/go-sqlite3/vfs/adiantum"
+const pepper = "github.com/ncruces/go-sqlite3/vfs/adiantum"
 
 type adiantumCreator struct{}
 
@@ -21,7 +21,7 @@ func (adiantumCreator) KDF(text string) []byte {
 		return key[:]
 	}
 
-	key := argon2.IDKey([]byte(text), []byte(salt), 1, 64*1024, 4, 32)
+	key := argon2.IDKey([]byte(text), []byte(pepper), 1, 64*1024, 4, 32)
 	keyCachePut(text, (*[32]byte)(key))
 	return key
 }
