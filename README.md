@@ -70,6 +70,7 @@ Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ run
 - [math functions](https://sqlite.org/lang_mathfunc.html)
 - [full-text search](https://sqlite.org/fts5.html)
 - [geospatial search](https://sqlite.org/geopoly.html)
+- [encryption at rest](vfs/adiantum/README.md)
 - [and more…](embed/README.md)
 
 ### Caveats
