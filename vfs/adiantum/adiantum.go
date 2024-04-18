@@ -13,6 +13,9 @@ const pepper = "github.com/ncruces/go-sqlite3/vfs/adiantum"
 type adiantumCreator struct{}
 
 func (adiantumCreator) HBSH(key []byte) *hbsh.HBSH {
+	if len(key) != 32 {
+		return nil
+	}
 	return adiantum.New(key)
 }
 
