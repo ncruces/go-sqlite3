@@ -16,7 +16,9 @@ In general, any HBSH construction can be used to wrap any VFS.
 
 The default Adiantum construction uses XChaCha12 for its stream cipher,
 AES for its block cipher, and NH and Poly1305 for hashing.
-It uses Argon2id to derive keys from plain text.
+It uses Argon2id to derive 256-bit keys from plain text.
+
+The VFS encrypts database files, rollback and statement journals, and WAL files.
 
 > [!IMPORTANT]
 > Adiantum is typically used for disk encryption.
@@ -25,5 +27,3 @@ It uses Argon2id to derive keys from plain text.
 > The security property that disk encryption provides is that
 > the only information such an adversary can determine is
 > whether the data in a sector has or has not changed over time.
-
-The VFS encrypts database files, rollback and statement journals, and WAL files.
