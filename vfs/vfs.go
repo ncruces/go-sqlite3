@@ -167,8 +167,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
-	if pOutVFS != 0 && util.CanMap(ctx) {
-		util.WriteUint32(mod, pOutVFS, 1)
+	if pOutVFS != 0 && util.CanMapFiles(ctx) {
+		if _, ok := util.Unwrap(file).(fileShm); ok {
+			util.WriteUint32(mod, pOutVFS, 1)
+		}
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
@@ -361,7 +363,7 @@ func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
 }
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szRegion int32, bExtend, pp uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
 	p, err := file.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	if err != nil {
 		return vfsErrorCode(err, _IOERR_SHMMAP)
@@ -371,30 +373,44 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szReg
 }
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile uint32, offset, n int32, flags _ShmFlag) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
 	err := file.shmLock(offset, n, flags)
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
 }
 
 func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(fileShm)
+	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
 	file.shmUnmap(bDelete != 0)
 	return _OK
 }
 
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
-	if flags&OPEN_URI == 0 {
+	switch {
+	case flags&(OPEN_URI|OPEN_MAIN_DB) == OPEN_URI|OPEN_MAIN_DB:
+		// database file
+	case flags&(OPEN_MAIN_JOURNAL|OPEN_SUBJOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0:
+		// journal or WAL file
+	default:
 		return nil
 	}
 
-	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+	nameDB := mod.ExportedFunction("sqlite3_filename_database")
 	uriKey := mod.ExportedFunction("sqlite3_uri_key")
-	if uriParam == nil || uriKey == nil {
+	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+	if nameDB == nil || uriKey == nil || uriParam == nil {
 		return nil
 	}
 
 	var stack [2]uint64
 	var params url.Values
+
+	if flags&OPEN_MAIN_DB == 0 {
+		stack[0] = uint64(zPath)
+		if err := nameDB.CallWithStack(ctx, stack[:]); err != nil {
+			panic(err)
+		}
+		zPath = uint32(stack[0])
+	}
 
 	for i := 0; ; i++ {
 		stack[1] = uint64(i)

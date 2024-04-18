@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -56,8 +57,16 @@ func TestDB_utf16(t *testing.T) {
 	testDB(t, tmp)
 }
 
-func TestDB_vfs(t *testing.T) {
+func TestDB_memdb(t *testing.T) {
+	t.Parallel()
 	testDB(t, "file:test.db?vfs=memdb")
+}
+
+func TestDB_adiantum(t *testing.T) {
+	t.Parallel()
+	testDB(t, "file:"+
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
+		"?vfs=adiantum&textkey=correct+horse+battery+staple")
 }
 
 func testDB(t testing.TB, name string) {

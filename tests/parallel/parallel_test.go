@@ -14,10 +14,11 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
+	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
-func TestParallel(t *testing.T) {
+func Test_parallel(t *testing.T) {
 	var iter int
 	if testing.Short() {
 		iter = 1000
@@ -34,7 +35,7 @@ func TestParallel(t *testing.T) {
 	testIntegrity(t, name)
 }
 
-func TestWAL(t *testing.T) {
+func Test_wal(t *testing.T) {
 	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without shared memory")
 	}
@@ -48,7 +49,7 @@ func TestWAL(t *testing.T) {
 	testIntegrity(t, name)
 }
 
-func TestMemory(t *testing.T) {
+func Test_memdb(t *testing.T) {
 	var iter int
 	if testing.Short() {
 		iter = 1000
@@ -57,6 +58,21 @@ func TestMemory(t *testing.T) {
 	}
 
 	name := "file:/test.db?vfs=memdb"
+	testParallel(t, name, iter)
+	testIntegrity(t, name)
+}
+
+func Test_adiantum(t *testing.T) {
+	var iter int
+	if testing.Short() {
+		iter = 1000
+	} else {
+		iter = 5000
+	}
+
+	name := "file:" +
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
+		"?vfs=adiantum&textkey=correct+horse+battery+staple"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -112,7 +128,7 @@ func TestChildProcess(t *testing.T) {
 	testParallel(t, name, 1000)
 }
 
-func BenchmarkMemory(b *testing.B) {
+func Benchmark_memdb(b *testing.B) {
 	memdb.Delete("test.db")
 	name := "file:/test.db?vfs=memdb"
 	testParallel(b, name, b.N)

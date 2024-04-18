@@ -61,6 +61,9 @@ sqlite3_errmsg
 sqlite3_error_offset
 sqlite3_errstr
 sqlite3_exec
+sqlite3_filename_database
+sqlite3_filename_journal
+sqlite3_filename_wal
 sqlite3_finalize
 sqlite3_get_autocommit
 sqlite3_get_auxdata
