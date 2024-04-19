@@ -1,7 +1,12 @@
 // Package vfs wraps the C SQLite VFS API.
 package vfs
 
-import "net/url"
+import (
+	"context"
+	"net/url"
+
+	"github.com/tetratelabs/wazero/api"
+)
 
 // A VFS defines the interface between the SQLite core and the underlying operating system.
 //
@@ -128,4 +133,19 @@ type FileBatchAtomicWrite interface {
 	BeginAtomicWrite() error
 	CommitAtomicWrite() error
 	RollbackAtomicWrite() error
+}
+
+// FileSharedMemory extends File to possibly implement shared memory.
+// It's OK for SharedMemory to return nil.
+type FileSharedMemory interface {
+	File
+	SharedMemory() SharedMemory
+}
+
+// SharedMemory is a shared memory implementation.
+// This cannot be externally implemented.
+type SharedMemory interface {
+	shmMap(context.Context, api.Module, int32, int32, bool) (uint32, error)
+	shmLock(int32, int32, _ShmFlag) error
+	shmUnmap(bool)
 }

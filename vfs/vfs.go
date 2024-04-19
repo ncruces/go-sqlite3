@@ -171,8 +171,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
 	if pOutVFS != 0 && util.CanMapFiles(ctx) {
-		if _, ok := util.Unwrap(file).(fileShm); ok {
-			util.WriteUint32(mod, pOutVFS, 1)
+		if f, ok := file.(FileSharedMemory); ok {
+			if f.SharedMemory() != nil {
+				util.WriteUint32(mod, pOutVFS, 1)
+			}
 		}
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
@@ -366,7 +368,7 @@ func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
 }
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szRegion int32, bExtend, pp uint32) _ErrorCode {
-	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
+	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	p, err := file.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	if err != nil {
 		return vfsErrorCode(err, _IOERR_SHMMAP)
@@ -376,13 +378,13 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szReg
 }
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile uint32, offset, n int32, flags _ShmFlag) _ErrorCode {
-	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
+	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	err := file.shmLock(offset, n, flags)
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
 }
 
 func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
-	file := util.Unwrap(vfsFileGet(ctx, mod, pFile)).(fileShm)
+	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	file.shmUnmap(bDelete != 0)
 	return _OK
 }
