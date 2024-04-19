@@ -22,11 +22,8 @@ func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag,
 }
 
 func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values) (file vfs.File, _ vfs.OpenFlag, err error) {
-	encrypt := flags&(0|
-		vfs.OPEN_MAIN_DB|
-		vfs.OPEN_MAIN_JOURNAL|
-		vfs.OPEN_SUBJOURNAL|
-		vfs.OPEN_WAL) != 0
+	// Encrypt everything except super journals.
+	encrypt := flags&vfs.OPEN_SUPER_JOURNAL == 0
 
 	var hbsh *hbsh.HBSH
 	if encrypt {

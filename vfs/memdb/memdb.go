@@ -11,12 +11,22 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
+// Must be a multiple of 64K (the largest page size).
+const sectorSize = 65536
+
 type memVFS struct{}
 
 func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// Allowed file types:
+	// For simplicity, we do not support reading or writing data
+	// across "sector" boundaries.
+	//
+	// This is not a problem for most SQLite file types:
 	// - databases, which only do page aligned reads/writes;
-	// - temp journals, used by the sorter, which does the same.
+	// - temp journals, as used by the sorter, which does the same:
+	//   https://sqlite.org/src/artifact/237840?ln=409-412
+	//
+	// We refuse to open all other file types,
+	// but returning OPEN_MEMORY means SQLite won't ask us to.
 	const types = vfs.OPEN_MAIN_DB |
 		vfs.OPEN_TRANSIENT_DB |
 		vfs.OPEN_TEMP_DB |
@@ -60,9 +70,6 @@ func (memVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 func (memVFS) FullPathname(name string) (string, error) {
 	return name, nil
 }
-
-// Must be a multiple of 64K (the largest page size).
-const sectorSize = 65536
 
 type memDB struct {
 	// +checklocks:lockMtx
