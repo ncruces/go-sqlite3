@@ -27,18 +27,19 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 	// Encrypt everything except super journals.
 	if flags&vfs.OPEN_SUPER_JOURNAL == 0 {
 		var key []byte
-		if t, ok := params["key"]; ok {
+		if name == "" {
+			key = h.hbsh.KDF("") // Temporary files get a random key.
+		} else if t, ok := params["key"]; ok {
 			key = []byte(t[0])
 		} else if t, ok := params["hexkey"]; ok {
 			key, _ = hex.DecodeString(t[0])
 		} else if t, ok := params["textkey"]; ok {
 			key = h.hbsh.KDF(t[0])
-		} else if name == "" {
-			key = h.hbsh.KDF("")
 		}
 
 		if hbsh = h.hbsh.HBSH(key); hbsh == nil {
-			return nil, flags, sqlite3.NOTADB
+			// Can't open without a valid key.
+			return nil, flags, sqlite3.CANTOPEN
 		}
 	}
 
@@ -51,6 +52,7 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 		file, flags, err = h.Open(name, flags)
 	}
 	if err != nil || hbsh == nil || flags&vfs.OPEN_MEMORY != 0 {
+		// Error, or no encryption (super journals, memory files).
 		return file, flags, err
 	}
 	return &hbshFile{File: file, hbsh: hbsh}, flags, err
@@ -72,8 +74,8 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	min := (off) &^ (blockSize - 1)                                 // round down
 	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
 
+	// Read one block at a time.
 	for ; min < max; min += blockSize {
-		// Read full block.
 		m, err := h.File.ReadAt(h.block[:], min)
 		if m != blockSize {
 			return n, err
@@ -98,20 +100,24 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 	min := (off) &^ (blockSize - 1)                                 // round down
 	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
 
+	// Write one block at a time.
 	for ; min < max; min += blockSize {
 		binary.LittleEndian.PutUint64(h.tweak[:], uint64(min))
 		data := h.block[:]
 
 		if off > min || len(p[n:]) < blockSize {
-			// Read full block.
+			// Partial block write: read-update-write.
 			m, err := h.File.ReadAt(h.block[:], min)
 			if m != blockSize {
 				if err != io.EOF {
 					return n, err
 				}
-				// Writing past the EOF.
-				// A partially written block is corrupt,
-				// and also considered to be past the EOF.
+				// Writing past the EOF:
+				// We're either appending an entirely new block,
+				// or the final block was only partially written.
+				// A partially written block can't be decripted,
+				// and is as good as corrupt.
+				// Either way, zero pad the file to the next block size.
 				clear(data)
 			}
 
@@ -124,7 +130,6 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		t := copy(data, p[n:])
 		h.hbsh.Encrypt(h.block[:], h.tweak[:])
 
-		// Write full block.
 		m, err := h.File.WriteAt(h.block[:], min)
 		if m != blockSize {
 			return n, err
@@ -155,9 +160,11 @@ func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 		vfs.IOCAP_BATCH_ATOMIC)
 }
 
-// This is needed for shared memory.
-func (h *hbshFile) Unwrap() vfs.File {
-	return h.File
+func (h *hbshFile) SharedMemory() vfs.SharedMemory {
+	if shm, ok := h.File.(vfs.FileSharedMemory); ok {
+		return shm.SharedMemory()
+	}
+	return nil
 }
 
 // Wrap optional methods.
