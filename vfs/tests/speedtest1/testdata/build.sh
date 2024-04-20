@@ -16,8 +16,8 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
-	-D_HAVE_SQLITE_CONFIG_H \
-	-Wl,--export=aligned_alloc
+	-D_HAVE_SQLITE_CONFIG_H -DSQLITE_USE_URI \
+	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	speedtest1.wasm -o speedtest1.tmp \

@@ -24,6 +24,15 @@ type VFSParams interface {
 	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
 }
 
+// VFSJournal extends VFS with the ability to open journals than
+// can access their corresponding database files.
+//
+// https://sqlite.org/c3ref/database_file_object.html
+type VFSJournal interface {
+	VFS
+	OpenJournal(name string, flags OpenFlag, db File) (File, OpenFlag, error)
+}
+
 // A File represents an open file in the OS interface layer.
 //
 // Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.

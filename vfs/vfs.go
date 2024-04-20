@@ -143,7 +143,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	var err error
 	var parsed bool
 	var params url.Values
-	if pfs, ok := vfs.(VFSParams); ok {
+	if jfs, ok := vfs.(VFSJournal); ok && flags&(OPEN_WAL|OPEN_MAIN_JOURNAL) != 0 {
+		db := vfsDatabaseFileObject(ctx, mod, zPath)
+		file, flags, err = jfs.OpenJournal(path, flags, db)
+	} else if pfs, ok := vfs.(VFSParams); ok {
 		parsed = true
 		params = vfsURIParameters(ctx, mod, zPath, flags)
 		file, flags, err = pfs.OpenParams(path, flags, params)
@@ -385,7 +388,6 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 }
 
 // Consider these exports:
-// - sqlite3_database_file_object
 // - sqlite3_db_filename
 // - sqlite3_filename_database
 // - sqlite3_filename_journal
@@ -394,8 +396,6 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
 	// In principle, sqlite3_uri_key and sqlite3_uri_parameter are safe to call in all cases
 	// with a zPath passed to xOpen, but we can can avoid the overhead of doing so.
-	// NULLs are safe, and even OPEN_SUPER_JOURNAL is safe:
-	// https://sqlite.org/src/artifact/6385727a?ln=3014
 	switch {
 	case flags&(OPEN_URI|OPEN_MAIN_DB) == OPEN_URI|OPEN_MAIN_DB:
 		// database file
@@ -408,14 +408,11 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 		return nil
 	}
 
-	uriKey := mod.ExportedFunction("sqlite3_uri_key")
-	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
-	if uriKey == nil || uriParam == nil {
-		return nil
-	}
-
 	var stack [2]uint64
 	var params url.Values
+	uriKey := mod.ExportedFunction("sqlite3_uri_key")
+	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
+
 	for i := 0; ; i++ {
 		stack[1] = uint64(i)
 		stack[0] = uint64(zPath)
@@ -440,6 +437,15 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 		}
 		params.Set(key, util.ReadString(mod, uint32(stack[0]), _MAX_NAME))
 	}
+}
+
+func vfsDatabaseFileObject(ctx context.Context, mod api.Module, zPath uint32) File {
+	stack := [...]uint64{uint64(zPath)}
+	fn := mod.ExportedFunction("sqlite3_database_file_object")
+	if err := fn.CallWithStack(ctx, stack[:]); err != nil {
+		panic(err)
+	}
+	return vfsFileGet(ctx, mod, uint32(stack[0]))
 }
 
 func vfsGet(mod api.Module, pVfs uint32) VFS {

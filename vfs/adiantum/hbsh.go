@@ -56,6 +56,10 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 	return &hbshFile{File: file, hbsh: hbsh}, flags, err
 }
 
+// func (h *hbshVFS) OpenJournal(name string, flags vfs.OpenFlag, db vfs.File) (vfs.File, vfs.OpenFlag, error) {
+// 	return nil, 0, nil
+// }
+
 const (
 	blockSize = 4096
 	tweakSize = 8
