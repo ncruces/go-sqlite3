@@ -143,7 +143,10 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	var err error
 	var parsed bool
 	var params url.Values
-	if pfs, ok := vfs.(VFSParams); ok {
+	if jfs, ok := vfs.(VFSJournal); ok && flags&(OPEN_WAL|OPEN_MAIN_JOURNAL) != 0 {
+		db := vfsDatabaseFileObject(ctx, mod, zPath)
+		file, flags, err = jfs.OpenJournal(path, flags, db)
+	} else if pfs, ok := vfs.(VFSParams); ok {
 		parsed = true
 		params = vfsURIParameters(ctx, mod, zPath, flags)
 		file, flags, err = pfs.OpenParams(path, flags, params)
@@ -387,30 +390,17 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
 	switch {
 	case flags&(OPEN_URI|OPEN_MAIN_DB) == OPEN_URI|OPEN_MAIN_DB:
-		// database file
-	case flags&(OPEN_MAIN_JOURNAL|OPEN_SUBJOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0:
+		// database file with URI
+	case flags&(OPEN_WAL|OPEN_MAIN_JOURNAL) != 0:
 		// journal or WAL file
 	default:
 		return nil
 	}
 
-	nameDB := mod.ExportedFunction("sqlite3_filename_database")
-	uriKey := mod.ExportedFunction("sqlite3_uri_key")
-	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
-	if nameDB == nil || uriKey == nil || uriParam == nil {
-		return nil
-	}
-
 	var stack [2]uint64
 	var params url.Values
-
-	if flags&OPEN_MAIN_DB == 0 {
-		stack[0] = uint64(zPath)
-		if err := nameDB.CallWithStack(ctx, stack[:]); err != nil {
-			panic(err)
-		}
-		zPath = uint32(stack[0])
-	}
+	uriKey := mod.ExportedFunction("sqlite3_uri_key")
+	uriParam := mod.ExportedFunction("sqlite3_uri_parameter")
 
 	for i := 0; ; i++ {
 		stack[1] = uint64(i)
@@ -436,6 +426,15 @@ func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags O
 		}
 		params.Set(key, util.ReadString(mod, uint32(stack[0]), _MAX_NAME))
 	}
+}
+
+func vfsDatabaseFileObject(ctx context.Context, mod api.Module, zPath uint32) File {
+	stack := [...]uint64{uint64(zPath)}
+	fn := mod.ExportedFunction("sqlite3_database_file_object")
+	if err := fn.CallWithStack(ctx, stack[:]); err != nil {
+		panic(err)
+	}
+	return vfsFileGet(ctx, mod, uint32(stack[0]))
 }
 
 func vfsGet(mod api.Module, pVfs uint32) VFS {

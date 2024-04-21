@@ -33,18 +33,20 @@ func Register(name string, base vfs.VFS, cipher HBSHCreator) {
 	if cipher == nil {
 		cipher = adiantumCreator{}
 	}
-	vfs.Register("adiantum", &hbshVFS{
+	vfs.Register(name, &hbshVFS{
 		VFS:  base,
 		hbsh: cipher,
 	})
 }
 
-// HBSHCreator creates an [hbsh.HBSH] cipher,
+// HBSHCreator creates an [hbsh.HBSH] cipher
 // given key material.
 type HBSHCreator interface {
-	// KDF maps a secret (text) to a key of the appropriate size.
-	KDF(text string) (key []byte)
+	// KDF derives an HBSH key from a secret.
+	// If no secret is given, a random key is generated.
+	KDF(secret string) (key []byte)
 
-	// HBSH creates an HBSH cipher given an appropriate key.
+	// HBSH creates an HBSH cipher given a key.
+	// If key is not appropriate, nil is returned.
 	HBSH(key []byte) *hbsh.HBSH
 }

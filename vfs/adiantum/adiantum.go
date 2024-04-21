@@ -1,6 +1,7 @@
 package adiantum
 
 import (
+	"crypto/rand"
 	"sync"
 
 	"golang.org/x/crypto/argon2"
@@ -20,6 +21,12 @@ func (adiantumCreator) HBSH(key []byte) *hbsh.HBSH {
 }
 
 func (adiantumCreator) KDF(text string) []byte {
+	if text == "" {
+		key := make([]byte, 32)
+		n, _ := rand.Read(key)
+		return key[:n]
+	}
+
 	if key := keyCacheGet(text); key != nil {
 		return key[:]
 	}
