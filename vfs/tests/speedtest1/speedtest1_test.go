@@ -21,6 +21,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
+	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -38,8 +39,7 @@ func TestMain(m *testing.M) {
 	initFlags()
 
 	ctx := context.Background()
-	cfg := wazero.NewRuntimeConfig().WithMemoryLimitPages(1024)
-	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
+	rt = wazero.NewRuntime(ctx)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	_, err := env.Instantiate(ctx)
@@ -88,6 +88,25 @@ func Benchmark_speedtest1(b *testing.B) {
 	ctx := util.NewContext(context.Background(), true)
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
+	cfg := wazero.NewModuleConfig().
+		WithArgs(args...).WithName("speedtest1").
+		WithStdout(&output).WithStderr(&output).
+		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
+		WithOsyield(runtime.Gosched).
+		WithRandSource(rand.Reader)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Benchmark_adiantum(b *testing.B) {
+	output.Reset()
+	ctx := util.NewContext(context.Background(), true)
+	name := "file:" + filepath.Join(b.TempDir(), "test.db") +
+		"?textkey=correct+horse+battery+staple"
+	args := append(options, "--vfs", "adiantum", "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
 		WithArgs(args...).WithName("speedtest1").
 		WithStdout(&output).WithStderr(&output).
