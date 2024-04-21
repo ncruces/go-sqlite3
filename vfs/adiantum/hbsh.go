@@ -18,15 +18,14 @@ type hbshVFS struct {
 }
 
 func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	return h.OpenParams(name, flags, url.Values{})
+	return h.OpenParams(name, flags, nil)
 }
 
 func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values) (file vfs.File, _ vfs.OpenFlag, err error) {
-	// Encrypt everything except super journals.
-	encrypt := flags&vfs.OPEN_SUPER_JOURNAL == 0
-
 	var hbsh *hbsh.HBSH
-	if encrypt {
+
+	// Encrypt everything except super journals.
+	if flags&vfs.OPEN_SUPER_JOURNAL == 0 {
 		var key []byte
 		if t, ok := params["key"]; ok {
 			key = []byte(t[0])
@@ -34,6 +33,8 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 			key, _ = hex.DecodeString(t[0])
 		} else if t, ok := params["textkey"]; ok {
 			key = h.hbsh.KDF(t[0])
+		} else if name == "" {
+			key = h.hbsh.KDF("")
 		}
 
 		if hbsh = h.hbsh.HBSH(key); hbsh == nil {
@@ -42,7 +43,6 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 	}
 
 	if h, ok := h.VFS.(vfs.VFSParams); ok {
-		delete(params, "vfs")
 		delete(params, "key")
 		delete(params, "hexkey")
 		delete(params, "textkey")
@@ -50,15 +50,11 @@ func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values)
 	} else {
 		file, flags, err = h.Open(name, flags)
 	}
-	if err != nil || hbsh == nil {
+	if err != nil || hbsh == nil || flags&vfs.OPEN_MEMORY != 0 {
 		return file, flags, err
 	}
 	return &hbshFile{File: file, hbsh: hbsh}, flags, err
 }
-
-// func (h *hbshVFS) OpenJournal(name string, flags vfs.OpenFlag, db vfs.File) (vfs.File, vfs.OpenFlag, error) {
-// 	return nil, 0, nil
-// }
 
 const (
 	blockSize = 4096

@@ -387,24 +387,13 @@ func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _Er
 	return _OK
 }
 
-// Consider these exports:
-// - sqlite3_db_filename
-// - sqlite3_filename_database
-// - sqlite3_filename_journal
-// - sqlite3_filename_wal
-
 func vfsURIParameters(ctx context.Context, mod api.Module, zPath uint32, flags OpenFlag) url.Values {
-	// In principle, sqlite3_uri_key and sqlite3_uri_parameter are safe to call in all cases
-	// with a zPath passed to xOpen, but we can can avoid the overhead of doing so.
 	switch {
 	case flags&(OPEN_URI|OPEN_MAIN_DB) == OPEN_URI|OPEN_MAIN_DB:
-		// database file
+		// database file with URI
 	case flags&(OPEN_WAL|OPEN_MAIN_JOURNAL) != 0:
 		// journal or WAL file
 	default:
-		return nil
-	}
-	if zPath == 0 {
 		return nil
 	}
 

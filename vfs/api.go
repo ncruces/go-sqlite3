@@ -24,8 +24,8 @@ type VFSParams interface {
 	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
 }
 
-// VFSJournal extends VFS with the ability to open journals than
-// can access their corresponding database files.
+// VFSJournal extends VFS with the ability to open journals
+// that need a reference to their corresponding database files.
 //
 // https://sqlite.org/c3ref/database_file_object.html
 type VFSJournal interface {
