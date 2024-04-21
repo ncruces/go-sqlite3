@@ -20,10 +20,10 @@ Additionally, we use Argon2id to derive 256-bit keys from plain text.
 
 The VFS encrypts all files _except_
 [super journals](https://sqlite.org/tempfiles.html#super_journal_files):
-super journals _never_ contain database data, only filenames,
+these _never_ contain database data, only filenames,
 and padding them to the block size is problematic.
 
-Temporary files _are_ encrypted with random keys,
+Temporary files _are_ encrypted with **random** keys,
 as they _may_ contain database data.
 To avoid the overhead of encrypting temporary files,
 keep them in memory:
