@@ -63,13 +63,9 @@ var driverName = "sqlite3"
 
 func init() {
 	if driverName != "" {
-		sql.Register(driverName, &SQLiteDriver)
+		sql.Register(driverName, &SQLite{})
 	}
 }
-
-// SQLiteDriver is a global Driver{} instance
-// registered under [database/sql] as "sqlite3".
-var SQLiteDriver = Driver{}
 
 // Open opens the SQLite database specified by dataSourceName as a [database/sql.DB].
 //
@@ -77,15 +73,14 @@ var SQLiteDriver = Driver{}
 // The conn can be used to execute queries, register functions, etc.
 // Any error return closes the conn and passes the error to [database/sql].
 func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
-	d := Driver{Init: init}
-	c, err := d.OpenConnector(dataSourceName)
+	c, err := (&SQLite{Init: init}).OpenConnector(dataSourceName)
 	if err != nil {
 		return nil, err
 	}
 	return sql.OpenDB(c), nil
 }
 
-type Driver struct {
+type SQLite struct {
 
 	// The init function is called by the driver on new connections.
 	// The conn can be used to execute queries, register functions, etc.
@@ -94,7 +89,7 @@ type Driver struct {
 }
 
 // Open: implements [database/sql.Driver].
-func (d *Driver) Open(name string) (driver.Conn, error) {
+func (d *SQLite) Open(name string) (driver.Conn, error) {
 	c, err := d.newConnector(name)
 	if err != nil {
 		return nil, err
@@ -103,11 +98,11 @@ func (d *Driver) Open(name string) (driver.Conn, error) {
 }
 
 // OpenConnector: implements [database/sql.DriverContext].
-func (d *Driver) OpenConnector(name string) (driver.Connector, error) {
+func (d *SQLite) OpenConnector(name string) (driver.Connector, error) {
 	return d.newConnector(name)
 }
 
-func (d *Driver) newConnector(name string) (*connector, error) {
+func (d *SQLite) newConnector(name string) (*connector, error) {
 	c := connector{driver: d, name: name}
 
 	var txlock, timefmt string
@@ -150,7 +145,7 @@ func (d *Driver) newConnector(name string) (*connector, error) {
 }
 
 type connector struct {
-	driver  *Driver
+	driver  *SQLite
 	name    string
 	txBegin string
 	tmRead  sqlite3.TimeFormat
