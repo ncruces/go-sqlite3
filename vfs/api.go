@@ -24,18 +24,20 @@ type VFS interface {
 // through the OpenParams method.
 //
 // https://sqlite.org/c3ref/uri_boolean.html
+//
+// Deprecated: implement [VFSFilename] instead.
 type VFSParams interface {
 	VFS
 	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
 }
 
-// VFSJournal extends VFS with the ability to open journals
-// that need a reference to their corresponding database files.
+// VFSFilename extends VFS with the ability to use Filename
+// objects for opening files.
 //
-// https://sqlite.org/c3ref/database_file_object.html
-type VFSJournal interface {
+// https://sqlite.org/c3ref/filename.html
+type VFSFilename interface {
 	VFS
-	OpenJournal(name string, flags OpenFlag, db File) (File, OpenFlag, error)
+	OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error)
 }
 
 // A File represents an open file in the OS interface layer.
