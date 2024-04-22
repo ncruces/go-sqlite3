@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
-	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -141,15 +140,9 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 
 	var file File
 	var err error
-	var parsed bool
-	var params url.Values
 	if ffs, ok := vfs.(VFSFilename); ok {
 		name := OpenFilename(ctx, mod, zPath, flags)
 		file, flags, err = ffs.OpenFilename(name, flags)
-	} else if pfs, ok := vfs.(VFSParams); ok {
-		parsed = true
-		params = OpenFilename(ctx, mod, zPath, flags).URIParameters()
-		file, flags, err = pfs.OpenParams(path, flags, params)
 	} else {
 		file, flags, err = vfs.Open(path, flags)
 	}
@@ -159,9 +152,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	}
 
 	if file, ok := file.(FilePowersafeOverwrite); ok {
-		if !parsed {
-			params = OpenFilename(ctx, mod, zPath, flags).URIParameters()
-		}
+		params := OpenFilename(ctx, mod, zPath, flags).URIParameters()
 		if b, ok := util.ParseBool(params.Get("psow")); ok {
 			file.SetPowersafeOverwrite(b)
 		}
@@ -190,7 +181,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile uint32) _ErrorCode {
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32, iOfst int64) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
 	n, err := file.ReadAt(buf, iOfst)
@@ -205,7 +196,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32
 }
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32, iOfst int64) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
 	_, err := file.WriteAt(buf, iOfst)
@@ -216,38 +207,38 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int3
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Truncate(nByte)
 	return vfsErrorCode(err, _IOERR_TRUNCATE)
 }
 
 func vfsSync(ctx context.Context, mod api.Module, pFile uint32, flags SyncFlag) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Sync(flags)
 	return vfsErrorCode(err, _IOERR_FSYNC)
 }
 
 func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	size, err := file.Size()
 	util.WriteUint64(mod, pSize, uint64(size))
 	return vfsErrorCode(err, _IOERR_SEEK)
 }
 
 func vfsLock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Lock(eLock)
 	return vfsErrorCode(err, _IOERR_LOCK)
 }
 
 func vfsUnlock(ctx context.Context, mod api.Module, pFile uint32, eLock LockLevel) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Unlock(eLock)
 	return vfsErrorCode(err, _IOERR_UNLOCK)
 }
 
 func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	locked, err := file.CheckReservedLock()
 
 	var res uint32
@@ -260,7 +251,7 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 }
 
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 
 	switch op {
 	case _FCNTL_LOCKSTATE:
@@ -351,12 +342,12 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 }
 
 func vfsSectorSize(ctx context.Context, mod api.Module, pFile uint32) uint32 {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	return uint32(file.SectorSize())
 }
 
 func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32) DeviceCharacteristic {
-	file := vfsFileGet(ctx, mod, pFile)
+	file := vfsFileGet(ctx, mod, pFile).(File)
 	return file.DeviceCharacteristics()
 }
 
@@ -407,10 +398,10 @@ func vfsFileRegister(ctx context.Context, mod api.Module, pFile uint32, file Fil
 	util.WriteUint32(mod, pFile+fileHandleOffset, id)
 }
 
-func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) File {
+func vfsFileGet(ctx context.Context, mod api.Module, pFile uint32) any {
 	const fileHandleOffset = 4
 	id := util.ReadUint32(mod, pFile+fileHandleOffset)
-	return util.GetHandle(ctx, id).(File)
+	return util.GetHandle(ctx, id)
 }
 
 func vfsFileClose(ctx context.Context, mod api.Module, pFile uint32) error {

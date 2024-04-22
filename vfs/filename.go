@@ -90,7 +90,8 @@ func (n *Filename) DatabaseFile() File {
 	if err := fn.CallWithStack(n.ctx, n.stack[:]); err != nil {
 		panic(err)
 	}
-	return vfsFileGet(n.ctx, n.mod, uint32(n.stack[0]))
+	file, _ := vfsFileGet(n.ctx, n.mod, uint32(n.stack[0])).(File)
+	return file
 }
 
 // URIParameters obtain values for URI parameters.

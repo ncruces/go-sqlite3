@@ -3,7 +3,6 @@ package vfs
 
 import (
 	"context"
-	"net/url"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -18,17 +17,6 @@ type VFS interface {
 	Delete(name string, syncDir bool) error
 	Access(name string, flags AccessFlag) (bool, error)
 	FullPathname(name string) (string, error)
-}
-
-// VFSParams extends VFS with the ability to handle URI parameters
-// through the OpenParams method.
-//
-// https://sqlite.org/c3ref/uri_boolean.html
-//
-// Deprecated: implement [VFSFilename] instead.
-type VFSParams interface {
-	VFS
-	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
 }
 
 // VFSFilename extends VFS with the ability to use Filename
