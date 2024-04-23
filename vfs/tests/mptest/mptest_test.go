@@ -242,7 +242,7 @@ func Test_crash01_adiantum(t *testing.T) {
 
 	ctx := util.NewContext(newContext(t), true)
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?textkey=correct+horse+battery+staple"
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
 		"--vfs", "adiantum")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -265,7 +265,7 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 
 	ctx := util.NewContext(newContext(t), true)
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?textkey=correct+horse+battery+staple"
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
 		"--vfs", "adiantum", "--journalmode", "wal")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)

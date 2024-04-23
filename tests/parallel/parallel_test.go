@@ -72,7 +72,8 @@ func Test_adiantum(t *testing.T) {
 
 	name := "file:" +
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
-		"?vfs=adiantum&textkey=correct+horse+battery+staple"
+		"?vfs=adiantum" +
+		"&hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }

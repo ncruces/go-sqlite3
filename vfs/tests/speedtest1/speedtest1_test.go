@@ -105,7 +105,7 @@ func Benchmark_adiantum(b *testing.B) {
 	output.Reset()
 	ctx := util.NewContext(context.Background(), true)
 	name := "file:" + filepath.Join(b.TempDir(), "test.db") +
-		"?textkey=correct+horse+battery+staple"
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	args := append(options, "--vfs", "adiantum", "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
 		WithArgs(args...).WithName("speedtest1").
