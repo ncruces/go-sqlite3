@@ -10,19 +10,18 @@ This package wraps an SQLite VFS to offer encryption at rest.
 
 The `"adiantum"` VFS wraps the default SQLite VFS using the
 [Adiantum](https://github.com/lukechampine/adiantum)
-tweakable and length-preserving encryption.
-
+tweakable and length-preserving encryption.\
 In general, any HBSH construction can be used to wrap any VFS.
 
 The default Adiantum construction uses XChaCha12 for its stream cipher,
-AES for its block cipher, and NH and Poly1305 for hashing.
-Additionally, we use Argon2id to derive 256-bit keys from plain text.
+AES for its block cipher, and NH and Poly1305 for hashing.\
+Additionally, we use [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2#hdr-Argon2id)
+to derive 256-bit keys from plain text.
 
 The VFS encrypts all files _except_
 [super journals](https://sqlite.org/tempfiles.html#super_journal_files):
-these _never_ contain database data, only filenames,
+they _never_ contain database data, only filenames,
 and padding them to the block size is problematic.
-
 Temporary files _are_ encrypted with **random** keys,
 as they _may_ contain database data.
 To avoid the overhead of encrypting temporary files,
@@ -35,5 +34,11 @@ keep them in memory:
 > The standard threat model for disk encryption considers an adversary
 > that can read multiple snapshots of a disk.
 > The only security property that disk encryption (and this package)
-> provides is that the only information such an adversary can determine
-> is whether the data in a sector has or has not changed over time.
+> provides is that all information such an adversary can obtain
+> is whether the data in a sector has (or has not) changed over time.
+
+> [!CAUTION]
+> This package does not claim protect databases against forgery.
+> Any encryption scheme that allows constant-time block updates
+> can't prevent individual blocks from being reverted to former versions of themselves,
+> so block-level authentication is of limited value.
