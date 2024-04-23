@@ -25,20 +25,23 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 
 	// Encrypt everything except super journals.
 	if flags&vfs.OPEN_SUPER_JOURNAL == 0 {
-		var key []byte
-		if params := name.URIParameters(); name == nil {
-			key = h.hbsh.KDF("") // Temporary files get a random key.
-		} else if t, ok := params["key"]; ok {
-			key = []byte(t[0])
-		} else if t, ok := params["hexkey"]; ok {
-			key, _ = hex.DecodeString(t[0])
-		} else if t, ok := params["textkey"]; ok {
-			key = h.hbsh.KDF(t[0])
-		}
-
-		if hbsh = h.hbsh.HBSH(key); hbsh == nil {
-			// Can't open without a valid key.
-			return nil, flags, sqlite3.CANTOPEN
+		if f, ok := name.DatabaseFile().(*hbshFile); ok {
+			hbsh = f.hbsh
+		} else {
+			var key []byte
+			if params := name.URIParameters(); name == nil {
+				key = h.hbsh.KDF("") // Temporary files get a random key.
+			} else if t, ok := params["key"]; ok {
+				key = []byte(t[0])
+			} else if t, ok := params["hexkey"]; ok {
+				key, _ = hex.DecodeString(t[0])
+			} else if t, ok := params["textkey"]; ok {
+				key = h.hbsh.KDF(t[0])
+			}
+			if hbsh = h.hbsh.HBSH(key); hbsh == nil {
+				// Can't open without a valid key.
+				return nil, flags, sqlite3.CANTOPEN
+			}
 		}
 	}
 

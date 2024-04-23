@@ -416,6 +416,48 @@ func TestConn_SetLastInsertRowID(t *testing.T) {
 	}
 }
 
+func TestConn_Filename(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "test.db")
+	db, err := sqlite3.Open(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	n := db.Filename("")
+	if n.String() != file {
+		t.Errorf("got %v", n)
+	}
+	if n.Database() != file {
+		t.Errorf("got %v", n)
+	}
+	if n.DatabaseFile() == nil {
+		t.Errorf("got %v", n)
+	}
+
+	n = db.Filename("xpto")
+	if n != nil {
+		t.Errorf("got %v", n)
+	}
+	if n.String() != "" {
+		t.Errorf("got %v", n)
+	}
+	if n.Database() != "" {
+		t.Errorf("got %v", n)
+	}
+	if n.Journal() != "" {
+		t.Errorf("got %v", n)
+	}
+	if n.WAL() != "" {
+		t.Errorf("got %v", n)
+	}
+	if n.DatabaseFile() != nil {
+		t.Errorf("got %v", n)
+	}
+}
+
 func TestConn_ReadOnly(t *testing.T) {
 	t.Parallel()
 

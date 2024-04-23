@@ -152,8 +152,8 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	}
 
 	if file, ok := file.(FilePowersafeOverwrite); ok {
-		params := OpenFilename(ctx, mod, zPath, flags).URIParameters()
-		if b, ok := util.ParseBool(params.Get("psow")); ok {
+		name := OpenFilename(ctx, mod, zPath, flags)
+		if b, ok := util.ParseBool(name.URIParameter("psow")); ok {
 			file.SetPowersafeOverwrite(b)
 		}
 	}

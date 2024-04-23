@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -214,6 +215,20 @@ func (c *Conn) DBName(n int) string {
 		return ""
 	}
 	return util.ReadString(c.mod, ptr, _MAX_NAME)
+}
+
+// Filename returns the filename for a database.
+//
+// https://sqlite.org/c3ref/db_filename.html
+func (c *Conn) Filename(schema string) *vfs.Filename {
+	var ptr uint32
+	if schema != "" {
+		defer c.arena.mark()()
+		ptr = c.arena.string(schema)
+	}
+
+	r := c.call("sqlite3_db_filename", uint64(c.handle), uint64(ptr))
+	return vfs.OpenFilename(c.ctx, c.mod, uint32(r), vfs.OPEN_MAIN_DB)
 }
 
 // ReadOnly determines if a database is read-only.

@@ -101,7 +101,7 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 		return nil, flags, err
 	}
 
-	if modeof := name.URIParameters().Get("modeof"); modeof != "" {
+	if modeof := name.URIParameter("modeof"); modeof != "" {
 		if err = osSetMode(f, modeof); err != nil {
 			f.Close()
 			return nil, flags, _IOERR_FSTAT
