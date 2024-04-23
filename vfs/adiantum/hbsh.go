@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"io"
-	"net/url"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -18,38 +17,38 @@ type hbshVFS struct {
 }
 
 func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	return h.OpenParams(name, flags, nil)
+	return nil, 0, sqlite3.CANTOPEN
 }
 
-func (h *hbshVFS) OpenParams(name string, flags vfs.OpenFlag, params url.Values) (file vfs.File, _ vfs.OpenFlag, err error) {
+func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
 	var hbsh *hbsh.HBSH
 
 	// Encrypt everything except super journals.
 	if flags&vfs.OPEN_SUPER_JOURNAL == 0 {
-		var key []byte
-		if name == "" {
-			key = h.hbsh.KDF("") // Temporary files get a random key.
-		} else if t, ok := params["key"]; ok {
-			key = []byte(t[0])
-		} else if t, ok := params["hexkey"]; ok {
-			key, _ = hex.DecodeString(t[0])
-		} else if t, ok := params["textkey"]; ok {
-			key = h.hbsh.KDF(t[0])
-		}
-
-		if hbsh = h.hbsh.HBSH(key); hbsh == nil {
-			// Can't open without a valid key.
-			return nil, flags, sqlite3.CANTOPEN
+		if f, ok := name.DatabaseFile().(*hbshFile); ok {
+			hbsh = f.hbsh
+		} else {
+			var key []byte
+			if params := name.URIParameters(); name == nil {
+				key = h.hbsh.KDF("") // Temporary files get a random key.
+			} else if t, ok := params["key"]; ok {
+				key = []byte(t[0])
+			} else if t, ok := params["hexkey"]; ok {
+				key, _ = hex.DecodeString(t[0])
+			} else if t, ok := params["textkey"]; ok {
+				key = h.hbsh.KDF(t[0])
+			}
+			if hbsh = h.hbsh.HBSH(key); hbsh == nil {
+				// Can't open without a valid key.
+				return nil, flags, sqlite3.CANTOPEN
+			}
 		}
 	}
 
-	if h, ok := h.VFS.(vfs.VFSParams); ok {
-		delete(params, "key")
-		delete(params, "hexkey")
-		delete(params, "textkey")
-		file, flags, err = h.OpenParams(name, flags, params)
+	if h, ok := h.VFS.(vfs.VFSFilename); ok {
+		file, flags, err = h.OpenFilename(name, flags)
 	} else {
-		file, flags, err = h.Open(name, flags)
+		file, flags, err = h.Open(name.String(), flags)
 	}
 	if err != nil || hbsh == nil || flags&vfs.OPEN_MEMORY != 0 {
 		// Error, or no encryption (super journals, memory files).

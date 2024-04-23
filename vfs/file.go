@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -70,10 +69,10 @@ func (vfsOS) Access(name string, flags AccessFlag) (bool, error) {
 }
 
 func (vfsOS) Open(name string, flags OpenFlag) (File, OpenFlag, error) {
-	return vfsOS{}.OpenParams(name, flags, nil)
+	return nil, 0, _CANTOPEN
 }
 
-func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error) {
+func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error) {
 	var oflags int
 	if flags&OPEN_EXCLUSIVE != 0 {
 		oflags |= os.O_EXCL
@@ -90,10 +89,10 @@ func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, O
 
 	var err error
 	var f *os.File
-	if name == "" {
+	if name == nil {
 		f, err = os.CreateTemp("", "*.db")
 	} else {
-		f, err = osutil.OpenFile(name, oflags, 0666)
+		f, err = osutil.OpenFile(name.String(), oflags, 0666)
 	}
 	if err != nil {
 		if errors.Is(err, syscall.EISDIR) {
@@ -102,7 +101,7 @@ func (vfsOS) OpenParams(name string, flags OpenFlag, params url.Values) (File, O
 		return nil, flags, err
 	}
 
-	if modeof := params.Get("modeof"); modeof != "" {
+	if modeof := name.URIParameter("modeof"); modeof != "" {
 		if err = osSetMode(f, modeof); err != nil {
 			f.Close()
 			return nil, flags, _IOERR_FSTAT

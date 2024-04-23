@@ -3,7 +3,6 @@ package vfs
 
 import (
 	"context"
-	"net/url"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -20,22 +19,13 @@ type VFS interface {
 	FullPathname(name string) (string, error)
 }
 
-// VFSParams extends VFS with the ability to handle URI parameters
-// through the OpenParams method.
+// VFSFilename extends VFS with the ability to use Filename
+// objects for opening files.
 //
-// https://sqlite.org/c3ref/uri_boolean.html
-type VFSParams interface {
+// https://sqlite.org/c3ref/filename.html
+type VFSFilename interface {
 	VFS
-	OpenParams(name string, flags OpenFlag, params url.Values) (File, OpenFlag, error)
-}
-
-// VFSJournal extends VFS with the ability to open journals
-// that need a reference to their corresponding database files.
-//
-// https://sqlite.org/c3ref/database_file_object.html
-type VFSJournal interface {
-	VFS
-	OpenJournal(name string, flags OpenFlag, db File) (File, OpenFlag, error)
+	OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error)
 }
 
 // A File represents an open file in the OS interface layer.
