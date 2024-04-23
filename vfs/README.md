@@ -17,7 +17,7 @@ The main differences are [file locking](#file-locking) and [WAL mode](write-ahea
 POSIX advisory locks, which SQLite uses on Unix, are
 [broken by design](https://sqlite.org/src/artifact/2e8b12?ln=1073-1161).
 
-On Linux, macOS and illumos, this module uses
+On Linux and macOS, this module uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
 OFD locks are fully compatible with POSIX advisory locks.
@@ -45,7 +45,7 @@ to check if your platform supports file locking.
 
 ### Write-Ahead Logging
 
-On 64-bit Linux, macOS and illumos, this module uses `mmap` to implement
+On 64-bit Linux and macOS, this module uses `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
 
@@ -69,7 +69,7 @@ to check if your platform supports shared memory.
 ### Batch-Atomic Write
 
 On 64-bit Linux, this module supports [batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
-on the F2FS filesystem.
+with the F2FS filesystem.
 
 ### Build tags
 

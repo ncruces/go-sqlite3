@@ -89,7 +89,7 @@ It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 
 The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c)
-on Linux, macOS, Windows and FreeBSD.
+on Linux, macOS, Windows, FreeBSD and illumos.
 
 ### Performance
 

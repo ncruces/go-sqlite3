@@ -85,8 +85,29 @@ jobs:
         operating_system: freebsd
         version: '14.0'
         shell: bash
-        run: source test.sh
+        run: . ./test.sh
         sync_files: runner-to-vm
+
+  test-illumos:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Build
+      run: .github/workflows/illumos.sh
+
+    - name: Test
+      uses: vmactions/omnios-vm@v1
+      with:
+        usesh: true
+        copyback: false
+        run: . ./test.sh
 
   test-m1:
     runs-on: macos-14
