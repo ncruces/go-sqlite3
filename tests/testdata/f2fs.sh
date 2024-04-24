@@ -14,7 +14,7 @@ sudo mount -nv -o loop f2fs.img f2fs/
 mkdir -p f2fs/tmp/
 
 go test -c "$ROOT/tests" -coverpkg github.com/ncruces/go-sqlite3/...
-TMPDIR=f2fs/tmp/ ./tests.test -test.v -test.short -test.coverprofile cover.out
+TMPDIR=$PWD/f2fs/tmp/ ./tests.test -test.v -test.short -test.coverprofile cover.out
 go tool cover -html cover.out
 
 sudo umount f2fs/

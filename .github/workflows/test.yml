@@ -52,7 +52,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
 
     - name: Test no locks
-      run: go test -v -tags sqlite3_nosys ./tests -run TestDB_nolock
+      run: go test -v -tags sqlite3_nosys ./...
 
     - name: Test GORM
       run: gormlite/test.sh
@@ -123,21 +123,7 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-  test-386:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v4
-      with: { lfs: 'true' }
-
-    - uses: actions/setup-go@v5
-      with: { go-version: stable }
-
-    - name: Test
-      run: GOARCH=386 go test -v -short ./...
-
-  test-arm:
+  test-qemu:
     runs-on: ubuntu-latest
     needs: test
 
@@ -151,4 +137,10 @@ jobs:
     - uses: docker/setup-qemu-action@v3
 
     - name: Test
+      run: GOARCH=386 go test -v -short ./...
+
+    - name: Test
       run: GOARCH=arm64 go test -v -short ./...
+
+    - name: Test
+      run: GOARCH=riscv64 go test -v -short ./...

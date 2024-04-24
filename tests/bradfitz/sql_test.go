@@ -1,3 +1,5 @@
+//go:build !sqlite3_nosys
+
 package bradfitz
 
 // Adapted from: https://github.com/bradfitz/go-sql-test
