@@ -1,3 +1,5 @@
+//go:build !sqlite3_nosys
+
 package driver_test
 
 // Adapted from: https://go.dev/doc/tutorial/database-access

@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
@@ -26,18 +27,19 @@ func TestDB_memory(t *testing.T) {
 }
 
 func TestDB_file(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	t.Parallel()
 	testDB(t, filepath.Join(t.TempDir(), "test.db"))
 }
 
-func TestDB_nolock(t *testing.T) {
-	t.Parallel()
-	testDB(t, "file:"+
-		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
-		"?nolock=1")
-}
-
 func TestDB_wal(t *testing.T) {
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
 	t.Parallel()
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	err := os.WriteFile(tmp, waldb, 0666)
@@ -48,6 +50,10 @@ func TestDB_wal(t *testing.T) {
 }
 
 func TestDB_utf16(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	t.Parallel()
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	err := os.WriteFile(tmp, utf16db, 0666)
@@ -64,9 +70,15 @@ func TestDB_memdb(t *testing.T) {
 
 func TestDB_adiantum(t *testing.T) {
 	t.Parallel()
-	testDB(t, "file:"+
-		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
-		"?vfs=adiantum&textkey=correct+horse+battery+staple")
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
+		"&vfs=adiantum&textkey=correct+horse+battery+staple")
+}
+
+func TestDB_nolock(t *testing.T) {
+	t.Parallel()
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1")
 }
 
 func testDB(t testing.TB, name string) {

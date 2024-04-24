@@ -24,7 +24,7 @@ OFD locks are fully compatible with POSIX advisory locks.
 
 On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-On BSD Unixes, BSD locks are fully compatible with POSIX advisory locks.
+On BSD, these locks are fully compatible with POSIX advisory locks.
 However, concurrency is reduced with BSD locks
 (`BEGIN IMMEDIATE` behaves the same as `BEGIN EXCLUSIVE`). 
 
@@ -34,8 +34,7 @@ like SQLite.
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
 (or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
-to open database files.
-
+to open database files.\
 To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
 with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
@@ -53,15 +52,15 @@ To allow `mmap` to work, each connection needs to reserve up to 4GB of address s
 To limit the amount of address space each connection needs,
 use [`WithMemoryLimitPages`](../tests/testcfg/testcfg.go).
 
-On all other platforms, [WAL](https://sqlite.org/wal.html) support is
+On Windows and BSD, [WAL](https://sqlite.org/wal.html) support is
 [limited](https://sqlite.org/wal.html#noshm).
-
-To work around this limitation, SQLite is [patched](sqlite3/locking_mode.patch)
-to automatically use `EXCLUSIVE` locking mode for WAL databases on such platforms.
-
-To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
-with `EXCLUSIVE` locking mode you should disable connection pooling by calling
+`EXCLUSIVE` locking mode can be set to create, read, and write WAL databases.\
+To use `EXCLUSIVE` locking mode with the
+[`database/sql`](https://pkg.go.dev/database/sql) driver
+you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
+
+On all other platforms, where file locking is not supported, WAL mode does not work.
 
 You can use [`vfs.SupportsSharedMemory`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsSharedMemory)
 to check if your platform supports shared memory.

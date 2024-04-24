@@ -1,3 +1,5 @@
+//go:build !sqlite3_nosys
+
 package tests
 
 import (
@@ -21,6 +23,13 @@ func TestWAL_enter_exit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+
+	if !vfs.SupportsSharedMemory {
+		err = db.Exec(`PRAGMA locking_mode=EXCLUSIVE`)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	err = db.Exec(`
 		CREATE TABLE test (col);
@@ -89,6 +98,7 @@ func TestConn_WalCheckpoint(t *testing.T) {
 	})
 
 	err = db.Exec(`
+		PRAGMA locking_mode=EXCLUSIVE;
 		PRAGMA journal_mode=WAL;
 		CREATE TABLE test (col);
 	`)
