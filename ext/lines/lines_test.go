@@ -59,7 +59,7 @@ func Example() {
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
 	}
-	// Output:
+	// Expected output:
 	// US: 141001
 	// GB: 22560
 	// CA: 11759
