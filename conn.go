@@ -348,8 +348,8 @@ func (c *Conn) checkInterrupt() {
 }
 
 func progressCallback(ctx context.Context, mod api.Module, pDB uint32) (interrupt uint32) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
-		if c.interrupt != nil && c.interrupt.Err() != nil {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.interrupt != nil {
+		if c.interrupt.Err() != nil {
 			interrupt = 1
 		}
 	}
