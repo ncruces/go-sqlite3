@@ -34,8 +34,7 @@ like SQLite.
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
 (or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
-to open database files.
-
+to open database files.\
 To use the [`database/sql`](https://pkg.go.dev/database/sql) driver
 with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
@@ -54,17 +53,17 @@ To limit the amount of address space each connection needs,
 use [`WithMemoryLimitPages`](../tests/testcfg/testcfg.go).
 
 On Windows and BSD, [WAL](https://sqlite.org/wal.html) support is
-[limited](https://sqlite.org/wal.html#noshm), but functional.
-
+[limited](https://sqlite.org/wal.html#noshm).
+`EXCLUSIVE` locking mode can be set to create, read, and write WAL databases.\
 To use `EXCLUSIVE` locking mode with the
 [`database/sql`](https://pkg.go.dev/database/sql) driver
-you should disable connection pooling by calling
+you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
+
+On all other platforms, where file locking is not supported, WAL mode does not work.
 
 You can use [`vfs.SupportsSharedMemory`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsSharedMemory)
 to check if your platform supports shared memory.
-
-On platforms where file locking is not supported, WAL mode does not work.
 
 ### Batch-Atomic Write
 
