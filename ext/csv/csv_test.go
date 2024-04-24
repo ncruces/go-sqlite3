@@ -8,6 +8,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/csv"
+	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 )
 
 func Example() {
