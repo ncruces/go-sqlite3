@@ -36,8 +36,8 @@ func TestDB_file(t *testing.T) {
 }
 
 func TestDB_wal(t *testing.T) {
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
 	}
 
 	t.Parallel()

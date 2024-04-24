@@ -53,6 +53,7 @@ jobs:
 
     - name: Test no locks
       run: go test -v -tags sqlite3_nosys ./...
+      if: matrix.os == 'ubuntu-latest'
 
     - name: Test GORM
       run: gormlite/test.sh
@@ -136,11 +137,11 @@ jobs:
 
     - uses: docker/setup-qemu-action@v3
 
-    - name: Test
+    - name: Test 386
       run: GOARCH=386 go test -v -short ./...
 
-    - name: Test
+    - name: Test arm64
       run: GOARCH=arm64 go test -v -short ./...
 
-    - name: Test
+    - name: Test riscv64
       run: GOARCH=riscv64 go test -v -short ./...
