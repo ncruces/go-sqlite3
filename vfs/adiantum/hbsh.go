@@ -168,6 +168,13 @@ func (h *hbshFile) SharedMemory() vfs.SharedMemory {
 
 // Wrap optional methods.
 
+func (h *hbshFile) ChunkSize(size int) {
+	if f, ok := h.File.(vfs.FileChunkSize); ok {
+		size = (size + blockSize - 1) &^ (blockSize - 1) // round up
+		f.ChunkSize(size)
+	}
+}
+
 func (h *hbshFile) SizeHint(size int64) error {
 	if f, ok := h.File.(vfs.FileSizeHint); ok {
 		size = (size + blockSize - 1) &^ (blockSize - 1) // round up
@@ -214,6 +221,20 @@ func (h *hbshFile) CommitAtomicWrite() error {
 func (h *hbshFile) RollbackAtomicWrite() error {
 	if f, ok := h.File.(vfs.FileBatchAtomicWrite); ok {
 		return f.RollbackAtomicWrite()
+	}
+	return sqlite3.NOTFOUND
+}
+
+func (h *hbshFile) CheckpointDone() error {
+	if f, ok := h.File.(vfs.FileCheckpoint); ok {
+		return f.CheckpointDone()
+	}
+	return sqlite3.NOTFOUND
+}
+
+func (h *hbshFile) CheckpointStart() error {
+	if f, ok := h.File.(vfs.FileCheckpoint); ok {
+		return f.CheckpointStart()
 	}
 	return sqlite3.NOTFOUND
 }

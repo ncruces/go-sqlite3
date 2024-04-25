@@ -57,6 +57,15 @@ type FileLockState interface {
 	LockState() LockLevel
 }
 
+// FileChunkSize extends File to implement the
+// SQLITE_FCNTL_CHUNK_SIZE file control opcode.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlchunksize
+type FileChunkSize interface {
+	File
+	ChunkSize(size int)
+}
+
 // FileSizeHint extends File to implement the
 // SQLITE_FCNTL_SIZE_HINT file control opcode.
 //
@@ -123,6 +132,26 @@ type FileBatchAtomicWrite interface {
 	BeginAtomicWrite() error
 	CommitAtomicWrite() error
 	RollbackAtomicWrite() error
+}
+
+// FilePragma extends File to implement the
+// SQLITE_FCNTL_PRAGMA file control opcode.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlpragma
+type FilePragma interface {
+	File
+	Pragma(name, value string) (string, error)
+}
+
+// FileCheckpoint extends File to implement the
+// SQLITE_FCNTL_CKPT_START and SQLITE_FCNTL_CKPT_DONE
+// file control opcodes.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlckptstart
+type FileCheckpoint interface {
+	File
+	CheckpointDone() error
+	CheckpointStart() error
 }
 
 // FileSharedMemory extends File to possibly implement shared memory.

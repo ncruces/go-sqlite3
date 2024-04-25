@@ -89,7 +89,6 @@ It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 
 Every commit is [tested](.github/workflows/test.yml) on
 Linux (amd64/arm64/386/riscv64), macOS (amd64/arm64), Windows, FreeBSD and illumos.
-
 The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c).
 

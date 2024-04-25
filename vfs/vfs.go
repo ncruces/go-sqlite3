@@ -284,6 +284,13 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return _OK
 		}
 
+	case _FCNTL_CHUNK_SIZE:
+		if file, ok := file.(FileChunkSize); ok {
+			size := util.ReadUint32(mod, pArg)
+			file.ChunkSize(int(size))
+			return _OK
+		}
+
 	case _FCNTL_SIZE_HINT:
 		if file, ok := file.(FileSizeHint); ok {
 			size := util.ReadUint64(mod, pArg)
@@ -329,14 +336,45 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			err := file.RollbackAtomicWrite()
 			return vfsErrorCode(err, _IOERR_ROLLBACK_ATOMIC)
 		}
+
+	case _FCNTL_CKPT_DONE:
+		if file, ok := file.(FileCheckpoint); ok {
+			err := file.CheckpointDone()
+			return vfsErrorCode(err, _IOERR)
+		}
+	case _FCNTL_CKPT_START:
+		if file, ok := file.(FileCheckpoint); ok {
+			err := file.CheckpointStart()
+			return vfsErrorCode(err, _IOERR)
+		}
+
+	case _FCNTL_PRAGMA:
+		if file, ok := file.(FilePragma); ok {
+			name := util.ReadUint32(mod, pArg+1*ptrlen)
+			value := util.ReadUint32(mod, pArg+2*ptrlen)
+			out, err := file.Pragma(
+				util.ReadString(mod, name, _MAX_SQL_LENGTH),
+				util.ReadString(mod, value, _MAX_SQL_LENGTH))
+			if err != nil {
+				out = err.Error()
+			}
+			if out != "" {
+				fn := mod.ExportedFunction("malloc")
+				stack := [...]uint64{uint64(len(out) + 1)}
+				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
+					panic(err)
+				}
+				util.WriteUint32(mod, pArg, uint32(stack[0]))
+				util.WriteString(mod, uint32(stack[0]), out)
+				return _ERROR
+			}
+			return vfsErrorCode(err, _ERROR)
+		}
 	}
 
 	// Consider also implementing these opcodes (in use by SQLite):
 	//  _FCNTL_BUSYHANDLER
-	//  _FCNTL_CHUNK_SIZE
-	//  _FCNTL_CKPT_DONE
-	//  _FCNTL_CKPT_START
-	//  _FCNTL_PRAGMA
+	//  _FCNTL_LAST_ERRNO
 	//  _FCNTL_SYNC
 	return _NOTFOUND
 }
