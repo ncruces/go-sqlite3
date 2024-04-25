@@ -2,7 +2,6 @@ package sqlite3
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"net/url"
@@ -103,15 +102,14 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {
 				pragmas.WriteString(`;`)
 			}
 		}
-
-		pragmaPtr := c.arena.string(pragmas.String())
-		r := c.call("sqlite3_exec", uint64(handle), uint64(pragmaPtr), 0, 0, 0)
-		if err := c.sqlite.error(r, handle, pragmas.String()); err != nil {
-			if errors.Is(err, ERROR) {
+		if pragmas.Len() != 0 {
+			pragmaPtr := c.arena.string(pragmas.String())
+			r := c.call("sqlite3_exec", uint64(handle), uint64(pragmaPtr), 0, 0, 0)
+			if err := c.sqlite.error(r, handle, pragmas.String()); err != nil {
 				err = fmt.Errorf("sqlite3: invalid _pragma: %w", err)
+				c.closeDB(handle)
+				return 0, err
 			}
-			c.closeDB(handle)
-			return 0, err
 		}
 	}
 	c.call("sqlite3_progress_handler_go", uint64(handle), 100)
