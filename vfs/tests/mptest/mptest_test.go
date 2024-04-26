@@ -96,7 +96,7 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 
 	cfg := config(ctx).WithArgs(args...)
 	go func() {
-		ctx := util.NewContext(ctx, true)
+		ctx := util.NewContext(ctx)
 		mod, _ := rt.InstantiateModule(ctx, module, cfg)
 		mod.Close(ctx)
 	}()
@@ -104,7 +104,7 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 }
 
 func Test_config01(t *testing.T) {
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -122,7 +122,7 @@ func Test_config02(t *testing.T) {
 		t.Skip("skipping in CI")
 	}
 
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -140,7 +140,7 @@ func Test_crash01(t *testing.T) {
 		t.Skip("skipping in CI")
 	}
 
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -155,7 +155,7 @@ func Test_multiwrite01(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -167,7 +167,7 @@ func Test_multiwrite01(t *testing.T) {
 
 func Test_config01_memory(t *testing.T) {
 	memdb.Delete("test.db")
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
 		"--vfs", "memdb")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -183,7 +183,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 	}
 
 	memdb.Delete("test.db")
-	ctx := util.NewContext(newContext(t), false)
+	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
@@ -204,7 +204,7 @@ func Test_crash01_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t), true)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
 		"--journalmode", "wal")
@@ -223,7 +223,7 @@ func Test_multiwrite01_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t), true)
+	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test",
 		"--journalmode", "wal")
@@ -242,7 +242,7 @@ func Test_crash01_adiantum(t *testing.T) {
 		t.Skip("skipping in CI")
 	}
 
-	ctx := util.NewContext(newContext(t), true)
+	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
@@ -265,7 +265,7 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t), true)
+	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",

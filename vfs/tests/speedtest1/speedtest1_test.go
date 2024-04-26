@@ -85,7 +85,7 @@ func initFlags() {
 
 func Benchmark_speedtest1(b *testing.B) {
 	output.Reset()
-	ctx := util.NewContext(context.Background(), true)
+	ctx := util.NewContext(context.Background())
 	name := filepath.Join(b.TempDir(), "test.db")
 	args := append(options, "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
@@ -103,7 +103,7 @@ func Benchmark_speedtest1(b *testing.B) {
 
 func Benchmark_adiantum(b *testing.B) {
 	output.Reset()
-	ctx := util.NewContext(context.Background(), true)
+	ctx := util.NewContext(context.Background())
 	name := "file:" + filepath.Join(b.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	args := append(options, "--vfs", "adiantum", "--size", strconv.Itoa(b.N), name)

@@ -12,10 +12,10 @@ type moduleState struct {
 	mmapState
 }
 
-func NewContext(ctx context.Context, mappableMemory bool) context.Context {
+func NewContext(ctx context.Context) context.Context {
 	state := new(moduleState)
-	ctx = context.WithValue(ctx, moduleKey{}, state)
+	ctx = withMmappedAllocator(ctx)
 	ctx = experimental.WithCloseNotifier(ctx, state)
-	ctx = state.mmapState.init(ctx, mappableMemory)
+	ctx = context.WithValue(ctx, moduleKey{}, state)
 	return ctx
 }

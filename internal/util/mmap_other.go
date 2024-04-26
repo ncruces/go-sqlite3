@@ -6,10 +6,6 @@ import "context"
 
 type mmapState struct{}
 
-func (s *mmapState) init(ctx context.Context, _ bool) context.Context {
+func withMmappedAllocator(ctx context.Context) context.Context {
 	return ctx
-}
-
-func CanMapFiles(ctx context.Context) bool {
-	return false
 }

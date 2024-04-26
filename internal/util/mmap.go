@@ -12,22 +12,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func withMmappedAllocator(ctx context.Context) context.Context {
+	return experimental.WithMemoryAllocator(ctx,
+		experimental.MemoryAllocatorFunc(mmappedAllocator))
+}
+
 type mmapState struct {
 	regions []*MappedRegion
-	enabled bool
-}
-
-func (s *mmapState) init(ctx context.Context, enabled bool) context.Context {
-	if s.enabled = enabled; enabled {
-		return experimental.WithMemoryAllocator(ctx,
-			experimental.MemoryAllocatorFunc(mmappedAllocator))
-	}
-	return ctx
-}
-
-func CanMapFiles(ctx context.Context) bool {
-	s := ctx.Value(moduleKey{}).(*moduleState)
-	return s.mmapState.enabled
 }
 
 func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *MappedRegion {

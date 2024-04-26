@@ -161,12 +161,9 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
-	if pOutVFS != 0 && util.CanMapFiles(ctx) {
-		if f, ok := file.(FileSharedMemory); ok {
-			if f.SharedMemory() != nil {
-				util.WriteUint32(mod, pOutVFS, 1)
-			}
-		}
+	if f, ok := file.(FileSharedMemory); ok && flags&OPEN_MAIN_DB != 0 &&
+		pOutVFS != 0 && f.SharedMemory() != nil {
+		util.WriteUint32(mod, pOutVFS, 1)
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
