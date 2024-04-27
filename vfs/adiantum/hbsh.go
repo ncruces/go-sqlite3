@@ -87,9 +87,9 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 
 func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	if h.hbsh == nil {
-		// If it's trying to read the header, pretend the file is empty,
-		// so the key can be specified later.
 		if off == 0 && len(p) == 100 {
+			// SQLite is trying to read the header of a database.
+			// Pretend the file is empty so the key can be specified later.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN

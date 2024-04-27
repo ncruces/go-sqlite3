@@ -3,7 +3,7 @@
 // The "reader" [vfs.VFS] permits accessing any [io.ReaderAt]
 // as an immutable SQLite database.
 //
-// Importing package readervfs registers the VFS.
+// Importing package readervfs registers the VFS:
 //
 //	import _ "github.com/ncruces/go-sqlite3/vfs/readervfs"
 package readervfs
