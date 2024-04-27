@@ -118,13 +118,14 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 		syncDir: runtime.GOOS != "windows" &&
 			flags&(OPEN_CREATE) != 0 &&
 			flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0,
+		shm: NewSharedMemory(name.String()+"-shm", flags),
 	}
 	return &file, flags, nil
 }
 
 type vfsFile struct {
 	*os.File
-	shm      vfsShm
+	shm      SharedMemory
 	lock     LockLevel
 	readOnly bool
 	keepWAL  bool
@@ -142,7 +143,9 @@ var (
 )
 
 func (f *vfsFile) Close() error {
-	f.shm.Close()
+	if f.shm != nil {
+		f.shm.Close()
+	}
 	return f.File.Close()
 }
 

@@ -12,6 +12,11 @@ package vfs
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
 const SupportsSharedMemory = false
 
-type vfsShm struct{}
-
-func (vfsShm) Close() error { return nil }
+// NewSharedMemory returns a shared-memory WAL-index
+// backed a file with the given path.
+// It may return nil if shared-memory is not supported,
+// or not appropriate for the given flags.
+// Only [OPEN_MAIN_DB] databases support WAL mode.
+func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
+	return nil
+}

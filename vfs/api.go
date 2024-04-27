@@ -3,6 +3,7 @@ package vfs
 
 import (
 	"context"
+	"io"
 
 	"github.com/tetratelabs/wazero/api"
 )
@@ -154,17 +155,19 @@ type FileCheckpoint interface {
 	CheckpointStart() error
 }
 
-// FileSharedMemory extends File to possibly implement shared memory.
+// FileSharedMemory extends File to possibly implement
+// shared-memory for the WAL-index.
 // It's OK for SharedMemory to return nil.
 type FileSharedMemory interface {
 	File
 	SharedMemory() SharedMemory
 }
 
-// SharedMemory is a shared memory implementation.
+// SharedMemory is a shared-memory WAL-index implementation.
 // This cannot be externally implemented.
 type SharedMemory interface {
 	shmMap(context.Context, api.Module, int32, int32, bool) (uint32, error)
 	shmLock(int32, int32, _ShmFlag) error
 	shmUnmap(bool)
+	io.Closer
 }
