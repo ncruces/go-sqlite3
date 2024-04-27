@@ -107,5 +107,5 @@ The Wasm and VFS layers are also tested by running SQLite's
 - [`github.com/mattn/go-sqlite3`](https://pkg.go.dev/github.com/mattn/go-sqlite3)
 - [`github.com/zombiezen/go-sqlite`](https://pkg.go.dev/github.com/zombiezen/go-sqlite)
 
-[^1]: anything else you find in [`go.mod`](./go.mod) is either a test dependency,
+[^1]: anything else you find in `go.mod` is either a test dependency,
       or needed by one of the extensions.

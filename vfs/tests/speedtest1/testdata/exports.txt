@@ -3,4 +3,3 @@ free
 malloc
 sqlite3_database_file_object
 sqlite3_uri_key
-sqlite3_uri_parameter

@@ -103,27 +103,32 @@ func (n *Filename) URIParameter(key string) string {
 	}
 
 	uriKey := n.mod.ExportedFunction("sqlite3_uri_key")
-	uriParam := n.mod.ExportedFunction("sqlite3_uri_parameter")
+	n.stack[0] = uint64(n.zPath)
+	n.stack[1] = uint64(0)
+	if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
+		panic(err)
+	}
 
-	for i := 0; ; i++ {
-		n.stack[1] = uint64(i)
-		n.stack[0] = uint64(n.zPath)
-		if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
-			panic(err)
-		}
-		if n.stack[0] == 0 {
+	ptr := uint32(n.stack[0])
+	if ptr == 0 {
+		return ""
+	}
+
+	// Parse the format from:
+	// https://github.com/sqlite/sqlite/blob/b74eb0/src/pager.c#L4797-L4840
+	// This avoids having to alloc/free the key just to find a value.
+	for {
+		k := util.ReadString(n.mod, ptr, _MAX_NAME)
+		if k == "" {
 			return ""
 		}
-		if key != util.ReadString(n.mod, uint32(n.stack[0]), _MAX_NAME) {
-			continue
-		}
+		ptr += uint32(len(k)) + 1
 
-		n.stack[1] = n.stack[0]
-		n.stack[0] = uint64(n.zPath)
-		if err := uriParam.CallWithStack(n.ctx, n.stack[:]); err != nil {
-			panic(err)
+		v := util.ReadString(n.mod, ptr, _MAX_NAME)
+		if k == key {
+			return v
 		}
-		return util.ReadString(n.mod, uint32(n.stack[0]), _MAX_NAME)
+		ptr += uint32(len(v)) + 1
 	}
 }
 
@@ -135,32 +140,35 @@ func (n *Filename) URIParameters() url.Values {
 		return nil
 	}
 
-	var params url.Values
 	uriKey := n.mod.ExportedFunction("sqlite3_uri_key")
-	uriParam := n.mod.ExportedFunction("sqlite3_uri_parameter")
+	n.stack[0] = uint64(n.zPath)
+	n.stack[1] = uint64(0)
+	if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
+		panic(err)
+	}
 
-	for i := 0; ; i++ {
-		n.stack[1] = uint64(i)
-		n.stack[0] = uint64(n.zPath)
-		if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
-			panic(err)
-		}
-		if n.stack[0] == 0 {
+	ptr := uint32(n.stack[0])
+	if ptr == 0 {
+		return nil
+	}
+
+	var params url.Values
+
+	// Parse the format from:
+	// https://github.com/sqlite/sqlite/blob/b74eb0/src/pager.c#L4797-L4840
+	// This is the only way to support multiple valued keys.
+	for {
+		k := util.ReadString(n.mod, ptr, _MAX_NAME)
+		if k == "" {
 			return params
 		}
-		key := util.ReadString(n.mod, uint32(n.stack[0]), _MAX_NAME)
-		if params.Has(key) {
-			continue
-		}
+		ptr += uint32(len(k)) + 1
 
-		n.stack[1] = n.stack[0]
-		n.stack[0] = uint64(n.zPath)
-		if err := uriParam.CallWithStack(n.ctx, n.stack[:]); err != nil {
-			panic(err)
-		}
+		v := util.ReadString(n.mod, ptr, _MAX_NAME)
 		if params == nil {
 			params = url.Values{}
 		}
-		params.Set(key, util.ReadString(n.mod, uint32(n.stack[0]), _MAX_NAME))
+		params.Add(k, v)
+		ptr += uint32(len(v)) + 1
 	}
 }

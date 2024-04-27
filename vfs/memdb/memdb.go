@@ -23,7 +23,7 @@ func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, err
 	// This is not a problem for most SQLite file types:
 	// - databases, which only do page aligned reads/writes;
 	// - temp journals, as used by the sorter, which does the same:
-	//   https://sqlite.org/src/artifact/237840?ln=409-412
+	//   https://github.com/sqlite/sqlite/blob/b74eb0/src/vdbesort.c#L409-L412
 	//
 	// We refuse to open all other file types,
 	// but returning OPEN_MEMORY means SQLite won't ask us to.

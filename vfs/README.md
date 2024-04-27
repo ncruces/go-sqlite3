@@ -15,7 +15,7 @@ The main differences are [file locking](#file-locking) and [WAL mode](write-ahea
 ### File Locking
 
 POSIX advisory locks, which SQLite uses on Unix, are
-[broken by design](https://sqlite.org/src/artifact/2e8b12?ln=1073-1161).
+[broken by design](https://github.com/sqlite/sqlite/blob/b74eb0/src/os_unix.c#L1073-L1161).
 
 On Linux and macOS, this module uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
