@@ -347,12 +347,17 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 
 	case _FCNTL_PRAGMA:
 		if file, ok := file.(FilePragma); ok {
-			name := util.ReadUint32(mod, pArg+1*ptrlen)
-			value := util.ReadUint32(mod, pArg+2*ptrlen)
-			out, err := file.Pragma(
-				util.ReadString(mod, name, _MAX_SQL_LENGTH),
-				util.ReadString(mod, value, _MAX_SQL_LENGTH))
-			if err != nil {
+			ptr := util.ReadUint32(mod, pArg+1*ptrlen)
+			name := util.ReadString(mod, ptr, _MAX_SQL_LENGTH)
+			var value string
+			if ptr := util.ReadUint32(mod, pArg+2*ptrlen); ptr != 0 {
+				value = util.ReadString(mod, ptr, _MAX_SQL_LENGTH)
+			}
+
+			out, err := file.Pragma(name, value)
+
+			ret := vfsErrorCode(err, _ERROR)
+			if ret == _ERROR {
 				out = err.Error()
 			}
 			if out != "" {
@@ -363,9 +368,8 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 				}
 				util.WriteUint32(mod, pArg, uint32(stack[0]))
 				util.WriteString(mod, uint32(stack[0]), out)
-				return _ERROR
 			}
-			return vfsErrorCode(err, _ERROR)
+			return ret
 		}
 	}
 
