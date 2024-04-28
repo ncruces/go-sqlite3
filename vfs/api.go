@@ -157,6 +157,8 @@ type FileCheckpoint interface {
 
 // FileSharedMemory extends File to possibly implement
 // shared-memory for the WAL-index.
+// The same shared-memory instance must be returned
+// for the entire life of the file.
 // It's OK for SharedMemory to return nil.
 type FileSharedMemory interface {
 	File
@@ -164,7 +166,7 @@ type FileSharedMemory interface {
 }
 
 // SharedMemory is a shared-memory WAL-index implementation.
-// This cannot be externally implemented.
+// Use [NewSharedMemory] to create a shared-memory.
 type SharedMemory interface {
 	shmMap(context.Context, api.Module, int32, int32, bool) (uint32, error)
 	shmLock(int32, int32, _ShmFlag) error

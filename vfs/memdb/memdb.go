@@ -28,7 +28,6 @@ func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, err
 	// We refuse to open all other file types,
 	// but returning OPEN_MEMORY means SQLite won't ask us to.
 	const types = vfs.OPEN_MAIN_DB |
-		vfs.OPEN_TRANSIENT_DB |
 		vfs.OPEN_TEMP_DB |
 		vfs.OPEN_TEMP_JOURNAL
 	if flags&types == 0 {
@@ -173,7 +172,7 @@ func (m *memFile) truncate(size int64) error {
 	return nil
 }
 
-func (*memFile) Sync(flag vfs.SyncFlag) error {
+func (m *memFile) Sync(flag vfs.SyncFlag) error {
 	return nil
 }
 
@@ -263,11 +262,11 @@ func (m *memFile) CheckReservedLock() (bool, error) {
 	return m.reserved != nil, nil
 }
 
-func (*memFile) SectorSize() int {
+func (m *memFile) SectorSize() int {
 	return sectorSize
 }
 
-func (*memFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
+func (m *memFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 	return vfs.IOCAP_ATOMIC |
 		vfs.IOCAP_SEQUENTIAL |
 		vfs.IOCAP_SAFE_APPEND |

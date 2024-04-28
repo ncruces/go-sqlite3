@@ -176,7 +176,7 @@ func (f *vfsFile) Size() (int64, error) {
 	return f.Seek(0, io.SeekEnd)
 }
 
-func (*vfsFile) SectorSize() int {
+func (f *vfsFile) SectorSize() int {
 	return _DEFAULT_SECTOR_SIZE
 }
 

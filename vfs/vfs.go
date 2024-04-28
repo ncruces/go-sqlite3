@@ -146,7 +146,6 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	} else {
 		file, flags, err = vfs.Open(path, flags)
 	}
-
 	if err != nil {
 		return vfsErrorCode(err, _CANTOPEN)
 	}
@@ -157,13 +156,12 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 			file.SetPowersafeOverwrite(b)
 		}
 	}
-
+	if file, ok := file.(FileSharedMemory); ok &&
+		pOutVFS != 0 && file.SharedMemory() != nil {
+		util.WriteUint32(mod, pOutVFS, 1)
+	}
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
-	}
-	if f, ok := file.(FileSharedMemory); ok && flags&OPEN_MAIN_DB != 0 &&
-		pOutVFS != 0 && f.SharedMemory() != nil {
-		util.WriteUint32(mod, pOutVFS, 1)
 	}
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
@@ -398,8 +396,8 @@ func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
 }
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szRegion int32, bExtend, pp uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
-	p, err := file.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
+	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
+	p, err := shm.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	if err != nil {
 		return vfsErrorCode(err, _IOERR_SHMMAP)
 	}
@@ -408,14 +406,14 @@ func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szReg
 }
 
 func vfsShmLock(ctx context.Context, mod api.Module, pFile uint32, offset, n int32, flags _ShmFlag) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
-	err := file.shmLock(offset, n, flags)
+	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
+	err := shm.shmLock(offset, n, flags)
 	return vfsErrorCode(err, _IOERR_SHMLOCK)
 }
 
 func vfsShmUnmap(ctx context.Context, mod api.Module, pFile, bDelete uint32) _ErrorCode {
-	file := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
-	file.shmUnmap(bDelete != 0)
+	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
+	shm.shmUnmap(bDelete != 0)
 	return _OK
 }
 

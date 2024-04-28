@@ -139,7 +139,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 		  SELECT 0, 1
 		  UNION ALL
 		  SELECT next, curr + next FROM fibonacci
-		  LIMIT 1e6
+		  LIMIT 1e7
 		)
 		SELECT min(curr) FROM fibonacci
 	`)

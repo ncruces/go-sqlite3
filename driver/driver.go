@@ -327,7 +327,7 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 	return newResult(c.Conn), nil
 }
 
-func (*conn) CheckNamedValue(arg *driver.NamedValue) error {
+func (c *conn) CheckNamedValue(arg *driver.NamedValue) error {
 	return nil
 }
 

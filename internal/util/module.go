@@ -8,8 +8,8 @@ import (
 
 type moduleKey struct{}
 type moduleState struct {
-	handleState
 	mmapState
+	handleState
 }
 
 func NewContext(ctx context.Context) context.Context {

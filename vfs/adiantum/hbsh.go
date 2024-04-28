@@ -51,16 +51,16 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 }
 
 const (
-	blockSize = 4096
 	tweakSize = 8
+	blockSize = 4096
 )
 
 type hbshFile struct {
 	vfs.File
 	hbsh  *hbsh.HBSH
 	reset HBSHCreator
-	block [blockSize]byte
 	tweak [tweakSize]byte
+	block [blockSize]byte
 }
 
 func (h *hbshFile) Pragma(name string, value string) (string, error) {
@@ -95,8 +95,8 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, sqlite3.CANTOPEN
 	}
 
-	min := (off) &^ (blockSize - 1)                                 // round down
-	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
+	min := (off) &^ (blockSize - 1)                                   // round down
+	max := (off + int64(len(p)) + (blockSize - 1)) &^ (blockSize - 1) // round up
 
 	// Read one block at a time.
 	for ; min < max; min += blockSize {
@@ -125,8 +125,8 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		return 0, sqlite3.READONLY
 	}
 
-	min := (off) &^ (blockSize - 1)                                 // round down
-	max := (off + int64(len(p)) + blockSize - 1) &^ (blockSize - 1) // round up
+	min := (off) &^ (blockSize - 1)                                   // round down
+	max := (off + int64(len(p)) + (blockSize - 1)) &^ (blockSize - 1) // round up
 
 	// Write one block at a time.
 	for ; min < max; min += blockSize {
@@ -143,13 +143,13 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 				// Writing past the EOF:
 				// We're either appending an entirely new block,
 				// or the final block was only partially written.
-				// A partially written block can't be decripted,
+				// A partially written block can't be decrypted,
 				// and is as good as corrupt.
 				// Either way, zero pad the file to the next block size.
 				clear(data)
+			} else {
+				data = h.hbsh.Decrypt(h.block[:], h.tweak[:])
 			}
-
-			data = h.hbsh.Decrypt(h.block[:], h.tweak[:])
 			if off > min {
 				data = data[off-min:]
 			}
@@ -172,7 +172,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 }
 
 func (h *hbshFile) Truncate(size int64) error {
-	size = (size + blockSize - 1) &^ (blockSize - 1) // round up
+	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
 	return h.File.Truncate(size)
 }
 
@@ -188,25 +188,25 @@ func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 		vfs.IOCAP_BATCH_ATOMIC)
 }
 
+// Wrap optional methods.
+
 func (h *hbshFile) SharedMemory() vfs.SharedMemory {
-	if shm, ok := h.File.(vfs.FileSharedMemory); ok {
-		return shm.SharedMemory()
+	if f, ok := h.File.(vfs.FileSharedMemory); ok {
+		return f.SharedMemory()
 	}
 	return nil
 }
 
-// Wrap optional methods.
-
 func (h *hbshFile) ChunkSize(size int) {
 	if f, ok := h.File.(vfs.FileChunkSize); ok {
-		size = (size + blockSize - 1) &^ (blockSize - 1) // round up
+		size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
 		f.ChunkSize(size)
 	}
 }
 
 func (h *hbshFile) SizeHint(size int64) error {
 	if f, ok := h.File.(vfs.FileSizeHint); ok {
-		size = (size + blockSize - 1) &^ (blockSize - 1) // round up
+		size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
 		return f.SizeHint(size)
 	}
 	return sqlite3.NOTFOUND

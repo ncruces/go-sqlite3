@@ -12,11 +12,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// SupportsSharedMemory is true on platforms that support shared memory.
-// To enable shared memory support on those platforms,
-// you need to set the appropriate [wazero.RuntimeConfig];
-// otherwise, [EXCLUSIVE locking mode] is activated automatically
-// to use [WAL without shared-memory].
+// SupportsSharedMemory is false on platforms that do not support shared memory.
+// To use [WAL without shared-memory], you need to set [EXCLUSIVE locking mode].
 //
 // [WAL without shared-memory]: https://sqlite.org/wal.html#noshm
 // [EXCLUSIVE locking mode]: https://sqlite.org/pragma.html#pragma_locking_mode
@@ -31,12 +28,14 @@ const (
 func (f *vfsFile) SharedMemory() SharedMemory { return f.shm }
 
 // NewSharedMemory returns a shared-memory WAL-index
-// backed a file with the given path.
-// It may return nil if shared-memory is not supported,
+// backed by a file with the given path.
+// It will return nil if shared-memory is not supported,
 // or not appropriate for the given flags.
-// Only [OPEN_MAIN_DB] databases support WAL mode.
+// Only [OPEN_MAIN_DB] databases may need a WAL-index.
+// You must ensure all concurrent accesses to a database
+// use shared-memory instances created with the same path.
 func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
-	if flags&OPEN_MAIN_DB == 0 {
+	if flags&OPEN_MAIN_DB == 0 || flags&(OPEN_DELETEONCLOSE|OPEN_MEMORY) != 0 {
 		return nil
 	}
 	return &vfsShm{
@@ -47,8 +46,8 @@ func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
 
 type vfsShm struct {
 	*os.File
-	regions  []*util.MappedRegion
 	path     string
+	regions  []*util.MappedRegion
 	readOnly bool
 }
 
@@ -154,6 +153,10 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 }
 
 func (s *vfsShm) shmUnmap(delete bool) {
+	if s.File == nil {
+		return
+	}
+
 	// Unmap regions.
 	for _, r := range s.regions {
 		r.Unmap()
@@ -162,9 +165,9 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	s.regions = s.regions[:0]
 
 	// Close the file.
-	if delete && s.File != nil {
+	defer s.Close()
+	if delete {
 		os.Remove(s.Name())
 	}
-	s.Close()
 	s.File = nil
 }
