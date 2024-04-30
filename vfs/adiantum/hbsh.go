@@ -26,6 +26,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	} else {
 		file, flags, err = h.Open(name.String(), flags)
 	}
+
 	// Encrypt everything except super journals and memory files.
 	if err != nil || flags&(vfs.OPEN_SUPER_JOURNAL|vfs.OPEN_MEMORY) != 0 {
 		return file, flags, err
@@ -47,7 +48,12 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 		}
 		hbsh = h.hbsh.HBSH(key)
 	}
-	return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, err
+
+	// Main datatabases may have their key specified later, as a PRAGMA.
+	if hbsh != nil || flags&vfs.OPEN_MAIN_DB != 0 {
+		return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, nil
+	}
+	return nil, flags, sqlite3.CANTOPEN
 }
 
 const (
@@ -87,9 +93,11 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 
 func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	if h.hbsh == nil {
+		// Only OPEN_MAIN_DB can have a missing key.
 		if off == 0 && len(p) == 100 {
-			// SQLite is trying to read the header of a database.
-			// Pretend the file is empty so the key can be specified later.
+			// SQLite is trying to read the header of a database file.
+			// Pretend the file is empty so the key may specified later,
+			// as a PRAGMA.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN
@@ -140,7 +148,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 				if err != io.EOF {
 					return n, err
 				}
-				// Writing past the EOF:
+				// Writing past the EOF.
 				// We're either appending an entirely new block,
 				// or the final block was only partially written.
 				// A partially written block can't be decrypted,
