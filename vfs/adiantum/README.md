@@ -16,11 +16,13 @@ In general, any HBSH construction can be used to wrap any VFS.
 The default Adiantum construction uses XChaCha12 for its stream cipher,
 AES for its block cipher, and NH and Poly1305 for hashing.\
 Additionally, we use [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2#hdr-Argon2id)
-to derive 256-bit keys from plain text.
+to derive 256-bit keys from plain text where needed.
+File contents are encrypted in 4K blocks, matching the
+[default](https://sqlite.org/pgszchng2016.html) SQLite page size.
 
 The VFS encrypts all files _except_
 [super journals](https://sqlite.org/tempfiles.html#super_journal_files):
-they _never_ contain database data, only filenames,
+these _never_ contain database data, only filenames,
 and padding them to the block size is problematic.
 Temporary files _are_ encrypted with **random** keys,
 as they _may_ contain database data.
@@ -30,15 +32,33 @@ keep them in memory:
     PRAGMA temp_store = memory;
 
 > [!IMPORTANT]
-> Adiantum is typically used for disk encryption.
+> Adiantum is a cipher composition for disk encryption.
 > The standard threat model for disk encryption considers an adversary
 > that can read multiple snapshots of a disk.
-> The only security property that disk encryption (and this package)
-> provides is that all information such an adversary can obtain
-> is whether the data in a sector has (or has not) changed over time.
+> The only security property that disk encryption provides
+> is that all information such an adversary can obtain
+> is whether the data in a sector has or has not changed over time.
+
+The encryption offered by this package is fully deterministic.
+
+This means that an adversary who can get ahold of multiple snapshots
+(e.g. backups) of a database file can learn precisely:
+which blocks changed, which ones didn't, which got reverted.
+
+This is slightly weaker than other forms of SQLite encryption
+that include *some* nondeterminism; with limited nondeterminism,
+an adversary can't distinguish between
+blocks that actually changed, and blocks that got reverted.
 
 > [!CAUTION]
-> This package does not claim protect databases against forgery.
-> Any encryption scheme that allows constant-time block updates
-> can't prevent individual blocks from being reverted to former versions of themselves,
-> so block-level authentication is of limited value.
+> This package does not claim protect databases against tampering or forgery.
+
+The major practical consequence of the above point is that,
+if you're keeping `"adiantum"` encrypted backups of your database,
+and want to protect against forgery, you should sign your backups,
+and verify signatures before restoring them.
+
+This is slightly weaker than other forms of SQLite encryption
+that include block-level [MACs](https://en.wikipedia.org/wiki/Message_authentication_code).
+Block-level MACs can protect against forging individual blocks,
+but can't prevent them from being reverted to former versions of themselves.
