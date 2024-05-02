@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package tests
 
 import (
@@ -9,9 +7,13 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func TestBackup(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	t.Parallel()
 
 	backupName := filepath.Join(t.TempDir(), "backup.db")

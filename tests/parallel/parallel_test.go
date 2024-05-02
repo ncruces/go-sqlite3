@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package tests
 
 import (
@@ -21,6 +19,10 @@ import (
 )
 
 func Test_parallel(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	var iter int
 	if testing.Short() {
 		iter = 1000
@@ -65,6 +67,10 @@ func Test_memdb(t *testing.T) {
 }
 
 func Test_adiantum(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	var iter int
 	if testing.Short() {
 		iter = 1000
@@ -81,6 +87,9 @@ func Test_adiantum(t *testing.T) {
 }
 
 func TestMultiProcess(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}

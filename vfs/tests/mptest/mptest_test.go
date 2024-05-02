@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package mptest
 
 import (
@@ -104,6 +102,10 @@ func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
 }
 
 func Test_config01(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
 	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
@@ -120,6 +122,9 @@ func Test_config02(t *testing.T) {
 	}
 	if os.Getenv("CI") != "" {
 		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
 	}
 
 	ctx := util.NewContext(newContext(t))
@@ -139,6 +144,9 @@ func Test_crash01(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("skipping in CI")
 	}
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 
 	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
@@ -153,6 +161,9 @@ func Test_crash01(t *testing.T) {
 func Test_multiwrite01(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
+	}
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
 	}
 
 	ctx := util.NewContext(newContext(t))
@@ -240,6 +251,9 @@ func Test_crash01_adiantum(t *testing.T) {
 	}
 	if os.Getenv("CI") != "" {
 		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
 	}
 
 	ctx := util.NewContext(newContext(t))

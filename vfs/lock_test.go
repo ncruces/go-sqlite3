@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package vfs
 
 import (
@@ -13,6 +11,10 @@ import (
 )
 
 func Test_vfsLock(t *testing.T) {
+	if !SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	name := filepath.Join(t.TempDir(), "test.db")
 
 	// Create a temporary file.

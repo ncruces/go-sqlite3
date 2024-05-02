@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package tests
 
 import (
@@ -14,6 +12,9 @@ import (
 )
 
 func TestWAL_enter_exit(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	t.Parallel()
 
 	file := filepath.Join(t.TempDir(), "test.db")
@@ -49,7 +50,6 @@ func TestWAL_readonly(t *testing.T) {
 	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without shared memory")
 	}
-
 	t.Parallel()
 
 	tmp := filepath.Join(t.TempDir(), "test.db")
@@ -76,6 +76,9 @@ func TestWAL_readonly(t *testing.T) {
 }
 
 func TestConn_WalCheckpoint(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	t.Parallel()
 
 	file := filepath.Join(t.TempDir(), "test.db")

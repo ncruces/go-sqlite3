@@ -1,4 +1,4 @@
-//go:build !sqlite3_nosys
+//go:build (linux || darwin || windows || freebsd) && !sqlite3_nosys
 
 package driver_test
 

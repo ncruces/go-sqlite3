@@ -1,5 +1,3 @@
-//go:build !sqlite3_nosys
-
 package driver
 
 import (
@@ -17,6 +15,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func Test_Open_dir(t *testing.T) {
@@ -82,6 +81,9 @@ func Test_Open_pragma_invalid(t *testing.T) {
 }
 
 func Test_Open_txLock(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	t.Parallel()
 
 	db, err := sql.Open("sqlite3", "file:"+
@@ -128,6 +130,9 @@ func Test_Open_txLock_invalid(t *testing.T) {
 }
 
 func Test_BeginTx(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
