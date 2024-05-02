@@ -8,7 +8,10 @@ import (
 	"lukechampine.com/adiantum/hbsh"
 )
 
-const pepper = "github.com/ncruces/go-sqlite3/vfs/adiantum"
+// This variable can be replaced with -ldflags:
+//
+//	go build -ldflags="-X github.com/ncruces/go-sqlite3/vfs/adiantum.pepper=adiantum"
+var pepper = "github.com/ncruces/go-sqlite3/vfs/adiantum"
 
 type adiantumCreator struct{}
 

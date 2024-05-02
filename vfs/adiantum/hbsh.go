@@ -45,15 +45,17 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 			key, _ = hex.DecodeString(t[0])
 		} else if t, ok := params["textkey"]; ok {
 			key = h.hbsh.KDF(t[0])
+		} else if flags&vfs.OPEN_MAIN_DB != 0 {
+			// Main datatabases may have their key specified as a PRAGMA.
+			return &hbshFile{File: file, reset: h.hbsh}, flags, nil
 		}
 		hbsh = h.hbsh.HBSH(key)
 	}
 
-	// Main datatabases may have their key specified later, as a PRAGMA.
-	if hbsh != nil || flags&vfs.OPEN_MAIN_DB != 0 {
-		return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, nil
+	if hbsh == nil {
+		return nil, flags, sqlite3.CANTOPEN
 	}
-	return nil, flags, sqlite3.CANTOPEN
+	return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, nil
 }
 
 const (
@@ -96,8 +98,7 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		// Only OPEN_MAIN_DB can have a missing key.
 		if off == 0 && len(p) == 100 {
 			// SQLite is trying to read the header of a database file.
-			// Pretend the file is empty so the key may specified later,
-			// as a PRAGMA.
+			// Pretend the file is empty so the key may specified as a PRAGMA.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN
