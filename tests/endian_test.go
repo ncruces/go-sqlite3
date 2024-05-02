@@ -34,7 +34,7 @@ func Test_endianness(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	const value = -9223372036854775808
+	const value int64 = -9223372036854775808
 	{
 		stmt, _, err := db.Prepare(`INSERT INTO test VALUES (?)`)
 		if err != nil {
@@ -60,7 +60,7 @@ func Test_endianness(t *testing.T) {
 		defer stmt.Close()
 
 		if stmt.Step() {
-			if got := stmt.ColumnInt(0); got != value {
+			if got := stmt.ColumnInt64(0); got != value {
 				t.Errorf("got %d, want %d", got, value)
 			}
 			if got := stmt.ColumnText(0); got != strconv.FormatInt(value, 10) {
