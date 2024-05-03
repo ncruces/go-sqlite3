@@ -98,6 +98,9 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 		case unix.EPERM:
 			return _PERM
 		}
+		if errno == unix.EWOULDBLOCK && unix.EWOULDBLOCK != unix.EAGAIN {
+			return _BUSY
+		}
 	}
 	return def
 }
