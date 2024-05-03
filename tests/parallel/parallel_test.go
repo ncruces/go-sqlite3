@@ -141,6 +141,9 @@ func TestChildProcess(t *testing.T) {
 }
 
 func Benchmark_memdb(b *testing.B) {
+	sqlite3.Initialize()
+	b.ResetTimer()
+
 	memdb.Delete("test.db")
 	name := "file:/test.db?vfs=memdb"
 	testParallel(b, name, b.N)

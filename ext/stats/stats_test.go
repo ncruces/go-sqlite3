@@ -180,6 +180,9 @@ func TestRegister_covariance(t *testing.T) {
 }
 
 func Benchmark_average(b *testing.B) {
+	sqlite3.Initialize()
+	b.ResetTimer()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		b.Fatal(err)
@@ -211,6 +214,9 @@ func Benchmark_average(b *testing.B) {
 }
 
 func Benchmark_variance(b *testing.B) {
+	sqlite3.Initialize()
+	b.ResetTimer()
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		b.Fatal(err)

@@ -28,6 +28,14 @@ var (
 	RuntimeConfig wazero.RuntimeConfig
 )
 
+// Initialize decodes and compiles the SQLite Wasm binary.
+// This is called implicitly when the first connection is openned,
+// but is potentially slow, so you may want to call it at a more convenient time.
+func Initialize() error {
+	instance.once.Do(compileSQLite)
+	return instance.err
+}
+
 var instance struct {
 	runtime  wazero.Runtime
 	compiled wazero.CompiledModule
@@ -79,9 +87,8 @@ type sqlite struct {
 }
 
 func instantiateSQLite() (sqlt *sqlite, err error) {
-	instance.once.Do(compileSQLite)
-	if instance.err != nil {
-		return nil, instance.err
+	if err := Initialize(); err != nil {
+		return nil, err
 	}
 
 	sqlt = new(sqlite)
