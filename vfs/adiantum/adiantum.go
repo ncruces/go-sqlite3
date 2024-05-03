@@ -28,5 +28,5 @@ func (adiantumCreator) KDF(text string) []byte {
 		n, _ := rand.Read(key)
 		return key[:n]
 	}
-	return argon2.IDKey([]byte(text), []byte(pepper), 1, 64*1024, 4, 32)
+	return argon2.IDKey([]byte(text), []byte(pepper), 3, 64*1024, 4, 32)
 }

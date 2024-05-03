@@ -18,11 +18,17 @@
 // However, this makes your key easily accessible to other parts of
 // your application (e.g. through [vfs.Filename.URIParameters]).
 //
-// To avoid this, use any of the following PRAGMAs:
+// To avoid this, invoke any of the following PRAGMAs
+// immediately after opening a connection:
 //
 //	PRAGMA key='D41d8cD98f00b204e9800998eCf8427e';
 //	PRAGMA hexkey='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 //	PRAGMA textkey='your-secret-key';
+//
+// For an ATTACH-ed database, you must specify the schema name:
+//
+//	ATTACH DATABASE 'demo.db' AS demo;
+//	PRAGMA demo.textkey='your-secret-key';
 //
 // [URI]: https://sqlite.org/uri.html
 package adiantum

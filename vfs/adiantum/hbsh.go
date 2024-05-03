@@ -21,10 +21,10 @@ func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag,
 }
 
 func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
-	if h, ok := h.VFS.(vfs.VFSFilename); ok {
-		file, flags, err = h.OpenFilename(name, flags)
+	if hf, ok := h.VFS.(vfs.VFSFilename); ok {
+		file, flags, err = hf.OpenFilename(name, flags)
 	} else {
-		file, flags, err = h.Open(name.String(), flags)
+		file, flags, err = h.VFS.Open(name.String(), flags)
 	}
 
 	// Encrypt everything except super journals and memory files.
