@@ -31,6 +31,10 @@ However, concurrency is reduced with BSD locks
 On Windows, this module uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
 
+On Linux and z/OS, BSD locks are fully functional,
+but incompatible with POSIX advisory locks (and SQLite).
+You can opt into BSD locks with the `sqlite3_flock` build tag.
+
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
 (or [`immutable=1`](https://sqlite.org/uri.html#uriimmutable))
