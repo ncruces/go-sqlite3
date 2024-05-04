@@ -24,16 +24,14 @@ OFD locks are fully compatible with POSIX advisory locks.
 
 On BSD Unixes, this module uses
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2).
-On BSD, these locks are fully compatible with POSIX advisory locks.
-However, concurrency is reduced with BSD locks
+On BSD, macOS, and illumos, these locks are fully compatible with POSIX advisory locks;
+on Linux and z/OS, they are fully functional, but incompatible with POSIX advisory locks.
+However, concurrency is always reduced with BSD locks
 (`BEGIN IMMEDIATE` behaves the same as `BEGIN EXCLUSIVE`). 
+You can opt into BSD locks with the `sqlite3_flock` build tag.
 
 On Windows, this module uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
-
-On Linux and z/OS, BSD locks are fully functional,
-but incompatible with POSIX advisory locks (and SQLite).
-You can opt into BSD locks with the `sqlite3_flock` build tag.
 
 On all other platforms, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
@@ -44,7 +42,7 @@ with `nolock=1` you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
 You can use [`vfs.SupportsFileLocking`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsFileLocking)
-to check if your platform supports file locking.
+to check if your build supports file locking.
 
 ### Write-Ahead Logging
 
@@ -56,7 +54,7 @@ To allow `mmap` to work, each connection needs to reserve up to 4GB of address s
 To limit the amount of address space each connection needs,
 use [`WithMemoryLimitPages`](../tests/testcfg/testcfg.go).
 
-On Windows and BSD, [WAL](https://sqlite.org/wal.html) support is
+On Windows, and with BSD locks, [WAL](https://sqlite.org/wal.html) support is
 [limited](https://sqlite.org/wal.html#noshm).
 `EXCLUSIVE` locking mode can be set to create, read, and write WAL databases.\
 To use `EXCLUSIVE` locking mode with the
@@ -64,20 +62,29 @@ To use `EXCLUSIVE` locking mode with the
 you must disable connection pooling by calling
 [`db.SetMaxOpenConns(1)`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns).
 
-On all other platforms, where file locking is not supported, WAL mode does not work.
+On all other platforms, where file locking is not supported, WAL mode is disabled.
 
 You can use [`vfs.SupportsSharedMemory`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs#SupportsSharedMemory)
-to check if your platform supports shared memory.
+to check if your build supports shared memory.
 
 ### Batch-Atomic Write
 
 On 64-bit Linux, this module supports [batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
 with the F2FS filesystem.
 
-### Build tags
+### Build Tags
 
 The VFS can be customized with a few build tags:
-- `sqlite3_flock` forces the use of BSD locks; it can be used on macOS to test the BSD locking implementation.
+- `sqlite3_flock` forces the use of BSD locks; it can be used on z/OS for locking support,
+  and elsewhere to test the BSD locks.
 - `sqlite3_nosys` prevents importing [`x/sys`](https://pkg.go.dev/golang.org/x/sys);
   disables locking _and_ shared memory on all platforms.
 - `sqlite3_noshm` disables shared memory on all platforms.
+
+> [!CAUTION]
+> If file locking is incompatible with POSIX advisory locks,
+> accessing databases concurrently with this package and other SQLite implementations
+> is unsafe, and will eventually corrupt data.
+> This will only be the case if you explicitly opt into BSD locks with `sqlite3_flock`.
+> The SQLite [`unix-flock`](https://sqlite.org/compile.html#enable_locking_style) VFS
+> is always compatible with `sqlite3_flock`.
