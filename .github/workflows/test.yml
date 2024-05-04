@@ -78,7 +78,10 @@ jobs:
       with: { go-version: stable }
 
     - name: Build
-      run: .github/workflows/bsd.sh
+      env:
+        GOOS: freebsd
+        TESTFLAGS: '-test.v'
+      run: .github/workflows/build-test.sh
 
     - name: Test
       uses: cross-platform-actions/action@v0.24.0
@@ -88,28 +91,7 @@ jobs:
         shell: bash
         run: . ./test.sh
         sync_files: runner-to-vm
-
-  test-illumos:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v4
-      with: { lfs: 'true' }
-
-    - uses: actions/setup-go@v5
-      with: { go-version: stable }
-
-    - name: Build
-      run: .github/workflows/illumos.sh
-
-    - name: Test
-      uses: vmactions/omnios-vm@v1
-      with:
-        usesh: true
-        copyback: false
-        run: . ./test.sh
-
+      
   test-m1:
     runs-on: macos-14
     needs: test
@@ -148,3 +130,40 @@ jobs:
 
     - name: Test s390x (like z/OS)
       run: GOARCH=s390x go test -v -short -tags sqlite3_flock ./...
+
+  test-vm:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+      with: { lfs: 'true' }
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Build illumos
+      env:
+        GOOS: illumos
+        TESTFLAGS: '-test.v -test.short'
+      run: .github/workflows/build-test.sh
+
+    - name: Test illumos
+      uses: vmactions/omnios-vm@v1
+      with:
+        usesh: true
+        copyback: false
+        run: . ./test.sh
+
+    - name: Build Solaris
+      env:
+        GOOS: solaris
+        TESTFLAGS: '-test.v -test.short'
+      run: .github/workflows/build-test.sh
+
+    - name: Test Solaris
+      uses: vmactions/solaris-vm@v1
+      with:
+        usesh: true
+        copyback: false
+        run: . ./test.sh

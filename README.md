@@ -88,7 +88,8 @@ It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 [wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach) thorough testing.
 
 Every commit is [tested](.github/workflows/test.yml) on
-Linux (amd64/arm64/386/riscv64), macOS (amd64/arm64), Windows, FreeBSD and illumos.
+Linux (amd64/arm64/386/riscv64/s390x), macOS (amd64/arm64),
+Windows, FreeBSD, illumos, and Solaris.
 The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c).
 
