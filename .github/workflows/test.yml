@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with: { lfs: 'true' }
+    - uses: ./.github/actions/lfs
 
     - uses: actions/setup-go@v5
       with: { go-version: stable }
@@ -66,13 +66,27 @@ jobs:
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
 
+  test-m1:
+    runs-on: macos-14
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/lfs
+
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Test
+      run: go test -v ./...
+
   test-bsd:
     runs-on: ubuntu-latest
     needs: test
 
     steps:
     - uses: actions/checkout@v4
-      with: { lfs: 'true' }
+    - uses: ./.github/actions/lfs
 
     - uses: actions/setup-go@v5
       with: { go-version: stable }
@@ -91,20 +105,6 @@ jobs:
         shell: bash
         run: . ./test.sh
         sync_files: runner-to-vm
-      
-  test-m1:
-    runs-on: macos-14
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v4
-      with: { lfs: 'true' }
-
-    - uses: actions/setup-go@v5
-      with: { go-version: stable }
-
-    - name: Test
-      run: go test -v ./...
 
   test-qemu:
     runs-on: ubuntu-latest
@@ -112,23 +112,23 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with: { lfs: 'true' }
+    - uses: ./.github/actions/lfs
 
     - uses: actions/setup-go@v5
       with: { go-version: stable }
 
     - uses: docker/setup-qemu-action@v3
 
-    - name: Test 386
+    - name: Test 386 (32-bit)
       run: GOARCH=386 go test -v -short ./...
 
-    - name: Test arm64
+    - name: Test arm64 (compiler)
       run: GOARCH=arm64 go test -v -short ./...
 
-    - name: Test riscv64
+    - name: Test riscv64 (interpreter)
       run: GOARCH=riscv64 go test -v -short ./...
 
-    - name: Test s390x (like z/OS)
+    - name: Test s390x (big-endian, z/OS)
       run: GOARCH=s390x go test -v -short -tags sqlite3_flock ./...
 
   test-vm:
@@ -137,7 +137,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with: { lfs: 'true' }
+    - uses: ./.github/actions/lfs
 
     - uses: actions/setup-go@v5
       with: { go-version: stable }

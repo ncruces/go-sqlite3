@@ -497,7 +497,7 @@ func TestConn_DBName(t *testing.T) {
 func TestConn_AutoVacuumPages(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open("file:test.db?vfs=memdb&_pragma=auto_vacuum(FULL)")
+	db, err := sqlite3.Open("file:test.db?vfs=memdb&_pragma=auto_vacuum(full)")
 	if err != nil {
 		t.Fatal(err)
 	}
