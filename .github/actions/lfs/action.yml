@@ -18,4 +18,6 @@ runs:
 
     - name: Git LFS pull
       shell: bash
-      run: git lfs pull
+      run: |
+        git lfs pull
+        git lfs prune

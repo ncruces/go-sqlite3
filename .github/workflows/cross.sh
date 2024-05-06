@@ -24,3 +24,4 @@ echo darwin-noshm  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_noshm .
 echo darwin-nosys  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_nosys .
 echo windows-nosys ; GOOS=windows   GOARCH=amd64 go build -tags sqlite3_nosys .
 echo freebsd-nosys ; GOOS=freebsd   GOARCH=amd64 go build -tags sqlite3_nosys .
+echo solaris-flock ; GOOS=solaris   GOARCH=amd64 go build -tags sqlite3_flock .
