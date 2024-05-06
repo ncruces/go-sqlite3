@@ -186,7 +186,7 @@ func (h *hbshFile) Truncate(size int64) error {
 }
 
 func (h *hbshFile) SectorSize() int {
-	return max(h.File.SectorSize(), blockSize)
+	return lcm(h.File.SectorSize(), blockSize)
 }
 
 func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
