@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-curl -#OL "https://sqlite.org/2024/sqlite-amalgamation-3450200.zip"
+curl -#OL "https://sqlite.org/2024/sqlite-amalgamation-3450300.zip"
 unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3* .
 rm -rf sqlite-amalgamation-*

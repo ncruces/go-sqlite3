@@ -16,10 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ./.github/actions/lfs
-
     - uses: actions/setup-go@v5
       with: { go-version: stable }
+
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
 
     - name: Format
       run: gofmt -s -w . && git diff --exit-code
@@ -66,16 +67,17 @@ jobs:
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
 
-  test-m1:
-    runs-on: macos-14
+  test-intel:
+    runs-on: macos-13
     needs: test
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ./.github/actions/lfs
-
     - uses: actions/setup-go@v5
       with: { go-version: stable }
+
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
 
     - name: Test
       run: go test -v ./...
@@ -86,10 +88,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ./.github/actions/lfs
-
     - uses: actions/setup-go@v5
       with: { go-version: stable }
+
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
 
     - name: Build
       env:
@@ -111,13 +114,13 @@ jobs:
     needs: test
 
     steps:
+    - uses: docker/setup-qemu-action@v3
     - uses: actions/checkout@v4
-    - uses: ./.github/actions/lfs
-
     - uses: actions/setup-go@v5
       with: { go-version: stable }
 
-    - uses: docker/setup-qemu-action@v3
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
 
     - name: Test 386 (32-bit)
       run: GOARCH=386 go test -v -short ./...
@@ -137,10 +140,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: ./.github/actions/lfs
-
     - uses: actions/setup-go@v5
       with: { go-version: stable }
+
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
 
     - name: Build illumos
       env:

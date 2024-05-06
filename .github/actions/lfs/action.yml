@@ -1,5 +1,5 @@
-name: LFS pull
-description: Cached LFS pull.
+name: Git LFS pull
+description: Cached Git LFS pull.
 
 runs:
   using: "composite"
@@ -16,6 +16,6 @@ runs:
         restore-keys: lfs-
         enableCrossOsArchive: true
 
-    - name: Git LFS Pull
+    - name: Git LFS pull
       shell: bash
       run: git lfs pull
