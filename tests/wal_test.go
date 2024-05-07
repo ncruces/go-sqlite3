@@ -26,7 +26,7 @@ func TestWAL_enter_exit(t *testing.T) {
 	defer db.Close()
 
 	if !vfs.SupportsSharedMemory {
-		err = db.Exec(`PRAGMA locking_mode=EXCLUSIVE`)
+		err = db.Exec(`PRAGMA locking_mode=exclusive`)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -34,11 +34,11 @@ func TestWAL_enter_exit(t *testing.T) {
 
 	err = db.Exec(`
 		CREATE TABLE test (col);
-		PRAGMA journal_mode=WAL;
+		PRAGMA journal_mode=wal;
 		SELECT * FROM test;
-		PRAGMA journal_mode=DELETE;
+		PRAGMA journal_mode=delete;
 		SELECT * FROM test;
-		PRAGMA journal_mode=WAL;
+		PRAGMA journal_mode=wal;
 		SELECT * FROM test;
 	`)
 	if err != nil {
@@ -53,7 +53,7 @@ func TestWAL_readonly(t *testing.T) {
 	t.Parallel()
 
 	tmp := filepath.Join(t.TempDir(), "test.db")
-	err := os.WriteFile(tmp, waldb, 0666)
+	err := os.WriteFile(tmp, walDB, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,8 +101,8 @@ func TestConn_WalCheckpoint(t *testing.T) {
 	})
 
 	err = db.Exec(`
-		PRAGMA locking_mode=EXCLUSIVE;
-		PRAGMA journal_mode=WAL;
+		PRAGMA locking_mode=exlusive;
+		PRAGMA journal_mode=wal;
 		CREATE TABLE test (col);
 	`)
 	if err != nil {

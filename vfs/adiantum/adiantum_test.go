@@ -1,13 +1,47 @@
 package adiantum_test
 
 import (
+	_ "embed"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
+	"github.com/ncruces/go-sqlite3/util/ioutil"
+	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/go-sqlite3/vfs/adiantum"
+	"github.com/ncruces/go-sqlite3/vfs/readervfs"
 )
+
+//go:embed testdata/test.db
+var testDB string
+
+func Test_fileformat(t *testing.T) {
+	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
+	adiantum.Register("adiantum", vfs.Find("reader"), nil)
+
+	db, err := driver.Open("file:test.db?vfs=adiantum", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`PRAGMA textkey='correct+horse+battery+staple'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var version uint32
+	err = db.QueryRow(`PRAGMA user_version`).Scan(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != 0xBADDB {
+		t.Error(version)
+	}
+}
 
 func Benchmark_nokey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
