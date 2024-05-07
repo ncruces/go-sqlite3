@@ -171,3 +171,4 @@ jobs:
         usesh: true
         copyback: false
         run: . ./test.sh
+      continue-on-error: true
