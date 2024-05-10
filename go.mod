@@ -10,9 +10,7 @@ require (
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.20.0
 	golang.org/x/text v0.15.0
-	lukechampine.com/adiantum v1.0.0
+	lukechampine.com/adiantum v1.1.0
 )
-
-require github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da // indirect
 
 retract v0.4.0 // tagged from the wrong branch
