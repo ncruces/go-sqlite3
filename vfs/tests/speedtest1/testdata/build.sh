@@ -17,6 +17,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
 	-D_HAVE_SQLITE_CONFIG_H -DSQLITE_USE_URI \
+	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \

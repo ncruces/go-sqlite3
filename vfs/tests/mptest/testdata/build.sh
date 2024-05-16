@@ -21,6 +21,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
 	-DSQLITE_NO_SYNC -DSQLITE_THREADSAFE=0 \
 	-DSQLITE_OMIT_LOAD_EXTENSION -DHAVE_USLEEP \
+	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
