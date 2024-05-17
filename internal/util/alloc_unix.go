@@ -3,13 +3,22 @@
 package util
 
 import (
+	"context"
 	"math"
 
 	"github.com/tetratelabs/wazero/experimental"
 	"golang.org/x/sys/unix"
 )
 
-func mmappedAllocator(cap, max uint64) experimental.LinearMemory {
+func withAllocator(ctx context.Context) context.Context {
+	if math.MaxInt != math.MaxInt64 {
+		return ctx
+	}
+	return experimental.WithMemoryAllocator(ctx,
+		experimental.MemoryAllocatorFunc(newAllocator))
+}
+
+func newAllocator(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(unix.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd

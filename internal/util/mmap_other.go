@@ -2,10 +2,4 @@
 
 package util
 
-import "context"
-
 type mmapState struct{}
-
-func withMmappedAllocator(ctx context.Context) context.Context {
-	return ctx
-}

@@ -8,14 +8,8 @@ import (
 	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental"
 	"golang.org/x/sys/unix"
 )
-
-func withMmappedAllocator(ctx context.Context) context.Context {
-	return experimental.WithMemoryAllocator(ctx,
-		experimental.MemoryAllocatorFunc(mmappedAllocator))
-}
 
 type mmapState struct {
 	regions []*MappedRegion
