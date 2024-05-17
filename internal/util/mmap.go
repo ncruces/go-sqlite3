@@ -1,4 +1,4 @@
-//go:build (darwin || linux) && (amd64 || arm64 || riscv64) && !(sqlite3_flock || sqlite3_noshm || sqlite3_nosys)
+//go:build (darwin || linux) && (amd64 || arm64 || riscv64) && !(sqlite3_noshm || sqlite3_nosys)
 
 package util
 
@@ -8,8 +8,14 @@ import (
 	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 	"golang.org/x/sys/unix"
 )
+
+func withAllocator(ctx context.Context) context.Context {
+	return experimental.WithMemoryAllocator(ctx,
+		experimental.MemoryAllocatorFunc(newAllocator))
+}
 
 type mmapState struct {
 	regions []*MappedRegion

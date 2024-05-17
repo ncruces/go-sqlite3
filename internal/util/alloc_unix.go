@@ -3,20 +3,11 @@
 package util
 
 import (
-	"context"
 	"math"
 
 	"github.com/tetratelabs/wazero/experimental"
 	"golang.org/x/sys/unix"
 )
-
-func withAllocator(ctx context.Context) context.Context {
-	if math.MaxInt != math.MaxInt64 {
-		return ctx
-	}
-	return experimental.WithMemoryAllocator(ctx,
-		experimental.MemoryAllocatorFunc(newAllocator))
-}
 
 func newAllocator(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
@@ -52,7 +43,9 @@ type mmappedMemory struct {
 }
 
 func (m *mmappedMemory) Reallocate(size uint64) []byte {
-	if com := uint64(len(m.buf)); com < size {
+	com := uint64(len(m.buf))
+	res := uint64(cap(m.buf))
+	if com < size && size < res {
 		// Round up to the page size.
 		rnd := uint64(unix.Getpagesize() - 1)
 		new := (size + rnd) &^ rnd

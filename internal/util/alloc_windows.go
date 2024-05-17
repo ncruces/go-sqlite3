@@ -3,7 +3,6 @@
 package util
 
 import (
-	"context"
 	"math"
 	"reflect"
 	"unsafe"
@@ -12,14 +11,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func withAllocator(ctx context.Context) context.Context {
-	if math.MaxInt != math.MaxInt64 {
-		return ctx
-	}
-	return experimental.WithMemoryAllocator(ctx,
-		experimental.MemoryAllocatorFunc(newAllocator))
-}
-
 func newAllocator(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
@@ -27,12 +18,12 @@ func newAllocator(cap, max uint64) experimental.LinearMemory {
 	cap = (cap + rnd) &^ rnd
 
 	if max > math.MaxInt {
-		// This ensures int(max) overflows to a negative value,
-		// and unix.Mmap returns EINVAL.
+		// This ensures uintptr(max) overflows to a large value,
+		// and windows.VirtualAlloc returns an error.
 		max = math.MaxUint64
 	}
 	// Reserve max bytes of address space, to ensure we won't need to move it.
-	// A protected, private, anonymous mapping should not commit memory.
+	// This does not commit memory.
 	r, err := windows.VirtualAlloc(0, uintptr(max), windows.MEM_RESERVE, windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
@@ -61,7 +52,9 @@ type virtualMemory struct {
 }
 
 func (m *virtualMemory) Reallocate(size uint64) []byte {
-	if com := uint64(len(m.buf)); com < size {
+	com := uint64(len(m.buf))
+	res := uint64(cap(m.buf))
+	if com < size && size < res {
 		// Round up to the page size.
 		rnd := uint64(windows.Getpagesize() - 1)
 		new := (size + rnd) &^ rnd
