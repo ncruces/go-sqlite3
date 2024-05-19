@@ -1,5 +1,7 @@
 #include <unistd.h>
 
+#define sqliteBusyCallback sqliteDefaultBusyCallback
+
 // Amalgamation
 #include "sqlite3.c"
 // VFS

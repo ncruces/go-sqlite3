@@ -296,8 +296,9 @@ func (a *arena) string(s string) uint32 {
 }
 
 func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.ExportFuncIII(env, "go_busy_handler", busyCallback)
 	util.ExportFuncII(env, "go_progress_handler", progressCallback)
+	util.ExportFuncIIII(env, "go_busy_timeout", timeoutCallback)
+	util.ExportFuncIII(env, "go_busy_handler", busyCallback)
 	util.ExportFuncII(env, "go_commit_hook", commitCallback)
 	util.ExportFuncVI(env, "go_rollback_hook", rollbackCallback)
 	util.ExportFuncVIIIIJ(env, "go_update_hook", updateCallback)

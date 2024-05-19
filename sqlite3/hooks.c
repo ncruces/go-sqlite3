@@ -4,6 +4,7 @@
 
 int go_progress_handler(void *);
 int go_busy_handler(void *, int);
+int go_busy_timeout(void *, int count, int tmout);
 
 int go_commit_hook(void *);
 void go_rollback_hook(void *);
@@ -56,3 +57,11 @@ int sqlite3_autovacuum_pages_go(sqlite3 *db, go_handle app) {
   if (rc) go_destroy(app);
   return rc;
 }
+
+#ifndef sqliteBusyCallback
+
+static int sqliteBusyCallback(sqlite3 *db, int count) {
+  return go_busy_timeout(db, count, db->busyTimeout);
+}
+
+#endif

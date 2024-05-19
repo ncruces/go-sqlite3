@@ -8,6 +8,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestConn_Transaction_exec(t *testing.T) {
@@ -244,6 +245,51 @@ func TestConn_Transaction_interrupted(t *testing.T) {
 	tx.End(&err)
 	if !errors.Is(err, sqlite3.INTERRUPT) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
+	}
+}
+
+func TestConn_Transaction_busy(t *testing.T) {
+	t.Parallel()
+
+	db1, err := sqlite3.Open("file:/test.db?vfs=memdb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db1.Close()
+
+	db2, err := sqlite3.Open("file:/test.db?vfs=memdb&_pragma=busy_timeout(10000)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db2.Close()
+
+	err = db1.Exec(`CREATE TABLE test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := db1.BeginImmediate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = db1.Exec(`INSERT INTO test VALUES (1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	db2.SetInterrupt(ctx)
+	go cancel()
+
+	_, err = db2.BeginExclusive()
+	if !errors.Is(err, sqlite3.BUSY) {
+		t.Errorf("got %v, want sqlite3.BUSY", err)
+	}
+
+	err = nil
+	tx.End(&err)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

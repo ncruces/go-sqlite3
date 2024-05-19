@@ -35,8 +35,12 @@
 
 // Because Wasm does not support shared memory,
 // SQLite disables WAL for Wasm builds.
-// But we want it.
 #undef SQLITE_OMIT_WAL
 
 // Implemented in vfs.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
+
+// Implemented in hooks.c.
+#ifndef sqliteBusyCallback
+static int sqliteBusyCallback(sqlite3 *, int);
+#endif

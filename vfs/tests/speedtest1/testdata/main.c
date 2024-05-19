@@ -1,6 +1,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define sqliteBusyCallback sqliteDefaultBusyCallback
+
 // Amalgamation
 #include "sqlite3.c"
 // VFS
