@@ -14,7 +14,7 @@ import (
 
 func withAllocator(ctx context.Context) context.Context {
 	return experimental.WithMemoryAllocator(ctx,
-		experimental.MemoryAllocatorFunc(newAllocator))
+		experimental.MemoryAllocatorFunc(virtualAlloc))
 }
 
 type mmapState struct {

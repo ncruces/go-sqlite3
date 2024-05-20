@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func newAllocator(cap, max uint64) experimental.LinearMemory {
+func virtualAlloc(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd
