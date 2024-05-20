@@ -61,6 +61,8 @@ func Test_memdb(t *testing.T) {
 		iter = 5000
 	}
 
+	memdb.Delete("test.db")
+	memdb.Create("test.db", nil)
 	name := "file:/test.db?vfs=memdb"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
@@ -145,6 +147,7 @@ func Benchmark_memdb(b *testing.B) {
 	b.ResetTimer()
 
 	memdb.Delete("test.db")
+	memdb.Create("test.db", nil)
 	name := "file:/test.db?vfs=memdb"
 	testParallel(b, name, b.N)
 }
