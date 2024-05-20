@@ -15,29 +15,23 @@ func newAllocator(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd
-	cap = (cap + rnd) &^ rnd
 
 	if max > math.MaxInt {
 		// This ensures uintptr(max) overflows to a large value,
 		// and windows.VirtualAlloc returns an error.
 		max = math.MaxUint64
 	}
+
 	// Reserve max bytes of address space, to ensure we won't need to move it.
 	// This does not commit memory.
 	r, err := windows.VirtualAlloc(0, uintptr(max), windows.MEM_RESERVE, windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
 	}
-	// Commit the initial cap bytes of memory.
-	_, err = windows.VirtualAlloc(r, uintptr(cap), windows.MEM_COMMIT, windows.PAGE_READWRITE)
-	if err != nil {
-		windows.VirtualFree(r, 0, windows.MEM_RELEASE)
-		panic(err)
-	}
+
 	mem := virtualMemory{addr: r}
 	// SliceHeader, although deprecated, avoids a go vet warning.
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&mem.buf))
-	sh.Len = int(cap) // Not a bug.
 	sh.Cap = int(max) // Not a bug.
 	sh.Data = r
 	return &mem
