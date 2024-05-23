@@ -23,6 +23,7 @@
 #define SQLITE_DEFAULT_FOREIGN_KEYS 1
 #define SQLITE_ENABLE_ATOMIC_WRITE
 #define SQLITE_ENABLE_BATCH_ATOMIC_WRITE
+#define SQLITE_ENABLE_STAT4 1
 
 // We have our own memdb VFS.
 // To avoid interactions between the two,

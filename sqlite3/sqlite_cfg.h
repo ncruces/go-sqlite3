@@ -18,6 +18,8 @@
 #define HAVE_STDINT_H 1
 #define HAVE_INTTYPES_H 1
 
+#define LONGDOUBLE_TYPE double
+
 #define HAVE_LOG2 1
 #define HAVE_LOG10 1
 #define HAVE_ISNAN 1
