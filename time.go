@@ -183,7 +183,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		case float64:
 			return time.UnixMilli(int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.UnixMilli(int64(v)).UTC(), nil
+			return time.UnixMilli(v).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -200,7 +200,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		case float64:
 			return time.UnixMicro(int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.UnixMicro(int64(v)).UTC(), nil
+			return time.UnixMicro(v).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}
@@ -217,7 +217,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		case float64:
 			return time.Unix(0, int64(math.Floor(v))).UTC(), nil
 		case int64:
-			return time.Unix(0, int64(v)).UTC(), nil
+			return time.Unix(0, v).UTC(), nil
 		default:
 			return time.Time{}, util.TimeErr
 		}

@@ -116,5 +116,5 @@ func (cur *seriesCursor) EOF() bool {
 }
 
 func (cur *seriesCursor) RowID() (int64, error) {
-	return int64(cur.value), nil
+	return cur.value, nil
 }
