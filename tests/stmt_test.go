@@ -20,7 +20,7 @@ func TestStmt(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE test (col)`)
+	err = db.Exec(`CREATE TABLE test (col ANY) STRICT`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestStmt(t *testing.T) {
 	}
 
 	// The table should have: 0, 1, 2, π, NULL, "", "text", "", "blob", NULL, "\0\0\0\0", "true", NULL
-	stmt, _, err = db.Prepare(`SELECT col FROM test`)
+	stmt, _, err = db.Prepare(`SELECT col AS c FROM test`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,6 +144,21 @@ func TestStmt(t *testing.T) {
 
 	if got := stmt.ReadOnly(); got != true {
 		t.Error("got false, want true")
+	}
+	if got := stmt.ColumnName(0); got != "c" {
+		t.Errorf(`got %q, want "c"`, got)
+	}
+	if got := stmt.ColumnDeclType(0); got != "ANY" {
+		t.Errorf(`got %q, want "ANY"`, got)
+	}
+	if got := stmt.ColumnOriginName(0); got != "col" {
+		t.Errorf(`got %q, want "col"`, got)
+	}
+	if got := stmt.ColumnTableName(0); got != "test" {
+		t.Errorf(`got %q, want "test"`, got)
+	}
+	if got := stmt.ColumnDatabaseName(0); got != "main" {
+		t.Errorf(`got %q, want "main"`, got)
 	}
 
 	if stmt.Step() {

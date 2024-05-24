@@ -2,7 +2,7 @@
 # This patch allows Go VFSes to be (un)registered.
 --- sqlite3.c.orig
 +++ sqlite3.c
-@@ -26372,7 +26372,7 @@
+@@ -26396,7 +26396,7 @@
  ** Locate a VFS by name.  If no name is given, simply return the
  ** first VFS on the list.
  */

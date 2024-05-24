@@ -72,6 +72,8 @@ static void go_mod_destroy(void *pAux) {
 static int go_vtab_create_wrapper(sqlite3 *db, void *pAux, int argc,
                                   const char *const *argv,
                                   sqlite3_vtab **ppVTab, char **pzErr) {
+  UNUSED_PARAMETER(db);
+
   struct go_vtab *vtab = calloc(1, sizeof(struct go_vtab));
   if (vtab == NULL) return SQLITE_NOMEM;
   *ppVTab = &vtab->base;
@@ -88,6 +90,8 @@ static int go_vtab_create_wrapper(sqlite3 *db, void *pAux, int argc,
 static int go_vtab_connect_wrapper(sqlite3 *db, void *pAux, int argc,
                                    const char *const *argv,
                                    sqlite3_vtab **ppVTab, char **pzErr) {
+  UNUSED_PARAMETER(db);
+
   struct go_vtab *vtab = calloc(1, sizeof(struct go_vtab));
   if (vtab == NULL) return SQLITE_NOMEM;
   *ppVTab = &vtab->base;

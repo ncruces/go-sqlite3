@@ -5,6 +5,8 @@
 
 static int time_collation(void *pArg, int nKey1, const void *pKey1, int nKey2,
                           const void *pKey2) {
+  UNUSED_PARAMETER(pArg);
+
   // Remove a Z suffix if one key is no longer than the other.
   // A Z suffix collates before any character but after the empty string.
   // This avoids making different keys equal.
@@ -29,8 +31,8 @@ static int time_collation(void *pArg, int nKey1, const void *pKey1, int nKey2,
 
 int sqlite3_time_init(sqlite3 *db, char **pzErrMsg,
                       const sqlite3_api_routines *pApi) {
+  UNUSED_PARAMETER2(pzErrMsg, pApi);
   sqlite3_create_collation_v2(db, "time", SQLITE_UTF8, /*arg=*/NULL,
-                              time_collation,
-                              /*destroy=*/NULL);
+                              time_collation, /*destroy=*/NULL);
   return SQLITE_OK;
 }

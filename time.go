@@ -101,7 +101,7 @@ func (f TimeFormat) Encode(t time.Time) any {
 		return t.UnixMicro()
 	case TimeFormatUnixNano:
 		return t.UnixNano()
-	// Special formats
+	// Special formats.
 	case TimeFormatDefault, TimeFormatAuto:
 		f = time.RFC3339Nano
 	// SQLite assumes UTC if unspecified.
@@ -139,7 +139,7 @@ func (f TimeFormat) Encode(t time.Time) any {
 // https://sqlite.org/lang_datefunc.html
 func (f TimeFormat) Decode(v any) (time.Time, error) {
 	switch f {
-	// Numeric formats
+	// Numeric formats.
 	case TimeFormatJulianDay:
 		switch v := v.(type) {
 		case string:
@@ -222,7 +222,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 			return time.Time{}, util.TimeErr
 		}
 
-	// Special formats
+	// Special formats.
 	case TimeFormatAuto:
 		switch s := v.(type) {
 		case string:
