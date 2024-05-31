@@ -18,6 +18,9 @@
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
 //   - regr_json: all regr stats in a JSON object
+//   - median: median value
+//   - quantile_cont: continuous quantile
+//   - quantile_disc: discrete quantile
 //
 // These join the [Built-in Aggregate Functions]:
 //   - count: count rows/values
@@ -27,9 +30,11 @@
 //   - max: maximum value
 //
 // See: [ANSI SQL Aggregate Functions]
+// See: [DuckDB Aggregate Functions]
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
+// [DuckDB Aggregate Functions]: https://duckdb.org/docs/sql/aggregates.html
 package stats
 
 import "github.com/ncruces/go-sqlite3"
@@ -54,6 +59,9 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept))
 	db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count))
 	db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json))
+	db.CreateWindowFunction("median", 1, flags, newQuantile(median))
+	db.CreateWindowFunction("quantile_cont", 2, flags, newQuantile(quant_cont))
+	db.CreateWindowFunction("quantile_disc", 2, flags, newQuantile(quant_disc))
 }
 
 const (

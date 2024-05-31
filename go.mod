@@ -13,4 +13,6 @@ require (
 	lukechampine.com/adiantum v1.1.1
 )
 
+require github.com/ncruces/sort v0.1.2
+
 retract v0.4.0 // tagged from the wrong branch
