@@ -35,7 +35,7 @@ func (q *quantile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func (q *quantile) Value(ctx sqlite3.Context) {
-	if q.list == nil {
+	if len(q.list) == 0 {
 		return
 	}
 	if q.kind == median {
@@ -49,7 +49,7 @@ func (q *quantile) Value(ctx sqlite3.Context) {
 	i, f := math.Modf(q.pos * float64(len(q.list)-1))
 	m0 := quick.Select(q.list, int(i))
 
-	if q.kind == quant_disc {
+	if f == 0 || q.kind == quant_disc {
 		ctx.ResultFloat(m0)
 		return
 	}

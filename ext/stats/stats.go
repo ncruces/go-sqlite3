@@ -18,9 +18,9 @@
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
 //   - regr_json: all regr stats in a JSON object
-//   - median: median value
-//   - quantile_cont: continuous quantile
 //   - quantile_disc: discrete quantile
+//   - quantile_cont: continuous quantile
+//   - median: median value
 //
 // These join the [Built-in Aggregate Functions]:
 //   - count: count rows/values
@@ -29,8 +29,7 @@
 //   - min: minimum value
 //   - max: maximum value
 //
-// See: [ANSI SQL Aggregate Functions]
-// See: [DuckDB Aggregate Functions]
+// See: [ANSI SQL Aggregate Functions], [DuckDB Aggregate Functions]
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html

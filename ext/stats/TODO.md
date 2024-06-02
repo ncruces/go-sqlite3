@@ -45,3 +45,11 @@ https://sqlite.org/lang_aggfunc.html
 - [ ] `PERCENTILE_DISC(percentile) OVER window`
 
 https://sqlite.org/windowfunctions.html#builtins
+
+## Additional aggregates
+
+- [X] `MEDIAN(expression)`
+- [X] `QUANTILE_CONT(expression, quantile)`
+- [X] `QUANTILE_DISC(expression, quantile)`
+
+https://duckdb.org/docs/sql/aggregates.html
