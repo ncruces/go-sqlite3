@@ -9,7 +9,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/pivot"
-	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 // https://antonz.org/sqlite-pivot-table/

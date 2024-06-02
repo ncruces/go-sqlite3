@@ -11,7 +11,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/array"
-	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
+	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func Example_driver() {

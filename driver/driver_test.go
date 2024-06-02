@@ -14,7 +14,6 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/internal/util"
-	_ "github.com/ncruces/go-sqlite3/tests/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
