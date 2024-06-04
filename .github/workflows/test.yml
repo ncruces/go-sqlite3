@@ -131,7 +131,7 @@ jobs:
     - name: Test riscv64 (interpreter)
       run: GOARCH=riscv64 go test -v -short ./...
 
-    - name: Test s390x (big-endian, z/OS)
+    - name: Test s390x (big-endian, z/OS demo)
       run: GOARCH=s390x go test -v -short -tags sqlite3_flock ./...
 
   test-vm:
