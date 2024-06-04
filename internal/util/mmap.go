@@ -1,4 +1,4 @@
-//go:build (darwin || linux) && (amd64 || arm64 || riscv64) && !(sqlite3_noshm || sqlite3_nosys)
+//go:build unix && (amd64 || arm64 || riscv64) && !(sqlite3_noshm || sqlite3_nosys)
 
 package util
 

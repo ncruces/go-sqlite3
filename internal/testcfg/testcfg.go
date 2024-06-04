@@ -1,6 +1,7 @@
 package testcfg
 
 import (
+	"math/bits"
 	"os"
 	"path/filepath"
 
@@ -9,6 +10,10 @@ import (
 )
 
 func init() {
+	if bits.UintSize < 64 {
+		return
+	}
+
 	sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().
 		WithMemoryCapacityFromMax(true).
 		WithMemoryLimitPages(1024)
