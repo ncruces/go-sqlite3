@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"math"
+	"math/bits"
 	"testing"
 	"time"
 
@@ -617,6 +618,9 @@ func TestStmt_ColumnTime(t *testing.T) {
 }
 
 func TestStmt_Error(t *testing.T) {
+	if bits.UintSize < 64 {
+		t.Skip("skipping on 32-bit")
+	}
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")
