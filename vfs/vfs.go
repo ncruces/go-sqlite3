@@ -83,7 +83,7 @@ func vfsRandomness(ctx context.Context, mod api.Module, pVfs uint32, nByte int32
 }
 
 func vfsSleep(ctx context.Context, mod api.Module, pVfs uint32, nMicro int32) _ErrorCode {
-	osSleep(time.Duration(nMicro) * time.Microsecond)
+	time.Sleep(time.Duration(nMicro) * time.Microsecond)
 	return _OK
 }
 
