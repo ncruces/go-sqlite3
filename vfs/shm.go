@@ -51,7 +51,7 @@ type vfsShm struct {
 	readOnly bool
 }
 
-func (s *vfsShm) shmOpen() error {
+func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
 		var flag int
 		if s.readOnly {
@@ -86,17 +86,17 @@ func (s *vfsShm) shmOpen() error {
 	if rc := osReadLock(s.File, _SHM_DMS, 1, 0); rc != _OK {
 		return rc
 	}
-	return nil
+	return _OK
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, error) {
+func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
 	}
 
-	if err := s.shmOpen(); err != nil {
-		return 0, err
+	if rc := s.shmOpen(); rc != _OK {
+		return 0, rc
 	}
 
 	// Check if file is big enough.
@@ -106,7 +106,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	}
 	if n := (int64(id) + 1) * int64(size); n > o {
 		if !extend {
-			return 0, nil
+			return 0, _OK
 		}
 		err := osAllocate(s.File, n)
 		if err != nil {
@@ -122,13 +122,13 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	}
 	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, prot)
 	if err != nil {
-		return 0, err
+		return 0, _IOERR_SHMMAP
 	}
 	s.regions = append(s.regions, r)
-	return r.Ptr, nil
+	return r.Ptr, _OK
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
+func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 	// Argument check.
 	if n <= 0 || offset < 0 || offset+n > _SHM_NLOCK {
 		panic(util.AssertErr())

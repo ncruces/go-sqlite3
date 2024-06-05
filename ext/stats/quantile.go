@@ -22,9 +22,9 @@ func newQuantile(kind int) func() sqlite3.AggregateFunction {
 }
 
 type quantile struct {
-	kind int
 	nums []float64
 	arg1 []byte
+	kind int
 }
 
 func (q *quantile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {

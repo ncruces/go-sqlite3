@@ -46,6 +46,13 @@ https://sqlite.org/lang_aggfunc.html
 
 https://sqlite.org/windowfunctions.html#builtins
 
+## Boolean aggregates
+
+- [ ] `ALL(boolean)`
+- [ ] `ANY(boolean)`
+- [ ] `EVERY(boolean)`
+- [ ] `SOME(boolean)`
+
 ## Additional aggregates
 
 - [X] `MEDIAN(expression)`

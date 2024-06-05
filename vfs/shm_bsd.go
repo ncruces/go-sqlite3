@@ -96,9 +96,9 @@ func (s *vfsShm) Close() error {
 	return err
 }
 
-func (s *vfsShm) shmOpen() (err error) {
+func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	if s.vfsShmFile != nil {
-		return nil
+		return _OK
 	}
 
 	// Open file read-write, as it will be shared.
@@ -123,13 +123,13 @@ func (s *vfsShm) shmOpen() (err error) {
 		if g != nil && os.SameFile(fi, g.info) {
 			g.refs++
 			s.vfsShmFile = g
-			return nil
+			return _OK
 		}
 	}
 
 	// Lock and truncate the file, if not readonly.
 	if s.readOnly {
-		err = _READONLY_CANTINIT
+		rc = _READONLY_CANTINIT
 	} else {
 		if rc := osWriteLock(f, 0, 0, 0); rc != _OK {
 			return rc
@@ -156,17 +156,17 @@ func (s *vfsShm) shmOpen() (err error) {
 	if add {
 		vfsShmFiles = append(vfsShmFiles, s.vfsShmFile)
 	}
-	return err
+	return rc
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, error) {
+func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
 	}
 
-	if err := s.shmOpen(); err != nil {
-		return 0, err
+	if rc := s.shmOpen(); rc != _OK {
+		return 0, rc
 	}
 
 	// Check if file is big enough.
@@ -176,7 +176,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	}
 	if n := (int64(id) + 1) * int64(size); n > o {
 		if !extend {
-			return 0, nil
+			return 0, _OK
 		}
 		err := osAllocate(s.File, n)
 		if err != nil {
@@ -192,13 +192,13 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	}
 	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, prot)
 	if err != nil {
-		return 0, err
+		return 0, _IOERR_SHMMAP
 	}
 	s.regions = append(s.regions, r)
-	return r.Ptr, nil
+	return r.Ptr, _OK
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
+func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 	s.lockMtx.Lock()
 	defer s.lockMtx.Unlock()
 
@@ -235,7 +235,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 		}
 	}
 
-	return nil
+	return _OK
 }
 
 func (s *vfsShm) shmUnmap(delete bool) {
