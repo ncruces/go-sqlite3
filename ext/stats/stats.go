@@ -21,6 +21,8 @@
 //   - quantile_disc: discrete quantile
 //   - quantile_cont: continuous quantile
 //   - median: median value
+//   - every: boolean and
+//   - some: boolean or
 //
 // These join the [Built-in Aggregate Functions]:
 //   - count: count rows/values
@@ -29,9 +31,16 @@
 //   - min: minimum value
 //   - max: maximum value
 //
+// And the [Built-in Window Functions]:
+//   - rank: rank of the current row with gaps
+//   - dense_rank: rank of the current row without gaps
+//   - percent_rank: relative rank of the row
+//   - cume_dist: cumulative distribution
+//
 // See: [ANSI SQL Aggregate Functions], [DuckDB Aggregate Functions]
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
+// [Built-in Window Functions]: https://sqlite.org/windowfunctions.html#builtins
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 // [DuckDB Aggregate Functions]: https://duckdb.org/docs/sql/aggregates.html
 package stats
@@ -61,6 +70,8 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("median", 1, flags, newQuantile(median))
 	db.CreateWindowFunction("quantile_cont", 2, flags, newQuantile(quant_cont))
 	db.CreateWindowFunction("quantile_disc", 2, flags, newQuantile(quant_disc))
+	db.CreateWindowFunction("every", 1, flags, newBoolean(every))
+	db.CreateWindowFunction("some", 1, flags, newBoolean(some))
 }
 
 const (

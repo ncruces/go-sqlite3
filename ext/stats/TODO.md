@@ -48,10 +48,8 @@ https://sqlite.org/windowfunctions.html#builtins
 
 ## Boolean aggregates
 
-- [ ] `ALL(boolean)`
-- [ ] `ANY(boolean)`
-- [ ] `EVERY(boolean)`
-- [ ] `SOME(boolean)`
+- [X] `EVERY(boolean)`
+- [X] `SOME(boolean)`
 
 ## Additional aggregates
 

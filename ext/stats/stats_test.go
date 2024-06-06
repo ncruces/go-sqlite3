@@ -40,8 +40,6 @@ func TestRegister_variance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stmt.Close()
-
 	if stmt.Step() {
 		if got := stmt.ColumnFloat(0); got != 40 {
 			t.Errorf("got %v, want 40", got)
@@ -62,24 +60,23 @@ func TestRegister_variance(t *testing.T) {
 			t.Errorf("got %v, want √22.5", got)
 		}
 	}
+	stmt.Close()
 
-	{
-		stmt, _, err := db.Prepare(`SELECT var_samp(x) OVER (ROWS 1 PRECEDING) FROM data`)
-		if err != nil {
-			t.Fatal(err)
+	stmt, _, err = db.Prepare(`SELECT var_samp(x) OVER (ROWS 1 PRECEDING) FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := [...]float64{0, 4.5, 18, 0, 0}
+	for i := 0; stmt.Step(); i++ {
+		if got := stmt.ColumnFloat(0); got != want[i] {
+			t.Errorf("got %v, want %v", got, want[i])
 		}
-		defer stmt.Close()
-
-		want := [...]float64{0, 4.5, 18, 0, 0}
-		for i := 0; stmt.Step(); i++ {
-			if got := stmt.ColumnFloat(0); got != want[i] {
-				t.Errorf("got %v, want %v", got, want[i])
-			}
-			if got := stmt.ColumnType(0); (got == sqlite3.FLOAT) != (want[i] != 0) {
-				t.Errorf("got %v, want %v", got, want[i])
-			}
+		if got := stmt.ColumnType(0); (got == sqlite3.FLOAT) != (want[i] != 0) {
+			t.Errorf("got %v, want %v", got, want[i])
 		}
 	}
+	stmt.Close()
 }
 
 func TestRegister_covariance(t *testing.T) {
@@ -113,8 +110,6 @@ func TestRegister_covariance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stmt.Close()
-
 	if stmt.Step() {
 		if got := stmt.ColumnFloat(0); got != 0.9881049293224639 {
 			t.Errorf("got %v, want 0.9881049293224639", got)
@@ -159,24 +154,23 @@ func TestRegister_covariance(t *testing.T) {
 			t.Errorf("got %v, want 5", got)
 		}
 	}
+	stmt.Close()
 
-	{
-		stmt, _, err := db.Prepare(`SELECT covar_samp(y, x) OVER (ROWS 1 PRECEDING) FROM data`)
-		if err != nil {
-			t.Fatal(err)
+	stmt, _, err = db.Prepare(`SELECT covar_samp(y, x) OVER (ROWS 1 PRECEDING) FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := [...]float64{0, 10, 30, 75, 22.5}
+	for i := 0; stmt.Step(); i++ {
+		if got := stmt.ColumnFloat(0); got != want[i] {
+			t.Errorf("got %v, want %v", got, want[i])
 		}
-		defer stmt.Close()
-
-		want := [...]float64{0, 10, 30, 75, 22.5}
-		for i := 0; stmt.Step(); i++ {
-			if got := stmt.ColumnFloat(0); got != want[i] {
-				t.Errorf("got %v, want %v", got, want[i])
-			}
-			if got := stmt.ColumnType(0); (got == sqlite3.FLOAT) != (want[i] != 0) {
-				t.Errorf("got %v, want %v", got, want[i])
-			}
+		if got := stmt.ColumnType(0); (got == sqlite3.FLOAT) != (want[i] != 0) {
+			t.Errorf("got %v, want %v", got, want[i])
 		}
 	}
+	stmt.Close()
 }
 
 func Benchmark_average(b *testing.B) {
