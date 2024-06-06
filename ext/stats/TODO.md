@@ -41,8 +41,6 @@ https://sqlite.org/lang_aggfunc.html
 - [X] `RANK() OVER window`
 - [X] `DENSE_RANK() OVER window`
 - [X] `PERCENT_RANK() OVER window`
-- [ ] `PERCENTILE_CONT(percentile) OVER window`
-- [ ] `PERCENTILE_DISC(percentile) OVER window`
 
 https://sqlite.org/windowfunctions.html#builtins
 
@@ -54,7 +52,5 @@ https://sqlite.org/windowfunctions.html#builtins
 ## Additional aggregates
 
 - [X] `MEDIAN(expression)`
-- [X] `QUANTILE_CONT(expression, quantile)`
-- [X] `QUANTILE_DISC(expression, quantile)`
-
-https://duckdb.org/docs/sql/aggregates.html
+- [X] `PERCENTILE_CONT(expression, fraction)`
+- [X] `PERCENTILE_DISC(expression, fraction)`

@@ -13,21 +13,21 @@ import (
 
 const (
 	median = iota
-	quant_cont
-	quant_disc
+	percentile_cont
+	percentile_disc
 )
 
-func newQuantile(kind int) func() sqlite3.AggregateFunction {
-	return func() sqlite3.AggregateFunction { return &quantile{kind: kind} }
+func newPercentile(kind int) func() sqlite3.AggregateFunction {
+	return func() sqlite3.AggregateFunction { return &percentile{kind: kind} }
 }
 
-type quantile struct {
+type percentile struct {
 	nums []float64
 	arg1 []byte
 	kind int
 }
 
-func (q *quantile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if a := arg[0]; a.NumericType() != sqlite3.NULL {
 		q.nums = append(q.nums, a.Float())
 	}
@@ -36,7 +36,12 @@ func (q *quantile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 }
 
-func (q *quantile) Value(ctx sqlite3.Context) {
+func (q *percentile) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	// Implementing inverse allows certain queries that don't really need it to succeed.
+	ctx.ResultError(util.ErrorString("percentile: may not be used as a window function"))
+}
+
+func (q *percentile) Value(ctx sqlite3.Context) {
 	if len(q.nums) == 0 {
 		return
 	}
@@ -47,21 +52,21 @@ func (q *quantile) Value(ctx sqlite3.Context) {
 		floats []float64
 	)
 	if q.kind == median {
-		float, err = getQuantile(q.nums, 0.5, false)
+		float, err = getPercentile(q.nums, 0.5, false)
 		ctx.ResultFloat(float)
 	} else if err = json.Unmarshal(q.arg1, &float); err == nil {
-		float, err = getQuantile(q.nums, float, q.kind == quant_disc)
+		float, err = getPercentile(q.nums, float, q.kind == percentile_disc)
 		ctx.ResultFloat(float)
 	} else if err = json.Unmarshal(q.arg1, &floats); err == nil {
-		err = getQuantiles(q.nums, floats, q.kind == quant_disc)
+		err = getPercentiles(q.nums, floats, q.kind == percentile_disc)
 		ctx.ResultJSON(floats)
 	}
 	if err != nil {
-		ctx.ResultError(fmt.Errorf("quantile: %w", err))
+		ctx.ResultError(fmt.Errorf("percentile: %w", err))
 	}
 }
 
-func getQuantile(nums []float64, pos float64, disc bool) (float64, error) {
+func getPercentile(nums []float64, pos float64, disc bool) (float64, error) {
 	if pos < 0 || pos > 1 {
 		return 0, util.ErrorString("invalid pos")
 	}
@@ -77,9 +82,9 @@ func getQuantile(nums []float64, pos float64, disc bool) (float64, error) {
 	return math.FMA(f, m1, -math.FMA(f, m0, -m0)), nil
 }
 
-func getQuantiles(nums []float64, pos []float64, disc bool) error {
+func getPercentiles(nums []float64, pos []float64, disc bool) error {
 	for i := range pos {
-		v, err := getQuantile(nums, pos[i], disc)
+		v, err := getPercentile(nums, pos[i], disc)
 		if err != nil {
 			return err
 		}

@@ -18,8 +18,8 @@
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
 //   - regr_json: all regr stats in a JSON object
-//   - quantile_disc: discrete quantile
-//   - quantile_cont: continuous quantile
+//   - percentile_disc: discrete percentile
+//   - percentile_cont: continuous percentile
 //   - median: median value
 //   - every: boolean and
 //   - some: boolean or
@@ -37,12 +37,11 @@
 //   - percent_rank: relative rank of the row
 //   - cume_dist: cumulative distribution
 //
-// See: [ANSI SQL Aggregate Functions], [DuckDB Aggregate Functions]
+// See: [ANSI SQL Aggregate Functions]
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [Built-in Window Functions]: https://sqlite.org/windowfunctions.html#builtins
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
-// [DuckDB Aggregate Functions]: https://duckdb.org/docs/sql/aggregates.html
 package stats
 
 import "github.com/ncruces/go-sqlite3"
@@ -67,9 +66,9 @@ func Register(db *sqlite3.Conn) {
 	db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept))
 	db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count))
 	db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json))
-	db.CreateWindowFunction("median", 1, flags, newQuantile(median))
-	db.CreateWindowFunction("quantile_cont", 2, flags, newQuantile(quant_cont))
-	db.CreateWindowFunction("quantile_disc", 2, flags, newQuantile(quant_disc))
+	db.CreateWindowFunction("median", 1, flags, newPercentile(median))
+	db.CreateWindowFunction("percentile_cont", 2, flags, newPercentile(percentile_cont))
+	db.CreateWindowFunction("percentile_disc", 2, flags, newPercentile(percentile_disc))
 	db.CreateWindowFunction("every", 1, flags, newBoolean(every))
 	db.CreateWindowFunction("some", 1, flags, newBoolean(some))
 }

@@ -10,7 +10,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
-func TestRegister_quantile(t *testing.T) {
+func TestRegister_percentile(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")
@@ -34,8 +34,8 @@ func TestRegister_quantile(t *testing.T) {
 	stmt, _, err := db.Prepare(`
 		SELECT
 			median(x),
-			quantile_disc(x, 0.5),
-			quantile_cont(x, '[0.25, 0.5, 0.75]')
+			percentile_disc(x, 0.5),
+			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)
@@ -60,8 +60,8 @@ func TestRegister_quantile(t *testing.T) {
 	stmt, _, err = db.Prepare(`
 		SELECT
 			median(x),
-			quantile_disc(x, 0.5),
-			quantile_cont(x, '[0.25, 0.5, 0.75]')
+			percentile_disc(x, 0.5),
+			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data
 		WHERE x < 5`)
 	if err != nil {
@@ -87,8 +87,8 @@ func TestRegister_quantile(t *testing.T) {
 	stmt, _, err = db.Prepare(`
 		SELECT
 			median(x),
-			quantile_disc(x, 0.5),
-			quantile_cont(x, '[0.25, 0.5, 0.75]')
+			percentile_disc(x, 0.5),
+			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data
 		WHERE x < 0`)
 	if err != nil {
@@ -109,10 +109,10 @@ func TestRegister_quantile(t *testing.T) {
 
 	stmt, _, err = db.Prepare(`
 		SELECT
-			quantile_disc(x, -2),
-			quantile_cont(x, +2),
-			quantile_cont(x, ''),
-			quantile_cont(x, '[100]')
+			percentile_disc(x, -2),
+			percentile_cont(x, +2),
+			percentile_cont(x, ''),
+			percentile_cont(x, '[100]')
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)
