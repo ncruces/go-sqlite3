@@ -177,7 +177,7 @@ func Test_multiwrite01(t *testing.T) {
 }
 
 func Test_config01_memory(t *testing.T) {
-	memdb.Delete("test.db")
+	memdb.Create("test.db", nil)
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
 		"--vfs", "memdb")
@@ -193,7 +193,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	memdb.Delete("test.db")
+	memdb.Create("test.db", nil)
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")

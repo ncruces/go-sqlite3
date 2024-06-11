@@ -61,7 +61,6 @@ func Test_memdb(t *testing.T) {
 		iter = 5000
 	}
 
-	memdb.Delete("test.db")
 	memdb.Create("test.db", nil)
 	name := "file:/test.db?vfs=memdb"
 	testParallel(t, name, iter)
@@ -142,11 +141,42 @@ func TestChildProcess(t *testing.T) {
 	testParallel(t, name, 1000)
 }
 
+func Benchmark_parallel(b *testing.B) {
+	if !vfs.SupportsSharedMemory {
+		b.Skip("skipping without shared memory")
+	}
+
+	sqlite3.Initialize()
+	b.ResetTimer()
+
+	name := "file:" +
+		filepath.Join(b.TempDir(), "test.db") +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
+	testParallel(b, name, b.N)
+}
+
+func Benchmark_wal(b *testing.B) {
+	if !vfs.SupportsSharedMemory {
+		b.Skip("skipping without shared memory")
+	}
+
+	sqlite3.Initialize()
+	b.ResetTimer()
+
+	name := "file:" +
+		filepath.Join(b.TempDir(), "test.db") +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(wal)" +
+		"&_pragma=synchronous(off)"
+	testParallel(b, name, b.N)
+}
+
 func Benchmark_memdb(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	memdb.Delete("test.db")
 	memdb.Create("test.db", nil)
 	name := "file:/test.db?vfs=memdb"
 	testParallel(b, name, b.N)
