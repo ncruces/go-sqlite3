@@ -28,6 +28,16 @@ func osReadLock(file *os.File, _ /*start*/, _ /*len*/ int64, _ /*timeout*/ time.
 	return osLock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_RDLOCK)
 }
 
-func osWriteLock(file *os.File, _ /*start*/, _ /*len*/ int64, _ /*timeout*/ time.Duration) _ErrorCode {
-	return osLock(file, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK)
+func osWriteLock(file *os.File, _ /*start*/, len int64, _ /*timeout*/ time.Duration) _ErrorCode {
+	rc := osLock(file, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK)
+	if rc == _BUSY && len != 0 {
+		// Reacquire the SHARED lock.
+		switch rc := osLock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_LOCK); {
+		case rc == _BUSY:
+			return _BUSY_SNAPSHOT
+		case rc != _OK:
+			return rc
+		}
+	}
+	return rc
 }
