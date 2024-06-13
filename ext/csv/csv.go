@@ -93,6 +93,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 				}
 			}
 			schema = getSchema(header, columns, row)
+		} else {
+			table.typs = getColumnAffinities(schema)
 		}
 
 		err = db.DeclareVTab(schema)
@@ -113,6 +115,7 @@ type table struct {
 	fsys   fs.FS
 	name   string
 	data   string
+	typs   []affinity
 	comma  rune
 	header bool
 }
@@ -226,6 +229,17 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 	if col < len(c.row) {
+		var typ affinity
+		if col < len(c.table.typs) {
+			typ = c.table.typs[col]
+		}
+		switch typ {
+		case numeric, integer:
+			// ctx.ResultInt64()
+			// ctx.ResultFloat()
+		case real:
+			// ctx.ResultFloat()
+		}
 		ctx.ResultText(c.row[col])
 	}
 	return nil
