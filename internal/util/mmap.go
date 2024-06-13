@@ -46,7 +46,7 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *Mapped
 	// Save the newly allocated region.
 	ptr := uint32(stack[0])
 	buf := View(mod, ptr, uint64(size))
-	addr := uintptr(unsafe.Pointer(&buf[0]))
+	addr := unsafe.Pointer(&buf[0])
 	s.regions = append(s.regions, &MappedRegion{
 		Ptr:  ptr,
 		addr: addr,
@@ -56,7 +56,7 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *Mapped
 }
 
 type MappedRegion struct {
-	addr uintptr
+	addr unsafe.Pointer
 	Ptr  uint32
 	size int32
 	used bool
@@ -76,7 +76,7 @@ func (r *MappedRegion) Unmap() error {
 	// We can't munmap the region, otherwise it could be remaped.
 	// Instead, convert it to a protected, private, anonymous mapping.
 	// If successful, it can be reused for a subsequent mmap.
-	_, err := mmap(r.addr, uintptr(r.size),
+	_, err := unix.MmapPtr(r.addr, uintptr(r.size),
 		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON|unix.MAP_FIXED,
 		-1, 0)
 	r.used = err != nil
@@ -84,15 +84,9 @@ func (r *MappedRegion) Unmap() error {
 }
 
 func (r *MappedRegion) mmap(f *os.File, offset int64, prot int) error {
-	_, err := mmap(r.addr, uintptr(r.size),
+	_, err := unix.MmapPtr(r.addr, uintptr(r.size),
 		prot, unix.MAP_SHARED|unix.MAP_FIXED,
 		int(f.Fd()), offset)
 	r.used = err == nil
 	return err
 }
-
-// We need the low level mmap for MAP_FIXED to work.
-// Bind the syscall version hoping that it is more stable.
-
-//go:linkname mmap syscall.mmap
-func mmap(addr, length uintptr, prot, flag, fd int, pos int64) (*byte, error)
