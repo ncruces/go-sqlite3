@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"strconv"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
@@ -233,14 +234,36 @@ func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 		if col < len(c.table.typs) {
 			typ = c.table.typs[col]
 		}
+
+		txt := c.row[col]
+		if typ == blob {
+			ctx.ResultText(txt)
+			return nil
+		}
+		if txt == "" {
+			return nil
+		}
+
 		switch typ {
 		case numeric, integer:
-			// ctx.ResultInt64()
-			// ctx.ResultFloat()
+			if strings.TrimLeft(txt, "+-0123456789") == "" {
+				if i, err := strconv.ParseInt(txt, 10, 64); err == nil {
+					ctx.ResultInt64(i)
+					return nil
+				}
+			}
+			fallthrough
 		case real:
-			// ctx.ResultFloat()
+			if strings.TrimLeft(txt, "+-.0123456789Ee") == "" {
+				if f, err := strconv.ParseFloat(txt, 64); err == nil {
+					ctx.ResultFloat(f)
+					return nil
+				}
+			}
+			fallthrough
+		case text:
+			ctx.ResultText(c.row[col])
 		}
-		ctx.ResultText(c.row[col])
 	}
 	return nil
 }
