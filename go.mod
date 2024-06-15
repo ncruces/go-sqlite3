@@ -6,7 +6,6 @@ require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.2
 	github.com/psanford/httpreadat v0.1.0
-	github.com/rqlite/sql v0.0.0-20240312185922-ffac88a740bd
 	github.com/tetratelabs/wazero v1.7.3
 	golang.org/x/crypto v0.24.0
 	golang.org/x/sync v0.7.0

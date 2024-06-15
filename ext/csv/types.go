@@ -1,9 +1,11 @@
 package csv
 
 import (
+	"context"
+	_ "embed"
 	"strings"
 
-	"github.com/rqlite/sql"
+	"github.com/tetratelabs/wazero"
 )
 
 type affinity byte
@@ -16,18 +18,69 @@ const (
 	real    affinity = 4
 )
 
+//go:embed parser/sql3parse_table.wasm
+var binary []byte
+
 func getColumnAffinities(schema string) []affinity {
-	stmt, _ := sql.NewParser(strings.NewReader(schema)).ParseStatement()
-	create := stmt.(*sql.CreateTableStatement)
-	typs := make([]affinity, len(create.Columns))
-	for i := range typs {
-		var name string
-		if typ := create.Columns[i].Type; typ != nil {
-			name = typ.Name.Name
-		}
-		typs[i] = getAffinity(name)
+	ctx := context.Background()
+
+	runtime := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfigInterpreter())
+	defer runtime.Close(ctx)
+
+	mod, err := runtime.Instantiate(ctx, binary)
+	if err != nil {
+		return nil
 	}
-	return typs
+
+	r, err := mod.ExportedFunction("malloc").Call(ctx, uint64(len(schema)))
+	if err != nil || r[0] == 0 {
+		return nil
+	}
+	sql := uint32(r[0])
+
+	if buf, ok := mod.Memory().Read(uint32(sql), uint32(len(schema))); ok {
+		copy(buf, schema)
+	} else {
+		return nil
+	}
+
+	r, err = mod.ExportedFunction("sql3parse_table").Call(ctx, uint64(sql), uint64(len(schema)), 0)
+	if err != nil || r[0] == 0 {
+		return nil
+	}
+	table := r[0]
+
+	r, err = mod.ExportedFunction("sql3table_num_columns").Call(ctx, table)
+	if err != nil {
+		return nil
+	}
+	types := make([]affinity, r[0])
+
+	for i := range types {
+		r, err = mod.ExportedFunction("sql3table_get_column").Call(ctx, table, uint64(i))
+		if err != nil || r[0] == 0 {
+			break
+		}
+		r, err = mod.ExportedFunction("sql3column_type").Call(ctx, r[0])
+		if err != nil || r[0] == 0 {
+			continue
+		}
+
+		str, ok := mod.Memory().ReadUint32Le(uint32(r[0]) + 0)
+		if !ok {
+			break
+		}
+		len, ok := mod.Memory().ReadUint32Le(uint32(r[0]) + 4)
+		if !ok {
+			break
+		}
+		name, ok := mod.Memory().Read(str, len)
+		if !ok {
+			break
+		}
+		types[i] = getAffinity(string(name))
+	}
+	return types
 }
 
 func getAffinity(declType string) affinity {
