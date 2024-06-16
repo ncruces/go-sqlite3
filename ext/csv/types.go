@@ -32,19 +32,13 @@ func getColumnAffinities(schema string) []affinity {
 		return nil
 	}
 
-	r, err := mod.ExportedFunction("malloc").Call(ctx, uint64(len(schema)))
-	if err != nil || r[0] == 0 {
-		return nil
-	}
-	sql := uint32(r[0])
-
-	if buf, ok := mod.Memory().Read(uint32(sql), uint32(len(schema))); ok {
+	if buf, ok := mod.Memory().Read(4, uint32(len(schema))); ok {
 		copy(buf, schema)
 	} else {
 		return nil
 	}
 
-	r, err = mod.ExportedFunction("sql3parse_table").Call(ctx, uint64(sql), uint64(len(schema)), 0)
+	r, err := mod.ExportedFunction("sql3parse_table").Call(ctx, 4, uint64(len(schema)), 0)
 	if err != nil || r[0] == 0 {
 		return nil
 	}

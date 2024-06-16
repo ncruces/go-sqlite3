@@ -11,7 +11,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o sql3parse_table.wasm sql3parse_table.c \
 	-mexec-model=reactor \
-	-msimd128 -mmutable-globals \
+	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
