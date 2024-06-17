@@ -1,11 +1,10 @@
 package csv
 
 import (
-	"context"
 	_ "embed"
 	"strings"
 
-	"github.com/tetratelabs/wazero"
+	"github.com/ncruces/go-sqlite3/util/vtabutil"
 )
 
 type affinity byte
@@ -18,61 +17,17 @@ const (
 	real    affinity = 4
 )
 
-//go:embed parser/sql3parse_table.wasm
-var binary []byte
-
 func getColumnAffinities(schema string) []affinity {
-	ctx := context.Background()
-
-	runtime := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfigInterpreter())
-	defer runtime.Close(ctx)
-
-	mod, err := runtime.Instantiate(ctx, binary)
+	tab, err := vtabutil.Parse(schema)
 	if err != nil {
 		return nil
 	}
+	defer tab.Close()
 
-	if buf, ok := mod.Memory().Read(4, uint32(len(schema))); ok {
-		copy(buf, schema)
-	} else {
-		return nil
-	}
-
-	r, err := mod.ExportedFunction("sql3parse_table").Call(ctx, 4, uint64(len(schema)), 0)
-	if err != nil || r[0] == 0 {
-		return nil
-	}
-	table := r[0]
-
-	r, err = mod.ExportedFunction("sql3table_num_columns").Call(ctx, table)
-	if err != nil {
-		return nil
-	}
-	types := make([]affinity, r[0])
-
+	types := make([]affinity, tab.NumColumns())
 	for i := range types {
-		r, err = mod.ExportedFunction("sql3table_get_column").Call(ctx, table, uint64(i))
-		if err != nil || r[0] == 0 {
-			break
-		}
-		r, err = mod.ExportedFunction("sql3column_type").Call(ctx, r[0])
-		if err != nil || r[0] == 0 {
-			continue
-		}
-
-		str, ok := mod.Memory().ReadUint32Le(uint32(r[0]) + 0)
-		if !ok {
-			break
-		}
-		len, ok := mod.Memory().ReadUint32Le(uint32(r[0]) + 4)
-		if !ok {
-			break
-		}
-		name, ok := mod.Memory().Read(str, len)
-		if !ok {
-			break
-		}
-		types[i] = getAffinity(string(name))
+		col := tab.Column(i)
+		types[i] = getAffinity(col.Type())
 	}
 	return types
 }
