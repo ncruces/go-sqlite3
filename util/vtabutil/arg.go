@@ -1,4 +1,3 @@
-// Package ioutil implements virtual table utility functions.
 package vtabutil
 
 import "strings"

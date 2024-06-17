@@ -31,9 +31,10 @@ type Table struct {
 	sql string
 }
 
-// Parse parses a CREATE TABLE command.
+// Parse parses a [CREATE] or [ALTER TABLE] command.
 //
-// https://sqlite.org/lang_createtable.html
+// [CREATE]: https://sqlite.org/lang_createtable.html
+// [ALTER TABLE]: https://sqlite.org/lang_altertable.html
 func Parse(sql string) (*Table, error) {
 	once.Do(func() {
 		ctx = context.Background()
@@ -88,35 +89,39 @@ func (t *Table) NumColumns() int {
 }
 
 // Column returns data for the ith column of the table.
+//
+// https://sqlite.org/lang_createtable.html#column_definitions
 func (t *Table) Column(i int) Column {
 	r, err := t.mod.ExportedFunction("sql3table_get_column").Call(ctx, uint64(t.ptr), uint64(i))
 	if err != nil {
 		panic(err)
 	}
 	return Column{
-		Table: t,
-		ptr:   uint32(r[0]),
+		tab: t,
+		ptr: uint32(r[0]),
 	}
 }
 
 // Column holds metadata about a column.
 type Column struct {
-	*Table
+	tab *Table
 	ptr uint32
 }
 
 // Type returns the declared type of a column.
+//
+// https://sqlite.org/lang_createtable.html#column_data_types
 func (c Column) Type() string {
-	r, err := c.mod.ExportedFunction("sql3column_type").Call(ctx, uint64(c.ptr))
+	r, err := c.tab.mod.ExportedFunction("sql3column_type").Call(ctx, uint64(c.ptr))
 	if err != nil {
 		panic(err)
 	}
 	if r[0] == 0 {
 		return ""
 	}
-	off, _ := c.mod.Memory().ReadUint32Le(uint32(r[0]) + 0)
-	len, _ := c.mod.Memory().ReadUint32Le(uint32(r[0]) + 4)
-	return c.sql[off-base : off+len-base]
+	off, _ := c.tab.mod.Memory().ReadUint32Le(uint32(r[0]) + 0)
+	len, _ := c.tab.mod.Memory().ReadUint32Le(uint32(r[0]) + 4)
+	return c.tab.sql[off-base : off+len-base]
 }
 
 type ecode uint32
