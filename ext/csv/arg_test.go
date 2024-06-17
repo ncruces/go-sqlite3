@@ -40,6 +40,8 @@ func Test_uintArg(t *testing.T) {
 }
 
 func Test_boolArg(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		arg string
 		key string
@@ -76,6 +78,8 @@ func Test_boolArg(t *testing.T) {
 }
 
 func Test_runeArg(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		arg string
 		key string

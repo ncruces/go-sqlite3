@@ -113,6 +113,50 @@ Robert	"Griesemer"	"gri"`
 	}
 }
 
+func TestAffinity(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	csv.Register(db)
+
+	const data = "01\n0.10\ne"
+	err = db.Exec(`
+		CREATE VIRTUAL TABLE temp.nums USING csv(
+			data   = ` + sqlite3.Quote(data) + `,
+			schema = 'CREATE TABLE x(a numeric)'
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT * FROM temp.nums`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt.Step() {
+		if got := stmt.ColumnText(0); got != "1" {
+			t.Errorf("got %q want 1", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnText(0); got != "0.1" {
+			t.Errorf("got %q want 0.1", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnText(0); got != "e" {
+			t.Errorf("got %q want e", got)
+		}
+	}
+}
+
 func TestRegister_errors(t *testing.T) {
 	t.Parallel()
 

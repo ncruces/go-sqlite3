@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"strconv"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
@@ -93,6 +94,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 				}
 			}
 			schema = getSchema(header, columns, row)
+		} else {
+			table.typs = getColumnAffinities(schema)
 		}
 
 		err = db.DeclareVTab(schema)
@@ -113,6 +116,7 @@ type table struct {
 	fsys   fs.FS
 	name   string
 	data   string
+	typs   []affinity
 	comma  rune
 	header bool
 }
@@ -226,7 +230,40 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 	if col < len(c.row) {
-		ctx.ResultText(c.row[col])
+		var typ affinity
+		if col < len(c.table.typs) {
+			typ = c.table.typs[col]
+		}
+
+		txt := c.row[col]
+		if typ == blob {
+			ctx.ResultText(txt)
+			return nil
+		}
+		if txt == "" {
+			return nil
+		}
+
+		switch typ {
+		case numeric, integer:
+			if strings.TrimLeft(txt, "+-0123456789") == "" {
+				if i, err := strconv.ParseInt(txt, 10, 64); err == nil {
+					ctx.ResultInt64(i)
+					return nil
+				}
+			}
+			fallthrough
+		case real:
+			if strings.TrimLeft(txt, "+-.0123456789Ee") == "" {
+				if f, err := strconv.ParseFloat(txt, 64); err == nil {
+					ctx.ResultFloat(f)
+					return nil
+				}
+			}
+			fallthrough
+		case text:
+			ctx.ResultText(c.row[col])
+		}
 	}
 	return nil
 }
