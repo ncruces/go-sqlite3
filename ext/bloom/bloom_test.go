@@ -31,5 +31,39 @@ func TestRegister(t *testing.T) {
 
 	bloom.Register(db)
 
-	db.Exec(`SELECT COUNT(*) FROM plants('apple')`)
+	query, _, err := db.Prepare(`SELECT COUNT(*) FROM plants(?)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer query.Close()
+
+	err = query.BindText(1, "apple")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !query.Step() {
+		t.Error("no rows")
+	}
+	if !query.ColumnBool(0) {
+		t.Error("want true")
+	}
+	err = query.Reset()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = query.BindText(1, "lemon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !query.Step() {
+		t.Error("no rows")
+	}
+	if query.ColumnBool(0) {
+		t.Error("want false")
+	}
+	err = query.Reset()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
