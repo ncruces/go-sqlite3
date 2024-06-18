@@ -1,3 +1,9 @@
+// Package bloom provides a Bloom filter virtual table.
+//
+// A Bloom filter is a space-efficient probabilistic data structure
+// used to test whether an element is a member of a set.
+//
+// https://github.com/nalgeon/sqlean/issues/27#issuecomment-1002267134
 package bloom
 
 import (
@@ -12,6 +18,9 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
+// Register registers the bloom_filter virtual table:
+//
+//	CREATE VIRTUAL TABLE foo USING bloom_filter(nElements, falseProb, kHashes)
 func Register(db *sqlite3.Conn) {
 	sqlite3.CreateModule(db, "bloom_filter", create, connect)
 }
