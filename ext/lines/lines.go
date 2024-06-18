@@ -34,13 +34,13 @@ func Register(db *sqlite3.Conn) {
 // The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, fsys is used to open the file.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
-	sqlite3.CreateModule[lines](db, "lines", nil,
+	sqlite3.CreateModule(db, "lines", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VTabConfig(sqlite3.VTAB_INNOCUOUS)
 			return lines{}, err
 		})
-	sqlite3.CreateModule[lines](db, "lines_read", nil,
+	sqlite3.CreateModule(db, "lines_read", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
 			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
 			db.VTabConfig(sqlite3.VTAB_DIRECTONLY)

@@ -16,7 +16,7 @@ import (
 // ints, floats, bools, strings or byte slices,
 // using [sqlite3.BindPointer] or [sqlite3.Pointer].
 func Register(db *sqlite3.Conn) {
-	sqlite3.CreateModule[array](db, "array", nil,
+	sqlite3.CreateModule(db, "array", nil,
 		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (array, error) {
 			err := db.DeclareVTab(`CREATE TABLE x(value, array HIDDEN)`)
 			return array{}, err
