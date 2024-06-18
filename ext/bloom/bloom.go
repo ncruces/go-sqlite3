@@ -18,7 +18,6 @@ func Register(db *sqlite3.Conn) {
 type bloom struct {
 	db      *sqlite3.Conn
 	schema  string
-	table   string
 	storage string
 	prob    float64
 	nfilter int64
@@ -29,7 +28,6 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 	t := bloom{
 		db:      db,
 		schema:  schema,
-		table:   table,
 		storage: table + "_storage",
 		prob:    0.01,
 	}
@@ -98,7 +96,6 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 	t := bloom{
 		db:      db,
 		schema:  schema,
-		table:   table,
 		storage: table + "_storage",
 	}
 
@@ -132,7 +129,20 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 func (b *bloom) Destroy() error {
 	return b.db.Exec(fmt.Sprintf(`DROP TABLE %s.%s`,
 		sqlite3.QuoteIdentifier(b.schema),
-		sqlite3.QuoteIdentifier(b.table+"_storage")))
+		sqlite3.QuoteIdentifier(b.storage)))
+}
+
+func (b *bloom) Rename(new string) error {
+	new += "_storage"
+	err := b.db.Exec(fmt.Sprintf(`ALTER TABLE %s.%s RENAME TO %s`,
+		sqlite3.QuoteIdentifier(b.schema),
+		sqlite3.QuoteIdentifier(b.storage),
+		sqlite3.QuoteIdentifier(new),
+	))
+	if err == nil {
+		b.storage = new
+	}
+	return err
 }
 
 func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
