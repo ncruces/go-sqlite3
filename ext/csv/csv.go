@@ -9,6 +9,7 @@ package csv
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -69,7 +70,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		}
 
 		if (filename == "") == (data == "") {
-			return nil, fmt.Errorf(`csv: must specify either "filename" or "data" but not both`)
+			return nil, errors.New(`csv: must specify either "filename" or "data" but not both`)
 		}
 
 		table := &table{

@@ -8,7 +8,7 @@ package statement
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -29,7 +29,7 @@ type table struct {
 
 func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	if len(arg) != 1 {
-		return nil, fmt.Errorf("statement: wrong number of arguments")
+		return nil, errors.New("statement: wrong number of arguments")
 	}
 
 	sql := "SELECT * FROM\n" + arg[0]
