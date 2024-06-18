@@ -23,7 +23,7 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := sqlite3.Open(tmp)
+	db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1")
 	if err != nil {
 		t.Fatal(err)
 	}
