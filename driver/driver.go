@@ -301,7 +301,7 @@ func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, e
 		s.Close()
 		return nil, util.TailErr
 	}
-	return &stmt{Stmt: s, tmRead: c.tmRead, tmWrite: c.tmWrite}, nil
+	return &stmt{Stmt: s, tmRead: c.tmRead, tmWrite: c.tmWrite, inputs: -2}, nil
 }
 
 func (c *conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
@@ -335,6 +335,7 @@ type stmt struct {
 	*sqlite3.Stmt
 	tmWrite sqlite3.TimeFormat
 	tmRead  sqlite3.TimeFormat
+	inputs  int
 }
 
 var (
@@ -345,12 +346,17 @@ var (
 )
 
 func (s *stmt) NumInput() int {
+	if s.inputs >= -1 {
+		return s.inputs
+	}
 	n := s.Stmt.BindCount()
 	for i := 1; i <= n; i++ {
 		if s.Stmt.BindName(i) != "" {
+			s.inputs = -1
 			return -1
 		}
 	}
+	s.inputs = n
 	return n
 }
 
@@ -389,12 +395,7 @@ func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 	return &rows{ctx: ctx, stmt: s}, nil
 }
 
-func (s *stmt) setupBindings(args []driver.NamedValue) error {
-	err := s.Stmt.ClearBindings()
-	if err != nil {
-		return err
-	}
-
+func (s *stmt) setupBindings(args []driver.NamedValue) (err error) {
 	var ids [3]int
 	for _, arg := range args {
 		ids := ids[:0]
