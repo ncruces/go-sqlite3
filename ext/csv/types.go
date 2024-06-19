@@ -17,10 +17,10 @@ const (
 	real    affinity = 4
 )
 
-func getColumnAffinities(schema string) []affinity {
+func getColumnAffinities(schema string) ([]affinity, error) {
 	tab, err := vtabutil.Parse(schema)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer tab.Close()
 
@@ -29,7 +29,7 @@ func getColumnAffinities(schema string) []affinity {
 		col := tab.Column(i)
 		types[i] = getAffinity(col.Type())
 	}
-	return types
+	return types, nil
 }
 
 func getAffinity(declType string) affinity {

@@ -87,6 +87,9 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 		return nil, err
 	}
 
+	id := db.LastInsertRowID()
+	defer db.SetLastInsertRowID(id)
+
 	err = db.Exec(fmt.Sprintf(
 		`INSERT INTO %s.%s (rowid, data, p, n, m, k)
 		 VALUES (1, zeroblob(%d), %f, %d, %d, %d)`,
@@ -163,13 +166,14 @@ func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
 		if cst.Usable && cst.Column == 1 &&
 			cst.Op == sqlite3.INDEX_CONSTRAINT_EQ {
 			idx.ConstraintUsage[n].ArgvIndex = 1
+			idx.OrderByConsumed = true
+			idx.EstimatedRows = 1
+			idx.EstimatedCost = float64(b.hashes)
+			idx.IdxFlags = sqlite3.INDEX_SCAN_UNIQUE
+			return nil
 		}
 	}
-	idx.OrderByConsumed = true
-	idx.EstimatedRows = 1
-	idx.EstimatedCost = float64(b.hashes)
-	idx.IdxFlags = sqlite3.INDEX_SCAN_UNIQUE
-	return nil
+	return sqlite3.CONSTRAINT
 }
 
 func (b *bloom) Update(arg ...sqlite3.Value) (rowid int64, err error) {

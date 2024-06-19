@@ -96,7 +96,11 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 			}
 			schema = getSchema(header, columns, row)
 		} else {
-			table.typs = getColumnAffinities(schema)
+			defer func() {
+				if err == nil {
+					table.typs, err = getColumnAffinities(schema)
+				}
+			}()
 		}
 
 		err = db.DeclareVTab(schema)
