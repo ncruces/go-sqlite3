@@ -63,14 +63,16 @@ func TestRegister(t *testing.T) {
 	csv.Register(db)
 
 	const data = `
+# Comment
 "Rob"	"Pike"	rob
 "Ken"	Thompson	ken
 Robert	"Griesemer"	"gri"`
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE temp.users USING csv(
-			data   = ` + sqlite3.Quote(data) + `,
-			schema = 'CREATE TABLE x(first_name, last_name, username)',
-			comma  = '\t'
+			data    = ` + sqlite3.Quote(data) + `,
+			schema  = 'CREATE TABLE x(first_name, last_name, username)',
+			comma   = '\t',
+			comment = '#'
 		)`)
 	if err != nil {
 		t.Fatal(err)

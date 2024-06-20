@@ -38,6 +38,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 			header   bool
 			columns  int  = -1
 			comma    rune = ','
+			comment  rune
 
 			done = map[string]struct{}{}
 		)
@@ -60,6 +61,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 				columns, err = uintArg(key, val)
 			case "comma":
 				comma, err = runeArg(key, val)
+			case "comment":
+				comment, err = runeArg(key, val)
 			default:
 				return nil, fmt.Errorf("csv: unknown %q parameter", key)
 			}
@@ -74,11 +77,12 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		}
 
 		table := &table{
-			fsys:   fsys,
-			name:   filename,
-			data:   data,
-			comma:  comma,
-			header: header,
+			fsys:    fsys,
+			name:    filename,
+			data:    data,
+			comma:   comma,
+			comment: comment,
+			header:  header,
 		}
 
 		if schema == "" {
@@ -118,12 +122,13 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 }
 
 type table struct {
-	fsys   fs.FS
-	name   string
-	data   string
-	typs   []affinity
-	comma  rune
-	header bool
+	fsys    fs.FS
+	name    string
+	data    string
+	typs    []affinity
+	comma   rune
+	comment rune
+	header  bool
 }
 
 func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
@@ -180,6 +185,7 @@ func (t *table) newReader() (*csv.Reader, io.Closer, error) {
 	csv := csv.NewReader(r)
 	csv.ReuseRecord = true
 	csv.Comma = t.comma
+	csv.Comment = t.comment
 	return csv, c, nil
 }
 
@@ -235,17 +241,13 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 	if col < len(c.row) {
-		var typ affinity
+		typ := text
 		if col < len(c.table.typs) {
 			typ = c.table.typs[col]
 		}
 
 		txt := c.row[col]
-		if typ == blob {
-			ctx.ResultText(txt)
-			return nil
-		}
-		if txt == "" {
+		if txt == "" && typ != text {
 			return nil
 		}
 
@@ -266,9 +268,9 @@ func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
 				}
 			}
 			fallthrough
-		case text:
-			ctx.ResultText(c.row[col])
+		default:
 		}
+		ctx.ResultText(txt)
 	}
 	return nil
 }
