@@ -159,7 +159,7 @@ static int go_vtab_integrity_wrapper(sqlite3_vtab *pVTab, const char *zSchema,
   return rc;
 }
 
-static int go_vtab_shadown_name_wrapper(const char *zName) { return 1; }
+static int go_vtab_shadown_name_wrapper(const char *zName) { return true; }
 
 int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
                              go_handle handle) {
