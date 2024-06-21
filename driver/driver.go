@@ -229,6 +229,7 @@ func (c *conn) Raw() *sqlite3.Conn {
 	return c.Conn
 }
 
+// Deprecated: use BeginTx instead.
 func (c *conn) Begin() (driver.Tx, error) {
 	return c.BeginTx(context.Background(), driver.TxOptions{})
 }
@@ -559,19 +560,20 @@ func (r *rows) Next(dest []driver.Value) error {
 	return err
 }
 
-func (r *rows) decodeTime(i int, v any) (_ time.Time, _ bool) {
+func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
 	if r.tmRead == sqlite3.TimeFormatDefault {
-		return
-	}
-	switch r.declType(i) {
-	case "DATE", "TIME", "DATETIME", "TIMESTAMP":
-		// maybe
-	default:
+		// handled by maybeTime
 		return
 	}
 	switch v.(type) {
 	case int64, float64, string:
-		// maybe
+		// could be a time value
+	default:
+		return
+	}
+	switch r.declType(i) {
+	case "DATE", "TIME", "DATETIME", "TIMESTAMP":
+		// could be a time value
 	default:
 		return
 	}

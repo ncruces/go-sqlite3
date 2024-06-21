@@ -127,4 +127,14 @@ func Test_compatible(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	err = db.Exec(`PRAGMA integrity_check`)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = db.Exec(`PRAGMA quick_check`)
+	if err != nil {
+		t.Error(err)
+	}
 }

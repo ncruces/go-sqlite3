@@ -1,12 +1,6 @@
-# Go `"adiantum"` SQLite VFS
+# Go `adiantum` SQLite VFS
 
 This package wraps an SQLite VFS to offer encryption at rest.
-
-> [!WARNING]
-> This work was not certified by a cryptographer.
-> If you need vetted encryption, you should purchase the
-> [SQLite Encryption Extension](https://sqlite.org/see),
-> and either wrap it, or seek assistance wrapping it.
 
 The `"adiantum"` VFS wraps the default SQLite VFS using the
 [Adiantum](https://github.com/lukechampine/adiantum)

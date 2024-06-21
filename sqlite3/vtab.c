@@ -1,16 +1,18 @@
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "include.h"
 #include "sqlite3.h"
 
-#define SQLITE_VTAB_CREATOR_GO /******/ 0x01
-#define SQLITE_VTAB_DESTROYER_GO /****/ 0x02
-#define SQLITE_VTAB_UPDATER_GO /******/ 0x04
-#define SQLITE_VTAB_RENAMER_GO /******/ 0x08
-#define SQLITE_VTAB_OVERLOADER_GO /***/ 0x10
-#define SQLITE_VTAB_CHECKER_GO /******/ 0x20
-#define SQLITE_VTAB_TXN_GO /**********/ 0x40
-#define SQLITE_VTAB_SAVEPOINTER_GO /**/ 0x80
+#define SQLITE_VTAB_CREATOR_GO /******/ 0x001
+#define SQLITE_VTAB_DESTROYER_GO /****/ 0x002
+#define SQLITE_VTAB_UPDATER_GO /******/ 0x004
+#define SQLITE_VTAB_RENAMER_GO /******/ 0x008
+#define SQLITE_VTAB_OVERLOADER_GO /***/ 0x010
+#define SQLITE_VTAB_CHECKER_GO /******/ 0x020
+#define SQLITE_VTAB_TXN_GO /**********/ 0x040
+#define SQLITE_VTAB_SAVEPOINTER_GO /**/ 0x080
+#define SQLITE_VTAB_SHADOWTABS_GO /***/ 0x100
 
 int go_vtab_create(sqlite3_module *, int argc, const char *const *argv,
                    sqlite3_vtab **, char **pzErr);
@@ -157,6 +159,8 @@ static int go_vtab_integrity_wrapper(sqlite3_vtab *pVTab, const char *zSchema,
   return rc;
 }
 
+static int go_vtab_shadown_name_wrapper(const char *zName) { return 1; }
+
 int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
                              go_handle handle) {
   struct go_module *mod = malloc(sizeof(struct go_module));
@@ -207,6 +211,9 @@ int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
     mod->base.xSavepoint = go_vtab_savepoint;
     mod->base.xRelease = go_vtab_release;
     mod->base.xRollbackTo = go_vtab_rollback_to;
+  }
+  if (flags & SQLITE_VTAB_SHADOWTABS_GO) {
+    mod->base.xShadowName = go_vtab_shadown_name_wrapper;
   }
   if (mod->base.xCreate && !mod->base.xDestroy) {
     mod->base.xDestroy = mod->base.xDisconnect;

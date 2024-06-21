@@ -34,7 +34,7 @@ Go, wazero and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ run
 - [`github.com/ncruces/go-sqlite3/ext/blobio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blobio)
   simplifies [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html).
 - [`github.com/ncruces/go-sqlite3/ext/bloom`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/bloom)
-  provides the [`bloom_filter`](https://github.com/nalgeon/sqlean/issues/27#issuecomment-1002267134) virtual table.
+  provides a [Bloom filter](https://github.com/nalgeon/sqlean/issues/27#issuecomment-1002267134) virtual table.
 - [`github.com/ncruces/go-sqlite3/ext/csv`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/csv)
   reads [comma-separated values](https://sqlite.org/csv.html).
 - [`github.com/ncruces/go-sqlite3/ext/fileio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/fileio)

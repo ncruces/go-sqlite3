@@ -15,7 +15,6 @@ import (
 
 	"github.com/dchest/siphash"
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the bloom_filter virtual table:
@@ -161,6 +160,41 @@ func (b *bloom) Rename(new string) error {
 	return err
 }
 
+func (t *bloom) ShadowTables() {}
+
+func (t *bloom) Integrity(schema, table string, flags int) error {
+	load, _, err := t.db.Prepare(fmt.Sprintf(
+		`SELECT typeof(data), length(data), p, n, m, k FROM %s.%s WHERE rowid = 1`,
+		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)))
+	if err != nil {
+		return fmt.Errorf("bloom: %v", err) // can't wrap!
+	}
+	defer load.Close()
+
+	err = errors.New("bloom: invalid parameters")
+	if !load.Step() {
+		return err
+	}
+	if t := load.ColumnText(0); t != "blob" {
+		return err
+	}
+	if m := load.ColumnInt64(4); m <= 0 || m%8 != 0 {
+		return err
+	} else if load.ColumnInt64(1) != m/8 {
+		return err
+	}
+	if p := load.ColumnFloat(2); p <= 0 || p >= 1 {
+		return err
+	}
+	if n := load.ColumnInt64(3); n <= 0 {
+		return err
+	}
+	if k := load.ColumnInt(5); k <= 0 {
+		return err
+	}
+	return nil
+}
+
 func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
 	for n, cst := range idx.Constraint {
 		if cst.Usable && cst.Column == 1 &&
@@ -274,8 +308,6 @@ func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
 		ctx.ResultBool(true)
 	case 1:
 		ctx.ResultValue(*c.arg)
-	default:
-		panic(util.AssertErr())
 	}
 	return nil
 }
