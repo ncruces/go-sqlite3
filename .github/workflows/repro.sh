@@ -18,6 +18,13 @@ mkdir -p tools/
 [ -d "tools/binaryen-version"* ] || curl -#L "$BINARYEN" | tar xzC tools &
 wait
 
-sqlite3/download.sh   # Download SQLite
-embed/build.sh        # Build Wasm
-git diff --exit-code  # Check diffs
+# Download and build SQLite
+sqlite3/download.sh
+embed/build.sh
+
+# Download and build sqlite-createtable-parser
+util/vtabutil/parse/download.sh
+util/vtabutil/parse/build.sh
+
+# Check diffs
+git diff --exit-code 

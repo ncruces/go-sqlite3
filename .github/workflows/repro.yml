@@ -3,6 +3,11 @@ name: Reproducible build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
 jobs:
   build:
     strategy:
@@ -17,3 +22,10 @@ jobs:
 
     - name: Build
       run: .github/workflows/repro.sh
+
+    - uses: actions/attest-build-provenance@v1
+      if: matrix.os == 'ubuntu-latest'
+      with:
+        subject-path: |
+          embed/sqlite3.wasm
+          util/vtabutil/parse/sql3parse_table.wasm
