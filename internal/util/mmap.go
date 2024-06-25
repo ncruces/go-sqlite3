@@ -76,17 +76,15 @@ func (r *MappedRegion) Unmap() error {
 	// We can't munmap the region, otherwise it could be remaped.
 	// Instead, convert it to a protected, private, anonymous mapping.
 	// If successful, it can be reused for a subsequent mmap.
-	_, err := unix.MmapPtr(r.addr, uintptr(r.size),
-		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON|unix.MAP_FIXED,
-		-1, 0)
+	_, err := unix.MmapPtr(-1, 0, r.addr, uintptr(r.size),
+		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
 	r.used = err != nil
 	return err
 }
 
 func (r *MappedRegion) mmap(f *os.File, offset int64, prot int) error {
-	_, err := unix.MmapPtr(r.addr, uintptr(r.size),
-		prot, unix.MAP_SHARED|unix.MAP_FIXED,
-		int(f.Fd()), offset)
+	_, err := unix.MmapPtr(int(f.Fd()), offset, r.addr, uintptr(r.size),
+		prot, unix.MAP_SHARED|unix.MAP_FIXED)
 	r.used = err == nil
 	return err
 }
