@@ -83,6 +83,18 @@ jobs:
       run: go test -v ./...
 
   test-bsd:
+    strategy:
+      matrix:
+        os:
+          - name: freebsd
+            version: '14.0'
+            flags: '-test.v'
+          - name: openbsd
+            version: '7.5'
+            flags: '-test.v -test.short'
+          - name: netbsd
+            version: '10.0'
+            flags: '-test.v -test.short'
     runs-on: ubuntu-latest
     needs: test
 
@@ -96,15 +108,15 @@ jobs:
 
     - name: Build
       env:
-        GOOS: freebsd
-        TESTFLAGS: '-test.v'
+        GOOS: ${{ matrix.os.name }}
+        TESTFLAGS: ${{ matrix.os.flags }}
       run: .github/workflows/build-test.sh
 
     - name: Test
       uses: cross-platform-actions/action@v0.24.0
       with:
-        operating_system: freebsd
-        version: '14.0'
+        operating_system: ${{ matrix.os.name }}
+        version: ${{ matrix.os.version }}
         shell: bash
         run: . ./test.sh
         sync_files: runner-to-vm

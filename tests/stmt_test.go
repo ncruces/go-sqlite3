@@ -618,6 +618,9 @@ func TestStmt_ColumnTime(t *testing.T) {
 }
 
 func TestStmt_Error(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
 	if bits.UintSize < 64 {
 		t.Skip("skipping on 32-bit")
 	}
