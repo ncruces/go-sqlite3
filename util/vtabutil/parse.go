@@ -3,7 +3,6 @@ package vtabutil
 import (
 	"context"
 	"sync"
-	"unsafe"
 
 	_ "embed"
 
@@ -71,7 +70,8 @@ func Parse(sql string) (_ *Table, err error) {
 		return nil, util.ErrorString("sql3parse: unsupported SQL")
 	}
 
-	tab := sql3ptr[sql3table, Table](r[0]).value(sql, mod)
+	var tab Table
+	tab.load(mod, uint32(r[0]), sql)
 	return &tab, nil
 }
 
@@ -89,45 +89,27 @@ type Table struct {
 	NewName        string
 }
 
-type sql3table struct {
-	name            sql3string
-	schema          sql3string
-	comment         sql3string
-	is_temporary    bool
-	is_ifnotexists  bool
-	is_withoutrowid bool
-	is_strict       bool
-	num_columns     int32
-	columns         uint32
-	num_constraint  int32
-	constraints     uint32
-	typ             sql3statement_type
-	current_name    sql3string
-	new_name        sql3string
-}
+func (t *Table) load(mod api.Module, ptr uint32, sql string) {
+	t.Name = loadString(mod, ptr+0, sql)
+	t.Schema = loadString(mod, ptr+8, sql)
+	t.Comment = loadString(mod, ptr+16, sql)
 
-func (s sql3table) value(sql string, mod api.Module) (r Table) {
-	r.Name = s.name.value(sql, nil)
-	r.Schema = s.schema.value(sql, nil)
-	r.Comment = s.comment.value(sql, nil)
+	t.IsTemporary = loadBool(mod, ptr+24)
+	t.IsIfNotExists = loadBool(mod, ptr+25)
+	t.IsWithoutRowID = loadBool(mod, ptr+26)
+	t.IsStrict = loadBool(mod, ptr+27)
 
-	r.IsTemporary = s.is_temporary
-	r.IsIfNotExists = s.is_ifnotexists
-	r.IsWithoutRowID = s.is_withoutrowid
-	r.IsStrict = s.is_strict
-
-	r.Columns = make([]Column, s.num_columns)
-	ptr, _ := mod.Memory().ReadUint32Le(s.columns)
-	col := sql3ptr[sql3column, Column](ptr)
-	for i := range r.Columns {
-		r.Columns[i] = col.value(sql, mod)
-		col += 4
+	num, _ := mod.Memory().ReadUint32Le(ptr + 28)
+	t.Columns = make([]Column, num)
+	ref, _ := mod.Memory().ReadUint32Le(ptr + 32)
+	for i := range t.Columns {
+		p, _ := mod.Memory().ReadUint32Le(ref)
+		t.Columns[i].load(mod, p, sql)
+		ref += 4
 	}
 
-	r.CurrentName = s.current_name.value(sql, nil)
-	r.NewName = s.new_name.value(sql, nil)
-
-	return
+	t.CurrentName = loadString(mod, ptr+48, sql)
+	t.NewName = loadString(mod, ptr+56, sql)
 }
 
 // Column holds metadata about a column.
@@ -146,87 +128,33 @@ type Column struct {
 	CollateName     string
 }
 
-type sql3column struct {
-	name                   sql3string
-	typ                    sql3string
-	length                 sql3string
-	constraint_name        sql3string
-	comment                sql3string
-	is_primarykey          bool
-	is_autoincrement       bool
-	is_notnull             bool
-	is_unique              bool
-	pk_order               sql3order_clause
-	pk_conflictclause      sql3conflict_clause
-	notnull_conflictclause sql3conflict_clause
-	unique_conflictclause  sql3conflict_clause
-	check_expr             sql3string
-	default_expr           sql3string
-	collate_name           sql3string
-	foreignkey_clause      sql3foreignkey
+func (c *Column) load(mod api.Module, ptr uint32, sql string) {
+	c.Name = loadString(mod, ptr+0, sql)
+	c.Type = loadString(mod, ptr+8, sql)
+	c.Length = loadString(mod, ptr+16, sql)
+	c.ConstraintName = loadString(mod, ptr+24, sql)
+	c.Comment = loadString(mod, ptr+32, sql)
+
+	c.IsPrimaryKey = loadBool(mod, ptr+40)
+	c.IsAutoIncrement = loadBool(mod, ptr+41)
+	c.IsNotNull = loadBool(mod, ptr+42)
+	c.IsUnique = loadBool(mod, ptr+43)
+
+	c.CheckExpr = loadString(mod, ptr+60, sql)
+	c.DefaultExpr = loadString(mod, ptr+68, sql)
+	c.CollateName = loadString(mod, ptr+76, sql)
 }
 
-func (s sql3column) value(sql string, _ api.Module) (r Column) {
-	r.Name = s.name.value(sql, nil)
-	r.Type = s.typ.value(sql, nil)
-	r.Length = s.length.value(sql, nil)
-	r.ConstraintName = s.constraint_name.value(sql, nil)
-	r.Comment = s.comment.value(sql, nil)
-
-	r.IsPrimaryKey = s.is_primarykey
-	r.IsAutoIncrement = s.is_autoincrement
-	r.IsNotNull = s.is_notnull
-	r.IsUnique = s.is_unique
-
-	r.CheckExpr = s.check_expr.value(sql, nil)
-	r.DefaultExpr = s.default_expr.value(sql, nil)
-	r.CollateName = s.collate_name.value(sql, nil)
-
-	return
-}
-
-type sql3foreignkey struct {
-	table       sql3string
-	num_columns int32
-	column_name uint32
-	on_delete   sql3fk_action
-	on_update   sql3fk_action
-	match       sql3string
-	deferrable  sql3fk_deftype
-}
-
-type sql3string struct {
-	off uint32
-	len uint32
-}
-
-func (s sql3string) value(sql string, _ api.Module) string {
-	if s.off == 0 {
+func loadString(mod api.Module, ptr uint32, sql string) string {
+	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
+	if off == 0 {
 		return ""
 	}
-	return sql[s.off-sqlp : s.off+s.len-sqlp]
+	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
+	return sql[off-sqlp : off+len-sqlp]
 }
 
-type sql3ptr[T sql3valuer[V], V any] uint32
-
-func (s sql3ptr[T, V]) value(sql string, mod api.Module) (_ V) {
-	if s == 0 {
-		return
-	}
-	var val T
-	buf, _ := mod.Memory().Read(uint32(s), uint32(unsafe.Sizeof(val)))
-	val = *(*T)(unsafe.Pointer(&buf[0]))
-	return val.value(sql, mod)
+func loadBool(mod api.Module, ptr uint32) bool {
+	val, _ := mod.Memory().ReadByte(ptr)
+	return val != 0
 }
-
-type sql3valuer[T any] interface {
-	value(string, api.Module) T
-}
-
-type (
-	sql3conflict_clause int32
-	sql3order_clause    int32
-	sql3fk_action       int32
-	sql3fk_deftype      int32
-	sql3statement_type  int32
-)
