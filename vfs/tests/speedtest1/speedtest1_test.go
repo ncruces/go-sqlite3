@@ -74,6 +74,8 @@ func initFlags() {
 			// keep test flags
 			os.Args[i] = arg
 			i++
+		case arg == "--":
+			// ignore this
 		default:
 			// collect everything else
 			options = append(options, arg)

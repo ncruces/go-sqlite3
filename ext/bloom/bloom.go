@@ -262,8 +262,8 @@ func (b *bloom) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	*bloom
-	eof bool
 	arg *sqlite3.Value
+	eof bool
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
