@@ -1,7 +1,6 @@
 package csv
 
 import (
-	_ "embed"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3/util/vtabutil"
@@ -22,12 +21,10 @@ func getColumnAffinities(schema string) ([]affinity, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tab.Close()
 
-	types := make([]affinity, tab.NumColumns())
-	for i := range types {
-		col := tab.Column(i)
-		types[i] = getAffinity(col.Type())
+	types := make([]affinity, len(tab.Columns))
+	for i, col := range tab.Columns {
+		types[i] = getAffinity(col.Type)
 	}
 	return types, nil
 }

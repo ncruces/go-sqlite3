@@ -1,9 +1,6 @@
 package csv
 
-import (
-	_ "embed"
-	"testing"
-)
+import "testing"
 
 func Test_getAffinity(t *testing.T) {
 	tests := []struct {
