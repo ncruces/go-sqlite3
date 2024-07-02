@@ -17,11 +17,11 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
-	$(awk '{print "-Wl,--export="$0}' exports.txt)
+	-Wl,--export=sql3parse_table
 
 trap 'rm -f sql3parse_table.tmp' EXIT
-"$BINARYEN/wasm-ctor-eval" -g -c _initialize sql3parse_table.wasm -o sql3parse_table.tmp
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -Oz \
+"$BINARYEN/wasm-ctor-eval" -c _initialize sql3parse_table.wasm -o sql3parse_table.tmp
+"$BINARYEN/wasm-opt" --strip --strip-debug --strip-producers -c -Oz \
 	sql3parse_table.tmp -o sql3parse_table.wasm \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \
