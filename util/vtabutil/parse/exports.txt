@@ -1,4 +1,0 @@
-sql3parse_table
-sql3table_get_column
-sql3table_num_columns
-sql3column_type

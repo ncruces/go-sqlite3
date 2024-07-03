@@ -12,30 +12,17 @@ import (
 )
 
 const (
-	_NONE = iota
-	_MEMORY
-	_SYNTAX
-	_UNSUPPORTEDSQL
-
-	codeptr = 4
-	baseptr = 8
+	errp = 4
+	sqlp = 8
 )
 
 var (
 	//go:embed parse/sql3parse_table.wasm
-	binary  []byte
-	ctx     context.Context
-	once    sync.Once
-	runtime wazero.Runtime
-	module  wazero.CompiledModule
+	binary   []byte
+	once     sync.Once
+	runtime  wazero.Runtime
+	compiled wazero.CompiledModule
 )
-
-// Table holds metadata about a table.
-type Table struct {
-	mod api.Module
-	ptr uint32
-	sql string
-}
 
 // Parse parses a [CREATE] or [ALTER TABLE] command.
 //
@@ -43,29 +30,32 @@ type Table struct {
 // [ALTER TABLE]: https://sqlite.org/lang_altertable.html
 func Parse(sql string) (_ *Table, err error) {
 	once.Do(func() {
-		ctx = context.Background()
-		cfg := wazero.NewRuntimeConfigInterpreter().WithDebugInfoEnabled(false)
+		ctx := context.Background()
+		cfg := wazero.NewRuntimeConfigInterpreter()
 		runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
-		module, err = runtime.CompileModule(ctx, binary)
+		compiled, err = runtime.CompileModule(ctx, binary)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	mod, err := runtime.InstantiateModule(ctx, module, wazero.NewModuleConfig().WithName(""))
+	ctx := context.Background()
+	mod, err := runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithName(""))
 	if err != nil {
 		return nil, err
 	}
+	defer mod.Close(ctx)
 
-	if buf, ok := mod.Memory().Read(baseptr, uint32(len(sql))); ok {
+	if buf, ok := mod.Memory().Read(sqlp, uint32(len(sql))); ok {
 		copy(buf, sql)
 	}
-	r, err := mod.ExportedFunction("sql3parse_table").Call(ctx, baseptr, uint64(len(sql)), codeptr)
+
+	r, err := mod.ExportedFunction("sql3parse_table").Call(ctx, sqlp, uint64(len(sql)), errp)
 	if err != nil {
 		return nil, err
 	}
 
-	c, _ := mod.Memory().ReadUint32Le(codeptr)
+	c, _ := mod.Memory().ReadUint32Le(errp)
 	switch c {
 	case _MEMORY:
 		panic(util.OOMErr)
@@ -74,68 +64,146 @@ func Parse(sql string) (_ *Table, err error) {
 	case _UNSUPPORTEDSQL:
 		return nil, util.ErrorString("sql3parse: unsupported SQL")
 	}
-	if r[0] == 0 {
-		return nil, nil
-	}
-	return &Table{
-		sql: sql,
-		mod: mod,
-		ptr: uint32(r[0]),
-	}, nil
+
+	var tab Table
+	tab.load(mod, uint32(r[0]), sql)
+	return &tab, nil
 }
 
-// Close closes a table handle.
-func (t *Table) Close() error {
-	mod := t.mod
-	t.mod = nil
-	return mod.Close(ctx)
+// Table holds metadata about a table.
+type Table struct {
+	Name           string
+	Schema         string
+	Comment        string
+	IsTemporary    bool
+	IsIfNotExists  bool
+	IsWithoutRowID bool
+	IsStrict       bool
+	Columns        []Column
+	Type           StatementType
+	CurrentName    string
+	NewName        string
 }
 
-// NumColumns returns the number of columns of the table.
-func (t *Table) NumColumns() int {
-	r, err := t.mod.ExportedFunction("sql3table_num_columns").Call(ctx, uint64(t.ptr))
-	if err != nil {
-		panic(err)
-	}
-	return int(int32(r[0]))
-}
+func (t *Table) load(mod api.Module, ptr uint32, sql string) {
+	t.Name = loadString(mod, ptr+0, sql)
+	t.Schema = loadString(mod, ptr+8, sql)
+	t.Comment = loadString(mod, ptr+16, sql)
 
-// Column returns data for the ith column of the table.
-//
-// https://sqlite.org/lang_createtable.html#column_definitions
-func (t *Table) Column(i int) Column {
-	r, err := t.mod.ExportedFunction("sql3table_get_column").Call(ctx, uint64(t.ptr), uint64(i))
-	if err != nil {
-		panic(err)
-	}
-	return Column{
-		tab: t,
-		ptr: uint32(r[0]),
-	}
-}
+	t.IsTemporary = loadBool(mod, ptr+24)
+	t.IsIfNotExists = loadBool(mod, ptr+25)
+	t.IsWithoutRowID = loadBool(mod, ptr+26)
+	t.IsStrict = loadBool(mod, ptr+27)
 
-func (t *Table) string(ptr uint32) string {
-	if ptr == 0 {
-		return ""
-	}
-	off, _ := t.mod.Memory().ReadUint32Le(ptr + 0)
-	len, _ := t.mod.Memory().ReadUint32Le(ptr + 4)
-	return t.sql[off-baseptr : off+len-baseptr]
+	t.Columns = loadSlice(mod, ptr+28, func(ptr uint32, res *Column) {
+		p, _ := mod.Memory().ReadUint32Le(ptr)
+		res.load(mod, p, sql)
+	})
+
+	t.Type = loadEnum[StatementType](mod, ptr+44)
+	t.CurrentName = loadString(mod, ptr+48, sql)
+	t.NewName = loadString(mod, ptr+56, sql)
 }
 
 // Column holds metadata about a column.
 type Column struct {
-	tab *Table
-	ptr uint32
+	Name                  string
+	Type                  string
+	Length                string
+	ConstraintName        string
+	Comment               string
+	IsPrimaryKey          bool
+	IsAutoIncrement       bool
+	IsNotNull             bool
+	IsUnique              bool
+	PKOrder               OrderClause
+	PKConflictClause      ConflictClause
+	NotNullConflictClause ConflictClause
+	UniqueConflictClause  ConflictClause
+	CheckExpr             string
+	DefaultExpr           string
+	CollateName           string
+	ForeignKeyClause      *ForeignKey
 }
 
-// Type returns the declared type of a column.
-//
-// https://sqlite.org/lang_createtable.html#column_data_types
-func (c Column) Type() string {
-	r, err := c.tab.mod.ExportedFunction("sql3column_type").Call(ctx, uint64(c.ptr))
-	if err != nil {
-		panic(err)
+func (c *Column) load(mod api.Module, ptr uint32, sql string) {
+	c.Name = loadString(mod, ptr+0, sql)
+	c.Type = loadString(mod, ptr+8, sql)
+	c.Length = loadString(mod, ptr+16, sql)
+	c.ConstraintName = loadString(mod, ptr+24, sql)
+	c.Comment = loadString(mod, ptr+32, sql)
+
+	c.IsPrimaryKey = loadBool(mod, ptr+40)
+	c.IsAutoIncrement = loadBool(mod, ptr+41)
+	c.IsNotNull = loadBool(mod, ptr+42)
+	c.IsUnique = loadBool(mod, ptr+43)
+
+	c.PKOrder = loadEnum[OrderClause](mod, ptr+44)
+	c.PKConflictClause = loadEnum[ConflictClause](mod, ptr+48)
+	c.NotNullConflictClause = loadEnum[ConflictClause](mod, ptr+52)
+	c.UniqueConflictClause = loadEnum[ConflictClause](mod, ptr+56)
+
+	c.CheckExpr = loadString(mod, ptr+60, sql)
+	c.DefaultExpr = loadString(mod, ptr+68, sql)
+	c.CollateName = loadString(mod, ptr+76, sql)
+
+	if ptr, _ := mod.Memory().ReadUint32Le(ptr + 84); ptr != 0 {
+		c.ForeignKeyClause = &ForeignKey{}
+		c.ForeignKeyClause.load(mod, ptr, sql)
 	}
-	return c.tab.string(uint32(r[0]))
+}
+
+type ForeignKey struct {
+	Table      string
+	Columns    []string
+	OnDelete   FKAction
+	OnUpdate   FKAction
+	Match      string
+	Deferrable FKDefType
+}
+
+func (f *ForeignKey) load(mod api.Module, ptr uint32, sql string) {
+	f.Table = loadString(mod, ptr+0, sql)
+
+	f.Columns = loadSlice(mod, ptr+8, func(ptr uint32, res *string) {
+		*res = loadString(mod, ptr, sql)
+	})
+
+	f.OnDelete = loadEnum[FKAction](mod, ptr+16)
+	f.OnUpdate = loadEnum[FKAction](mod, ptr+20)
+	f.Match = loadString(mod, ptr+24, sql)
+	f.Deferrable = loadEnum[FKDefType](mod, ptr+32)
+}
+
+func loadString(mod api.Module, ptr uint32, sql string) string {
+	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
+	if off == 0 {
+		return ""
+	}
+	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
+	return sql[off-sqlp : off+len-sqlp]
+}
+
+func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T)) []T {
+	ref, _ := mod.Memory().ReadUint32Le(ptr + 4)
+	if ref == 0 {
+		return nil
+	}
+	len, _ := mod.Memory().ReadUint32Le(ptr + 0)
+	res := make([]T, len)
+	for i := range res {
+		fn(ref, &res[i])
+		ref += 4
+	}
+	return res
+}
+
+func loadEnum[T ~uint32](mod api.Module, ptr uint32) T {
+	val, _ := mod.Memory().ReadUint32Le(ptr)
+	return T(val)
+}
+
+func loadBool(mod api.Module, ptr uint32) bool {
+	val, _ := mod.Memory().ReadByte(ptr)
+	return val != 0
 }
