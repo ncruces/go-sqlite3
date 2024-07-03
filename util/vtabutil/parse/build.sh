@@ -7,9 +7,8 @@ ROOT=../../../
 BINARYEN="$ROOT/tools/binaryen-version_117/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 
-"$WASI_SDK/clang" --target=wasm32-wasi -std=c17 -flto -g0 -Oz \
-	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-	-o sql3parse_table.wasm sql3parse_table.c \
+"$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -flto -g0 -Oz \
+	-Wall -Wextra -o sql3parse_table.wasm main.c \
 	-mexec-model=reactor \
 	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \

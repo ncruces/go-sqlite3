@@ -85,6 +85,7 @@ type Table struct {
 	IsWithoutRowID bool
 	IsStrict       bool
 	Columns        []Column
+	Type           StatementType
 	CurrentName    string
 	NewName        string
 }
@@ -108,24 +109,29 @@ func (t *Table) load(mod api.Module, ptr uint32, sql string) {
 		ref += 4
 	}
 
+	t.Type = loadEnum[StatementType](mod, ptr+44)
 	t.CurrentName = loadString(mod, ptr+48, sql)
 	t.NewName = loadString(mod, ptr+56, sql)
 }
 
 // Column holds metadata about a column.
 type Column struct {
-	Name            string
-	Type            string
-	Length          string
-	ConstraintName  string
-	Comment         string
-	IsPrimaryKey    bool
-	IsAutoIncrement bool
-	IsNotNull       bool
-	IsUnique        bool
-	CheckExpr       string
-	DefaultExpr     string
-	CollateName     string
+	Name                  string
+	Type                  string
+	Length                string
+	ConstraintName        string
+	Comment               string
+	IsPrimaryKey          bool
+	IsAutoIncrement       bool
+	IsNotNull             bool
+	IsUnique              bool
+	PKOrder               OrderClause
+	PKConflictClause      ConflictClause
+	NotNullConflictClause ConflictClause
+	UniqueConflictClause  ConflictClause
+	CheckExpr             string
+	DefaultExpr           string
+	CollateName           string
 }
 
 func (c *Column) load(mod api.Module, ptr uint32, sql string) {
@@ -140,10 +146,45 @@ func (c *Column) load(mod api.Module, ptr uint32, sql string) {
 	c.IsNotNull = loadBool(mod, ptr+42)
 	c.IsUnique = loadBool(mod, ptr+43)
 
+	c.PKOrder = loadEnum[OrderClause](mod, ptr+44)
+	c.PKConflictClause = loadEnum[ConflictClause](mod, ptr+48)
+	c.NotNullConflictClause = loadEnum[ConflictClause](mod, ptr+52)
+	c.UniqueConflictClause = loadEnum[ConflictClause](mod, ptr+56)
+
 	c.CheckExpr = loadString(mod, ptr+60, sql)
 	c.DefaultExpr = loadString(mod, ptr+68, sql)
 	c.CollateName = loadString(mod, ptr+76, sql)
 }
+
+type StatementType uint32
+
+const (
+	CREATE_UNKNOWN StatementType = iota
+	CREATE_TABLE
+	ALTER_RENAME_TABLE
+	ALTER_RENAME_COLUMN
+	ALTER_ADD_COLUMN
+	ALTER_DROP_COLUMN
+)
+
+type OrderClause uint32
+
+const (
+	ORDER_NONE OrderClause = iota
+	ORDER_ASC
+	ORDER_DESC
+)
+
+type ConflictClause uint32
+
+const (
+	CONFLICT_NONE ConflictClause = iota
+	CONFLICT_ROLLBACK
+	CONFLICT_ABORT
+	CONFLICT_FAIL
+	CONFLICT_IGNORE
+	CONFLICT_REPLACE
+)
 
 func loadString(mod api.Module, ptr uint32, sql string) string {
 	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
@@ -152,6 +193,11 @@ func loadString(mod api.Module, ptr uint32, sql string) string {
 	}
 	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
 	return sql[off-sqlp : off+len-sqlp]
+}
+
+func loadEnum[T ~uint32](mod api.Module, ptr uint32) T {
+	val, _ := mod.Memory().ReadUint32Le(ptr)
+	return T(val)
 }
 
 func loadBool(mod api.Module, ptr uint32) bool {
