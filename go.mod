@@ -17,4 +17,6 @@ require (
 	lukechampine.com/adiantum v1.1.1
 )
 
+require github.com/google/uuid v1.6.0
+
 retract v0.4.0 // tagged from the wrong branch
