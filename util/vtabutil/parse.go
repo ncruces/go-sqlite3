@@ -12,11 +12,6 @@ import (
 )
 
 const (
-	_NONE = iota
-	_MEMORY
-	_SYNTAX
-	_UNSUPPORTEDSQL
-
 	errp = 4
 	sqlp = 8
 )
@@ -100,14 +95,10 @@ func (t *Table) load(mod api.Module, ptr uint32, sql string) {
 	t.IsWithoutRowID = loadBool(mod, ptr+26)
 	t.IsStrict = loadBool(mod, ptr+27)
 
-	num, _ := mod.Memory().ReadUint32Le(ptr + 28)
-	t.Columns = make([]Column, num)
-	ref, _ := mod.Memory().ReadUint32Le(ptr + 32)
-	for i := range t.Columns {
-		p, _ := mod.Memory().ReadUint32Le(ref)
-		t.Columns[i].load(mod, p, sql)
-		ref += 4
-	}
+	t.Columns = loadSlice(mod, ptr+28, func(ptr uint32, res *Column) {
+		p, _ := mod.Memory().ReadUint32Le(ptr)
+		res.load(mod, p, sql)
+	})
 
 	t.Type = loadEnum[StatementType](mod, ptr+44)
 	t.CurrentName = loadString(mod, ptr+48, sql)
@@ -132,6 +123,7 @@ type Column struct {
 	CheckExpr             string
 	DefaultExpr           string
 	CollateName           string
+	ForeignKeyClause      *ForeignKey
 }
 
 func (c *Column) load(mod api.Module, ptr uint32, sql string) {
@@ -154,37 +146,34 @@ func (c *Column) load(mod api.Module, ptr uint32, sql string) {
 	c.CheckExpr = loadString(mod, ptr+60, sql)
 	c.DefaultExpr = loadString(mod, ptr+68, sql)
 	c.CollateName = loadString(mod, ptr+76, sql)
+
+	if ptr, _ := mod.Memory().ReadUint32Le(ptr + 84); ptr != 0 {
+		c.ForeignKeyClause = &ForeignKey{}
+		c.ForeignKeyClause.load(mod, ptr, sql)
+	}
 }
 
-type StatementType uint32
+type ForeignKey struct {
+	Table      string
+	Columns    []string
+	OnDelete   FKAction
+	OnUpdate   FKAction
+	Match      string
+	Deferrable FKDefType
+}
 
-const (
-	CREATE_UNKNOWN StatementType = iota
-	CREATE_TABLE
-	ALTER_RENAME_TABLE
-	ALTER_RENAME_COLUMN
-	ALTER_ADD_COLUMN
-	ALTER_DROP_COLUMN
-)
+func (f *ForeignKey) load(mod api.Module, ptr uint32, sql string) {
+	f.Table = loadString(mod, ptr+0, sql)
 
-type OrderClause uint32
+	f.Columns = loadSlice(mod, ptr+8, func(ptr uint32, res *string) {
+		*res = loadString(mod, ptr, sql)
+	})
 
-const (
-	ORDER_NONE OrderClause = iota
-	ORDER_ASC
-	ORDER_DESC
-)
-
-type ConflictClause uint32
-
-const (
-	CONFLICT_NONE ConflictClause = iota
-	CONFLICT_ROLLBACK
-	CONFLICT_ABORT
-	CONFLICT_FAIL
-	CONFLICT_IGNORE
-	CONFLICT_REPLACE
-)
+	f.OnDelete = loadEnum[FKAction](mod, ptr+16)
+	f.OnUpdate = loadEnum[FKAction](mod, ptr+20)
+	f.Match = loadString(mod, ptr+24, sql)
+	f.Deferrable = loadEnum[FKDefType](mod, ptr+32)
+}
 
 func loadString(mod api.Module, ptr uint32, sql string) string {
 	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
@@ -193,6 +182,20 @@ func loadString(mod api.Module, ptr uint32, sql string) string {
 	}
 	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
 	return sql[off-sqlp : off+len-sqlp]
+}
+
+func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T)) []T {
+	ref, _ := mod.Memory().ReadUint32Le(ptr + 4)
+	if ref == 0 {
+		return nil
+	}
+	len, _ := mod.Memory().ReadUint32Le(ptr + 0)
+	res := make([]T, len)
+	for i := range res {
+		fn(ref, &res[i])
+		ref += 4
+	}
+	return res
 }
 
 func loadEnum[T ~uint32](mod api.Module, ptr uint32) T {

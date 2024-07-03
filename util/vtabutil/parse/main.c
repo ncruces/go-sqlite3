@@ -31,3 +31,12 @@ static_assert(offsetof(sql3column, unique_conflictclause) == 56, "Unexpected off
 static_assert(offsetof(sql3column, check_expr) == 60, "Unexpected offset");
 static_assert(offsetof(sql3column, default_expr) == 68, "Unexpected offset");
 static_assert(offsetof(sql3column, collate_name) == 76, "Unexpected offset");
+static_assert(offsetof(sql3column, foreignkey_clause) == 84, "Unexpected offset");
+
+static_assert(offsetof(sql3foreignkey, table) == 0, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, num_columns) == 8, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, column_name) == 12, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, on_delete) == 16, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, on_update) == 20, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, match) == 24, "Unexpected offset");
+static_assert(offsetof(sql3foreignkey, deferrable) == 32, "Unexpected offset");
