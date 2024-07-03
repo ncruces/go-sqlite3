@@ -2,6 +2,8 @@ module github.com/ncruces/go-sqlite3
 
 go 1.21
 
+toolchain go1.22.5
+
 require (
 	github.com/dchest/siphash v1.2.3
 	github.com/ncruces/julianday v1.0.0
