@@ -1,3 +1,6 @@
+// Package uuid provides functions to generate RFC 4122 UUIDs.
+//
+// https://sqlite.org/src/file/ext/misc/uuid.c
 package uuid
 
 import (
@@ -9,6 +12,19 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
+// Register registers the SQL functions:
+//
+//	uuid([version], [domain/namespace], [id/data])
+//
+// Generates a UUID as a string.
+//
+//	uuid_str(u)
+//
+// Converts a UUID into a well-formed UUID string.
+//
+//	uuid_blob(u)
+//
+// Converts a UUID into a 16-byte blob.
 func Register(db *sqlite3.Conn) {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	db.CreateFunction("uuid", 0, sqlite3.INNOCUOUS, generate)

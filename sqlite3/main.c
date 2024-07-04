@@ -8,7 +8,6 @@
 #include "ext/regexp.c"
 #include "ext/series.c"
 #include "ext/uint.c"
-#include "ext/uuid.c"
 // Bindings
 #include "column.c"
 #include "func.c"
@@ -28,6 +27,5 @@ __attribute__((constructor)) void init() {
   sqlite3_auto_extension((void (*)(void))sqlite3_regexp_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_series_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_uint_init);
-  sqlite3_auto_extension((void (*)(void))sqlite3_uuid_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_time_init);
 }
