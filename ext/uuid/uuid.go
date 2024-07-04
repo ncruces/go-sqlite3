@@ -1,42 +1,105 @@
 package uuid
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func Register(db *sqlite3.Conn) {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	db.CreateFunction("uuid", 0, sqlite3.INNOCUOUS, generate)
 	db.CreateFunction("uuid", 1, sqlite3.INNOCUOUS, generate)
+	db.CreateFunction("uuid", 2, sqlite3.INNOCUOUS, generate)
+	db.CreateFunction("uuid", 3, sqlite3.INNOCUOUS, generate)
 	db.CreateFunction("uuid_str", 1, flags, toString)
 	db.CreateFunction("uuid_blob", 1, flags, toBLOB)
 }
 
 func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	var (
-		version int
-		err     error
-		u       uuid.UUID
+		ver int
+		err error
+		u   uuid.UUID
 	)
 
 	if len(arg) > 0 {
-		version = arg[0].Int()
+		ver = arg[0].Int()
+	} else {
+		ver = 4
 	}
 
-	switch version {
-	case 0, 4:
-		u, err = uuid.NewRandom()
+	switch ver {
 	case 1:
 		u, err = uuid.NewUUID()
+	case 4:
+		u, err = uuid.NewRandom()
 	case 6:
 		u, err = uuid.NewV6()
 	case 7:
 		u, err = uuid.NewV7()
+
+	case 2:
+		var domain uuid.Domain
+		if len(arg) > 1 {
+			domain = uuid.Domain(arg[1].Int64())
+			if domain == 0 {
+				if txt := arg[1].RawText(); len(txt) > 0 {
+					switch txt[0] | 0x20 {
+					case 'g': // group
+						domain = 1
+					case 'o': // org
+						domain = 2
+					}
+				}
+			}
+		}
+		if len(arg) > 2 {
+			id := uint32(arg[2].Int64())
+			u, err = uuid.NewDCESecurity(domain, id)
+		} else if domain == uuid.Person {
+			u, err = uuid.NewDCEPerson()
+		} else if domain == uuid.Group {
+			u, err = uuid.NewDCEGroup()
+		} else {
+			err = util.ErrorString("missing id")
+		}
+
+	case 3, 5:
+		if len(arg) < 2 {
+			err = util.ErrorString("missing data")
+			break
+		}
+		ns, err := fromValue(arg[1])
+		if err != nil {
+			space := arg[1].RawText()
+			switch {
+			case bytes.EqualFold(space, []byte("url")):
+				ns = uuid.NameSpaceURL
+			case bytes.EqualFold(space, []byte("oid")):
+				ns = uuid.NameSpaceOID
+			case bytes.EqualFold(space, []byte("dns")):
+				ns = uuid.NameSpaceDNS
+			case bytes.EqualFold(space, []byte("fqdn")):
+				ns = uuid.NameSpaceDNS
+			case bytes.EqualFold(space, []byte("x500")):
+				ns = uuid.NameSpaceX500
+			default:
+				ctx.ResultError(err)
+				return
+			}
+		}
+		if ver == 3 {
+			u = uuid.NewMD5(ns, arg[2].RawBlob())
+		} else {
+			u = uuid.NewSHA1(ns, arg[2].RawBlob())
+		}
+
 	default:
-		err = fmt.Errorf("invalid version: %d", version)
+		err = fmt.Errorf("invalid version: %d", ver)
 	}
 
 	if err != nil {
