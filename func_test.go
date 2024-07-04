@@ -130,8 +130,8 @@ func ExampleContext_SetAuxData() {
 				ctx.ResultError(err)
 				return
 			}
-			ctx.SetAuxData(0, r)
 			re = r
+			ctx.SetAuxData(0, r)
 		}
 		ctx.ResultBool(re.Match(arg[1].RawText()))
 	})
