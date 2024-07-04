@@ -7,7 +7,6 @@
 package bloom
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/dchest/siphash"
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the bloom_filter virtual table:
@@ -47,7 +47,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 			return nil, err
 		}
 		if nelem <= 0 {
-			return nil, errors.New("bloom: number of elements in filter must be positive")
+			return nil, util.ErrorString("bloom: number of elements in filter must be positive")
 		}
 	} else {
 		nelem = 100
@@ -59,7 +59,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 			return nil, err
 		}
 		if t.prob <= 0 || t.prob >= 1 {
-			return nil, errors.New("bloom: probability must be in the range (0,1)")
+			return nil, util.ErrorString("bloom: probability must be in the range (0,1)")
 		}
 	} else {
 		t.prob = 0.01
@@ -71,7 +71,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 			return nil, err
 		}
 		if t.hashes <= 0 {
-			return nil, errors.New("bloom: number of hash functions must be positive")
+			return nil, util.ErrorString("bloom: number of hash functions must be positive")
 		}
 	} else {
 		t.hashes = max(1, numHashes(t.prob))
@@ -171,7 +171,7 @@ func (t *bloom) Integrity(schema, table string, flags int) error {
 	}
 	defer load.Close()
 
-	err = errors.New("bloom: invalid parameters")
+	err = util.ErrorString("bloom: invalid parameters")
 	if !load.Step() {
 		return err
 	}
@@ -213,9 +213,9 @@ func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
 func (b *bloom) Update(arg ...sqlite3.Value) (rowid int64, err error) {
 	if arg[0].Type() != sqlite3.NULL {
 		if len(arg) == 1 {
-			return 0, errors.New("bloom: elements cannot be deleted")
+			return 0, util.ErrorString("bloom: elements cannot be deleted")
 		}
-		return 0, errors.New("bloom: elements cannot be updated")
+		return 0, util.ErrorString("bloom: elements cannot be updated")
 	}
 
 	blob := arg[2].RawBlob()
