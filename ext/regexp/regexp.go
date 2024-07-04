@@ -42,34 +42,34 @@ func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	re, err := load(ctx, 0, arg[0].Text())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+	} else {
+		ctx.ResultBool(re.Match(arg[1].RawText()))
 	}
-	ctx.ResultBool(re.Match(arg[1].RawText()))
 }
 
 func regexLike(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	re, err := load(ctx, 1, arg[1].Text())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+	} else {
+		ctx.ResultBool(re.Match(arg[0].RawText()))
 	}
-	ctx.ResultBool(re.Match(arg[0].RawText()))
 }
 
 func regexSubstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	re, err := load(ctx, 1, arg[1].Text())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+	} else {
+		ctx.ResultRawText(re.Find(arg[0].RawText()))
 	}
-	ctx.ResultRawText(re.Find(arg[0].RawText()))
 }
 
 func regexReplace(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	re, err := load(ctx, 1, arg[1].Text())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+	} else {
+		ctx.ResultRawText(re.ReplaceAll(arg[0].RawText(), arg[2].RawText()))
 	}
-	ctx.ResultRawText(re.ReplaceAll(arg[0].RawText(), arg[2].RawText()))
 }
