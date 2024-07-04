@@ -7,6 +7,8 @@
 //   - and a REGEXP operator.
 //
 // The implementation uses Go [regexp/syntax] for regular expressions.
+//
+// https://github.com/nalgeon/sqlean/blob/main/docs/regexp.md
 package regexp
 
 import (
