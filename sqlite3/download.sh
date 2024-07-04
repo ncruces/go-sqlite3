@@ -19,7 +19,6 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/ieee754.
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/regexp.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/series.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/uint.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/uuid.c"
 cd ~-
 
 cd ../vfs/tests/mptest/testdata/

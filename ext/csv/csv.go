@@ -9,7 +9,6 @@ package csv
 import (
 	"bufio"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -17,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/osutil"
 	"github.com/ncruces/go-sqlite3/util/vtabutil"
 )
@@ -73,7 +73,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		}
 
 		if (filename == "") == (data == "") {
-			return nil, errors.New(`csv: must specify either "filename" or "data" but not both`)
+			return nil, util.ErrorString(`csv: must specify either "filename" or "data" but not both`)
 		}
 
 		table := &table{
