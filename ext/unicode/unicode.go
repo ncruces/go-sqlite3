@@ -111,7 +111,7 @@ func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			return
 		}
 		re = r
-		ctx.SetAuxData(0, re)
+		ctx.SetAuxData(0, r)
 	}
 	ctx.ResultBool(re.Match(arg[1].RawText()))
 }

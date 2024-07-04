@@ -10,6 +10,8 @@ import (
 )
 
 func Test_generate(t *testing.T) {
+	t.Parallel()
+
 	db, err := driver.Open(":memory:", func(conn *sqlite3.Conn) error {
 		Register(conn)
 		return nil
@@ -130,6 +132,8 @@ func Test_generate(t *testing.T) {
 }
 
 func Test_convert(t *testing.T) {
+	t.Parallel()
+
 	db, err := driver.Open(":memory:", func(conn *sqlite3.Conn) error {
 		Register(conn)
 		return nil
