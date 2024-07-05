@@ -14,13 +14,13 @@ import (
 
 // https://antonz.org/sqlite-pivot-table/
 func Example() {
+	sqlite3.AutoExtension(pivot.Register)
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	pivot.Register(db)
 
 	err = db.Exec(`
 		CREATE TABLE sales(product TEXT, year INT, income DECIMAL);

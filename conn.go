@@ -75,6 +75,13 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
+	allExtensions(func(f func(*Conn) error) bool {
+		err = f(c)
+		return err == nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

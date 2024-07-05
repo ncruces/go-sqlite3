@@ -50,13 +50,13 @@ func Example_driver() {
 }
 
 func Example() {
+	sqlite3.AutoExtension(array.Register)
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	array.Register(db)
 
 	stmt, _, err := db.Prepare(`
 		SELECT name
