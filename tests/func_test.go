@@ -207,7 +207,10 @@ func TestAnyCollationNeeded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db.AnyCollationNeeded()
+	err = db.AnyCollationNeeded()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	stmt, _, err := db.Prepare(`SELECT id, name FROM users ORDER BY name COLLATE silly`)
 	if err != nil {
