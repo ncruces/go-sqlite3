@@ -3,7 +3,6 @@ package zorder_test
 import (
 	"testing"
 
-	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/zorder"
@@ -13,10 +12,7 @@ import (
 func TestRegister_zorder(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		zorder.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,10 +56,7 @@ func TestRegister_zorder(t *testing.T) {
 func TestRegister_unzorder(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		zorder.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,10 +83,7 @@ func TestRegister_unzorder(t *testing.T) {
 func TestRegister_error(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		zorder.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

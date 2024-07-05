@@ -15,10 +15,7 @@ import (
 )
 
 func Example_driver() {
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		array.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", array.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,10 +88,7 @@ func Example() {
 func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		array.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

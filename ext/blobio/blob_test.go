@@ -18,10 +18,7 @@ import (
 
 func Example() {
 	// Open the database, registering the extension.
-	db, err := driver.Open("file:/test.db?vfs=memdb", func(conn *sqlite3.Conn) error {
-		blobio.Register(conn)
-		return nil
-	})
+	db, err := driver.Open("file:/test.db?vfs=memdb", blobio.Register)
 
 	if err != nil {
 		log.Fatal(err)
