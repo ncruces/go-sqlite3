@@ -18,6 +18,7 @@ package unicode
 
 import (
 	"bytes"
+	"errors"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -30,29 +31,29 @@ import (
 )
 
 // Register registers Unicode aware functions for a database connection.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	return errors.Join(
+		db.CreateFunction("like", 2, flags, like),
+		db.CreateFunction("like", 3, flags, like),
+		db.CreateFunction("upper", 1, flags, upper),
+		db.CreateFunction("upper", 2, flags, upper),
+		db.CreateFunction("lower", 1, flags, lower),
+		db.CreateFunction("lower", 2, flags, lower),
+		db.CreateFunction("regexp", 2, flags, regex),
+		db.CreateFunction("icu_load_collation", 2, sqlite3.DIRECTONLY,
+			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+				name := arg[1].Text()
+				if name == "" {
+					return
+				}
 
-	db.CreateFunction("like", 2, flags, like)
-	db.CreateFunction("like", 3, flags, like)
-	db.CreateFunction("upper", 1, flags, upper)
-	db.CreateFunction("upper", 2, flags, upper)
-	db.CreateFunction("lower", 1, flags, lower)
-	db.CreateFunction("lower", 2, flags, lower)
-	db.CreateFunction("regexp", 2, flags, regex)
-	db.CreateFunction("icu_load_collation", 2, sqlite3.DIRECTONLY,
-		func(ctx sqlite3.Context, arg ...sqlite3.Value) {
-			name := arg[1].Text()
-			if name == "" {
-				return
-			}
-
-			err := RegisterCollation(db, arg[0].Text(), name)
-			if err != nil {
-				ctx.ResultError(err)
-				return
-			}
-		})
+				err := RegisterCollation(db, arg[0].Text(), name)
+				if err != nil {
+					ctx.ResultError(err)
+					return
+				}
+			}))
 }
 
 // RegisterCollation registers a Unicode collation sequence for a database connection.

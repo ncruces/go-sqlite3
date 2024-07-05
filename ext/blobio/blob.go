@@ -29,10 +29,11 @@ import (
 // along with the [sqlite3.Blob] handle.
 //
 // https://sqlite.org/c3ref/blob.html
-func Register(db *sqlite3.Conn) {
-	db.CreateFunction("readblob", 6, 0, readblob)
-	db.CreateFunction("writeblob", 6, 0, writeblob)
-	db.CreateFunction("openblob", -1, 0, openblob)
+func Register(db *sqlite3.Conn) error {
+	return errors.Join(
+		db.CreateFunction("readblob", 6, 0, readblob),
+		db.CreateFunction("writeblob", 6, 0, writeblob),
+		db.CreateFunction("openblob", -1, 0, openblob))
 }
 
 // OpenCallback is the type for the openblob callback.

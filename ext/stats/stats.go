@@ -44,33 +44,38 @@
 // [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 package stats
 
-import "github.com/ncruces/go-sqlite3"
+import (
+	"errors"
+
+	"github.com/ncruces/go-sqlite3"
+)
 
 // Register registers statistics functions.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop))
-	db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp))
-	db.CreateWindowFunction("stddev_pop", 1, flags, newVariance(stddev_pop))
-	db.CreateWindowFunction("stddev_samp", 1, flags, newVariance(stddev_samp))
-	db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop))
-	db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp))
-	db.CreateWindowFunction("corr", 2, flags, newCovariance(corr))
-	db.CreateWindowFunction("regr_r2", 2, flags, newCovariance(regr_r2))
-	db.CreateWindowFunction("regr_sxx", 2, flags, newCovariance(regr_sxx))
-	db.CreateWindowFunction("regr_syy", 2, flags, newCovariance(regr_syy))
-	db.CreateWindowFunction("regr_sxy", 2, flags, newCovariance(regr_sxy))
-	db.CreateWindowFunction("regr_avgx", 2, flags, newCovariance(regr_avgx))
-	db.CreateWindowFunction("regr_avgy", 2, flags, newCovariance(regr_avgy))
-	db.CreateWindowFunction("regr_slope", 2, flags, newCovariance(regr_slope))
-	db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept))
-	db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count))
-	db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json))
-	db.CreateWindowFunction("median", 1, flags, newPercentile(median))
-	db.CreateWindowFunction("percentile_cont", 2, flags, newPercentile(percentile_cont))
-	db.CreateWindowFunction("percentile_disc", 2, flags, newPercentile(percentile_disc))
-	db.CreateWindowFunction("every", 1, flags, newBoolean(every))
-	db.CreateWindowFunction("some", 1, flags, newBoolean(some))
+	return errors.Join(
+		db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop)),
+		db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp)),
+		db.CreateWindowFunction("stddev_pop", 1, flags, newVariance(stddev_pop)),
+		db.CreateWindowFunction("stddev_samp", 1, flags, newVariance(stddev_samp)),
+		db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop)),
+		db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp)),
+		db.CreateWindowFunction("corr", 2, flags, newCovariance(corr)),
+		db.CreateWindowFunction("regr_r2", 2, flags, newCovariance(regr_r2)),
+		db.CreateWindowFunction("regr_sxx", 2, flags, newCovariance(regr_sxx)),
+		db.CreateWindowFunction("regr_syy", 2, flags, newCovariance(regr_syy)),
+		db.CreateWindowFunction("regr_sxy", 2, flags, newCovariance(regr_sxy)),
+		db.CreateWindowFunction("regr_avgx", 2, flags, newCovariance(regr_avgx)),
+		db.CreateWindowFunction("regr_avgy", 2, flags, newCovariance(regr_avgy)),
+		db.CreateWindowFunction("regr_slope", 2, flags, newCovariance(regr_slope)),
+		db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept)),
+		db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count)),
+		db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json)),
+		db.CreateWindowFunction("median", 1, flags, newPercentile(median)),
+		db.CreateWindowFunction("percentile_cont", 2, flags, newPercentile(percentile_cont)),
+		db.CreateWindowFunction("percentile_disc", 2, flags, newPercentile(percentile_disc)),
+		db.CreateWindowFunction("every", 1, flags, newBoolean(every)),
+		db.CreateWindowFunction("some", 1, flags, newBoolean(some)))
 }
 
 const (

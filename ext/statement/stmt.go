@@ -17,8 +17,8 @@ import (
 )
 
 // Register registers the statement virtual table.
-func Register(db *sqlite3.Conn) {
-	sqlite3.CreateModule(db, "statement", declare, declare)
+func Register(db *sqlite3.Conn) error {
+	return sqlite3.CreateModule(db, "statement", declare, declare)
 }
 
 type table struct {

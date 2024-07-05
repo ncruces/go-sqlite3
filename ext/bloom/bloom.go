@@ -20,8 +20,8 @@ import (
 // Register registers the bloom_filter virtual table:
 //
 //	CREATE VIRTUAL TABLE foo USING bloom_filter(nElements, falseProb, kHashes)
-func Register(db *sqlite3.Conn) {
-	sqlite3.CreateModule(db, "bloom_filter", create, connect)
+func Register(db *sqlite3.Conn) error {
+	return sqlite3.CreateModule(db, "bloom_filter", create, connect)
 }
 
 type bloom struct {

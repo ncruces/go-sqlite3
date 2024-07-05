@@ -21,47 +21,60 @@ package hash
 
 import (
 	"crypto"
+	"errors"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers cryptographic hash functions for a database connection.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 
+	var errs util.ErrorJoiner
 	if crypto.MD4.Available() {
-		db.CreateFunction("md4", 1, flags, md4Func)
+		errs.Join(
+			db.CreateFunction("md4", 1, flags, md4Func))
 	}
 	if crypto.MD5.Available() {
-		db.CreateFunction("md5", 1, flags, md5Func)
+		errs.Join(
+			db.CreateFunction("md5", 1, flags, md5Func))
 	}
 	if crypto.SHA1.Available() {
-		db.CreateFunction("sha1", 1, flags, sha1Func)
+		errs.Join(
+			db.CreateFunction("sha1", 1, flags, sha1Func))
 	}
 	if crypto.SHA3_512.Available() {
-		db.CreateFunction("sha3", 1, flags, sha3Func)
-		db.CreateFunction("sha3", 2, flags, sha3Func)
+		errs.Join(
+			db.CreateFunction("sha3", 1, flags, sha3Func),
+			db.CreateFunction("sha3", 2, flags, sha3Func))
 	}
 	if crypto.SHA256.Available() {
-		db.CreateFunction("sha224", 1, flags, sha224Func)
-		db.CreateFunction("sha256", 1, flags, sha256Func)
-		db.CreateFunction("sha256", 2, flags, sha256Func)
+		errs.Join(
+			db.CreateFunction("sha224", 1, flags, sha224Func),
+			db.CreateFunction("sha256", 1, flags, sha256Func),
+			db.CreateFunction("sha256", 2, flags, sha256Func))
 	}
 	if crypto.SHA512.Available() {
-		db.CreateFunction("sha384", 1, flags, sha384Func)
-		db.CreateFunction("sha512", 1, flags, sha512Func)
-		db.CreateFunction("sha512", 2, flags, sha512Func)
+		errs.Join(
+			db.CreateFunction("sha384", 1, flags, sha384Func),
+			db.CreateFunction("sha512", 1, flags, sha512Func),
+			db.CreateFunction("sha512", 2, flags, sha512Func))
 	}
 	if crypto.BLAKE2s_256.Available() {
-		db.CreateFunction("blake2s", 1, flags, blake2sFunc)
+		errs.Join(
+			db.CreateFunction("blake2s", 1, flags, blake2sFunc))
 	}
 	if crypto.BLAKE2b_512.Available() {
-		db.CreateFunction("blake2b", 1, flags, blake2bFunc)
-		db.CreateFunction("blake2b", 2, flags, blake2bFunc)
+		errs.Join(
+			db.CreateFunction("blake2b", 1, flags, blake2bFunc),
+			db.CreateFunction("blake2b", 2, flags, blake2bFunc))
 	}
 	if crypto.RIPEMD160.Available() {
-		db.CreateFunction("ripemd160", 1, flags, ripemd160Func)
+		errs.Join(
+			db.CreateFunction("ripemd160", 1, flags, ripemd160Func))
 	}
+	return errors.Join(errs...)
 }
 
 func md4Func(ctx sqlite3.Context, arg ...sqlite3.Value) {

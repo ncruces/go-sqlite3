@@ -13,6 +13,7 @@ package lines
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -25,27 +26,28 @@ import (
 // The lines function reads from a database blob or text.
 // The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, [os.Open] is used to open the file.
-func Register(db *sqlite3.Conn) {
-	RegisterFS(db, osutil.FS{})
+func Register(db *sqlite3.Conn) error {
+	return RegisterFS(db, osutil.FS{})
 }
 
 // RegisterFS registers the lines and lines_read table-valued functions.
 // The lines function reads from a database blob or text.
 // The lines_read function reads from a file or an [io.Reader].
 // If a filename is specified, fsys is used to open the file.
-func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
-	sqlite3.CreateModule(db, "lines", nil,
-		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
-			db.VTabConfig(sqlite3.VTAB_INNOCUOUS)
-			return lines{}, err
-		})
-	sqlite3.CreateModule(db, "lines_read", nil,
-		func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-			err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
-			db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
-			return lines{fsys}, err
-		})
+func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
+	return errors.Join(
+		sqlite3.CreateModule(db, "lines", nil,
+			func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
+				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+				db.VTabConfig(sqlite3.VTAB_INNOCUOUS)
+				return lines{}, err
+			}),
+		sqlite3.CreateModule(db, "lines_read", nil,
+			func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
+				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+				db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
+				return lines{fsys}, err
+			}))
 }
 
 type lines struct {
