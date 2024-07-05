@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
@@ -16,10 +15,7 @@ import (
 func Test_writefile(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", Register)
 	if err != nil {
 		t.Fatal(err)
 	}
