@@ -10,7 +10,7 @@ require (
 	github.com/ncruces/sort v0.1.2
 	github.com/psanford/httpreadat v0.1.0
 	github.com/tetratelabs/wazero v1.7.3
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.22.0
 	golang.org/x/text v0.16.0
