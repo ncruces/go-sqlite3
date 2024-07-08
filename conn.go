@@ -72,13 +72,9 @@ func newConn(filename string, flags OpenFlag) (conn *Conn, err error) {
 	c.arena = c.newArena(1024)
 	c.ctx = context.WithValue(c.ctx, connKey{}, c)
 	c.handle, err = c.openDB(filename, flags)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		err = initExtensions(c)
 	}
-	allExtensions(func(f func(*Conn) error) bool {
-		err = f(c)
-		return err == nil
-	})
 	if err != nil {
 		return nil, err
 	}

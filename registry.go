@@ -18,12 +18,13 @@ func AutoExtension(entryPoint func(*Conn) error) {
 	extRegistry = append(extRegistry, entryPoint)
 }
 
-func allExtensions(yield func(func(*Conn) error) bool) {
+func initExtensions(c *Conn) error {
 	extRegistryMtx.RLock()
 	defer extRegistryMtx.RUnlock()
-	for _, ext := range extRegistry {
-		if !yield(ext) {
-			return
+	for _, f := range extRegistry {
+		if err := f(c); err != nil {
+			return err
 		}
 	}
+	return nil
 }
