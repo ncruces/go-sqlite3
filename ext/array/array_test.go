@@ -133,7 +133,10 @@ func Test_array_errors(t *testing.T) {
 	}
 	defer db.Close()
 
-	array.Register(db)
+	err = array.Register(db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = db.Exec(`SELECT * FROM array()`)
 	if err == nil {

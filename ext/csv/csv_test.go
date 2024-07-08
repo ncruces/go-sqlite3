@@ -18,7 +18,10 @@ func Example() {
 	}
 	defer db.Close()
 
-	csv.Register(db)
+	err = csv.Register(db)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE eurofxref USING csv(
@@ -51,6 +54,10 @@ func Example() {
 	// On Twosday, 1€ = $1.1342
 }
 
+func init() {
+	sqlite3.AutoExtension(csv.Register)
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
@@ -59,8 +66,6 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	csv.Register(db)
 
 	const data = `
 # Comment
@@ -124,8 +129,6 @@ func TestAffinity(t *testing.T) {
 	}
 	defer db.Close()
 
-	csv.Register(db)
-
 	const data = "01\n0.10\ne"
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE temp.nums USING csv(
@@ -167,8 +170,6 @@ func TestRegister_errors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	csv.Register(db)
 
 	err = db.Exec(`CREATE VIRTUAL TABLE temp.users USING csv()`)
 	if err == nil {

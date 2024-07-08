@@ -12,6 +12,10 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
+func init() {
+	sqlite3.AutoExtension(bloom.Register)
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
@@ -20,8 +24,6 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	bloom.Register(db)
 
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE sports_cars USING bloom_filter(20);
@@ -89,8 +91,6 @@ func Test_compatible(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	bloom.Register(db)
 
 	query, _, err := db.Prepare(`SELECT COUNT(*) FROM plants(?)`)
 	if err != nil {

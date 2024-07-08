@@ -5,7 +5,6 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/ext/stats"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
@@ -17,8 +16,6 @@ func TestRegister_boolean(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	stats.Register(db)
 
 	err = db.Exec(`CREATE TABLE data (x)`)
 	if err != nil {

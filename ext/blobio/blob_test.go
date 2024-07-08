@@ -57,6 +57,11 @@ func Example() {
 	// Hello BLOB!
 }
 
+func init() {
+	sqlite3.AutoExtension(blobio.Register)
+	sqlite3.AutoExtension(array.Register)
+}
+
 func Test_readblob(t *testing.T) {
 	t.Parallel()
 
@@ -65,9 +70,6 @@ func Test_readblob(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	blobio.Register(db)
-	array.Register(db)
 
 	err = db.Exec(`SELECT readblob()`)
 	if err == nil {
@@ -125,9 +127,6 @@ func Test_openblob(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	blobio.Register(db)
-	array.Register(db)
 
 	err = db.Exec(`SELECT openblob()`)
 	if err == nil {

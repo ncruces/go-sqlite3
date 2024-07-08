@@ -68,7 +68,10 @@ func Test_fsdir_errors(t *testing.T) {
 	}
 	defer db.Close()
 
-	fileio.Register(db)
+	err = fileio.Register(db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = db.Exec(`SELECT name FROM fsdir()`)
 	if err == nil {
