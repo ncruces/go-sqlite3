@@ -4,7 +4,7 @@ set -euo pipefail
 cd -P -- "$(dirname -- "$0")"
 
 ROOT=../../../
-BINARYEN="$ROOT/tools/binaryen-version_117/bin"
+BINARYEN="$ROOT/tools/binaryen-version_118/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -flto -g0 -Oz \
