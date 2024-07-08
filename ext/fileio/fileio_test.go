@@ -17,10 +17,7 @@ import (
 func Test_lsmode(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		fileio.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", fileio.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

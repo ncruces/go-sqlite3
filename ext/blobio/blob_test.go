@@ -18,10 +18,7 @@ import (
 
 func Example() {
 	// Open the database, registering the extension.
-	db, err := driver.Open("file:/test.db?vfs=memdb", func(conn *sqlite3.Conn) error {
-		blobio.Register(conn)
-		return nil
-	})
+	db, err := driver.Open("file:/test.db?vfs=memdb", blobio.Register)
 
 	if err != nil {
 		log.Fatal(err)
@@ -60,6 +57,11 @@ func Example() {
 	// Hello BLOB!
 }
 
+func init() {
+	sqlite3.AutoExtension(blobio.Register)
+	sqlite3.AutoExtension(array.Register)
+}
+
 func Test_readblob(t *testing.T) {
 	t.Parallel()
 
@@ -68,9 +70,6 @@ func Test_readblob(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	blobio.Register(db)
-	array.Register(db)
 
 	err = db.Exec(`SELECT readblob()`)
 	if err == nil {
@@ -128,9 +127,6 @@ func Test_openblob(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	blobio.Register(db)
-	array.Register(db)
 
 	err = db.Exec(`SELECT openblob()`)
 	if err == nil {

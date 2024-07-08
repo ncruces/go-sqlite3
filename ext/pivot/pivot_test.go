@@ -14,13 +14,13 @@ import (
 
 // https://antonz.org/sqlite-pivot-table/
 func Example() {
+	sqlite3.AutoExtension(pivot.Register)
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	pivot.Register(db)
 
 	err = db.Exec(`
 		CREATE TABLE sales(product TEXT, year INT, income DECIMAL);
@@ -83,6 +83,10 @@ func Example() {
 	// gamma   80      75      78      80
 }
 
+func init() {
+	sqlite3.AutoExtension(pivot.Register)
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
@@ -91,8 +95,6 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	pivot.Register(db)
 
 	err = db.Exec(`
 		CREATE TABLE r AS
@@ -152,8 +154,6 @@ func TestRegister_errors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	pivot.Register(db)
 
 	err = db.Exec(`CREATE VIRTUAL TABLE pivot USING pivot()`)
 	if err == nil {

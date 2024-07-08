@@ -4,15 +4,18 @@
 package zorder
 
 import (
+	"errors"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Register registers the zorder and unzorder SQL functions.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	db.CreateFunction("zorder", -1, flags, zorder)
-	db.CreateFunction("unzorder", 3, flags, unzorder)
+	return errors.Join(
+		db.CreateFunction("zorder", -1, flags, zorder),
+		db.CreateFunction("unzorder", 3, flags, unzorder))
 }
 
 func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {

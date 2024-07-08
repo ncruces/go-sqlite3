@@ -10,6 +10,10 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
+func init() {
+	sqlite3.AutoExtension(stats.Register)
+}
+
 func TestRegister_variance(t *testing.T) {
 	t.Parallel()
 
@@ -18,8 +22,6 @@ func TestRegister_variance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	stats.Register(db)
 
 	err = db.Exec(`CREATE TABLE data (x)`)
 	if err != nil {
@@ -87,8 +89,6 @@ func TestRegister_covariance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	stats.Register(db)
 
 	err = db.Exec(`CREATE TABLE data (y, x)`)
 	if err != nil {
@@ -216,8 +216,6 @@ func Benchmark_variance(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer db.Close()
-
-	stats.Register(db)
 
 	stmt, _, err := db.Prepare(`SELECT var_pop(value) FROM generate_series(0, ?)`)
 	if err != nil {

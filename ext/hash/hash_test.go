@@ -7,7 +7,6 @@ import (
 	_ "crypto/sha512"
 	"testing"
 
-	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
@@ -53,10 +52,7 @@ func TestRegister(t *testing.T) {
 		{"blake2b('', 256)", "0E5751C026E543B2E8AB2EB06099DAA1D1E5DF47778F7787FAAB45CDF12FE3A8"},
 	}
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", Register)
 	if err != nil {
 		t.Fatal(err)
 	}

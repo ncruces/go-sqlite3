@@ -13,8 +13,8 @@ import (
 )
 
 // Register registers the pivot virtual table.
-func Register(db *sqlite3.Conn) {
-	sqlite3.CreateModule(db, "pivot", declare, declare)
+func Register(db *sqlite3.Conn) error {
+	return sqlite3.CreateModule(db, "pivot", declare, declare)
 }
 
 type table struct {

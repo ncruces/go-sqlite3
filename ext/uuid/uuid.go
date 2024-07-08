@@ -5,6 +5,7 @@ package uuid
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -25,14 +26,15 @@ import (
 //	uuid_blob(u)
 //
 // Converts a UUID into a 16-byte blob.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	db.CreateFunction("uuid", 0, sqlite3.INNOCUOUS, generate)
-	db.CreateFunction("uuid", 1, sqlite3.INNOCUOUS, generate)
-	db.CreateFunction("uuid", 2, sqlite3.INNOCUOUS, generate)
-	db.CreateFunction("uuid", 3, sqlite3.INNOCUOUS, generate)
-	db.CreateFunction("uuid_str", 1, flags, toString)
-	db.CreateFunction("uuid_blob", 1, flags, toBLOB)
+	return errors.Join(
+		db.CreateFunction("uuid", 0, sqlite3.INNOCUOUS, generate),
+		db.CreateFunction("uuid", 1, sqlite3.INNOCUOUS, generate),
+		db.CreateFunction("uuid", 2, sqlite3.INNOCUOUS, generate),
+		db.CreateFunction("uuid", 3, sqlite3.INNOCUOUS, generate),
+		db.CreateFunction("uuid_str", 1, flags, toString),
+		db.CreateFunction("uuid_blob", 1, flags, toBlob))
 }
 
 func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -147,7 +149,7 @@ func fromValue(arg sqlite3.Value) (u uuid.UUID, err error) {
 	return u, err
 }
 
-func toBLOB(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func toBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	u, err := fromValue(arg[0])
 	if err != nil {
 		ctx.ResultError(err)

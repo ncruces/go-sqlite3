@@ -12,13 +12,13 @@ import (
 )
 
 func Example() {
+	sqlite3.AutoExtension(statement.Register)
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	statement.Register(db)
 
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE split_date USING statement((
@@ -48,6 +48,10 @@ func Example() {
 	// Twosday was 2022-2-22
 }
 
+func init() {
+	sqlite3.AutoExtension(statement.Register)
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
@@ -56,8 +60,6 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	statement.Register(db)
 
 	err = db.Exec(`
 		CREATE VIRTUAL TABLE arguments USING statement((SELECT ? AS a, ? AS b, ? AS c))
@@ -106,8 +108,6 @@ func TestRegister_errors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	statement.Register(db)
 
 	err = db.Exec(`CREATE VIRTUAL TABLE split_date USING statement()`)
 	if err == nil {

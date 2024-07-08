@@ -15,10 +15,7 @@ import (
 )
 
 func Example_driver() {
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		array.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", array.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,13 +50,13 @@ func Example_driver() {
 }
 
 func Example() {
+	sqlite3.AutoExtension(array.Register)
+
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	array.Register(db)
 
 	stmt, _, err := db.Prepare(`
 		SELECT name
@@ -91,10 +88,7 @@ func Example() {
 func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		array.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +133,10 @@ func Test_array_errors(t *testing.T) {
 	}
 	defer db.Close()
 
-	array.Register(db)
+	err = array.Register(db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = db.Exec(`SELECT * FROM array()`)
 	if err == nil {

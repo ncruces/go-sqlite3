@@ -12,19 +12,20 @@
 package regexp
 
 import (
+	"errors"
 	"regexp"
 
 	"github.com/ncruces/go-sqlite3"
 )
 
 // Register registers Unicode aware functions for a database connection.
-func Register(db *sqlite3.Conn) {
+func Register(db *sqlite3.Conn) error {
 	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-
-	db.CreateFunction("regexp", 2, flags, regex)
-	db.CreateFunction("regexp_like", 2, flags, regexLike)
-	db.CreateFunction("regexp_substr", 2, flags, regexSubstr)
-	db.CreateFunction("regexp_replace", 3, flags, regexReplace)
+	return errors.Join(
+		db.CreateFunction("regexp", 2, flags, regex),
+		db.CreateFunction("regexp_like", 2, flags, regexLike),
+		db.CreateFunction("regexp_substr", 2, flags, regexSubstr),
+		db.CreateFunction("regexp_replace", 3, flags, regexReplace))
 }
 
 func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {

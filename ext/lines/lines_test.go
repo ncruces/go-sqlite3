@@ -18,10 +18,7 @@ import (
 )
 
 func Example() {
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		lines.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,10 +67,7 @@ func Example() {
 func Test_lines(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		lines.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,10 +97,7 @@ func Test_lines(t *testing.T) {
 func Test_lines_error(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		lines.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,10 +121,7 @@ func Test_lines_error(t *testing.T) {
 func Test_lines_read(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		lines.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -164,10 +152,7 @@ func Test_lines_read(t *testing.T) {
 func Test_lines_test(t *testing.T) {
 	t.Parallel()
 
-	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
-		lines.Register(c)
-		return nil
-	})
+	db, err := driver.Open(":memory:", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}

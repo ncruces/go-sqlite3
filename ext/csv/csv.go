@@ -23,13 +23,13 @@ import (
 
 // Register registers the CSV virtual table.
 // If a filename is specified, [os.Open] is used to open the file.
-func Register(db *sqlite3.Conn) {
-	RegisterFS(db, osutil.FS{})
+func Register(db *sqlite3.Conn) error {
+	return RegisterFS(db, osutil.FS{})
 }
 
 // RegisterFS registers the CSV virtual table.
 // If a filename is specified, fsys is used to open the file.
-func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
+func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
 		var (
 			filename string
@@ -118,7 +118,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) {
 		return table, nil
 	}
 
-	sqlite3.CreateModule(db, "csv", declare, declare)
+	return sqlite3.CreateModule(db, "csv", declare, declare)
 }
 
 type table struct {
