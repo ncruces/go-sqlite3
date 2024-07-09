@@ -218,6 +218,9 @@ func (b *bloom) Update(arg ...sqlite3.Value) (rowid int64, err error) {
 		return 0, util.ErrorString("bloom: elements cannot be updated")
 	}
 
+	if arg[2].NoChange() {
+		return 0, nil
+	}
 	blob := arg[2].RawBlob()
 
 	f, err := b.db.OpenBlob(b.schema, b.storage, "data", 1, true)
@@ -303,6 +306,9 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 }
 
 func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
+	if ctx.VTabNoChange() {
+		return nil
+	}
 	switch n {
 	case 0:
 		ctx.ResultBool(true)
