@@ -168,6 +168,44 @@ func TestCreateFunction(t *testing.T) {
 	}
 }
 
+func TestCreateFunction_error(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var want error
+	err = db.CreateFunction("test", 0, sqlite3.INNOCUOUS, func(ctx sqlite3.Context, _ ...sqlite3.Value) {
+		ctx.ResultError(want)
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT test()`)
+	if err != nil {
+		t.Error(err)
+	}
+	defer func() { recover() }()
+	defer stmt.Close()
+
+	for _, want = range []error{sqlite3.FULL, sqlite3.TOOBIG} {
+		if stmt.Step() {
+			t.Error("want error")
+		}
+		if got := stmt.Err(); !errors.Is(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	}
+
+	want = sqlite3.NOMEM
+	stmt.Step()
+}
+
 func TestOverloadFunction(t *testing.T) {
 	t.Parallel()
 
