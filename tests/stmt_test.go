@@ -611,9 +611,39 @@ func TestStmt_ColumnTime(t *testing.T) {
 			t.Errorf("want error")
 		}
 	}
+}
+
+func TestStmt_ColumnValue(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt.Step() {
+		val := stmt.ColumnValue(0)
+		if _, err := val.InFirst(); err == nil {
+			t.Error("want error")
+		}
+		if _, err := val.InNext(); err == nil {
+			t.Error("want error")
+		}
+	}
 
 	if got := stmt.Status(sqlite3.STMTSTATUS_RUN, true); got != 1 {
 		t.Errorf("got %d, want 1", got)
+	}
+
+	if got := stmt.Status(math.MaxUint32, false); got != 0 {
+		t.Errorf("got %d, want 0", got)
 	}
 }
 

@@ -78,6 +78,13 @@ func Test_readblob(t *testing.T) {
 		t.Log(err)
 	}
 
+	err = db.Exec(`SELECT readblob('main', 'test1', 'col', 1, 1, 1)`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
 	err = db.Exec(`
 		CREATE TABLE test1 (col);
 		CREATE TABLE test2 (col);
@@ -86,6 +93,18 @@ func Test_readblob(t *testing.T) {
 	`)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT readblob('main', 'test1', 'col', 1, -1, 1)`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`SELECT readblob('main', 'test1', 'col', 1, 1, 0)`)
+	if err != nil {
+		t.Log(err)
 	}
 
 	stmt, _, err := db.Prepare(`SELECT readblob('main', value, 'col', 1, 1, 1) FROM array(?)`)
@@ -119,6 +138,51 @@ func Test_readblob(t *testing.T) {
 	}
 }
 
+func Test_writeblob(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`SELECT writeblob()`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`SELECT writeblob('main', 'test', 'col', 1, 1, x'')`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`
+		CREATE TABLE test (col);
+		INSERT INTO test VALUES (x'cafe');
+		-- INSERT INTO test2 VALUES (x'babe');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT writeblob('main', 'test', 'col', 1, -1, x'')`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`SELECT writeblob('main', 'test', 'col', 1, 0, x'babe')`)
+	if err != nil {
+		t.Log(err)
+	}
+}
+
 func Test_openblob(t *testing.T) {
 	t.Parallel()
 
@@ -129,6 +193,13 @@ func Test_openblob(t *testing.T) {
 	defer db.Close()
 
 	err = db.Exec(`SELECT openblob()`)
+	if err == nil {
+		t.Fatal("want error")
+	} else {
+		t.Log(err)
+	}
+
+	err = db.Exec(`SELECT openblob('main', 'test1', 'col', 1, false, NULL)`)
 	if err == nil {
 		t.Fatal("want error")
 	} else {
