@@ -17,6 +17,8 @@ import (
 	_ "embed"
 
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -39,7 +41,9 @@ func TestMain(m *testing.M) {
 	initFlags()
 
 	ctx := context.Background()
-	rt = wazero.NewRuntime(ctx)
+	cfg := wazero.NewRuntimeConfig().
+		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
+	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
 	_, err := env.Instantiate(ctx)

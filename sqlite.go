@@ -13,6 +13,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 )
 
 // Configure SQLite Wasm.
@@ -45,7 +46,7 @@ var instance struct {
 
 func compileSQLite() {
 	if RuntimeConfig == nil {
-		RuntimeConfig = wazero.NewRuntimeConfig()
+		RuntimeConfig = wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
 	}
 
 	ctx := context.Background()
