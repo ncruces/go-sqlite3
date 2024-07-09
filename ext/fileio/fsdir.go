@@ -54,7 +54,7 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 type cursor struct {
 	fsdir
 	base   string
-	resume func(struct{}) (entry, bool)
+	resume resume
 	cancel func()
 	curr   entry
 	eof    bool
@@ -92,25 +92,14 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		c.base = base
 	}
 
-	c.resume, c.cancel = coroNew(func(_ struct{}, yield func(entry) struct{}) entry {
-		walkDir := func(path string, d fs.DirEntry, err error) error {
-			yield(entry{d, err, path})
-			return nil
-		}
-		if c.fsys != nil {
-			fs.WalkDir(c.fsys, root, walkDir)
-		} else {
-			filepath.WalkDir(root, walkDir)
-		}
-		return entry{}
-	})
+	c.resume, c.cancel = pull(c, root)
 	c.eof = false
 	c.rowID = 0
 	return c.Next()
 }
 
 func (c *cursor) Next() error {
-	curr, ok := c.resume(struct{}{})
+	curr, ok := next(c)
 	c.curr = curr
 	c.eof = !ok
 	c.rowID++
