@@ -59,8 +59,17 @@ jobs:
     - name: Test GORM
       run: gormlite/test.sh
 
+    - name: Test coverage
+      run: |
+        go install github.com/dave/courtney@latest
+        courtney
+      if: |
+        github.event_name == 'push' &&
+        matrix.os == 'ubuntu-latest'
+
     - uses: ncruces/go-coverage-report@v0
       with:
+        coverage-file: coverage.out
         chart: true
         amend: true
       if: |
