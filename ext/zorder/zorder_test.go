@@ -1,6 +1,8 @@
 package zorder_test
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
@@ -91,6 +93,18 @@ func TestRegister_error(t *testing.T) {
 
 	var got int64
 	err = db.QueryRow(`SELECT zorder(1, 2, 3, 100000)`).Scan(&got)
+	if err == nil {
+		t.Error("want error")
+	}
+
+	var buf strings.Builder
+	buf.WriteString("SELECT zorder(0")
+	for i := 1; i < 80; i++ {
+		buf.WriteByte(',')
+		buf.WriteString(strconv.Itoa(0))
+	}
+	buf.WriteByte(')')
+	err = db.QueryRow(buf.String()).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}

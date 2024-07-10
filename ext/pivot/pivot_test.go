@@ -144,6 +144,11 @@ func TestRegister(t *testing.T) {
 			t.Errorf("got %d, want 3", got)
 		}
 	}
+
+	err = db.Exec(`ALTER TABLE v_x RENAME TO v_y`)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRegister_errors(t *testing.T) {

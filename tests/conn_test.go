@@ -172,6 +172,11 @@ func TestConn_SetInterrupt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	db.SetInterrupt(ctx)
+	if got := db.GetInterrupt(); got != ctx {
+		t.Errorf("got %v, want %v", got, ctx)
+	}
 }
 
 func TestConn_Prepare_empty(t *testing.T) {
@@ -372,13 +377,25 @@ func TestConn_SetAuthorizer(t *testing.T) {
 	defer db.Close()
 
 	err = db.SetAuthorizer(func(action sqlite3.AuthorizerActionCode, name3rd, name4th, schema, nameInner string) sqlite3.AuthorizerReturnCode {
+		if action != sqlite3.AUTH_PRAGMA {
+			t.Errorf("got %v, want PRAGMA", action)
+		}
+		if name3rd != "busy_timeout" {
+			t.Errorf("got %q, want busy_timeout", name3rd)
+		}
+		if name4th != "5000" {
+			t.Errorf("got %q, want 5000", name4th)
+		}
+		if schema != "main" {
+			t.Errorf("got %q, want main", schema)
+		}
 		return sqlite3.AUTH_DENY
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = db.Exec(`SELECT * FROM sqlite_schema`)
+	err = db.Exec(`PRAGMA main.busy_timeout=5000`)
 	if !errors.Is(err, sqlite3.AUTH) {
 		t.Errorf("got %v, want sqlite3.AUTH", err)
 	}

@@ -20,17 +20,17 @@ func Register(db *sqlite3.Conn) error {
 
 func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	var x [63]int64
-	for i := range arg {
-		x[i] = arg[i].Int64()
-	}
 	if len(arg) > len(x) {
 		ctx.ResultError(util.ErrorString("zorder: too many parameters"))
 		return
 	}
+	for i := range arg {
+		x[i] = arg[i].Int64()
+	}
 
 	var z int64
 	if len(arg) > 0 {
-		for i := 0; i < 63; i++ {
+		for i := range x {
 			j := i % len(arg)
 			z |= (x[j] & 1) << i
 			x[j] >>= 1

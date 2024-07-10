@@ -328,6 +328,7 @@ func (c *cursor) EOF() bool {
 }
 
 func (c *cursor) RowID() (int64, error) {
+	// notest // WITHOUT ROWID
 	return 0, nil
 }
 

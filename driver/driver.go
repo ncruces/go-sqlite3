@@ -231,6 +231,7 @@ func (c *conn) Raw() *sqlite3.Conn {
 
 // Deprecated: use BeginTx instead.
 func (c *conn) Begin() (driver.Tx, error) {
+	// notest
 	return c.BeginTx(context.Background(), driver.TxOptions{})
 }
 
@@ -287,6 +288,7 @@ func (c *conn) Rollback() error {
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
+	// notest
 	return c.PrepareContext(context.Background(), query)
 }
 
@@ -363,11 +365,13 @@ func (s *stmt) NumInput() int {
 
 // Deprecated: use ExecContext instead.
 func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
+	// notest
 	return s.ExecContext(context.Background(), namedValues(args))
 }
 
 // Deprecated: use QueryContext instead.
 func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
+	// notest
 	return s.QueryContext(context.Background(), namedValues(args))
 }
 
