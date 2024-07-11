@@ -122,7 +122,7 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.24.0
+      uses: cross-platform-actions/action@v0.25.0
       with:
         operating_system: ${{ matrix.os.name }}
         version: ${{ matrix.os.version }}
