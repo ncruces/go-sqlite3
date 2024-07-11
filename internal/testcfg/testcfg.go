@@ -7,8 +7,6 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental"
 )
 
 func init() {
@@ -17,7 +15,6 @@ func init() {
 	}
 
 	sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().
-		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads).
 		WithMemoryCapacityFromMax(true).
 		WithMemoryLimitPages(1024)
 

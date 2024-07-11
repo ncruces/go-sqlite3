@@ -45,12 +45,14 @@ var instance struct {
 }
 
 func compileSQLite() {
-	if RuntimeConfig == nil {
-		RuntimeConfig = wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
+	ctx := context.Background()
+	cfg := RuntimeConfig
+	if cfg == nil {
+		cfg = wazero.NewRuntimeConfig()
 	}
 
-	ctx := context.Background()
-	instance.runtime = wazero.NewRuntimeWithConfig(ctx, RuntimeConfig)
+	instance.runtime = wazero.NewRuntimeWithConfig(ctx,
+		cfg.WithCoreFeatures(api.CoreFeaturesV2|experimental.CoreFeaturesThreads))
 
 	env := instance.runtime.NewHostModuleBuilder("env")
 	env = vfs.ExportHostFunctions(env)

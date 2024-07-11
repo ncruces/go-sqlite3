@@ -8,15 +8,11 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental"
 )
 
 func init() {
 	Path = "./embed/sqlite3.wasm"
-	RuntimeConfig = wazero.NewRuntimeConfig().
-		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads).
-		WithMemoryLimitPages(1024)
+	RuntimeConfig = wazero.NewRuntimeConfig().WithMemoryLimitPages(1024)
 }
 
 func Test_sqlite_error_OOM(t *testing.T) {
