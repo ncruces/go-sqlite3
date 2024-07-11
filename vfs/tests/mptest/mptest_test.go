@@ -23,6 +23,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
@@ -40,7 +41,9 @@ var (
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	cfg := wazero.NewRuntimeConfig().WithMemoryLimitPages(1024)
+	cfg := wazero.NewRuntimeConfig().
+		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads).
+		WithMemoryLimitPages(1024)
 	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 

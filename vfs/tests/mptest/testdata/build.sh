@@ -10,7 +10,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -flto -g0 -O2 \
 	-o mptest.wasm main.c \
 	-I"$ROOT/sqlite3" \
-	-msimd128 -mmutable-globals \
+	-matomics -msimd128 -mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \

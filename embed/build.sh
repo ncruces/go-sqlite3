@@ -12,13 +12,13 @@ WASI_SDK="$ROOT/tools/wasi-sdk-22.0/bin"
 	-o sqlite3.wasm "$ROOT/sqlite3/main.c" \
 	-I"$ROOT/sqlite3" \
 	-mexec-model=reactor \
-	-msimd128 -mmutable-globals \
+	-matomics -msimd128 -mmutable-globals \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
-	-Wl,--initial-memory=327680 \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
+	-Wl,--initial-memory=327680 \
 	-D_HAVE_SQLITE_CONFIG_H \
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
