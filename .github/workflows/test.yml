@@ -96,7 +96,7 @@ jobs:
       matrix:
         os:
           - name: freebsd
-            version: '14.0'
+            version: '14.1'
             flags: '-test.v'
           - name: openbsd
             version: '7.5'
