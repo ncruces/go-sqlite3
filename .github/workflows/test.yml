@@ -96,7 +96,7 @@ jobs:
       matrix:
         os:
           - name: freebsd
-            version: '14.0'
+            version: '14.1'
             flags: '-test.v'
           - name: openbsd
             version: '7.5'
@@ -122,7 +122,7 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.24.0
+      uses: cross-platform-actions/action@v0.25.0
       with:
         operating_system: ${{ matrix.os.name }}
         version: ${{ matrix.os.version }}
