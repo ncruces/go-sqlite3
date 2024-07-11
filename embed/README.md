@@ -17,7 +17,6 @@ The following optional features are compiled in:
 - [regexp](https://github.com/sqlite/sqlite/blob/master/ext/misc/regexp.c)
 - [series](https://github.com/sqlite/sqlite/blob/master/ext/misc/series.c)
 - [uint](https://github.com/sqlite/sqlite/blob/master/ext/misc/uint.c)
-- [uuid](https://github.com/sqlite/sqlite/blob/master/ext/misc/uuid.c)
 - [time](../sqlite3/time.c)
 
 See the [configuration options](../sqlite3/sqlite_cfg.h),
