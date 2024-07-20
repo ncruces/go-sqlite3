@@ -30,7 +30,7 @@ func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, err
 		vfs.OPEN_TEMP_DB |
 		vfs.OPEN_TEMP_JOURNAL
 	if flags&types == 0 {
-		// notest
+		// notest // OPEN_MEMORY
 		return nil, flags, sqlite3.CANTOPEN
 	}
 
@@ -270,6 +270,7 @@ func (m *memFile) Unlock(lock vfs.LockLevel) error {
 }
 
 func (m *memFile) CheckReservedLock() (bool, error) {
+	// notest // OPEN_MEMORY
 	if m.lock >= vfs.LOCK_RESERVED {
 		return true, nil
 	}
@@ -279,6 +280,7 @@ func (m *memFile) CheckReservedLock() (bool, error) {
 }
 
 func (m *memFile) SectorSize() int {
+	// notest // IOCAP_POWERSAFE_OVERWRITE
 	return sectorSize
 }
 

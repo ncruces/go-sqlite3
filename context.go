@@ -165,7 +165,8 @@ func (ctx Context) resultRFC3339Nano(value time.Time) {
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultPointer(ptr any) {
 	valPtr := util.AddHandle(ctx.c.ctx, ptr)
-	ctx.c.call("sqlite3_result_pointer_go", uint64(valPtr))
+	ctx.c.call("sqlite3_result_pointer_go",
+		uint64(ctx.handle), uint64(valPtr))
 }
 
 // ResultJSON sets the result of the function to the JSON encoding of value.

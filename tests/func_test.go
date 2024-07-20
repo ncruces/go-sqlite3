@@ -279,3 +279,41 @@ func TestAnyCollationNeeded(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPointer(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var want any = "xpto"
+
+	err = db.CreateFunction("ident", 1, 0, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		got := arg[0].Pointer()
+		if got != want {
+			t.Errorf("want %v, got %v", want, got)
+		}
+		ctx.ResultPointer(got)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT ident(ident(?))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = stmt.BindPointer(1, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = stmt.Exec()
+	if err != nil {
+		t.Error(err)
+	}
+}
