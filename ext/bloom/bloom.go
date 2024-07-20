@@ -160,7 +160,9 @@ func (b *bloom) Rename(new string) error {
 	return err
 }
 
-func (t *bloom) ShadowTables() {}
+func (t *bloom) ShadowTables() {
+	// notest // not meant to be called
+}
 
 func (t *bloom) Integrity(schema, table string, flags int) error {
 	load, _, err := t.db.Prepare(fmt.Sprintf(

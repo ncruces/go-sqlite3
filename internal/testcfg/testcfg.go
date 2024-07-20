@@ -9,6 +9,8 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
+// notest
+
 func init() {
 	if bits.UintSize < 64 {
 		return

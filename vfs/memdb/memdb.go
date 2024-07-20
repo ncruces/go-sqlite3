@@ -30,6 +30,7 @@ func (memVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, err
 		vfs.OPEN_TEMP_DB |
 		vfs.OPEN_TEMP_JOURNAL
 	if flags&types == 0 {
+		// notest
 		return nil, flags, sqlite3.CANTOPEN
 	}
 
@@ -136,7 +137,7 @@ func (m *memFile) ReadAt(b []byte, off int64) (n int, err error) {
 	}
 	n = copy(b, (*m.data[base])[rest:have])
 	if n < len(b) {
-		// Assume reads are page aligned.
+		// notest // assume reads are page aligned
 		return 0, io.ErrNoProgress
 	}
 	return n, nil
@@ -153,7 +154,7 @@ func (m *memFile) WriteAt(b []byte, off int64) (n int, err error) {
 	}
 	n = copy((*m.data[base])[rest:], b)
 	if n < len(b) {
-		// Assume writes are page aligned.
+		// notest // assume writes are page aligned
 		return n, io.ErrShortWrite
 	}
 	if size := off + int64(len(b)); size > m.size {

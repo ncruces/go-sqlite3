@@ -10,6 +10,7 @@ type readerVFS struct{}
 
 func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
 	if flags&vfs.OPEN_MAIN_DB == 0 {
+		// notest
 		return nil, flags, sqlite3.CANTOPEN
 	}
 	readerMtx.RLock()
@@ -21,10 +22,12 @@ func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, 
 }
 
 func (readerVFS) Delete(name string, dirSync bool) error {
+	// notest
 	return sqlite3.IOERR_DELETE
 }
 
 func (readerVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
+	// notest
 	return false, nil
 }
 
@@ -39,30 +42,37 @@ func (readerFile) Close() error {
 }
 
 func (readerFile) WriteAt(b []byte, off int64) (n int, err error) {
+	// notest
 	return 0, sqlite3.READONLY
 }
 
 func (readerFile) Truncate(size int64) error {
+	// notest
 	return sqlite3.READONLY
 }
 
 func (readerFile) Sync(flag vfs.SyncFlag) error {
+	// notest
 	return nil
 }
 
 func (readerFile) Lock(lock vfs.LockLevel) error {
+	// notest
 	return nil
 }
 
 func (readerFile) Unlock(lock vfs.LockLevel) error {
+	// notest
 	return nil
 }
 
 func (readerFile) CheckReservedLock() (bool, error) {
+	// notest
 	return false, nil
 }
 
 func (readerFile) SectorSize() int {
+	// notest
 	return 0
 }
 
