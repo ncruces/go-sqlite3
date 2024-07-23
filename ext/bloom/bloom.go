@@ -129,10 +129,10 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 	defer load.Close()
 
 	if !load.Step() {
-		if err = load.Err(); err == nil {
-			err = sqlite3.CORRUPT_VTAB
+		if err := load.Err(); err != nil {
+			return nil, err
 		}
-		return nil, err
+		return nil, sqlite3.CORRUPT_VTAB
 	}
 
 	t.bytes = load.ColumnInt64(0)

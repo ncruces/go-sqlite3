@@ -123,12 +123,11 @@ func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {
 	return nil
 }
 
-func (t *table) Open() (sqlite3.VTabCursor, error) {
+func (t *table) Open() (_ sqlite3.VTabCursor, err error) {
 	stmt := t.stmt
 	if !t.inuse {
 		t.inuse = true
 	} else {
-		var err error
 		stmt, _, err = t.stmt.Conn().Prepare(t.sql)
 		if err != nil {
 			return nil, err

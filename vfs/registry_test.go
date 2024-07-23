@@ -45,3 +45,20 @@ func TestRegister(t *testing.T) {
 
 	t.Error("want skip")
 }
+
+func TestRegister_os(t *testing.T) {
+	os := vfs.Find("os")
+	if os == nil {
+		t.Fail()
+	}
+
+	vfs.Register("os", testVFS{t})
+	if vfs.Find("os") != os {
+		t.Fail()
+	}
+
+	vfs.Unregister("os")
+	if vfs.Find("os") != os {
+		t.Fail()
+	}
+}

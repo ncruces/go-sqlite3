@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 
 func Test_assertErr(t *testing.T) {
 	err := util.AssertErr()
-	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:12)") {
+	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:13)") {
 		t.Errorf("got %q", s)
 	}
 }
@@ -164,5 +165,34 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 		if got != want {
 			t.Fatalf("got %q, want %q, with %d", got, want, i)
 		}
+	}
+}
+
+func Test_errorCode(t *testing.T) {
+	tests := []struct {
+		arg      error
+		wantMsg  string
+		wantCode uint32
+	}{
+		{nil, "", _OK},
+		{ERROR, "", util.ERROR},
+		{IOERR, "", util.IOERR},
+		{IOERR_READ, "", util.IOERR_READ},
+		{&Error{code: util.ERROR}, "", util.ERROR},
+		{fmt.Errorf("%w", ERROR), ERROR.Error(), util.ERROR},
+		{fmt.Errorf("%w", IOERR), IOERR.Error(), util.IOERR},
+		{fmt.Errorf("%w", IOERR_READ), IOERR_READ.Error(), util.IOERR_READ},
+		{fmt.Errorf("error"), "error", util.ERROR},
+	}
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			gotMsg, gotCode := errorCode(tt.arg, ERROR)
+			if gotMsg != tt.wantMsg {
+				t.Errorf("errorCode() gotMsg = %q, want %q", gotMsg, tt.wantMsg)
+			}
+			if gotCode != uint32(tt.wantCode) {
+				t.Errorf("errorCode() gotCode = %d, want %d", gotCode, tt.wantCode)
+			}
+		})
 	}
 }
