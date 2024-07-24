@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/tetratelabs/wazero/api"
 )
 
@@ -88,16 +89,63 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
 		return util.ReadUint32(c.mod, ptr) != 0, c.error(r)
+
+	case FCNTL_CHUNK_SIZE:
+		ptr := c.arena.new(4)
+		util.WriteUint32(c.mod, ptr, uint32(arg[0].(int)))
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		return nil, c.error(r)
+
+	case FCNTL_RESERVE_BYTES:
+		bytes := -1
+		if len(arg) > 0 {
+			bytes = arg[0].(int)
+		}
+		ptr := c.arena.new(4)
+		util.WriteUint32(c.mod, ptr, uint32(bytes))
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		return int(util.ReadUint32(c.mod, ptr)), c.error(r)
+
+	case FCNTL_DATA_VERSION:
+		ptr := c.arena.new(4)
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		return util.ReadUint32(c.mod, ptr), c.error(r)
+
+	case FCNTL_LOCKSTATE:
+		ptr := c.arena.new(4)
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		return vfs.LockLevel(util.ReadUint32(c.mod, ptr)), c.error(r)
+
+	case FCNTL_VFS_POINTER:
+		ptr := c.arena.new(4)
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		const zNameOffset = 16
+		ptr = util.ReadUint32(c.mod, ptr)
+		ptr = util.ReadUint32(c.mod, ptr+zNameOffset)
+		name := util.ReadString(c.mod, ptr, _MAX_NAME)
+		return vfs.Find(name), c.error(r)
+
+	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:
+		ptr := c.arena.new(4)
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		const fileHandleOffset = 4
+		ptr = util.ReadUint32(c.mod, ptr)
+		ptr = util.ReadUint32(c.mod, ptr+fileHandleOffset)
+		return util.GetHandle(c.ctx, ptr), c.error(r)
 	}
 
-	// FCNTL_CHUNK_SIZE				int32
-	// FCNTL_RESERVE_BYTES			int32
-	// FCNTL_DATA_VERSION			uint32
-	// FCNTL_SIZE_LIMIT				int64
-	// FCNTL_VFS_POINTER			vfs.VFS
-	// FCNTL_FILE_POINTER			vfs.File
-	// FCNTL_JOURNAL_POINTER		vfs.File
-	// FCNTL_LOCKSTATE				vfs.LockLevel
 	return nil, MISUSE
 }
 
