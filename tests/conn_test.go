@@ -428,7 +428,41 @@ func TestConn_FileControl(t *testing.T) {
 		}
 	})
 
+	t.Run("FCNTL_VFS_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_VFS_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != vfs.Find("os") {
+			t.Errorf("got %v, want os", o)
+		}
+	})
+
+	t.Run("FCNTL_FILE_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_FILE_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := o.(vfs.File); !ok {
+			t.Errorf("got %v, want File", o)
+		}
+	})
+
+	t.Run("FCNTL_JOURNAL_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_JOURNAL_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != nil {
+			t.Errorf("got %v, want nil", o)
+		}
+	})
+
 	t.Run("FCNTL_LOCKSTATE", func(t *testing.T) {
+		if !vfs.SupportsFileLocking {
+			t.Skip("skipping without locks")
+		}
+
 		txn, err := db.BeginExclusive()
 		if err != nil {
 			t.Fatal(err)
@@ -441,54 +475,6 @@ func TestConn_FileControl(t *testing.T) {
 		}
 		if o != vfs.LOCK_EXCLUSIVE {
 			t.Errorf("got %v, want LOCK_EXCLUSIVE", o)
-		}
-	})
-
-	t.Run("FCNTL_VFS_POINTER", func(t *testing.T) {
-		txn, err := db.BeginExclusive()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer txn.End(&err)
-
-		o, err := db.FileControl("", sqlite3.FCNTL_VFS_POINTER)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if o != vfs.Find("os") {
-			t.Errorf("got %v, want os", o)
-		}
-	})
-
-	t.Run("FCNTL_FILE_POINTER", func(t *testing.T) {
-		txn, err := db.BeginExclusive()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer txn.End(&err)
-
-		o, err := db.FileControl("", sqlite3.FCNTL_FILE_POINTER)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, ok := o.(vfs.File); !ok {
-			t.Errorf("got %v, want File", o)
-		}
-	})
-
-	t.Run("FCNTL_JOURNAL_POINTER", func(t *testing.T) {
-		txn, err := db.BeginExclusive()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer txn.End(&err)
-
-		o, err := db.FileControl("", sqlite3.FCNTL_JOURNAL_POINTER)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if o != nil {
-			t.Errorf("got %v, want nil", o)
 		}
 	})
 }
