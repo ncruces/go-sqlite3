@@ -59,7 +59,7 @@ jobs:
     - name: Test GORM
       run: gormlite/test.sh
 
-    - name: Test coverage
+    - name: Collect coverage
       run: |
         go install github.com/dave/courtney@latest
         courtney

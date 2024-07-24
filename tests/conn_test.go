@@ -12,6 +12,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -335,6 +336,147 @@ func TestConn_ConfigLog(t *testing.T) {
 	if code != sqlite3.ExtendedErrorCode(sqlite3.ERROR) {
 		t.Error("want sqlite3.ERROR")
 	}
+}
+
+func TestConn_FileControl(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "test.db")
+	db, err := sqlite3.Open(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	t.Run("MISUSE", func(t *testing.T) {
+		_, err := db.FileControl("main", 0)
+		if !errors.Is(err, sqlite3.MISUSE) {
+			t.Errorf("got %v, want MISUSE", err)
+		}
+	})
+	t.Run("FCNTL_RESET_CACHE", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_RESET_CACHE)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != nil {
+			t.Errorf("got %v, want nil", o)
+		}
+	})
+
+	t.Run("FCNTL_PERSIST_WAL", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_PERSIST_WAL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != false {
+			t.Errorf("got %v, want false", o)
+		}
+
+		o, err = db.FileControl("", sqlite3.FCNTL_PERSIST_WAL, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != true {
+			t.Errorf("got %v, want true", o)
+		}
+
+		o, err = db.FileControl("", sqlite3.FCNTL_PERSIST_WAL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != true {
+			t.Errorf("got %v, want true", o)
+		}
+	})
+
+	t.Run("FCNTL_CHUNK_SIZE", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_CHUNK_SIZE, 1024*1024)
+		if !errors.Is(err, sqlite3.NOTFOUND) {
+			t.Errorf("got %v, want NOTFOUND", err)
+		}
+		if o != nil {
+			t.Errorf("got %v, want nil", o)
+		}
+	})
+
+	t.Run("FCNTL_RESERVE_BYTES", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_RESERVE_BYTES, 4)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != 0 {
+			t.Errorf("got %v, want 0", o)
+		}
+
+		o, err = db.FileControl("", sqlite3.FCNTL_RESERVE_BYTES)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != 4 {
+			t.Errorf("got %v, want 4", o)
+		}
+	})
+
+	t.Run("FCNTL_DATA_VERSION", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_DATA_VERSION)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != uint32(2) {
+			t.Errorf("got %v, want 2", o)
+		}
+	})
+
+	t.Run("FCNTL_VFS_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_VFS_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != vfs.Find("os") {
+			t.Errorf("got %v, want os", o)
+		}
+	})
+
+	t.Run("FCNTL_FILE_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_FILE_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := o.(vfs.File); !ok {
+			t.Errorf("got %v, want File", o)
+		}
+	})
+
+	t.Run("FCNTL_JOURNAL_POINTER", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_JOURNAL_POINTER)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != nil {
+			t.Errorf("got %v, want nil", o)
+		}
+	})
+
+	t.Run("FCNTL_LOCKSTATE", func(t *testing.T) {
+		if !vfs.SupportsFileLocking {
+			t.Skip("skipping without locks")
+		}
+
+		txn, err := db.BeginExclusive()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer txn.End(&err)
+
+		o, err := db.FileControl("", sqlite3.FCNTL_LOCKSTATE)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != vfs.LOCK_EXCLUSIVE {
+			t.Errorf("got %v, want LOCK_EXCLUSIVE", o)
+		}
+	})
 }
 
 func TestConn_Limit(t *testing.T) {
