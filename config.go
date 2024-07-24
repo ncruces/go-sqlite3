@@ -58,6 +58,7 @@ func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg uint32) {
 }
 
 // FileControl allows low-level control of database files.
+// Only a subset of opcodes are supported.
 //
 // https://sqlite.org/c3ref/file_control.html
 func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, error) {
