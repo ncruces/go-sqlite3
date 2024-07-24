@@ -337,6 +337,49 @@ func TestConn_ConfigLog(t *testing.T) {
 	}
 }
 
+func TestConn_FileControl(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "test.db")
+	db, err := sqlite3.Open(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	o, err := db.FileControl("", sqlite3.FCNTL_RESET_CACHE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != nil {
+		t.Error("want nil")
+	}
+
+	o, err = db.FileControl("", sqlite3.FCNTL_PERSIST_WAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != false {
+		t.Error("want false")
+	}
+
+	o, err = db.FileControl("", sqlite3.FCNTL_PERSIST_WAL, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != true {
+		t.Error("want true")
+	}
+
+	o, err = db.FileControl("", sqlite3.FCNTL_PERSIST_WAL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o != true {
+		t.Error("want true")
+	}
+}
+
 func TestConn_Limit(t *testing.T) {
 	t.Parallel()
 

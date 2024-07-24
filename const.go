@@ -229,6 +229,24 @@ const (
 	DBCONFIG_REVERSE_SCANORDER     DBConfig = 1019
 )
 
+// FcntlOpcode are the available opcodes for [Conn.FileControl].
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
+type FcntlOpcode uint32
+
+const (
+	FCNTL_LOCKSTATE           FcntlOpcode = 1
+	FCNTL_CHUNK_SIZE          FcntlOpcode = 6
+	FCNTL_FILE_POINTER        FcntlOpcode = 7
+	FCNTL_PERSIST_WAL         FcntlOpcode = 10
+	FCNTL_POWERSAFE_OVERWRITE FcntlOpcode = 13
+	FCNTL_VFS_POINTER         FcntlOpcode = 27
+	FCNTL_JOURNAL_POINTER     FcntlOpcode = 28
+	FCNTL_DATA_VERSION        FcntlOpcode = 35
+	FCNTL_RESERVE_BYTES       FcntlOpcode = 38
+	FCNTL_RESET_CACHE         FcntlOpcode = 42
+)
+
 // LimitCategory are the available run-time limit categories.
 //
 // https://sqlite.org/c3ref/c_limit_attached.html

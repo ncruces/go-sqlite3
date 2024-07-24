@@ -56,6 +56,51 @@ func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg uint32) {
 	}
 }
 
+// FileControl allows low-level control of database files.
+//
+// https://sqlite.org/c3ref/file_control.html
+func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, error) {
+	defer c.arena.mark()()
+
+	var schemaPtr uint32
+	if schema != "" {
+		schemaPtr = c.arena.string(schema)
+	}
+
+	switch op {
+	case FCNTL_RESET_CACHE:
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), 0)
+		return nil, c.error(r)
+
+	case FCNTL_PERSIST_WAL, FCNTL_POWERSAFE_OVERWRITE:
+		var flag int
+		switch {
+		case len(arg) == 0:
+			flag = -1
+		case arg[0]:
+			flag = 1
+		}
+		ptr := c.arena.new(4)
+		util.WriteUint32(c.mod, ptr, uint32(flag))
+		r := c.call("sqlite3_file_control",
+			uint64(c.handle), uint64(schemaPtr),
+			uint64(op), uint64(ptr))
+		return util.ReadUint32(c.mod, ptr) != 0, c.error(r)
+	}
+
+	// FCNTL_CHUNK_SIZE				int32
+	// FCNTL_RESERVE_BYTES			int32
+	// FCNTL_DATA_VERSION			uint32
+	// FCNTL_SIZE_LIMIT				int64
+	// FCNTL_VFS_POINTER			vfs.VFS
+	// FCNTL_FILE_POINTER			vfs.File
+	// FCNTL_JOURNAL_POINTER		vfs.File
+	// FCNTL_LOCKSTATE				vfs.LockLevel
+	return nil, MISUSE
+}
+
 // Limit allows the size of various constructs to be
 // limited on a connection by connection basis.
 //
