@@ -32,6 +32,19 @@ func (c *Conn) Begin() Txn {
 	return Txn{c}
 }
 
+// BeginConcurrent starts a concurrent transaction.
+//
+// Experimental: requires a custom build of SQLite.
+//
+// https://sqlite.org/cgi/src/doc/begin-concurrent/doc/begin_concurrent.md
+func (c *Conn) BeginConcurrent() (Txn, error) {
+	err := c.Exec(`BEGIN CONCURRENT`)
+	if err != nil {
+		return Txn{}, err
+	}
+	return Txn{c}, nil
+}
+
 // BeginImmediate starts an immediate transaction.
 //
 // https://sqlite.org/lang_transaction.html

@@ -339,6 +339,21 @@ func TestConn_Transaction_rollback(t *testing.T) {
 	}
 }
 
+func TestConn_Transaction_concurrent(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.BeginConcurrent()
+	if !errors.Is(err, sqlite3.ERROR) {
+		t.Errorf("got %v, want sqlite3.ERROR", err)
+	}
+}
+
 func TestConn_Savepoint_exec(t *testing.T) {
 	t.Parallel()
 
