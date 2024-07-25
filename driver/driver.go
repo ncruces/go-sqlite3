@@ -73,7 +73,7 @@ func init() {
 // The [sqlite3.Conn] can be used to execute queries, register functions, etc.
 // Any error returned closes the connection and is returned to [database/sql].
 func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
-	c, err := (&SQLite{Init: init}).OpenConnector(dataSourceName)
+	c, err := (&SQLite{init}).OpenConnector(dataSourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -82,10 +82,7 @@ func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error
 
 // SQLite implements [database/sql/driver.Driver].
 type SQLite struct {
-	// Init function is called by the driver on new connections.
-	// The [sqlite3.Conn] can be used to execute queries, register functions, etc.
-	// Any error returned closes the connection and is returned to [database/sql].
-	Init func(*sqlite3.Conn) error
+	init func(*sqlite3.Conn) error
 }
 
 // Open implements [database/sql/driver.Driver].
@@ -176,18 +173,18 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 	defer c.Conn.SetInterrupt(old)
 
 	if !n.pragmas {
-		err = c.Conn.BusyTimeout(60 * time.Second)
+		err = c.Conn.BusyTimeout(time.Minute)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if n.driver.Init != nil {
-		err = n.driver.Init(c.Conn)
+	if n.driver.init != nil {
+		err = n.driver.init(c.Conn)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if n.pragmas || n.driver.Init != nil {
+	if n.pragmas || n.driver.init != nil {
 		s, _, err := c.Conn.Prepare(`PRAGMA query_only`)
 		if err != nil {
 			return nil, err
@@ -326,6 +323,8 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 }
 
 func (c *conn) CheckNamedValue(arg *driver.NamedValue) error {
+	// Fast path: short circuit argument verification.
+	// Arguments will be rejected by conn.ExecContext.
 	return nil
 }
 
