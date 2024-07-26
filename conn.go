@@ -228,7 +228,7 @@ func (c *Conn) Filename(schema string) *vfs.Filename {
 		ptr = c.arena.string(schema)
 	}
 	r := c.call("sqlite3_db_filename", uint64(c.handle), uint64(ptr))
-	return vfs.OpenFilename(c.ctx, c.mod, uint32(r), vfs.OPEN_MAIN_DB)
+	return vfs.GetFilename(c.ctx, c.mod, uint32(r), vfs.OPEN_MAIN_DB)
 }
 
 // ReadOnly determines if a database is read-only.
