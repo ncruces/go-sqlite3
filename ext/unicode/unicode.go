@@ -51,7 +51,7 @@ func Register(db *sqlite3.Conn) error {
 				err := RegisterCollation(db, arg[0].Text(), name)
 				if err != nil {
 					ctx.ResultError(err)
-					return
+					return // notest
 				}
 			}))
 }
@@ -75,7 +75,7 @@ func upper(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		t, err := language.Parse(arg[1].Text())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		c := cases.Upper(t)
 		ctx.SetAuxData(1, c)
@@ -94,7 +94,7 @@ func lower(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		t, err := language.Parse(arg[1].Text())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		c := cases.Lower(t)
 		ctx.SetAuxData(1, c)
@@ -109,7 +109,7 @@ func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		r, err := regexp.Compile(arg[0].Text())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		re = r
 		ctx.SetAuxData(0, r)

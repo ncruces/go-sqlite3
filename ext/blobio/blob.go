@@ -43,13 +43,13 @@ func readblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	blob, err := getAuxBlob(ctx, arg, false)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	_, err = blob.Seek(arg[4].Int64(), io.SeekStart)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	n := arg[5].Int64()
@@ -61,7 +61,7 @@ func readblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	_, err = io.ReadFull(blob, buf)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	ctx.ResultBlob(buf)
@@ -72,19 +72,19 @@ func writeblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	blob, err := getAuxBlob(ctx, arg, true)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	_, err = blob.Seek(arg[4].Int64(), io.SeekStart)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	_, err = blob.Write(arg[5].RawBlob())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	setAuxBlob(ctx, blob, false)
@@ -99,14 +99,14 @@ func openblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	blob, err := getAuxBlob(ctx, arg, arg[4].Bool())
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	fn := arg[5].Pointer().(OpenCallback)
 	err = fn(blob, arg[6:]...)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 
 	setAuxBlob(ctx, blob, true)

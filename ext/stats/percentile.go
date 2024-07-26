@@ -62,7 +62,7 @@ func (q *percentile) Value(ctx sqlite3.Context) {
 		ctx.ResultJSON(floats)
 	}
 	if err != nil {
-		ctx.ResultError(fmt.Errorf("percentile: %w", err))
+		ctx.ResultError(fmt.Errorf("percentile: %w", err)) // notest
 	}
 }
 

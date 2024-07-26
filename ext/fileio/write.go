@@ -39,7 +39,7 @@ func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			err := os.Chmod(file, mode.Perm())
 			if err != nil {
 				ctx.ResultError(fmt.Errorf("writefile: %w", err))
-				return
+				return // notest
 			}
 		}
 
@@ -48,7 +48,7 @@ func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			err := os.Chtimes(file, time.Time{}, mtime)
 			if err != nil {
 				ctx.ResultError(fmt.Errorf("writefile: %w", err))
-				return
+				return // notest
 			}
 		}
 	}

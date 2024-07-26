@@ -89,6 +89,7 @@ func Test_readblob(t *testing.T) {
 		CREATE TABLE test1 (col);
 		CREATE TABLE test2 (col);
 		INSERT INTO test1 VALUES (x'cafe');
+		INSERT INTO test1 VALUES (x'dead');
 		INSERT INTO test2 VALUES (x'babe');
 	`)
 	if err != nil {
@@ -107,34 +108,50 @@ func Test_readblob(t *testing.T) {
 		t.Log(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT readblob('main', value, 'col', 1, 1, 1) FROM array(?)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	err = stmt.BindPointer(1, []string{"test1", "test2"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if stmt.Step() {
-		got := stmt.ColumnText(0)
-		if got != "\xfe" {
-			t.Errorf("got %q", got)
-		}
+	tests := []struct {
+		name  string
+		sql   string
+		want1 string
+		want2 string
+	}{
+		{"rows", `SELECT readblob('main', 'test1', 'col', rowid, 1, 1) FROM test1`, "\xfe", "\xad"},
+		{"tables", `SELECT readblob('main', value, 'col', 1, 1, 1) FROM array(?)`, "\xfe", "\xbe"},
 	}
 
-	if stmt.Step() {
-		got := stmt.ColumnText(0)
-		if got != "\xbe" {
-			t.Errorf("got %q", got)
-		}
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stmt, _, err := db.Prepare(tt.sql)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer stmt.Close()
 
-	err = stmt.Err()
-	if err != nil {
-		t.Fatal(err)
+			if stmt.BindCount() == 1 {
+				err = stmt.BindPointer(1, []string{"test1", "test2"})
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if stmt.Step() {
+				got := stmt.ColumnText(0)
+				if got != tt.want1 {
+					t.Errorf("got %q", got)
+				}
+			}
+
+			if stmt.Step() {
+				got := stmt.ColumnText(0)
+				if got != tt.want2 {
+					t.Errorf("got %q", got)
+				}
+			}
+
+			err = stmt.Err()
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

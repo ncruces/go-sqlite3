@@ -55,7 +55,7 @@ func readfile(fsys fs.FS) func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		case err == nil:
 			ctx.ResultBlob(data)
 		case !errors.Is(err, fs.ErrNotExist):
-			ctx.ResultError(fmt.Errorf("readfile: %w", err))
+			ctx.ResultError(fmt.Errorf("readfile: %w", err)) // notest
 		}
 	}
 }

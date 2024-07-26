@@ -107,7 +107,7 @@ func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				ns = uuid.NameSpaceX500
 			default:
 				ctx.ResultError(err)
-				return
+				return // notest
 			}
 		}
 		if ver == 3 {
@@ -121,7 +121,7 @@ func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 
 	if err != nil {
-		ctx.ResultError(fmt.Errorf("uuid: %w", err))
+		ctx.ResultError(fmt.Errorf("uuid: %w", err)) // notest
 	} else {
 		ctx.ResultText(u.String())
 	}
@@ -152,7 +152,7 @@ func fromValue(arg sqlite3.Value) (u uuid.UUID, err error) {
 func toBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	u, err := fromValue(arg[0])
 	if err != nil {
-		ctx.ResultError(err)
+		ctx.ResultError(err) // notest
 	} else {
 		ctx.ResultBlob(u[:])
 	}
@@ -161,7 +161,7 @@ func toBlob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func toString(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	u, err := fromValue(arg[0])
 	if err != nil {
-		ctx.ResultError(err)
+		ctx.ResultError(err) // notest
 	} else {
 		ctx.ResultText(u.String())
 	}

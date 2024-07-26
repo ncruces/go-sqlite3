@@ -163,10 +163,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 
 func vfsClose(ctx context.Context, mod api.Module, pFile uint32) _ErrorCode {
 	err := vfsFileClose(ctx, mod, pFile)
-	if err != nil {
-		return vfsErrorCode(err, _IOERR_CLOSE)
-	}
-	return _OK
+	return vfsErrorCode(err, _IOERR_CLOSE)
 }
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int32, iOfst int64) _ErrorCode {
@@ -189,10 +186,7 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf uint32, iAmt int3
 	buf := util.View(mod, zBuf, uint64(iAmt))
 
 	_, err := file.WriteAt(buf, iOfst)
-	if err != nil {
-		return vfsErrorCode(err, _IOERR_WRITE)
-	}
-	return _OK
+	return vfsErrorCode(err, _IOERR_WRITE)
 }
 
 func vfsTruncate(ctx context.Context, mod api.Module, pFile uint32, nByte int64) _ErrorCode {
