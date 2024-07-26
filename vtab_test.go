@@ -92,7 +92,7 @@ func (cur *seriesCursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value)
 	return nil
 }
 
-func (cur *seriesCursor) Column(ctx *sqlite3.Context, col int) error {
+func (cur *seriesCursor) Column(ctx sqlite3.Context, col int) error {
 	switch col {
 	case 0:
 		ctx.ResultInt64(cur.value)

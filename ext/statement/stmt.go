@@ -201,7 +201,7 @@ func (c *cursor) RowID() (int64, error) {
 	return c.rowID, nil
 }
 
-func (c *cursor) Column(ctx *sqlite3.Context, col int) error {
+func (c *cursor) Column(ctx sqlite3.Context, col int) error {
 	switch outputs := c.stmt.ColumnCount(); {
 	case col < outputs:
 		ctx.ResultValue(c.stmt.ColumnValue(col))

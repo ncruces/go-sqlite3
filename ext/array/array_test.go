@@ -120,7 +120,7 @@ func Test_cursor_Column(t *testing.T) {
 		want = want[1:]
 	}
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }
 

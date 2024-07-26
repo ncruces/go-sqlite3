@@ -62,7 +62,7 @@ func (c *cursor) RowID() (int64, error) {
 	return int64(c.rowID), nil
 }
 
-func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
+func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 	if n != 0 {
 		return nil
 	}

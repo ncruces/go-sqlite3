@@ -307,7 +307,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	return nil
 }
 
-func (c *cursor) Column(ctx *sqlite3.Context, n int) error {
+func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 	if ctx.VTabNoChange() {
 		return nil
 	}
