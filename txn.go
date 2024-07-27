@@ -305,3 +305,11 @@ func updateCallback(ctx context.Context, mod api.Module, pDB uint32, action Auth
 		c.update(action, schema, table, int64(rowid))
 	}
 }
+
+// CacheFlush flushes caches to disk mid-transaction.
+//
+// https://sqlite.org/c3ref/db_cacheflush.html
+func (c *Conn) CacheFlush() error {
+	r := c.call("sqlite3_db_cacheflush", uint64(c.handle))
+	return c.error(r)
+}

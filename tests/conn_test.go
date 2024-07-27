@@ -543,6 +543,78 @@ func TestConn_SetAuthorizer(t *testing.T) {
 	}
 }
 
+func TestConn_Trace(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	rows := 0
+	closed := false
+	err = db.Trace(math.MaxUint32, func(evt sqlite3.TraceEvent, a1 any, a2 any) error {
+		switch evt {
+		case sqlite3.TRACE_CLOSE:
+			closed = true
+			_ = a1.(*sqlite3.Conn)
+			return db.Exec(`PRAGMA optimize`)
+		case sqlite3.TRACE_STMT:
+			stmt := a1.(*sqlite3.Stmt)
+			if sql := a2.(string); sql != stmt.SQL() {
+				t.Errorf("got %q, want %q", sql, stmt.SQL())
+			}
+			if sql := stmt.ExpandedSQL(); sql != `SELECT 1` {
+				t.Errorf("got %q", sql)
+			}
+		case sqlite3.TRACE_PROFILE:
+			_ = a1.(*sqlite3.Stmt)
+			if ns := a2.(int64); ns < 0 {
+				t.Errorf("got %d", ns)
+			}
+		case sqlite3.TRACE_ROW:
+			_ = a1.(*sqlite3.Stmt)
+			if a2 != nil {
+				t.Errorf("got %v", a2)
+			}
+			rows++
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT ?`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = stmt.BindInt(1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = stmt.Exec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Error("want 1")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !closed {
+		t.Error("want closed")
+	}
+}
+
 func TestConn_ReleaseMemory(t *testing.T) {
 	t.Parallel()
 
@@ -682,5 +754,98 @@ func TestConn_AutoVacuumPages(t *testing.T) {
 	err = db.Exec(`DROP TABLE test`)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestConn_Status(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cr, hi, err := db.Status(sqlite3.DBSTATUS_SCHEMA_USED, true)
+	if err != nil {
+		t.Error("want nil")
+	}
+	if cr == 0 {
+		t.Error("want something")
+	}
+	if hi != 0 {
+		t.Error("want zero")
+	}
+
+	cr, hi, err = db.Status(sqlite3.DBSTATUS_LOOKASIDE_HIT, true)
+	if err != nil {
+		t.Error("want nil")
+	}
+	if cr != 0 {
+		t.Error("want zero")
+	}
+	if hi == 0 {
+		t.Error("want something")
+	}
+
+	cr, hi, err = db.Status(sqlite3.DBSTATUS_LOOKASIDE_HIT, true)
+	if err != nil {
+		t.Error("want nil")
+	}
+	if cr != 0 {
+		t.Error("want zero")
+	}
+	if hi != 0 {
+		t.Error("want zero")
+	}
+}
+
+func TestConn_TableColumnMetadata(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE test (col)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, _, _, _, err = db.TableColumnMetadata("", "table", "")
+	if err == nil {
+		t.Error("want error")
+	}
+
+	_, _, _, _, _, err = db.TableColumnMetadata("", "test", "")
+	if err != nil {
+		t.Error("want nil")
+	}
+
+	typ, ord, nn, pk, ai, err := db.TableColumnMetadata("", "test", "rowid")
+	if err != nil {
+		t.Error("want nil")
+	}
+	if typ != "INTEGER" {
+		t.Error("want INTEGER")
+	}
+	if ord != "BINARY" {
+		t.Error("want BINARY")
+	}
+	if nn != false {
+		t.Error("want false")
+	}
+	if pk != true {
+		t.Error("want true")
+	}
+	if ai != false {
+		t.Error("want false")
 	}
 }

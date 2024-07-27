@@ -54,13 +54,13 @@ func TestWAL_readonly(t *testing.T) {
 
 	tmp := filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))
 
-	db1, err := driver.Open("file:"+tmp+"?_pragma=journal_mode(wal)&_txlock=immediate", nil)
+	db1, err := driver.Open("file:" + tmp + "?_pragma=journal_mode(wal)&_txlock=immediate")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db1.Close()
 
-	db2, err := driver.Open("file:"+tmp+"?_pragma=journal_mode(wal)&mode=ro", nil)
+	db2, err := driver.Open("file:" + tmp + "?_pragma=journal_mode(wal)&mode=ro")
 	if err != nil {
 		t.Fatal(err)
 	}

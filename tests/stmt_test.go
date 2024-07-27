@@ -503,6 +503,13 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
+	db.Stmts()(func(s *sqlite3.Stmt) bool {
+		if s != stmt {
+			t.Error()
+		}
+		return false
+	})
+
 	if err := stmt.Close(); err != nil {
 		t.Fatal(err)
 	}
