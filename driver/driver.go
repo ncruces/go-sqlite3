@@ -12,17 +12,20 @@
 //
 //	sql.Open("sqlite3", "file:demo.db?_txlock=immediate")
 //
-// Possible values are: "deferred", "immediate", "exclusive".
-// A [read-only] transaction is always "deferred", regardless of "_txlock".
+// Possible values are: "deferred" (the default), "immediate", "exclusive".
+// Regardless of "_txlock":
+//   - a [linearizable] transaction is always "exclusive";
+//   - a [serializable] transaction is always "immediate";
+//   - a [read-only] transaction is always "deferred".
 //
 // The time encoding/decoding format can be specified using "_timefmt":
 //
 //	sql.Open("sqlite3", "file:demo.db?_timefmt=sqlite")
 //
 // Possible values are: "auto" (the default), "sqlite", "rfc3339";
-// "auto" encodes as RFC 3339 and decodes any [format] supported by SQLite;
-// "sqlite" encodes as SQLite and decodes any [format] supported by SQLite;
-// "rfc3339" encodes and decodes RFC 3339 only.
+//   - "auto" encodes as RFC 3339 and decodes any [format] supported by SQLite;
+//   - "sqlite" encodes as SQLite and decodes any [format] supported by SQLite;
+//   - "rfc3339" encodes and decodes RFC 3339 only.
 //
 // [PRAGMA] statements can be specified using "_pragma":
 //
@@ -35,9 +38,11 @@
 //
 // [URI]: https://sqlite.org/uri.html
 // [PRAGMA]: https://sqlite.org/pragma.html
-// [format]: https://sqlite.org/lang_datefunc.html#time_values
 // [TRANSACTION]: https://sqlite.org/lang_transaction.html#deferred_immediate_and_exclusive_transactions
+// [linearizable]: https://pkg.go.dev/database/sql#TxOptions
+// [serializable]: https://pkg.go.dev/database/sql#TxOptions
 // [read-only]: https://pkg.go.dev/database/sql#TxOptions
+// [format]: https://sqlite.org/lang_datefunc.html#time_values
 package driver
 
 import (

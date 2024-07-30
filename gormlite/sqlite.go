@@ -2,7 +2,6 @@
 package gormlite
 
 import (
-	"database/sql"
 	"strconv"
 
 	"gorm.io/gorm"
@@ -21,7 +20,7 @@ func Open(dsn string) gorm.Dialector {
 }
 
 // Open opens a GORM dialector from a database handle.
-func OpenDB(db *sql.DB) gorm.Dialector {
+func OpenDB(db gorm.ConnPool) gorm.Dialector {
 	return &_Dialector{Conn: db}
 }
 
