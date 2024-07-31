@@ -20,7 +20,7 @@ func Example_json() {
 		CREATE TABLE orders (
 			cart_id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
-			cart    BLOB
+			cart    BLOB -- stored as JSONB
 		) STRICT;
 	`)
 	if err != nil {
@@ -38,6 +38,7 @@ func Example_json() {
 		Items []CartItem `json:"items"`
 	}
 
+	// convert to JSONB on insertion
 	stmt, _, err := db.Prepare(`INSERT INTO orders (user_id, cart) VALUES (?, jsonb(?))`)
 	if err != nil {
 		log.Fatal(err)
@@ -80,7 +81,7 @@ func Example_json() {
 	}
 
 	sl2, _, err := db.Prepare(`
-		SELECT json(cart)
+		SELECT json(cart) -- convert to JSON on retrieval
 		FROM orders
 		WHERE cart_id = last_insert_rowid()
 	`)

@@ -21,7 +21,7 @@ func Example_json() {
 		CREATE TABLE orders (
 			cart_id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
-			cart    BLOB
+			cart    BLOB -- stored as JSONB
 		) STRICT;
 	`)
 	if err != nil {
@@ -39,6 +39,7 @@ func Example_json() {
 		Items []CartItem `json:"items"`
 	}
 
+	// convert to JSONB on insertion
 	_, err = db.Exec(`INSERT INTO orders (user_id, cart) VALUES (?, jsonb(?))`, 123, sqlite3.JSON(Cart{
 		[]CartItem{
 			{ItemID: "111", Name: "T-shirt", Quantity: 1, Price: 250},
@@ -63,7 +64,7 @@ func Example_json() {
 
 	var cart Cart
 	err = db.QueryRow(`
-		SELECT json(cart)
+		SELECT json(cart) -- convert to JSON on retrieval
 		FROM orders
 		WHERE cart_id = last_insert_rowid()
 	`).Scan(sqlite3.JSON(&cart))
