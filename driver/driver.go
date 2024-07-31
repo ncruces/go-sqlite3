@@ -74,11 +74,22 @@ func init() {
 
 // Open opens the SQLite database specified by dataSourceName as a [database/sql.DB].
 //
-// The init function is called by the driver on new connections.
+// Open accepts zero, one, or two callbacks (nil callbacks are ignored).
+// The first callback is called when the driver opens a new connection.
+// The second callback is called before the driver closes a connection.
 // The [sqlite3.Conn] can be used to execute queries, register functions, etc.
-// Any error returned closes the connection and is returned to [database/sql].
-func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error) {
-	c, err := (&SQLite{init}).OpenConnector(dataSourceName)
+func Open(dataSourceName string, fn ...func(*sqlite3.Conn) error) (*sql.DB, error) {
+	var drv SQLite
+	if len(fn) > 2 {
+		return nil, util.ArgErr
+	}
+	if len(fn) > 1 {
+		drv.term = fn[1]
+	}
+	if len(fn) > 0 {
+		drv.init = fn[0]
+	}
+	c, err := drv.OpenConnector(dataSourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +99,7 @@ func Open(dataSourceName string, init func(*sqlite3.Conn) error) (*sql.DB, error
 // SQLite implements [database/sql/driver.Driver].
 type SQLite struct {
 	init func(*sqlite3.Conn) error
+	term func(*sqlite3.Conn) error
 }
 
 // Open implements [database/sql/driver.Driver].
@@ -200,6 +212,14 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 			c.readOnly = '0'
 		}
 		err = s.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if n.driver.term != nil {
+		err = c.Conn.Trace(sqlite3.TRACE_CLOSE, func(sqlite3.TraceEvent, any, any) error {
+			return n.driver.term(c.Conn)
+		})
 		if err != nil {
 			return nil, err
 		}

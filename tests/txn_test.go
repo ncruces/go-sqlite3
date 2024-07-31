@@ -184,6 +184,10 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = db.CacheFlush()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	cancel()
 	_, err = db.BeginImmediate()

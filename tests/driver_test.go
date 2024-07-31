@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
@@ -15,7 +16,9 @@ func TestDriver(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := driver.Open(":memory:", nil)
+	db, err := driver.Open(":memory:", nil, func(c *sqlite3.Conn) error {
+		return c.Exec(`PRAGMA optimize`)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -136,7 +136,7 @@ func TestTimeFormat_Scanner(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := driver.Open(":memory:", nil)
+	db, err := driver.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@ int go_commit_hook(void *);
 void go_rollback_hook(void *);
 void go_update_hook(void *, int, char const *, char const *, sqlite3_int64);
 int go_wal_hook(void *, sqlite3 *, const char *, int);
-
+int go_trace(unsigned, void *, void *, void *);
 int go_authorizer(void *, int, const char *, const char *, const char *,
                   const char *);
 
@@ -45,6 +45,10 @@ void sqlite3_wal_hook_go(sqlite3 *db, bool enable) {
 
 int sqlite3_set_authorizer_go(sqlite3 *db, bool enable) {
   return sqlite3_set_authorizer(db, enable ? go_authorizer : NULL, /*arg=*/db);
+}
+
+int sqlite3_trace_go(sqlite3 *db, unsigned mask) {
+  return sqlite3_trace_v2(db, mask, go_trace, /*arg=*/db);
 }
 
 int sqlite3_config_log_go(bool enable) {

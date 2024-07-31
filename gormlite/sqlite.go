@@ -37,7 +37,7 @@ func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 	if dialector.Conn != nil {
 		db.ConnPool = dialector.Conn
 	} else {
-		conn, err := driver.Open(dialector.DSN, nil)
+		conn, err := driver.Open(dialector.DSN)
 		if err != nil {
 			return err
 		}

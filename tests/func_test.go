@@ -48,7 +48,9 @@ func TestCreateFunction(t *testing.T) {
 		case 10:
 			ctx.ResultNull()
 		case 11:
-			arg.NoChange()
+			if arg.NoChange() || arg.FromBind() {
+				t.Error()
+			}
 			ctx.ResultError(sqlite3.FULL)
 		}
 	})
