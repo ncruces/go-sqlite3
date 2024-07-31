@@ -829,7 +829,7 @@ func TestConn_TableColumnMetadata(t *testing.T) {
 		t.Error("want nil")
 	}
 
-	typ, ord, nn, pk, ai, err := db.TableColumnMetadata("", "test", "rowid")
+	typ, ord, nn, pk, ai, err := db.TableColumnMetadata("main", "test", "rowid")
 	if err != nil {
 		t.Error("want nil")
 	}
