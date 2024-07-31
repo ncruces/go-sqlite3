@@ -21,8 +21,8 @@ func Example_json() {
 		CREATE TABLE orders (
 			cart_id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL,
-			cart    TEXT
-		);
+			cart    BLOB
+		) STRICT;
 	`)
 	if err != nil {
 		log.Fatal(err)
@@ -39,7 +39,7 @@ func Example_json() {
 		Items []CartItem `json:"items"`
 	}
 
-	_, err = db.Exec(`INSERT INTO orders (user_id, cart) VALUES (?, ?)`, 123, sqlite3.JSON(Cart{
+	_, err = db.Exec(`INSERT INTO orders (user_id, cart) VALUES (?, jsonb(?))`, 123, sqlite3.JSON(Cart{
 		[]CartItem{
 			{ItemID: "111", Name: "T-shirt", Quantity: 1, Price: 250},
 			{ItemID: "222", Name: "Trousers", Quantity: 1, Price: 600},
@@ -60,6 +60,24 @@ func Example_json() {
 	}
 
 	fmt.Println("total:", total)
+
+	var cart Cart
+	err = db.QueryRow(`
+		SELECT json(cart)
+		FROM orders
+		WHERE cart_id = last_insert_rowid()
+	`).Scan(sqlite3.JSON(&cart))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, item := range cart.Items {
+		fmt.Printf("id: %s, name: %s, quantity: %d, price: %d\n",
+			item.ItemID, item.Name, item.Quantity, item.Price)
+	}
+
 	// Output:
 	// total: 850
+	// id: 111, name: T-shirt, quantity: 1, price: 250
+	// id: 222, name: Trousers, quantity: 1, price: 600
 }
