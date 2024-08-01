@@ -176,7 +176,7 @@ func (ctx Context) ResultJSON(value any) {
 	data, err := json.Marshal(value)
 	if err != nil {
 		ctx.ResultError(err)
-		return
+		return // notest
 	}
 	ctx.ResultRawText(data)
 }

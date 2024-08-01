@@ -230,7 +230,7 @@ func (c *Conn) txnExecInterrupted(sql string) error {
 	return err
 }
 
-// TxnState starts a deferred transaction.
+// TxnState determines the transaction state of a database.
 //
 // https://sqlite.org/c3ref/txn_state.html
 func (c *Conn) TxnState(schema string) TxnState {

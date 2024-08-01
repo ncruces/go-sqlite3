@@ -81,7 +81,11 @@ func writeblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		return // notest
 	}
 
-	_, err = blob.Write(arg[5].RawBlob())
+	if p, ok := arg[5].Pointer().(io.Reader); ok {
+		_, err = blob.ReadFrom(p)
+	} else {
+		_, err = blob.Write(arg[5].RawBlob())
+	}
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest

@@ -29,7 +29,7 @@ func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	n, err := createFileAndDir(file, mode, arg[1])
 	if err != nil {
 		if len(arg) > 2 {
-			ctx.ResultError(fmt.Errorf("writefile: %w", err))
+			ctx.ResultError(fmt.Errorf("writefile: %w", err)) // notest
 		}
 		return
 	}

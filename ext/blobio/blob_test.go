@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -47,7 +48,7 @@ func Example() {
 	// Read the BLOB.
 	_, err = db.Exec(`SELECT openblob('main', 'test', 'col', rowid, false, ?) FROM test`,
 		sqlite3.Pointer[blobio.OpenCallback](func(blob *sqlite3.Blob, _ ...sqlite3.Value) error {
-			_, err = io.Copy(os.Stdout, blob)
+			_, err = blob.WriteTo(os.Stdout)
 			return err
 		}))
 	if err != nil {
@@ -181,7 +182,6 @@ func Test_writeblob(t *testing.T) {
 	err = db.Exec(`
 		CREATE TABLE test (col);
 		INSERT INTO test VALUES (x'cafe');
-		-- INSERT INTO test2 VALUES (x'babe');
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,18 @@ func Test_writeblob(t *testing.T) {
 		t.Log(err)
 	}
 
-	err = db.Exec(`SELECT writeblob('main', 'test', 'col', 1, 0, x'babe')`)
+	stmt, _, err := db.Prepare(`SELECT writeblob('main', 'test', 'col', 1, 0, ?)`)
+	if err != nil {
+		t.Log(err)
+	}
+	defer stmt.Close()
+
+	err = stmt.BindPointer(1, strings.NewReader("\xba\xbe"))
+	if err != nil {
+		t.Log(err)
+	}
+
+	err = stmt.Exec()
 	if err != nil {
 		t.Log(err)
 	}
