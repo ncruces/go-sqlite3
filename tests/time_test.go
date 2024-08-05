@@ -11,6 +11,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestTimeFormat_Encode(t *testing.T) {
@@ -132,11 +133,12 @@ func TestTimeFormat_Decode(t *testing.T) {
 
 func TestTimeFormat_Scanner(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := driver.Open(":memory:")
+	db, err := driver.Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,8 +10,8 @@
 package memdb
 
 import (
-	"math/rand"
-	"strconv"
+	"fmt"
+	"net/url"
 	"sync"
 	"testing"
 
@@ -70,10 +70,17 @@ func Delete(name string) {
 	delete(memoryDBs, name)
 }
 
+// TestDB creates an empty shared memory database for the test to use.
+// The database is automatically deleted when the test and all its subtests complete.
+// Each subsequent call to TestDB returns a unique database.
 func TestDB(tb testing.TB) string {
 	tb.Helper()
-	name := tb.Name() + "_" + strconv.Itoa(int(rand.Int31()))
+	name := fmt.Sprintf("%s_%p", tb.Name(), tb)
 	tb.Cleanup(func() { Delete(name) })
 	Create(name, nil)
-	return "file:/" + name + "?vfs=memdb&"
+	return (&url.URL{
+		Scheme:   "file",
+		OmitHost: true,
+		Path:     "/" + name,
+	}).String() + "?vfs=memdb&"
 }
