@@ -12,6 +12,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -65,7 +66,7 @@ func TestDB_utf16(t *testing.T) {
 
 func TestDB_memdb(t *testing.T) {
 	t.Parallel()
-	testDB(t, "file:test.db?vfs=memdb")
+	testDB(t, memdb.TestDB(t))
 }
 
 func TestDB_adiantum(t *testing.T) {

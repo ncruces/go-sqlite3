@@ -31,7 +31,7 @@ func Test_parallel(t *testing.T) {
 	}
 
 	name := "file:" +
-		filepath.Join(t.TempDir(), "test.db") +
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
@@ -45,7 +45,7 @@ func Test_wal(t *testing.T) {
 	}
 
 	name := "file:" +
-		filepath.Join(t.TempDir(), "test.db") +
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
@@ -61,8 +61,8 @@ func Test_memdb(t *testing.T) {
 		iter = 5000
 	}
 
-	memdb.Create("test.db", nil)
-	name := "file:/test.db?vfs=memdb"
+	name := memdb.TestDB(t) +
+		"_pragma=busy_timeout(10000)"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -82,7 +82,10 @@ func Test_adiantum(t *testing.T) {
 	name := "file:" +
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?vfs=adiantum" +
-		"&_pragma=hexkey(e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)"
+		"&_pragma=hexkey(e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)" +
+		"&_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -98,7 +101,7 @@ func TestMultiProcess(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "test.db")
 	t.Setenv("TestMultiProcess_dbfile", file)
 
-	name := "file:" + file +
+	name := "file:" + filepath.ToSlash(file) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
@@ -133,7 +136,7 @@ func TestChildProcess(t *testing.T) {
 		t.SkipNow()
 	}
 
-	name := "file:" + file +
+	name := "file:" + filepath.ToSlash(file) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
@@ -177,8 +180,8 @@ func Benchmark_memdb(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	memdb.Create("test.db", nil)
-	name := "file:/test.db?vfs=memdb"
+	name := memdb.TestDB(b) +
+		"_pragma=busy_timeout(10000)"
 	testParallel(b, name, b.N)
 }
 
@@ -217,11 +220,6 @@ func testParallel(t testing.TB, name string, n int) {
 			return err
 		}
 		defer db.Close()
-
-		err = db.BusyTimeout(10 * time.Second)
-		if err != nil {
-			return err
-		}
 
 		stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
 		if err != nil {
