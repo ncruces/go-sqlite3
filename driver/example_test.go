@@ -6,12 +6,15 @@ package driver_test
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 var db *sql.DB
@@ -148,4 +151,84 @@ func addAlbum(alb Album) (int64, error) {
 		return 0, fmt.Errorf("addAlbum: %w", err)
 	}
 	return id, nil
+}
+
+func Example_customTime() {
+	// Get a database handle.
+	db, err := sql.Open("sqlite3", "file:/time.db?vfs=memdb")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Create a table to hold our data
+	_, err = db.Exec(`CREATE TABLE data (
+		id INTEGER PRIMARY KEY,
+		date_time TEXT
+		) STRICT`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialise our custom time
+	c := CustomTime{time.Date(
+		2009, 11, 17, 20, 34, 58, 651387237, time.UTC)}
+
+	// Store our custom time in the DB
+	_, err = db.Exec(`INSERT INTO data (date_time) VALUES(?)`, c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var strTime string
+	// Retrieve it as a string, the result of Value()
+	err = db.QueryRow(`
+		SELECT date_time
+		FROM data
+		WHERE id = last_insert_rowid()
+	`).Scan(&strTime)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(strTime)
+
+	var resTime CustomTime
+	// Retrieve it as our custom time type, going through Scan()
+	err = db.QueryRow(`
+		SELECT date_time
+		FROM data
+		WHERE id = last_insert_rowid()
+	`).Scan(&resTime)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(resTime)
+	// Output:
+	// 2009-11-17T20:34:58.651387237Z
+	// 2009-11-17 20:34:58.651387237 +0000 UTC
+}
+
+type CustomTime struct{ time.Time }
+
+func (c CustomTime) Value() (driver.Value, error) {
+	return c.UTC().Format(time.RFC3339Nano), nil
+}
+
+func (c *CustomTime) Scan(value any) error {
+	switch v := value.(type) {
+	case nil:
+		*c = CustomTime{time.Time{}}
+	case time.Time:
+		*c = CustomTime{v}
+	case string:
+		t, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			return err
+		}
+		*c = CustomTime{t}
+	default:
+		panic("unsupported value type")
+	}
+	return nil
 }

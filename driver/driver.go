@@ -8,6 +8,8 @@
 //
 // The data source name for "sqlite3" databases can be a filename or a "file:" [URI].
 //
+// # Default transaction mode
+//
 // The [TRANSACTION] mode can be specified using "_txlock":
 //
 //	sql.Open("sqlite3", "file:demo.db?_txlock=immediate")
@@ -18,6 +20,8 @@
 //   - a [serializable] transaction is always "immediate";
 //   - a [read-only] transaction is always "deferred".
 //
+// # Working with time
+//
 // The time encoding/decoding format can be specified using "_timefmt":
 //
 //	sql.Open("sqlite3", "file:demo.db?_timefmt=sqlite")
@@ -26,6 +30,19 @@
 //   - "auto" encodes as RFC 3339 and decodes any [format] supported by SQLite;
 //   - "sqlite" encodes as SQLite and decodes any [format] supported by SQLite;
 //   - "rfc3339" encodes and decodes RFC 3339 only.
+//
+// When using a custom time struct, you'll have to implement
+// [database/sql/driver.Valuer] and [database/sql.Scanner]. The Value method
+// should serialise to a time format this driver recognises, like [time.RFC3339]
+// or [time.RFC3339Nano].
+//
+// The Scan method needs to take into account that the value it receives can
+// be of differing types. It can be a [time.Time] if the driver knows to decode
+// a column as such and manages to do so successfully, but can also be a string,
+// a byte, an integer etc. depending on the column type and what whoever wrote
+// to the column put in there.
+//
+// # Setting PRAGMA's
 //
 // [PRAGMA] statements can be specified using "_pragma":
 //
