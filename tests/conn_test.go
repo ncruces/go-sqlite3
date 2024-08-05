@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -727,8 +729,11 @@ func TestConn_DBName(t *testing.T) {
 
 func TestConn_AutoVacuumPages(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t, url.Values{
+		"_pragma": {"auto_vacuum(full)"},
+	})
 
-	db, err := sqlite3.Open("file:test.db?vfs=memdb&_pragma=auto_vacuum(full)")
+	db, err := sqlite3.Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}

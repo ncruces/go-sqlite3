@@ -12,10 +12,11 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/array"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Example_driver() {
-	db, err := driver.Open(":memory:", array.Register)
+	db, err := driver.Open("file:/test.db?vfs=memdb", array.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,8 +88,9 @@ func Example() {
 
 func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", array.Register)
+	db, err := driver.Open(tmp, array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

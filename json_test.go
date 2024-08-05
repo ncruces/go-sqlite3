@@ -6,11 +6,10 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Example_json() {
-	db, err := sqlite3.Open("file:/test.db?vfs=memdb")
+	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}

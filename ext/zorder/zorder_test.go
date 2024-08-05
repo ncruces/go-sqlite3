@@ -9,12 +9,14 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/zorder"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestRegister_zorder(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", zorder.Register)
+	db, err := driver.Open(tmp, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,8 +59,9 @@ func TestRegister_zorder(t *testing.T) {
 
 func TestRegister_unzorder(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", zorder.Register)
+	db, err := driver.Open(tmp, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,8 +87,9 @@ func TestRegister_unzorder(t *testing.T) {
 
 func TestRegister_error(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", zorder.Register)
+	db, err := driver.Open(tmp, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

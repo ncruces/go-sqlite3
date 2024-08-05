@@ -15,10 +15,11 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/lines"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Example() {
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open("file:/test.db?vfs=memdb", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,8 +67,9 @@ func Example() {
 
 func Test_lines(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open(tmp, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,8 +98,9 @@ func Test_lines(t *testing.T) {
 
 func Test_lines_error(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open(tmp, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,8 +123,9 @@ func Test_lines_error(t *testing.T) {
 
 func Test_lines_read(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open(tmp, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,8 +155,9 @@ func Test_lines_read(t *testing.T) {
 
 func Test_lines_test(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open(tmp, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "golang.org/x/crypto/blake2b"
 	_ "golang.org/x/crypto/blake2s"
 	_ "golang.org/x/crypto/md4"
@@ -19,6 +20,7 @@ import (
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
 	tests := []struct {
 		name string
@@ -52,7 +54,7 @@ func TestRegister(t *testing.T) {
 		{"blake2b('', 256)", "0E5751C026E543B2E8AB2EB06099DAA1D1E5DF47778F7787FAAB45CDF12FE3A8"},
 	}
 
-	db, err := driver.Open(":memory:", Register)
+	db, err := driver.Open(tmp, Register)
 	if err != nil {
 		t.Fatal(err)
 	}

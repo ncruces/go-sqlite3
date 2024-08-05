@@ -7,12 +7,14 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Test_generate(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", Register)
+	db, err := driver.Open(tmp, Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,8 +132,9 @@ func Test_generate(t *testing.T) {
 
 func Test_convert(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := driver.Open(":memory:", Register)
+	db, err := driver.Open(tmp, Register)
 	if err != nil {
 		t.Fatal(err)
 	}
