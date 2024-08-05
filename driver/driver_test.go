@@ -37,9 +37,11 @@ func Test_Open_dir(t *testing.T) {
 
 func Test_Open_pragma(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_pragma": {"busy_timeout(1000)"},
+	})
 
-	db, err := sql.Open("sqlite3", tmp+"_pragma=busy_timeout(1000)")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,9 +59,11 @@ func Test_Open_pragma(t *testing.T) {
 
 func Test_Open_pragma_invalid(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_pragma": {"busy_timeout 1000"},
+	})
 
-	db, err := sql.Open("sqlite3", tmp+"_pragma=busy_timeout+1000")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,9 +87,12 @@ func Test_Open_pragma_invalid(t *testing.T) {
 
 func Test_Open_txLock(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_txlock": {"exclusive"},
+		"_pragma": {"busy_timeout(1000)"},
+	})
 
-	db, err := sql.Open("sqlite3", tmp+"_txlock=exclusive&_pragma=busy_timeout(0)")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +123,9 @@ func Test_Open_txLock(t *testing.T) {
 
 func Test_Open_txLock_invalid(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_txlock": {"xclusive"},
+	})
 
 	_, err := sql.Open("sqlite3", tmp+"_txlock=xclusive")
 	if err == nil {
@@ -129,12 +138,15 @@ func Test_Open_txLock_invalid(t *testing.T) {
 
 func Test_BeginTx(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_txlock": {"exclusive"},
+		"_pragma": {"busy_timeout(0)"},
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", tmp+"_txlock=exclusive&_pragma=busy_timeout(0)")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,9 +319,11 @@ func Test_time(t *testing.T) {
 
 	for _, fmt := range []string{"auto", "sqlite", "rfc3339", time.ANSIC} {
 		t.Run(fmt, func(t *testing.T) {
-			tmp := memdb.TestDB(t)
+			tmp := memdb.TestDB(t, url.Values{
+				"_timefmt": {fmt},
+			})
 
-			db, err := sql.Open("sqlite3", tmp+"_timefmt="+url.QueryEscape(fmt))
+			db, err := sql.Open("sqlite3", tmp)
 			if err != nil {
 				t.Fatal(err)
 			}

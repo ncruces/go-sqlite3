@@ -19,7 +19,7 @@ import (
 )
 
 func Example() {
-	db, err := driver.Open(":memory:", lines.Register)
+	db, err := driver.Open("file:/test.db?vfs=memdb", lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}

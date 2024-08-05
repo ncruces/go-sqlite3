@@ -2,6 +2,7 @@ package tests
 
 import (
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,8 +62,9 @@ func Test_memdb(t *testing.T) {
 		iter = 5000
 	}
 
-	name := memdb.TestDB(t) +
-		"_pragma=busy_timeout(10000)"
+	name := memdb.TestDB(t, url.Values{
+		"_pragma": {"busy_timeout(10000)"},
+	})
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -180,8 +182,9 @@ func Benchmark_memdb(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	name := memdb.TestDB(b) +
-		"_pragma=busy_timeout(10000)"
+	name := memdb.TestDB(b, url.Values{
+		"_pragma": {"busy_timeout(10000)"},
+	})
 	testParallel(b, name, b.N)
 }
 

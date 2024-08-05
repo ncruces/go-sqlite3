@@ -262,7 +262,7 @@ func TestConn_Transaction_busy(t *testing.T) {
 	}
 	defer db1.Close()
 
-	db2, err := sqlite3.Open(tmp + "_pragma=busy_timeout(10000)")
+	db2, err := sqlite3.Open(tmp + "&_pragma=busy_timeout(10000)")
 	if err != nil {
 		t.Fatal(err)
 	}

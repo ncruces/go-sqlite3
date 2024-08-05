@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -728,9 +729,11 @@ func TestConn_DBName(t *testing.T) {
 
 func TestConn_AutoVacuumPages(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	tmp := memdb.TestDB(t, url.Values{
+		"_pragma": {"auto_vacuum(full)"},
+	})
 
-	db, err := sqlite3.Open(tmp + "_pragma=auto_vacuum(full)")
+	db, err := sqlite3.Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}

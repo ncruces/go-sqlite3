@@ -10,14 +10,14 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestDialector(t *testing.T) {
-	// This is the DSN of the in-memory SQLite database for these tests.
-	const InMemoryDSN = "file:testdatabase?mode=memory&cache=shared"
+	tmp := memdb.TestDB(t)
 
 	// Custom connection with a custom function called "my_custom_function".
-	db, err := driver.Open(InMemoryDSN, func(conn *sqlite3.Conn) error {
+	db, err := driver.Open(tmp, func(conn *sqlite3.Conn) error {
 		return conn.CreateFunction("my_custom_function", 0, sqlite3.DETERMINISTIC,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				ctx.ResultText("my-result")
@@ -36,14 +36,14 @@ func TestDialector(t *testing.T) {
 	}{
 		{
 			description:  "Default driver",
-			dialector:    Open(InMemoryDSN),
+			dialector:    Open(tmp),
 			openSuccess:  true,
 			query:        "SELECT 1",
 			querySuccess: true,
 		},
 		{
 			description:  "Custom function",
-			dialector:    Open(InMemoryDSN),
+			dialector:    Open(tmp),
 			openSuccess:  true,
 			query:        "SELECT my_custom_function()",
 			querySuccess: false,
