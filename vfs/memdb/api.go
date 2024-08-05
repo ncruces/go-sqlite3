@@ -10,7 +10,10 @@
 package memdb
 
 import (
+	"math/rand"
+	"strconv"
 	"sync"
+	"testing"
 
 	"github.com/ncruces/go-sqlite3/vfs"
 )
@@ -65,4 +68,12 @@ func Delete(name string) {
 	memoryMtx.Lock()
 	defer memoryMtx.Unlock()
 	delete(memoryDBs, name)
+}
+
+func TestDB(tb testing.TB) string {
+	tb.Helper()
+	name := tb.Name() + "_" + strconv.Itoa(int(rand.Int31()))
+	tb.Cleanup(func() { Delete(name) })
+	Create(name, nil)
+	return "file:/" + name + "?vfs=memdb&"
 }

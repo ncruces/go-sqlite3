@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math"
 	"net/url"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Test_Open_dir(t *testing.T) {
@@ -38,8 +37,9 @@ func Test_Open_dir(t *testing.T) {
 
 func Test_Open_pragma(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", "file::memory:?_pragma=busy_timeout(1000)")
+	db, err := sql.Open("sqlite3", tmp+"_pragma=busy_timeout(1000)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,8 +57,9 @@ func Test_Open_pragma(t *testing.T) {
 
 func Test_Open_pragma_invalid(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", "file::memory:?_pragma=busy_timeout+1000")
+	db, err := sql.Open("sqlite3", tmp+"_pragma=busy_timeout+1000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,14 +82,10 @@ func Test_Open_pragma_invalid(t *testing.T) {
 }
 
 func Test_Open_txLock(t *testing.T) {
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", "file:"+
-		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
-		"?_txlock=exclusive&_pragma=busy_timeout(0)")
+	db, err := sql.Open("sqlite3", tmp+"_txlock=exclusive&_pragma=busy_timeout(0)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,8 +116,9 @@ func Test_Open_txLock(t *testing.T) {
 
 func Test_Open_txLock_invalid(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	_, err := sql.Open("sqlite3", "file::memory:?_txlock=xclusive")
+	_, err := sql.Open("sqlite3", tmp+"_txlock=xclusive")
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -130,17 +128,13 @@ func Test_Open_txLock_invalid(t *testing.T) {
 }
 
 func Test_BeginTx(t *testing.T) {
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", "file:"+
-		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))+
-		"?_txlock=exclusive&_pragma=busy_timeout(0)")
+	db, err := sql.Open("sqlite3", tmp+"_txlock=exclusive&_pragma=busy_timeout(0)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,8 +176,9 @@ func Test_BeginTx(t *testing.T) {
 
 func Test_Prepare(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,11 +217,12 @@ func Test_Prepare(t *testing.T) {
 
 func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,8 +270,9 @@ func Test_QueryRow_named(t *testing.T) {
 
 func Test_QueryRow_blob_null(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +307,9 @@ func Test_time(t *testing.T) {
 
 	for _, fmt := range []string{"auto", "sqlite", "rfc3339", time.ANSIC} {
 		t.Run(fmt, func(t *testing.T) {
-			db, err := sql.Open("sqlite3", "file::memory:?_timefmt="+url.QueryEscape(fmt))
+			tmp := memdb.TestDB(t)
+
+			db, err := sql.Open("sqlite3", tmp+"_timefmt="+url.QueryEscape(fmt))
 			if err != nil {
 				t.Fatal(err)
 			}

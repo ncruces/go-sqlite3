@@ -8,7 +8,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestConn_Transaction_exec(t *testing.T) {
@@ -254,14 +254,15 @@ func TestConn_Transaction_interrupted(t *testing.T) {
 
 func TestConn_Transaction_busy(t *testing.T) {
 	t.Parallel()
+	tmp := memdb.TestDB(t)
 
-	db1, err := sqlite3.Open("file:/test.db?vfs=memdb")
+	db1, err := sqlite3.Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db1.Close()
 
-	db2, err := sqlite3.Open("file:/test.db?vfs=memdb&_pragma=busy_timeout(10000)")
+	db2, err := sqlite3.Open(tmp + "_pragma=busy_timeout(10000)")
 	if err != nil {
 		t.Fatal(err)
 	}
