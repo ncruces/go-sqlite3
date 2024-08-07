@@ -612,7 +612,8 @@ func (r *rows) Next(dest []driver.Value) error {
 }
 
 func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
-	if r.tmRead == sqlite3.TimeFormatDefault {
+	switch r.tmRead {
+	case sqlite3.TimeFormatDefault, time.RFC3339Nano:
 		// handled by maybeTime
 		return
 	}

@@ -130,7 +130,8 @@ func (ctx Context) ResultNull() {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultTime(value time.Time, format TimeFormat) {
-	if format == TimeFormatDefault {
+	switch format {
+	case TimeFormatDefault, TimeFormatAuto, time.RFC3339Nano:
 		ctx.resultRFC3339Nano(value)
 		return
 	}
