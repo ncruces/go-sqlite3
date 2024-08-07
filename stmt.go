@@ -311,7 +311,8 @@ func (s *Stmt) BindNull(param int) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
-	if format == TimeFormatDefault {
+	switch format {
+	case TimeFormatDefault, TimeFormatAuto, time.RFC3339Nano:
 		return s.bindRFC3339Nano(param, value)
 	}
 	switch v := format.Encode(value).(type) {

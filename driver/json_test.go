@@ -11,7 +11,7 @@ import (
 )
 
 func Example_json() {
-	db, err := driver.Open("file:/test.db?vfs=memdb")
+	db, err := driver.Open("file:/json.db?vfs=memdb")
 	if err != nil {
 		log.Fatal(err)
 	}
