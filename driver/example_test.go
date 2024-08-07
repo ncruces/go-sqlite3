@@ -12,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -253,12 +254,10 @@ func Example_customTime() {
 	// custom time: 2009-11-17 20:34:58.651 +0000 UTC
 }
 
-var Layout = "2006-01-02T15:04:05.000Z07:00"
-
 type CustomTime struct{ time.Time }
 
 func (c CustomTime) Value() (driver.Value, error) {
-	return c.UTC().Format(Layout), nil
+	return sqlite3.TimeFormat7TZ.Encode(c.UTC()), nil
 }
 
 func (c *CustomTime) Scan(value any) error {
@@ -270,7 +269,7 @@ func (c *CustomTime) Scan(value any) error {
 		*c = CustomTime{v}
 	case string:
 		fmt.Println("scan type string:", v)
-		t, err := time.Parse(Layout, v)
+		t, err := sqlite3.TimeFormat7TZ.Decode(v)
 		if err != nil {
 			return err
 		}
