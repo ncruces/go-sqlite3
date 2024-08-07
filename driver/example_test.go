@@ -170,49 +170,95 @@ func Example_customTime() {
 		log.Fatal(err)
 	}
 
-	// Initialise our custom time.
-	c := CustomTime{time.Date(
-		2009, 11, 17, 20, 34, 58, 651387237, time.UTC)}
+	// This one will be returned as string to [sql.Scanner] because it doesn't
+	// pass the driver's round-trip test when it tries to figure out if it's
+	// a time. 2009-11-17T20:34:58.650Z goes in, but parsing and formatting
+	// it with [time.RFC3338Nano] results in 2009-11-17T20:34:58.65Z. Though
+	// the times are identical, the trailing zero is lost in the string
+	// representation so the driver considers the conversion unsuccesful.
+	c1 := CustomTime{time.Date(
+		2009, 11, 17, 20, 34, 58, 650000000, time.UTC)}
 
 	// Store our custom time in the database.
-	_, err = db.Exec(`INSERT INTO data (date_time) VALUES(?)`, c)
+	_, err = db.Exec(`INSERT INTO data (date_time) VALUES(?)`, c1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var strTime string
+	var strc1 string
 	// Retrieve it as a string, the result of Value().
 	err = db.QueryRow(`
 		SELECT date_time
 		FROM data
 		WHERE id = last_insert_rowid()
-	`).Scan(&strTime)
+	`).Scan(&strc1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(strTime)
+	fmt.Println("in db:", strc1)
 
-	var resTime CustomTime
+	var resc1 CustomTime
 	// Retrieve it as our custom time type, going through Scan().
 	err = db.QueryRow(`
 		SELECT date_time
 		FROM data
 		WHERE id = last_insert_rowid()
-	`).Scan(&resTime)
+	`).Scan(&resc1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("custom time:", resc1)
+
+	// This one will be returned as [time.Time] to [sql.Scanner] because it does
+	// pass the driver's round-trip test when it tries to figure out if it's
+	// a time. 2009-11-17T20:34:58.651Z goes in, and parsing and formatting
+	// it with [time.RFC3339Nano] results in 2009-11-17T20:34:58.651Z.
+	c2 := CustomTime{time.Date(
+		2009, 11, 17, 20, 34, 58, 651000000, time.UTC)}
+	// Store our custom time in the database.
+	_, err = db.Exec(`INSERT INTO data (date_time) VALUES(?)`, c2)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(resTime)
+	var strc2 string
+	// Retrieve it as a string, the result of Value().
+	err = db.QueryRow(`
+		SELECT date_time
+		FROM data
+		WHERE id = last_insert_rowid()
+	`).Scan(&strc2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("in db:", strc2)
+
+	var resc2 CustomTime
+	// Retrieve it as our custom time type, going through Scan().
+	err = db.QueryRow(`
+		SELECT date_time
+		FROM data
+		WHERE id = last_insert_rowid()
+	`).Scan(&resc2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("custom time:", resc2)
 	// Output:
-	// 2009-11-17T20:34:58.651387237Z
-	// 2009-11-17 20:34:58.651387237 +0000 UTC
+	// in db: 2009-11-17T20:34:58.650Z
+	// scan type string: 2009-11-17T20:34:58.650Z
+	// custom time: 2009-11-17 20:34:58.65 +0000 UTC
+	// in db: 2009-11-17T20:34:58.651Z
+	// scan type time: 2009-11-17 20:34:58.651 +0000 UTC
+	// custom time: 2009-11-17 20:34:58.651 +0000 UTC
 }
+
+var Layout = "2006-01-02T15:04:05.000Z07:00"
 
 type CustomTime struct{ time.Time }
 
 func (c CustomTime) Value() (driver.Value, error) {
-	return c.UTC().Format(time.RFC3339Nano), nil
+	return c.UTC().Format(Layout), nil
 }
 
 func (c *CustomTime) Scan(value any) error {
@@ -220,9 +266,11 @@ func (c *CustomTime) Scan(value any) error {
 	case nil:
 		*c = CustomTime{time.Time{}}
 	case time.Time:
+		fmt.Println("scan type time:", v)
 		*c = CustomTime{v}
 	case string:
-		t, err := time.Parse(time.RFC3339Nano, v)
+		fmt.Println("scan type string:", v)
+		t, err := time.Parse(Layout, v)
 		if err != nil {
 			return err
 		}
