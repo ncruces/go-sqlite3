@@ -31,18 +31,27 @@
 //   - "sqlite" encodes as SQLite and decodes any [format] supported by SQLite;
 //   - "rfc3339" encodes and decodes RFC 3339 only.
 //
+// If you encode as RFC 3339 (the default),
+// consider using the TIME [collating sequence] to produce a time-ordered sequence.
+//
+// To scan values in other formats, [sqlite3.TimeFormat.Scanner] may be helpful.
+// To bind values in other formats, [sqlite3.TimeFormat.Encode] them before binding.
+//
 // When using a custom time struct, you'll have to implement
-// [database/sql/driver.Valuer] and [database/sql.Scanner]. The Value method
-// should serialise to a time format this driver recognises, like [time.RFC3339]
-// or [time.RFC3339Nano].
+// [database/sql/driver.Valuer] and [database/sql.Scanner].
 //
-// The Scan method needs to take into account that the value it receives can
-// be of differing types. It can be a [time.Time] if the driver knows to decode
-// a column as such and manages to do so successfully, but can also be a string,
-// a byte, an integer etc. depending on the column type and what whoever wrote
-// to the column put in there.
+// The Value method should ideally serialise to a time [format] supported by SQLite.
+// This ensures SQL date and time functions work as they should,
+// and that your schema works with other SQLite tools.
+// [sqlite3.TimeFormat.Encode] may help.
 //
-// # Setting PRAGMA's
+// The Scan method needs to take into account that the value it receives can be of differing types.
+// It can already be a [time.Time], if the driver decoded the value according to "_timefmt" rules.
+// Or it can be a: string, int64, float64, []byte, nil,
+// depending on the column type and what whoever wrote the value.
+// [sqlite3.TimeFormat.Decode] may help.
+//
+// # Setting PRAGMAs
 //
 // [PRAGMA] statements can be specified using "_pragma":
 //
@@ -51,7 +60,8 @@
 // If no PRAGMAs are specified, a busy timeout of 1 minute is set.
 //
 // Order matters:
-// busy timeout and locking mode should be the first PRAGMAs set, in that order.
+// encryption keys, busy timeout and locking mode should be the first PRAGMAs set,
+// in that order.
 //
 // [URI]: https://sqlite.org/uri.html
 // [PRAGMA]: https://sqlite.org/pragma.html
@@ -60,6 +70,7 @@
 // [serializable]: https://pkg.go.dev/database/sql#TxOptions
 // [read-only]: https://pkg.go.dev/database/sql#TxOptions
 // [format]: https://sqlite.org/lang_datefunc.html#time_values
+// [collating sequence]: https://sqlite.org/datatype3.html#collating_sequences
 package driver
 
 import (

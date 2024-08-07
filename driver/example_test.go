@@ -154,34 +154,34 @@ func addAlbum(alb Album) (int64, error) {
 }
 
 func Example_customTime() {
-	// Get a database handle.
 	db, err := sql.Open("sqlite3", "file:/time.db?vfs=memdb")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	// Create a table to hold our data
-	_, err = db.Exec(`CREATE TABLE data (
-		id INTEGER PRIMARY KEY,
-		date_time TEXT
-		) STRICT`)
+	_, err = db.Exec(`
+		CREATE TABLE data (
+			id INTEGER PRIMARY KEY,
+			date_time TEXT
+		) STRICT;
+	`)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Initialise our custom time
+	// Initialise our custom time.
 	c := CustomTime{time.Date(
 		2009, 11, 17, 20, 34, 58, 651387237, time.UTC)}
 
-	// Store our custom time in the DB
+	// Store our custom time in the database.
 	_, err = db.Exec(`INSERT INTO data (date_time) VALUES(?)`, c)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var strTime string
-	// Retrieve it as a string, the result of Value()
+	// Retrieve it as a string, the result of Value().
 	err = db.QueryRow(`
 		SELECT date_time
 		FROM data
@@ -193,7 +193,7 @@ func Example_customTime() {
 	fmt.Println(strTime)
 
 	var resTime CustomTime
-	// Retrieve it as our custom time type, going through Scan()
+	// Retrieve it as our custom time type, going through Scan().
 	err = db.QueryRow(`
 		SELECT date_time
 		FROM data

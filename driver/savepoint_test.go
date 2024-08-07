@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleSavepoint() {
-	db, err := driver.Open("file:/test.db?vfs=memdb")
+	db, err := driver.Open("file:/svpt.db?vfs=memdb")
 	if err != nil {
 		log.Fatal(err)
 	}
