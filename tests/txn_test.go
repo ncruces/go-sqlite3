@@ -353,9 +353,14 @@ func TestConn_Transaction_concurrent(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.BeginConcurrent()
-	if !errors.Is(err, sqlite3.ERROR) {
-		t.Errorf("got %v, want sqlite3.ERROR", err)
+	tx, err := db.BeginConcurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

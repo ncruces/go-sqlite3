@@ -3,33 +3,32 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-curl -#OL "https://sqlite.org/2024/sqlite-amalgamation-3460000.zip"
-unzip -d . sqlite-amalgamation-*.zip
-mv sqlite-amalgamation-*/sqlite3* .
-rm -rf sqlite-amalgamation-*
+curl -# https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=bedrock-3.46 | tar xz
 
+cd sqlite
+sh configure
+make sqlite3.c
+cd ~-
+
+mv sqlite/sqlite3.c sqlite/sqlite3.h sqlite/sqlite3ext.h ./
 cat *.patch | patch --no-backup-if-mismatch
 
 mkdir -p ext/
-cd ext/
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/anycollseq.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/base64.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/decimal.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/ieee754.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/regexp.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/series.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/ext/misc/uint.c"
-cd ~-
+mv sqlite/ext/misc/anycollseq.c    ext/
+mv sqlite/ext/misc/base64.c        ext/
+mv sqlite/ext/misc/decimal.c       ext/
+mv sqlite/ext/misc/ieee754.c       ext/
+mv sqlite/ext/misc/regexp.c        ext/
+mv sqlite/ext/misc/series.c        ext/
+mv sqlite/ext/misc/uint.c          ext/
 
-cd ../vfs/tests/mptest/testdata/
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/mptest.c"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/config01.test"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/config02.test"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/crash01.test"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/crash02.subtest"
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/mptest/multiwrite01.test"
-cd ~-
+mv sqlite/mptest/mptest.c          ../vfs/tests/mptest/testdata/
+mv sqlite/mptest/config01.test     ../vfs/tests/mptest/testdata/
+mv sqlite/mptest/config02.test     ../vfs/tests/mptest/testdata/
+mv sqlite/mptest/crash01.test      ../vfs/tests/mptest/testdata/
+mv sqlite/mptest/crash02.subtest   ../vfs/tests/mptest/testdata/
+mv sqlite/mptest/multiwrite01.test ../vfs/tests/mptest/testdata/
 
-cd ../vfs/tests/speedtest1/testdata/
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.0/test/speedtest1.c"
-cd ~-
+mv sqlite/test/speedtest1.c        ../vfs/tests/speedtest1/testdata/
+
+rm -r sqlite
