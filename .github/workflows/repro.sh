@@ -29,5 +29,10 @@ embed/build.sh
 util/vtabutil/parse/download.sh
 util/vtabutil/parse/build.sh
 
+# Download and build the bedrock branch (bcw2 patches)
+if [[ "$OSTYPE" == "linux"* ]]; then
+  embed/bcw2/build.sh
+fi
+
 # Check diffs
 git diff --exit-code 
