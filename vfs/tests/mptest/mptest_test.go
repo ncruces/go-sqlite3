@@ -248,47 +248,6 @@ func Test_multiwrite01_wal(t *testing.T) {
 	mod.Close(ctx)
 }
 
-func Test_crash01_wal2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	ctx := util.NewContext(newContext(t))
-	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
-		"--journalmode", "wal2")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
-}
-
-func Test_multiwrite01_wal2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	ctx := util.NewContext(newContext(t))
-	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test",
-		"--journalmode", "wal2")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
-}
-
 func Test_crash01_adiantum(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
@@ -328,29 +287,6 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
 		"--vfs", "adiantum", "--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
-}
-
-func Test_crash01_adiantum_wal2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	ctx := util.NewContext(newContext(t))
-	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
-		"--vfs", "adiantum", "--journalmode", "wal2")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
