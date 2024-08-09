@@ -24,15 +24,11 @@ wait
 # Download and build SQLite
 sqlite3/download.sh
 embed/build.sh
+embed/bcw2/build.sh
 
 # Download and build sqlite-createtable-parser
 util/vtabutil/parse/download.sh
 util/vtabutil/parse/build.sh
-
-# Download and build the bedrock branch (bcw2 patches)
-if [[ "$OSTYPE" == "linux"* ]]; then
-  embed/bcw2/build.sh
-fi
 
 # Check diffs
 git diff --exit-code 
