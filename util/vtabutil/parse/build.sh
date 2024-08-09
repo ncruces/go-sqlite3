@@ -7,6 +7,8 @@ ROOT=../../../
 BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
+trap 'rm -f sql3parse_table.tmp' EXIT
+
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -Oz \
 	-Wall -Wextra -o sql3parse_table.wasm main.c \
 	-mexec-model=reactor \
@@ -18,7 +20,6 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-Wl,--import-undefined \
 	-Wl,--export=sql3parse_table
 
-trap 'rm -f sql3parse_table.tmp' EXIT
 "$BINARYEN/wasm-ctor-eval" -c _initialize sql3parse_table.wasm -o sql3parse_table.tmp
 "$BINARYEN/wasm-opt" --strip --strip-debug --strip-producers -c -Oz \
 	sql3parse_table.tmp -o sql3parse_table.wasm \

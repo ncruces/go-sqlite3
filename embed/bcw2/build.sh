@@ -7,7 +7,7 @@ ROOT=../../
 BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
-trap 'rm -rf build sqlite bcw2.tmp' EXIT
+trap 'rm -rf build/ sqlite/ bcw2.tmp' EXIT
 
 mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/

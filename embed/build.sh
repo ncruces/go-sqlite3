@@ -7,6 +7,8 @@ ROOT=../
 BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
+trap 'rm -f sqlite3.tmp' EXIT
+
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o sqlite3.wasm "$ROOT/sqlite3/main.c" \
@@ -23,7 +25,6 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
-trap 'rm -f sqlite3.tmp' EXIT
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize sqlite3.wasm -o sqlite3.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	sqlite3.tmp -o sqlite3.wasm \
