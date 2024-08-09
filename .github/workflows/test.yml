@@ -57,6 +57,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
 
     - name: Test GORM
+      shell: bash
       run: gormlite/test.sh
 
     - name: Collect coverage

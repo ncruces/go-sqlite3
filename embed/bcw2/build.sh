@@ -16,8 +16,12 @@ cp "$ROOT"/sqlite3/*.patch build/
 curl -# https://www.sqlite.org/src/tarball/sqlite.tar.gz?r=bedrock-3.46 | tar xz
 
 cd sqlite
-sh configure
-make sqlite3.c
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c
+else
+	sh configure
+	make sqlite3.c
+fi
 cd ~-
 
 mv sqlite/sqlite3.c             build/
