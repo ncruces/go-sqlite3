@@ -83,7 +83,7 @@ type memDB struct {
 	size int64
 
 	// +checklocks:lockMtx
-	shared int
+	shared int32
 	// +checklocks:lockMtx
 	reserved bool
 	// +checklocks:lockMtx
@@ -227,9 +227,6 @@ func (m *memFile) Lock(lock vfs.LockLevel) error {
 
 	case vfs.LOCK_EXCLUSIVE:
 		if m.lock < vfs.LOCK_PENDING {
-			if m.pending {
-				return sqlite3.BUSY
-			}
 			m.lock = vfs.LOCK_PENDING
 			m.pending = true
 		}
