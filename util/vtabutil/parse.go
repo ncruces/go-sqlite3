@@ -50,7 +50,8 @@ func Parse(sql string) (_ *Table, err error) {
 		copy(buf, sql)
 	}
 
-	r, err := mod.ExportedFunction("sql3parse_table").Call(ctx, sqlp, uint64(len(sql)), errp)
+	stack := [...]uint64{sqlp, uint64(len(sql)), errp}
+	err = mod.ExportedFunction("sql3parse_table").CallWithStack(ctx, stack[:])
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func Parse(sql string) (_ *Table, err error) {
 	}
 
 	var tab Table
-	tab.load(mod, uint32(r[0]), sql)
+	tab.load(mod, uint32(stack[0]), sql)
 	return &tab, nil
 }
 
