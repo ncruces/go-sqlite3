@@ -12,7 +12,6 @@ func (e ErrorString) Error() string { return string(e) }
 const (
 	NilErr       = ErrorString("sqlite3: invalid memory address or null pointer dereference")
 	OOMErr       = ErrorString("sqlite3: out of memory")
-	ArgErr       = ErrorString("sqlite3: invalid argument")
 	RangeErr     = ErrorString("sqlite3: index out of range")
 	NoNulErr     = ErrorString("sqlite3: missing NUL terminator")
 	NoBinaryErr  = ErrorString("sqlite3: no SQLite binary embed/set/loaded")

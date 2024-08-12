@@ -109,7 +109,7 @@ func init() {
 func Open(dataSourceName string, fn ...func(*sqlite3.Conn) error) (*sql.DB, error) {
 	var drv SQLite
 	if len(fn) > 2 {
-		return nil, util.ArgErr
+		return nil, sqlite3.MISUSE
 	}
 	if len(fn) > 1 {
 		drv.term = fn[1]

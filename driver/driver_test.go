@@ -17,6 +17,18 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
+func Test_Open_error(t *testing.T) {
+	t.Parallel()
+
+	_, err := Open("", nil, nil, nil)
+	if err == nil {
+		t.Error("want error")
+	}
+	if !errors.Is(err, sqlite3.MISUSE) {
+		t.Errorf("got %v, want sqlite3.MISUSE", err)
+	}
+}
+
 func Test_Open_dir(t *testing.T) {
 	t.Parallel()
 
