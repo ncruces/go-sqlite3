@@ -1,11 +1,10 @@
-package bcw2_test
+package bcw2
 
 import (
 	"path/filepath"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed/bcw2"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -36,5 +35,14 @@ func Test_bcw2(t *testing.T) {
 	err = tx.Commit()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	var version string
+	err = db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != "3.46.1" {
+		t.Error(version)
 	}
 }

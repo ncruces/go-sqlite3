@@ -31,4 +31,4 @@ util/vtabutil/parse/download.sh
 util/vtabutil/parse/build.sh
 
 # Check diffs
-git diff --exit-code 
+git diff --exit-code
