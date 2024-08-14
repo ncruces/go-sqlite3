@@ -1,4 +1,4 @@
-//go:build go1.23 || goexperiment.rangefunc
+//go:build (go1.23 || goexperiment.rangefunc) && !vet
 
 package fileio
 
