@@ -66,23 +66,23 @@ func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			domain = uuid.Domain(arg[1].Int64())
 			if domain == 0 {
 				if txt := arg[1].RawText(); len(txt) > 0 {
-					switch txt[0] | 0x20 {
+					switch txt[0] | 0x20 { // to lower
 					case 'g': // group
-						domain = 1
+						domain = uuid.Group
 					case 'o': // org
-						domain = 2
+						domain = uuid.Org
 					}
 				}
 			}
 		}
-		if len(arg) > 2 {
-			id := uint32(arg[2].Int64())
-			u, err = uuid.NewDCESecurity(domain, id)
-		} else if domain == uuid.Person {
+		switch {
+		case len(arg) > 2:
+			u, err = uuid.NewDCESecurity(domain, uint32(arg[2].Int64()))
+		case domain == uuid.Person:
 			u, err = uuid.NewDCEPerson()
-		} else if domain == uuid.Group {
+		case domain == uuid.Group:
 			u, err = uuid.NewDCEGroup()
-		} else {
+		default:
 			err = util.ErrorString("missing id")
 		}
 
