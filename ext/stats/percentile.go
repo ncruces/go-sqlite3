@@ -79,7 +79,7 @@ func getPercentile(nums []float64, pos float64, disc bool) (float64, error) {
 	}
 
 	m1 := slices.Min(nums[int(i)+1:])
-	return math.FMA(f, m1, -math.FMA(f, m0, -m0)), nil
+	return math.FMA(f, m1, math.FMA(-f, m0, m0)), nil
 }
 
 func getPercentiles(nums []float64, pos []float64, disc bool) error {
