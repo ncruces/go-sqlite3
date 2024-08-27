@@ -32,7 +32,7 @@ func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		q.nums = append(q.nums, a.Float())
 	}
 	if q.kind != median {
-		q.arg1 = arg[1].Blob(q.arg1[:0])
+		q.arg1 = append(q.arg1[:0], arg[1].RawText()...)
 	}
 }
 
