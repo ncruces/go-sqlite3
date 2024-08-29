@@ -176,7 +176,7 @@ func Example_customTime() {
 	// a time. 2009-11-17T20:34:58.650Z goes in, but parsing and formatting
 	// it with [time.RFC3338Nano] results in 2009-11-17T20:34:58.65Z. Though
 	// the times are identical, the trailing zero is lost in the string
-	// representation so the driver considers the conversion unsuccesful.
+	// representation so the driver considers the conversion unsuccessful.
 	c1 := CustomTime{time.Date(
 		2009, 11, 17, 20, 34, 58, 650000000, time.UTC)}
 
