@@ -45,12 +45,19 @@ func Test_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
+	var iter int
+	if testing.Short() {
+		iter = 1000
+	} else {
+		iter = 2500
+	}
+
 	name := "file:" +
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
-	testParallel(t, name, 1000)
+	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
 
