@@ -1,7 +1,9 @@
 package tests
 
 import (
+	"errors"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -18,6 +20,20 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
+
+func TestMain(m *testing.M) {
+	sqlite3.AutoExtension(func(c *sqlite3.Conn) error {
+		return c.ConfigLog(func(code sqlite3.ExtendedErrorCode, msg string) {
+			// Having to do journal recovery is unexpected.
+			if errors.Is(code, sqlite3.NOTICE) {
+				log.Panicf("%v (%d): %s", code, code, msg)
+			} else {
+				log.Printf("%v (%d): %s", code, code, msg)
+			}
+		})
+	})
+	m.Run()
+}
 
 func Test_parallel(t *testing.T) {
 	if !vfs.SupportsFileLocking {
