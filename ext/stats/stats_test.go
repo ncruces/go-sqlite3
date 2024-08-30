@@ -10,8 +10,9 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(stats.Register)
+	m.Run()
 }
 
 func TestRegister_variance(t *testing.T) {

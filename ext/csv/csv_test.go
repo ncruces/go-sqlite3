@@ -54,8 +54,9 @@ func Example() {
 	// On Twosday, 1€ = $1.1342
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(csv.Register)
+	m.Run()
 }
 
 func TestRegister(t *testing.T) {

@@ -12,8 +12,9 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(bloom.Register)
+	m.Run()
 }
 
 func TestRegister(t *testing.T) {

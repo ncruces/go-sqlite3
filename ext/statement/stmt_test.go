@@ -48,8 +48,9 @@ func Example() {
 	// Twosday was 2022-2-22
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(statement.Register)
+	m.Run()
 }
 
 func TestRegister(t *testing.T) {

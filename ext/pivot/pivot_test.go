@@ -83,8 +83,9 @@ func Example() {
 	// gamma   80      75      78      80
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(pivot.Register)
+	m.Run()
 }
 
 func TestRegister(t *testing.T) {

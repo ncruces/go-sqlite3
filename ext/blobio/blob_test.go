@@ -58,9 +58,10 @@ func Example() {
 	// Hello BLOB!
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(blobio.Register)
 	sqlite3.AutoExtension(array.Register)
+	m.Run()
 }
 
 func Test_readblob(t *testing.T) {
