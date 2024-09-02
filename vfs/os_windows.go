@@ -38,9 +38,9 @@ func osGetPendingLock(file *os.File, block bool) _ErrorCode {
 	return osWriteLock(file, _PENDING_BYTE, 1, timeout)
 }
 
-func osGetExclusiveLock(file *os.File, wait bool) _ErrorCode {
+func osGetExclusiveLock(file *os.File, block bool) _ErrorCode {
 	var timeout time.Duration
-	if wait {
+	if block {
 		timeout = time.Millisecond
 	}
 
