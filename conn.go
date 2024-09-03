@@ -23,6 +23,7 @@ type Conn struct {
 	interrupt  context.Context
 	pending    *Stmt
 	stmts      []*Stmt
+	timer      *time.Timer
 	busy       func(int) bool
 	log        func(xErrorCode, string)
 	collation  func(*Conn, string)
@@ -394,10 +395,15 @@ func timeoutCallback(ctx context.Context, mod api.Module, pDB uint32, count, tmo
 				time.Sleep(delay)
 				return 1
 			}
+			if c.timer == nil {
+				c.timer = time.NewTimer(delay)
+			} else {
+				c.timer.Reset(delay)
+			}
 			select {
 			case <-c.interrupt.Done():
-				//
-			case <-time.After(delay):
+				c.timer.Stop()
+			case <-c.timer.C:
 				return 1
 			}
 		}
