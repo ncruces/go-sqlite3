@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -219,9 +220,13 @@ func testParallel(t testing.TB, name string, n int) {
 		}
 		defer db.Close()
 
-		err = db.BusyHandler(func(count int) (retry bool) {
-			time.Sleep(time.Millisecond)
-			return true
+		err = db.BusyHandler(func(ctx context.Context, count int) (retry bool) {
+			select {
+			case <-time.After(time.Millisecond):
+				return true
+			case <-ctx.Done():
+				return false
+			}
 		})
 		if err != nil {
 			return err
