@@ -389,11 +389,20 @@ func timeoutCallback(ctx context.Context, mod api.Module, pDB uint32, count, tmo
 		}
 
 		if delay = min(delay, tmout-prior); delay > 0 {
-			time.Sleep(time.Duration(delay) * time.Millisecond)
-			retry = 1
+			delay := time.Duration(delay) * time.Millisecond
+			if c.interrupt == nil || c.interrupt.Done() == nil {
+				time.Sleep(delay)
+				return 1
+			}
+			select {
+			case <-c.interrupt.Done():
+				//
+			case <-time.After(delay):
+				return 1
+			}
 		}
 	}
-	return retry
+	return 0
 }
 
 // BusyHandler registers a callback to handle [BUSY] errors.
