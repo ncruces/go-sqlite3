@@ -131,7 +131,12 @@ func TestMultiProcess(t *testing.T) {
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
 
-	cmd := exec.Command(os.Args[0], append(os.Args[1:], "-test.v", "-test.run=TestChildProcess")...)
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=TestChildProcess")...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
