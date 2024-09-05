@@ -34,23 +34,26 @@ func Example() {
 	const message = "Hello BLOB!"
 
 	// Create the BLOB.
-	_, err = db.Exec(`INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(len(message)))
+	r, err := db.Exec(`INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(len(message)))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	id, err := r.LastInsertId()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Write the BLOB.
-	_, err = db.Exec(`SELECT writeblob('main', 'test', 'col', last_insert_rowid(), 0, ?)`, message)
+	_, err = db.Exec(`SELECT writeblob('main', 'test', 'col', ?, 0, ?)`,
+		id, message)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Read the BLOB.
-	_, err = db.Exec(`SELECT openblob('main', 'test', 'col', rowid, false, ?) FROM test`,
-		sqlite3.Pointer[blobio.OpenCallback](func(blob *sqlite3.Blob, _ ...sqlite3.Value) error {
-			_, err = blob.WriteTo(os.Stdout)
-			return err
-		}))
+	_, err = db.Exec(`SELECT readblob('main', 'test', 'col', ?, 0, ?)`,
+		id, sqlite3.Pointer(os.Stdout))
 	if err != nil {
 		log.Fatal(err)
 	}

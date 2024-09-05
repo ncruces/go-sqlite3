@@ -11,11 +11,11 @@ import (
 
 // Register registers the SQL functions:
 //
-//	readblob(schema, table, column, rowid, offset, n)
+//	readblob(schema, table, column, rowid, offset, n/writer)
 //
 // Reads n bytes of a blob, starting at offset.
 //
-//	writeblob(schema, table, column, rowid, offset, data)
+//	writeblob(schema, table, column, rowid, offset, data/reader)
 //
 // Writes data into a blob, at the given offset.
 //
@@ -52,19 +52,24 @@ func readblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		return // notest
 	}
 
-	n := arg[5].Int64()
-	if n <= 0 {
-		return
+	if p, ok := arg[5].Pointer().(io.Writer); ok {
+		var n int64
+		n, err = blob.WriteTo(p)
+		ctx.ResultInt64(n)
+	} else {
+		n := arg[5].Int64()
+		if n <= 0 {
+			return
+		}
+		buf := make([]byte, n)
+		_, err = io.ReadFull(blob, buf)
+		ctx.ResultBlob(buf)
 	}
-	buf := make([]byte, n)
-
-	_, err = io.ReadFull(blob, buf)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
 	}
 
-	ctx.ResultBlob(buf)
 	setAuxBlob(ctx, blob, false)
 }
 
@@ -82,7 +87,9 @@ func writeblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 
 	if p, ok := arg[5].Pointer().(io.Reader); ok {
-		_, err = blob.ReadFrom(p)
+		var n int64
+		n, err = blob.ReadFrom(p)
+		ctx.ResultInt64(n)
 	} else {
 		_, err = blob.Write(arg[5].RawBlob())
 	}
