@@ -27,6 +27,10 @@ import (
 // using [sqlite3.BindPointer] or [sqlite3.Pointer].
 // The optional args will be passed to the callback,
 // along with the [sqlite3.Blob] handle.
+// The [sqlite3.Blob] handle is only valid during
+// the execution of the callback. Callers cannot
+// read or write to the handle after the callback
+// exits.
 //
 // https://sqlite.org/c3ref/blob.html
 func Register(db *sqlite3.Conn) error {
