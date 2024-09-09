@@ -3,7 +3,6 @@ package sqlite3
 import (
 	"bytes"
 	"math"
-	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -39,7 +38,7 @@ func Test_sqlite_call_closed(t *testing.T) {
 	sqlite.close()
 
 	defer func() { _ = recover() }()
-	sqlite.call("free")
+	sqlite.call("sqlite3_free")
 	t.Error("want panic")
 }
 
@@ -55,19 +54,6 @@ func Test_sqlite_new(t *testing.T) {
 	t.Run("MaxUint32", func(t *testing.T) {
 		defer func() { _ = recover() }()
 		sqlite.new(math.MaxUint32)
-		t.Error("want panic")
-	})
-
-	t.Run("_MAX_ALLOCATION_SIZE", func(t *testing.T) {
-		if testing.Short() {
-			t.Skip("skipping in short mode")
-		}
-		if os.Getenv("CI") != "" {
-			t.Skip("skipping in CI")
-		}
-		defer func() { _ = recover() }()
-		sqlite.new(_MAX_ALLOCATION_SIZE)
-		sqlite.new(_MAX_ALLOCATION_SIZE)
 		t.Error("want panic")
 	})
 }

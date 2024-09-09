@@ -86,7 +86,6 @@ type sqlite struct {
 		mask uint32
 	}
 	stack [9]uint64
-	freer uint32
 }
 
 func instantiateSQLite() (sqlt *sqlite, err error) {
@@ -102,14 +101,7 @@ func instantiateSQLite() (sqlt *sqlite, err error) {
 	if err != nil {
 		return nil, err
 	}
-
-	global := sqlt.mod.ExportedGlobal("malloc_destructor")
-	if global == nil {
-		return nil, util.BadBinaryErr
-	}
-
-	sqlt.freer = util.ReadUint32(sqlt.mod, uint32(global.Get()))
-	if sqlt.freer == 0 {
+	if sqlt.getfn("sqlite3_progress_handler_go") == nil {
 		return nil, util.BadBinaryErr
 	}
 	return sqlt, nil
@@ -196,15 +188,15 @@ func (sqlt *sqlite) free(ptr uint32) {
 	if ptr == 0 {
 		return
 	}
-	sqlt.call("free", uint64(ptr))
+	sqlt.call("sqlite3_free", uint64(ptr))
 }
 
 func (sqlt *sqlite) new(size uint64) uint32 {
-	if size > _MAX_ALLOCATION_SIZE {
-		panic(util.OOMErr)
+	if size == 0 {
+		size = 1
 	}
-	ptr := uint32(sqlt.call("malloc", size))
-	if ptr == 0 && size != 0 {
+	ptr := uint32(sqlt.call("sqlite3_malloc64", size))
+	if ptr == 0 {
 		panic(util.OOMErr)
 	}
 	return ptr

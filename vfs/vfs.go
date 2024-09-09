@@ -356,7 +356,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 				out = err.Error()
 			}
 			if out != "" {
-				fn := mod.ExportedFunction("malloc")
+				fn := mod.ExportedFunction("sqlite3_malloc64")
 				stack := [...]uint64{uint64(len(out) + 1)}
 				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
 					panic(err)
