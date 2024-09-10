@@ -192,11 +192,16 @@ func (sqlt *sqlite) free(ptr uint32) {
 }
 
 func (sqlt *sqlite) new(size uint64) uint32 {
-	if size == 0 {
-		size = 1
-	}
 	ptr := uint32(sqlt.call("sqlite3_malloc64", size))
-	if ptr == 0 {
+	if ptr == 0 && size != 0 {
+		panic(util.OOMErr)
+	}
+	return ptr
+}
+
+func (sqlt *sqlite) realloc(ptr uint32, size uint64) uint32 {
+	ptr = uint32(sqlt.call("sqlite3_realloc64", uint64(ptr), size))
+	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
 	return ptr
@@ -206,7 +211,11 @@ func (sqlt *sqlite) newBytes(b []byte) uint32 {
 	if (*[0]byte)(b) == nil {
 		return 0
 	}
-	ptr := sqlt.new(uint64(len(b)))
+	size := len(b)
+	if size == 0 {
+		size = 1
+	}
+	ptr := sqlt.new(uint64(size))
 	util.WriteBytes(sqlt.mod, ptr, b)
 	return ptr
 }
