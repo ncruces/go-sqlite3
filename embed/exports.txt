@@ -74,6 +74,7 @@ sqlite3_finalize
 sqlite3_free
 sqlite3_get_autocommit
 sqlite3_get_auxdata
+sqlite3_hard_heap_limit64
 sqlite3_interrupt
 sqlite3_last_insert_rowid
 sqlite3_limit
@@ -100,6 +101,7 @@ sqlite3_rollback_hook_go
 sqlite3_set_authorizer_go
 sqlite3_set_auxdata_go
 sqlite3_set_last_insert_rowid
+sqlite3_soft_heap_limit64
 sqlite3_step
 sqlite3_stmt_busy
 sqlite3_stmt_readonly
