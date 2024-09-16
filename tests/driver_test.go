@@ -33,7 +33,7 @@ func TestDriver(t *testing.T) {
 	defer conn.Close()
 
 	res, err := conn.ExecContext(ctx,
-		`CREATE TABLE users (id INT, name VARCHAR(10))`)
+		`CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,11 +82,17 @@ func TestDriver(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := typs[0].DatabaseTypeName(); got != "INT" {
-		t.Errorf("got %s, want INT", got)
+	if got := typs[0].DatabaseTypeName(); got != "INTEGER" {
+		t.Errorf("got %s, want INTEGER", got)
 	}
 	if got := typs[1].DatabaseTypeName(); got != "VARCHAR" {
-		t.Errorf("got %s, want INT", got)
+		t.Errorf("got %s, want VARCHAR", got)
+	}
+	if got, ok := typs[0].Nullable(); got || !ok {
+		t.Errorf("got %v/%v, want false/true", got, ok)
+	}
+	if got, ok := typs[1].Nullable(); !got || ok {
+		t.Errorf("got %v/%v, want true/false", got, ok)
 	}
 
 	row := 0
