@@ -79,6 +79,12 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 
 	t.bytes = numBytes(nelem, t.prob)
 
+	err = db.DeclareVTab(
+		`CREATE TABLE x(present, word HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`)
+	if err != nil {
+		return nil, err
+	}
+
 	err = db.Exec(fmt.Sprintf(
 		`CREATE TABLE %s.%s (data BLOB, p REAL, n INTEGER, m INTEGER, k INTEGER)`,
 		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)))
@@ -94,12 +100,6 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 		 VALUES (1, zeroblob(%d), %f, %d, %d, %d)`,
 		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage),
 		t.bytes, t.prob, nelem, 8*t.bytes, t.hashes))
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.DeclareVTab(
-		`CREATE TABLE x(present, word HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`)
 	if err != nil {
 		t.Destroy()
 		return nil, err
@@ -198,10 +198,10 @@ func (t *bloom) Integrity(schema, table string, flags int) error {
 }
 
 func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
-	for n, cst := range idx.Constraint {
+	for i, cst := range idx.Constraint {
 		if cst.Usable && cst.Column == 1 &&
 			cst.Op == sqlite3.INDEX_CONSTRAINT_EQ {
-			idx.ConstraintUsage[n].ArgvIndex = 1
+			idx.ConstraintUsage[i].ArgvIndex = 1
 			idx.OrderByConsumed = true
 			idx.EstimatedRows = 1
 			idx.EstimatedCost = float64(b.hashes)
