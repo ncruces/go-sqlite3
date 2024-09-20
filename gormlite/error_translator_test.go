@@ -3,20 +3,18 @@ package gormlite
 import (
 	"testing"
 
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 func TestErrorTranslator(t *testing.T) {
-	// This is the DSN of the in-memory SQLite database for these tests.
-	const InMemoryDSN = "file:testdatabase?mode=memory&cache=shared"
-
 	// This is the example object for testing the unique constraint error
 	type Article struct {
 		ArticleNumber string `gorm:"unique"`
 	}
 
-	db, err := gorm.Open(Open(InMemoryDSN), &gorm.Config{
+	db, err := gorm.Open(Open(memdb.TestDB(t)), &gorm.Config{
 		Logger:         logger.Default.LogMode(logger.Silent),
 		TranslateError: true})
 
