@@ -40,12 +40,12 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			comma    rune = ','
 			comment  rune
 
-			done = map[string]struct{}{}
+			done = util.Set[string]{}
 		)
 
 		for _, arg := range arg {
 			key, val := vtabutil.NamedArg(arg)
-			if _, ok := done[key]; ok {
+			if done.Contains(key) {
 				return nil, fmt.Errorf("csv: more than one %q parameter", key)
 			}
 			switch key {
@@ -69,7 +69,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			if err != nil {
 				return nil, err
 			}
-			done[key] = struct{}{}
+			done.Add(key)
 		}
 
 		if (filename == "") == (data == "") {
