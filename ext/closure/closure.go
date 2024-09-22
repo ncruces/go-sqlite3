@@ -1,6 +1,6 @@
 // Package closure provides a transitive closure virtual table.
 //
-// The "transitive_closure" virtual table finds the transitive closure of
+// The transitive_closure virtual table finds the transitive closure of
 // a parent/child relationship in a real table.
 //
 // https://sqlite.org/src/doc/tip/ext/misc/closure.c
@@ -24,6 +24,9 @@ const (
 	_COL_PARENTCOLUMN = 5
 )
 
+// Register registers the transitive_closure virtual table:
+//
+//	CREATE VIRTUAL TABLE temp.closure USING transitive_closure;
 func Register(db *sqlite3.Conn) error {
 	return sqlite3.CreateModule(db, "transitive_closure", nil,
 		func(db *sqlite3.Conn, _, _, _ string, arg ...string) (*closure, error) {
@@ -76,9 +79,9 @@ type closure struct {
 func (c *closure) Destroy() error { return nil }
 
 func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
-	posi := 1
 	plan := 0
-	cost := 10000000.0
+	posi := 1
+	cost := 1e7
 
 	for i, cst := range idx.Constraint {
 		if !cst.Usable {
@@ -140,17 +143,11 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 		}
 	}
 
-	if c.table == "" && plan&0xf00 == 0 ||
+	if plan&1 == 0 ||
+		c.table == "" && plan&0xf00 == 0 ||
 		c.column == "" && plan&0xf000 == 0 ||
 		c.parent == "" && plan&0xf0000 == 0 {
-		plan = 0
-	}
-	if plan&1 == 0 {
-		plan = 0
-		cost *= 1e30
-		for i := range idx.Constraint {
-			idx.ConstraintUsage[i].ArgvIndex = 0
-		}
+		return sqlite3.CONSTRAINT
 	}
 
 	idx.EstimatedCost = cost
@@ -173,10 +170,6 @@ type node struct {
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	if idxNum&1 == 0 {
-		return nil
-	}
-
 	root := arg[0].Int64()
 	maxDepth := math.MaxInt
 	if idxNum&0xf0 != 0 {

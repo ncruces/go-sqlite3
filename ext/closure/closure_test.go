@@ -24,6 +24,8 @@ func Example() {
 	}
 	defer db.Close()
 
+	closure.Register(db)
+
 	err = db.Exec(`
 		CREATE TABLE employees (
 			id INTEGER PRIMARY KEY,
@@ -148,5 +150,35 @@ func TestRegister(t *testing.T) {
 	err = db.Close()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func Test_errors(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE VIRTUAL TABLE hierarchy USING transitive_closure(table='employees')`)
+	if err == nil {
+		t.Error("want error")
+	}
+
+	err = db.Exec(`CREATE VIRTUAL TABLE hierarchy USING transitive_closure(tablename='employees', tablename="employees")`)
+	if err == nil {
+		t.Error("want error")
+	}
+
+	err = db.Exec("CREATE VIRTUAL TABLE hierarchy USING transitive_closure(tablename=`employees`)")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = db.Exec(`SELECT * FROM hierarchy`)
+	if err == nil {
+		t.Error("want error")
 	}
 }

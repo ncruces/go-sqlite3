@@ -272,10 +272,6 @@ type cursor struct {
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	if len(arg) != 1 {
-		return nil
-	}
-
 	c.eof = false
 	c.arg = &arg[0]
 	blob := arg[0].RawBlob()

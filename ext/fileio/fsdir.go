@@ -10,13 +10,22 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
+const (
+	_COL_NAME = 0
+	_COL_MODE = 1
+	_COL_TIME = 2
+	_COL_DATA = 3
+	_COL_ROOT = 4
+	_COL_BASE = 5
+)
+
 type fsdir struct{ fsys fs.FS }
 
 func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 	var root, base bool
 	for i, cst := range idx.Constraint {
 		switch cst.Column {
-		case 4: // root
+		case _COL_ROOT:
 			if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
 				return sqlite3.CONSTRAINT
 			}
@@ -25,7 +34,7 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 				ArgvIndex: 1,
 			}
 			root = true
-		case 5: // base
+		case _COL_BASE:
 			if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
 				return sqlite3.CONSTRAINT
 			}
@@ -116,25 +125,25 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 	switch n {
-	case 0: // name
+	case _COL_NAME:
 		name := strings.TrimPrefix(c.curr.path, c.base)
 		ctx.ResultText(name)
 
-	case 1: // mode
+	case _COL_MODE:
 		i, err := c.curr.Info()
 		if err != nil {
 			return err
 		}
 		ctx.ResultInt64(int64(i.Mode()))
 
-	case 2: // mtime
+	case _COL_TIME:
 		i, err := c.curr.Info()
 		if err != nil {
 			return err
 		}
 		ctx.ResultTime(i.ModTime(), sqlite3.TimeFormatUnixFrac)
 
-	case 3: // data
+	case _COL_DATA:
 		switch typ := c.curr.Type(); {
 		case typ.IsRegular():
 			var data []byte

@@ -26,6 +26,8 @@ func Unquote(val string) string {
 		return val
 	case '"':
 		old, new = `""`, `"`
+	case '`':
+		old, new = "``", "`"
 	case '\'':
 		old, new = `''`, `'`
 	}
