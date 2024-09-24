@@ -581,6 +581,12 @@ type rows struct {
 	nulls []bool
 }
 
+var (
+	// Ensure these interfaces are implemented:
+	_ driver.RowsColumnTypeDatabaseTypeName = &rows{}
+	_ driver.RowsColumnTypeNullable         = &rows{}
+)
+
 func (r *rows) Close() error {
 	r.Stmt.ClearBindings()
 	return r.Stmt.Reset()
