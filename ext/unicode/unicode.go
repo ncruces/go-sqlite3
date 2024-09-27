@@ -65,6 +65,15 @@ func RegisterCollation(db *sqlite3.Conn, locale, name string) error {
 	return db.CreateCollation(name, collate.New(tag).Compare)
 }
 
+// RegisterCollationsNeeded registers Unicode collation sequences on demand for a database connection.
+func RegisterCollationsNeeded(db *sqlite3.Conn) error {
+	return db.CollationNeeded(func(db *sqlite3.Conn, name string) {
+		if tag, err := language.Parse(name); err == nil {
+			db.CreateCollation(name, collate.New(tag).Compare)
+		}
+	})
+}
+
 func upper(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if len(arg) == 1 {
 		ctx.ResultRawText(bytes.ToUpper(arg[0].RawText()))

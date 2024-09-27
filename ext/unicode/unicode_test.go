@@ -92,12 +92,63 @@ func TestRegister_collation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = db.Exec(`SELECT icu_load_collation('fr_FR', 'french')`)
+	err = db.Exec(`SELECT icu_load_collation('fr-FR', 'french')`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	stmt, _, err := db.Prepare(`SELECT word FROM words ORDER BY word COLLATE french`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	got, want := []string{}, []string{"cote", "coté", "côte", "côté", "cotée", "coter"}
+
+	for stmt.Step() {
+		got = append(got, stmt.ColumnText(0))
+	}
+	if err := stmt.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Error("not equal")
+	}
+
+	err = stmt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRegisterCollationsNeeded(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	RegisterCollationsNeeded(db)
+
+	err = db.Exec(`CREATE TABLE words (word VARCHAR(10))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`INSERT INTO words (word) VALUES ('côte'), ('cote'), ('coter'), ('coté'), ('cotée'), ('côté')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT word FROM words ORDER BY word COLLATE fr_FR`)
 	if err != nil {
 		t.Fatal(err)
 	}

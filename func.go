@@ -33,7 +33,11 @@ func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 // one or more unknown collating sequences.
 func (c Conn) AnyCollationNeeded() error {
 	r := c.call("sqlite3_anycollseq_init", uint64(c.handle), 0, 0)
-	return c.error(r)
+	if err := c.error(r); err != nil {
+		return err
+	}
+	c.collation = nil
+	return nil
 }
 
 // CreateCollation defines a new collating sequence.
