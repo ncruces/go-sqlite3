@@ -24,7 +24,7 @@ type Conn struct {
 	pending    *Stmt
 	stmts      []*Stmt
 	timer      *time.Timer
-	busy       func(int) bool
+	busy       func(context.Context, int) bool
 	log        func(xErrorCode, string)
 	collation  func(*Conn, string)
 	wal        func(*Conn, string, int) error
@@ -414,7 +414,7 @@ func timeoutCallback(ctx context.Context, mod api.Module, pDB uint32, count, tmo
 // BusyHandler registers a callback to handle [BUSY] errors.
 //
 // https://sqlite.org/c3ref/busy_handler.html
-func (c *Conn) BusyHandler(cb func(count int) (retry bool)) error {
+func (c *Conn) BusyHandler(cb func(ctx context.Context, count int) (retry bool)) error {
 	var enable uint64
 	if cb != nil {
 		enable = 1
@@ -428,9 +428,12 @@ func (c *Conn) BusyHandler(cb func(count int) (retry bool)) error {
 }
 
 func busyCallback(ctx context.Context, mod api.Module, pDB uint32, count int32) (retry uint32) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.busy != nil &&
-		(c.interrupt == nil || c.interrupt.Err() == nil) {
-		if c.busy(int(count)) {
+	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.busy != nil {
+		interrupt := c.interrupt
+		if interrupt == nil {
+			interrupt = context.Background()
+		}
+		if interrupt.Err() == nil && c.busy(interrupt, int(count)) {
 			retry = 1
 		}
 	}
