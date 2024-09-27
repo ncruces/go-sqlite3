@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"strconv"
 	"time"
@@ -639,6 +640,14 @@ func (s *Stmt) Columns(dest []any) error {
 	}
 
 	types := util.View(s.c.mod, typePtr, count)
+
+	// hint to the compiler that
+	// it can omit bounds check
+	// accessing types[i] below.
+	if len(types) != len(dest) {
+		return errors.New("incorrect destination count")
+	}
+
 	for i := range dest {
 		switch types[i] {
 		case byte(INTEGER):
