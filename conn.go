@@ -38,9 +38,9 @@ type Conn struct {
 	handle uint32
 }
 
-// Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE], [OPEN_URI] and [OPEN_NOFOLLOW].
+// Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
 func Open(filename string) (*Conn, error) {
-	return newConn(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI|OPEN_NOFOLLOW)
+	return newConn(filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
 }
 
 // OpenFlags opens an SQLite database file as specified by the filename argument.
