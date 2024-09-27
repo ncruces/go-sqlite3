@@ -33,6 +33,7 @@ mv sqlite/ext/misc/decimal.c    build/ext/
 mv sqlite/ext/misc/ieee754.c    build/ext/
 mv sqlite/ext/misc/regexp.c     build/ext/
 mv sqlite/ext/misc/series.c     build/ext/
+mv sqlite/ext/misc/spellfix.c   build/ext/
 mv sqlite/ext/misc/uint.c       build/ext/
 
 cd build

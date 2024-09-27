@@ -7,6 +7,7 @@
 #include "ext/ieee754.c"
 #include "ext/regexp.c"
 #include "ext/series.c"
+#include "ext/spellfix.c"
 #include "ext/uint.c"
 // Bindings
 #include "bind.c"
@@ -26,6 +27,7 @@ __attribute__((constructor)) void init() {
   sqlite3_auto_extension((void (*)(void))sqlite3_ieee_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_regexp_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_series_init);
+  sqlite3_auto_extension((void (*)(void))sqlite3_spellfix_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_uint_init);
   sqlite3_auto_extension((void (*)(void))sqlite3_time_init);
 }

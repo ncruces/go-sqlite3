@@ -18,6 +18,7 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/decimal.
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/ieee754.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/regexp.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/series.c"
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/spellfix.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.46.1/ext/misc/uint.c"
 cd ~-
 
