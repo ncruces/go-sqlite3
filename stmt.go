@@ -640,9 +640,7 @@ func (s *Stmt) Columns(dest []any) error {
 
 	types := util.View(s.c.mod, typePtr, count)
 
-	// hint to the compiler that
-	// it can omit bounds check
-	// accessing types[i] below.
+	// Avoid bounds checks on types below.
 	if len(types) != len(dest) {
 		panic(util.AssertErr())
 	}

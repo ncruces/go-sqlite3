@@ -177,14 +177,14 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 }
 
 func (fn *covariance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a, b := arg[0], arg[1]
+	b, a := arg[1], arg[0] // avoid a bounds check
 	if a.NumericType() != sqlite3.NULL && b.NumericType() != sqlite3.NULL {
 		fn.enqueue(a.Float(), b.Float())
 	}
 }
 
 func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a, b := arg[0], arg[1]
+	b, a := arg[1], arg[0] // avoid a bounds check
 	if a.NumericType() != sqlite3.NULL && b.NumericType() != sqlite3.NULL {
 		fn.dequeue(a.Float(), b.Float())
 	}
