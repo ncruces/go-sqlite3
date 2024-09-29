@@ -5,6 +5,10 @@
 //   - LIKE and REGEXP operators,
 //   - collation sequences.
 //
+// It also provides, from PostgreSQL:
+//   - unaccent(),
+//   - initcap().
+//
 // The implementation is not 100% compatible with the [ICU extension]:
 //   - upper() and lower() use [strings.ToUpper], [strings.ToLower] and [cases];
 //   - the LIKE operator follows [strings.EqualFold] rules;
@@ -21,6 +25,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/ncruces/go-sqlite3"
@@ -28,6 +33,9 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 // Register registers Unicode aware functions for a database connection.
@@ -41,6 +49,9 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("lower", 1, flags, lower),
 		db.CreateFunction("lower", 2, flags, lower),
 		db.CreateFunction("regexp", 2, flags, regex),
+		db.CreateFunction("initcap", 1, flags, initcap),
+		db.CreateFunction("initcap", 2, flags, initcap),
+		db.CreateFunction("unaccent", 1, flags, unaccent),
 		db.CreateFunction("icu_load_collation", 2, sqlite3.DIRECTONLY,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				name := arg[1].Text()
@@ -110,6 +121,35 @@ func lower(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		cs = c
 	}
 	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
+}
+
+func initcap(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if len(arg) == 1 {
+		ctx.ResultRawText(bytes.Title(arg[0].RawText()))
+		return
+	}
+	cs, ok := ctx.GetAuxData(1).(cases.Caser)
+	if !ok {
+		t, err := language.Parse(arg[1].Text())
+		if err != nil {
+			ctx.ResultError(err)
+			return // notest
+		}
+		c := cases.Title(t)
+		ctx.SetAuxData(1, c)
+		cs = c
+	}
+	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
+}
+
+func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	unaccent := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	res, _, err := transform.Bytes(unaccent, arg[0].RawText())
+	if err != nil {
+		ctx.ResultError(err)
+	} else {
+		ctx.ResultRawText(res)
+	}
 }
 
 func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
