@@ -57,7 +57,7 @@ func Quote(value any) string {
 			buf[i] = b
 			i += 1
 		}
-		buf[i] = '\''
+		buf[len(buf)-1] = '\''
 		return unsafe.String(&buf[0], len(buf))
 
 	case []byte:
@@ -71,7 +71,7 @@ func Quote(value any) string {
 			buf[i+1] = hex[b%16]
 			i += 2
 		}
-		buf[i] = '\''
+		buf[len(buf)-1] = '\''
 		return unsafe.String(&buf[0], len(buf))
 
 	case ZeroBlob:
@@ -107,6 +107,6 @@ func QuoteIdentifier(id string) string {
 		buf[i] = b
 		i += 1
 	}
-	buf[i] = '"'
+	buf[len(buf)-1] = '"'
 	return unsafe.String(&buf[0], len(buf))
 }
