@@ -92,8 +92,10 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= 1
 				cost /= 100
-				idx.ConstraintUsage[i].ArgvIndex = 1
-				idx.ConstraintUsage[i].Omit = true
+				idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+					ArgvIndex: 1,
+					Omit:      true,
+				}
 			}
 			continue
 		}
@@ -116,8 +118,10 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 				plan |= posi << 8
 				cost /= 5
 				posi += 1
-				idx.ConstraintUsage[i].ArgvIndex = posi
-				idx.ConstraintUsage[i].Omit = true
+				idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+					ArgvIndex: posi,
+					Omit:      true,
+				}
 			}
 			continue
 		}
@@ -126,8 +130,10 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 12
 				posi += 1
-				idx.ConstraintUsage[i].ArgvIndex = posi
-				idx.ConstraintUsage[i].Omit = true
+				idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+					ArgvIndex: posi,
+					Omit:      true,
+				}
 			}
 			continue
 		}
@@ -136,8 +142,10 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 16
 				posi += 1
-				idx.ConstraintUsage[i].ArgvIndex = posi
-				idx.ConstraintUsage[i].Omit = true
+				idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+					ArgvIndex: posi,
+					Omit:      true,
+				}
 			}
 			continue
 		}

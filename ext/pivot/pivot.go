@@ -99,8 +99,8 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 }
 
 func (t *table) Close() error {
-	for i := range t.cols {
-		t.cols[i].Close()
+	for _, c := range t.cols {
+		c.Close()
 	}
 	return nil
 }

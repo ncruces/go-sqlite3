@@ -62,8 +62,8 @@ func Quote(value any) string {
 
 	case []byte:
 		buf := make([]byte, 3+2*len(v))
-		buf[0] = 'x'
 		buf[1] = '\''
+		buf[0] = 'x'
 		i := 2
 		for _, b := range v {
 			const hex = "0123456789ABCDEF"
@@ -80,8 +80,8 @@ func Quote(value any) string {
 		}
 
 		buf := bytes.Repeat([]byte("0"), int(3+2*int64(v)))
-		buf[0] = 'x'
 		buf[1] = '\''
+		buf[0] = 'x'
 		buf[len(buf)-1] = '\''
 		return unsafe.String(&buf[0], len(buf))
 	}

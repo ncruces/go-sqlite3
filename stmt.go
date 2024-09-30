@@ -30,12 +30,13 @@ func (s *Stmt) Close() error {
 	}
 
 	r := s.c.call("sqlite3_finalize", uint64(s.handle))
-	for i := range s.c.stmts {
-		if s == s.c.stmts[i] {
-			l := len(s.c.stmts) - 1
-			s.c.stmts[i] = s.c.stmts[l]
-			s.c.stmts[l] = nil
-			s.c.stmts = s.c.stmts[:l]
+	stmts := s.c.stmts
+	for i := range stmts {
+		if s == stmts[i] {
+			l := len(stmts) - 1
+			stmts[i] = stmts[l]
+			stmts[l] = nil
+			s.c.stmts = stmts[:l]
 			break
 		}
 	}

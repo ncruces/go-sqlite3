@@ -595,10 +595,11 @@ func (r *rows) Close() error {
 func (r *rows) Columns() []string {
 	if r.names == nil {
 		count := r.Stmt.ColumnCount()
-		r.names = make([]string, count)
-		for i := range r.names {
-			r.names[i] = r.Stmt.ColumnName(i)
+		names := make([]string, count)
+		for i := range names {
+			names[i] = r.Stmt.ColumnName(i)
 		}
+		r.names = names
 	}
 	return r.names
 }
@@ -606,26 +607,29 @@ func (r *rows) Columns() []string {
 func (r *rows) loadTypes() {
 	if r.nulls == nil {
 		count := r.Stmt.ColumnCount()
-		r.nulls = make([]bool, count)
-		r.types = make([]string, count)
-		for i := range r.nulls {
+		nulls := make([]bool, count)
+		types := make([]string, count)
+		for i := range nulls {
 			if col := r.Stmt.ColumnOriginName(i); col != "" {
-				r.types[i], _, r.nulls[i], _, _, _ = r.Stmt.Conn().TableColumnMetadata(
+				types[i], _, nulls[i], _, _, _ = r.Stmt.Conn().TableColumnMetadata(
 					r.Stmt.ColumnDatabaseName(i),
 					r.Stmt.ColumnTableName(i),
 					col)
 			}
 		}
+		r.nulls = nulls
+		r.types = types
 	}
 }
 
 func (r *rows) declType(index int) string {
 	if r.types == nil {
 		count := r.Stmt.ColumnCount()
-		r.types = make([]string, count)
-		for i := range r.types {
-			r.types[i] = strings.ToUpper(r.Stmt.ColumnDeclType(i))
+		types := make([]string, count)
+		for i := range types {
+			types[i] = strings.ToUpper(r.Stmt.ColumnDeclType(i))
 		}
+		r.types = types
 	}
 	return r.types[index]
 }

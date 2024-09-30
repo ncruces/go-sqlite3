@@ -22,8 +22,9 @@ func getColumnAffinities(schema string) ([]affinity, error) {
 		return nil, err
 	}
 
-	types := make([]affinity, len(tab.Columns))
-	for i, col := range tab.Columns {
+	columns := tab.Columns
+	types := make([]affinity, len(columns))
+	for i, col := range columns {
 		types[i] = getAffinity(col.Type)
 	}
 	return types, nil

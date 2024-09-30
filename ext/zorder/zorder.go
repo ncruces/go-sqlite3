@@ -47,9 +47,9 @@ func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func unzorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	z := arg[0].Int64()
-	n := arg[1].Int64()
 	i := arg[2].Int64()
+	n := arg[1].Int64()
+	z := arg[0].Int64()
 
 	var k int
 	var x int64
