@@ -45,7 +45,7 @@ cd ~-
 	-o bcw2.wasm "build/main.c" \
 	-I"build" \
 	-mexec-model=reactor \
-	-matomics -msimd128 -mmutable-globals \
+	-matomics -msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
