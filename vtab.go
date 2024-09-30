@@ -57,9 +57,12 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 		flags |= VTAB_SHADOWTABS
 	}
 
+	var modulePtr uint32
 	defer db.arena.mark()()
 	namePtr := db.arena.string(name)
-	modulePtr := util.AddHandle(db.ctx, module[T]{create, connect})
+	if connect != nil {
+		modulePtr = util.AddHandle(db.ctx, module[T]{create, connect})
+	}
 	r := db.call("sqlite3_create_module_go", uint64(db.handle),
 		uint64(namePtr), uint64(flags), uint64(modulePtr))
 	return db.error(r)

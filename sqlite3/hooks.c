@@ -57,9 +57,10 @@ int sqlite3_config_log_go(bool enable) {
 }
 
 int sqlite3_autovacuum_pages_go(sqlite3 *db, go_handle app) {
-  int rc = sqlite3_autovacuum_pages(db, go_autovacuum_pages, app, go_destroy);
-  if (rc) go_destroy(app);
-  return rc;
+  if (app == NULL) {
+    return sqlite3_autovacuum_pages(db, NULL, NULL, NULL);
+  }
+  return sqlite3_autovacuum_pages(db, go_autovacuum_pages, app, go_destroy);
 }
 
 #ifndef sqliteBusyCallback

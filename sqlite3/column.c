@@ -22,6 +22,7 @@ int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
     switch (aType[i] = sqlite3_column_type(stmt, i)) {
       default:  // SQLITE_NULL
         aData[i] = (union sqlite3_data){};
+        continue;
       case SQLITE_INTEGER:
         aData[i].i = sqlite3_column_int64(stmt, i);
         continue;

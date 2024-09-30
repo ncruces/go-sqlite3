@@ -163,6 +163,10 @@ static int go_vtab_shadown_name_wrapper(const char *zName) { return true; }
 
 int sqlite3_create_module_go(sqlite3 *db, const char *zName, int flags,
                              go_handle handle) {
+  if (handle == NULL) {
+    return sqlite3_create_module_v2(db, zName, NULL, NULL, NULL);
+  }
+
   struct go_module *mod = malloc(sizeof(struct go_module));
   if (mod == NULL) {
     go_destroy(handle);

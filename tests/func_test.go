@@ -209,6 +209,24 @@ func TestCreateFunction_error(t *testing.T) {
 	stmt.Step()
 }
 
+func TestCreateFunction_delete(t *testing.T) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.CreateFunction("regexp", 2, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.Exec(`SELECT 'a' REGEXP 'a|b'`)
+	if err == nil {
+		t.Error("want error")
+	}
+}
+
 func TestOverloadFunction(t *testing.T) {
 	t.Parallel()
 

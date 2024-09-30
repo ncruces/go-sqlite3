@@ -53,6 +53,9 @@ int sqlite3_collation_needed_go(sqlite3 *db, bool enable) {
 }
 
 int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {
+  if (app == NULL) {
+    return sqlite3_create_collation_v2(db, name, SQLITE_UTF8, NULL, NULL, NULL);
+  }
   int rc = sqlite3_create_collation_v2(db, name, SQLITE_UTF8, app, go_compare,
                                        go_destroy);
   if (rc) go_destroy(app);
@@ -61,6 +64,10 @@ int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {
 
 int sqlite3_create_function_go(sqlite3 *db, const char *name, int argc,
                                int flags, go_handle app) {
+  if (app == NULL) {
+    return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, NULL,
+                                      NULL, NULL, NULL, NULL);
+  }
   return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, app,
                                     go_func_wrapper, /*step=*/NULL,
                                     /*final=*/NULL, go_destroy);
@@ -68,6 +75,10 @@ int sqlite3_create_function_go(sqlite3 *db, const char *name, int argc,
 
 int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *name,
                                          int argc, int flags, go_handle app) {
+  if (app == NULL) {
+    return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, NULL,
+                                      NULL, NULL, NULL, NULL);
+  }
   return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, app,
                                     /*func=*/NULL, go_step_wrapper,
                                     go_final_wrapper, go_destroy);
@@ -75,6 +86,10 @@ int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *name,
 
 int sqlite3_create_window_function_go(sqlite3 *db, const char *name, int argc,
                                       int flags, go_handle app) {
+  if (app == NULL) {
+    return sqlite3_create_window_function(db, name, argc, SQLITE_UTF8 | flags,
+                                          NULL, NULL, NULL, NULL, NULL, NULL);
+  }
   return sqlite3_create_window_function(
       db, name, argc, SQLITE_UTF8 | flags, app, go_step_wrapper,
       go_final_wrapper, go_value_wrapper, go_inverse_wrapper, go_destroy);
