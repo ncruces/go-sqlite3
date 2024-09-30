@@ -20,7 +20,7 @@ import (
 
 // Register registers Unicode aware functions for a database connection.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
 		db.CreateFunction("regexp", 2, flags, regex),
 		db.CreateFunction("regexp_like", 2, flags, regexLike),

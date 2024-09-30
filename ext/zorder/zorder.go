@@ -12,7 +12,7 @@ import (
 
 // Register registers the zorder and unzorder SQL functions.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
 		db.CreateFunction("zorder", -1, flags, zorder),
 		db.CreateFunction("unzorder", 3, flags, unzorder))

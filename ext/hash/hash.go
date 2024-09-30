@@ -29,7 +29,7 @@ import (
 
 // Register registers cryptographic hash functions for a database connection.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 
 	var errs util.ErrorJoiner
 	if crypto.MD4.Available() {

@@ -27,7 +27,7 @@ import (
 //
 // Converts a UUID into a 16-byte blob.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
 		db.CreateFunction("uuid", 0, sqlite3.INNOCUOUS, generate),
 		db.CreateFunction("uuid", 1, sqlite3.INNOCUOUS, generate),

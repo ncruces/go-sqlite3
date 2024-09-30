@@ -38,12 +38,22 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// Set RegisterLike to false to not register a Unicode aware LIKE operator.
+// Overriding the built-in LIKE operator disables the [LIKE optimization].
+//
+// [LIKE optimization]: https://sqlite.org/optoverview.html#the_like_optimization
+var RegisterLike = true
+
 // Register registers Unicode aware functions for a database connection.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	return errors.Join(
-		db.CreateFunction("like", 2, flags, like),
-		db.CreateFunction("like", 3, flags, like),
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	var errs util.ErrorJoiner
+	if RegisterLike {
+		errs.Join(
+			db.CreateFunction("like", 2, flags, like),
+			db.CreateFunction("like", 3, flags, like))
+	}
+	errs.Join(
 		db.CreateFunction("upper", 1, flags, upper),
 		db.CreateFunction("upper", 2, flags, upper),
 		db.CreateFunction("lower", 1, flags, lower),
@@ -59,12 +69,13 @@ func Register(db *sqlite3.Conn) error {
 					return
 				}
 
-				err := RegisterCollation(db, arg[0].Text(), name)
+				err := RegisterCollation(ctx.Conn(), arg[0].Text(), name)
 				if err != nil {
 					ctx.ResultError(err)
 					return // notest
 				}
 			}))
+	return errors.Join(errs...)
 }
 
 // RegisterCollation registers a Unicode collation sequence for a database connection.
@@ -146,7 +157,7 @@ func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	unaccent := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 	res, _, err := transform.Bytes(unaccent, arg[0].RawText())
 	if err != nil {
-		ctx.ResultError(err)
+		ctx.ResultError(err) // notest
 	} else {
 		ctx.ResultRawText(res)
 	}

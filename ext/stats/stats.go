@@ -52,7 +52,7 @@ import (
 
 // Register registers statistics functions.
 func Register(db *sqlite3.Conn) error {
-	flags := sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
 		db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop)),
 		db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp)),
