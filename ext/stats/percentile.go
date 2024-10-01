@@ -28,11 +28,13 @@ type percentile struct {
 }
 
 func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	if a := arg[0]; a.NumericType() != sqlite3.NULL {
-		q.nums = append(q.nums, a.Float())
+	a := arg[0]
+	f := a.Float()
+	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+		q.nums = append(q.nums, f)
 	}
-	if q.kind != median {
-		q.arg1 = append(q.arg1[:0], arg[1].RawText()...)
+	if q.kind != median && q.arg1 == nil {
+		q.arg1 = append(q.arg1, arg[1].RawText()...)
 	}
 }
 
