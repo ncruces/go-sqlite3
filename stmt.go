@@ -631,7 +631,7 @@ func (s *Stmt) Columns(dest []any) error {
 	defer s.c.arena.mark()()
 	count := uint64(len(dest))
 	typePtr := s.c.arena.new(count)
-	dataPtr := s.c.arena.new(8 * count)
+	dataPtr := s.c.arena.new(count * 8)
 
 	r := s.c.call("sqlite3_columns_go",
 		uint64(s.handle), count, uint64(typePtr), uint64(dataPtr))
@@ -649,23 +649,22 @@ func (s *Stmt) Columns(dest []any) error {
 	for i := range dest {
 		switch types[i] {
 		case byte(INTEGER):
-			dest[i] = int64(util.ReadUint64(s.c.mod, dataPtr+8*uint32(i)))
-			continue
+			dest[i] = int64(util.ReadUint64(s.c.mod, dataPtr))
 		case byte(FLOAT):
-			dest[i] = util.ReadFloat64(s.c.mod, dataPtr+8*uint32(i))
-			continue
+			dest[i] = util.ReadFloat64(s.c.mod, dataPtr)
 		case byte(NULL):
 			dest[i] = nil
-			continue
+		default:
+			ptr := util.ReadUint32(s.c.mod, dataPtr+0)
+			len := util.ReadUint32(s.c.mod, dataPtr+4)
+			buf := util.View(s.c.mod, ptr, uint64(len))
+			if types[i] == byte(TEXT) {
+				dest[i] = string(buf)
+			} else {
+				dest[i] = buf
+			}
 		}
-		ptr := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+0)
-		len := util.ReadUint32(s.c.mod, dataPtr+8*uint32(i)+4)
-		buf := util.View(s.c.mod, ptr, uint64(len))
-		if types[i] == byte(TEXT) {
-			dest[i] = string(buf)
-		} else {
-			dest[i] = buf
-		}
+		dataPtr += 8
 	}
 	return nil
 }
