@@ -15,9 +15,6 @@ import (
 	"github.com/psanford/httpreadat"
 )
 
-//go:embed testdata/test.db
-var testDB string
-
 func Example_http() {
 	readervfs.Create("demo.db", httpreadat.New("https://sanford.io/demo.db"))
 	defer readervfs.Delete("demo.db")
@@ -64,6 +61,9 @@ func Example_http() {
 	// 2012.03: 18477 million Dollars
 	// 2012.06: 18270 million Dollars
 }
+
+//go:embed testdata/test.db
+var testDB string
 
 func Example_embed() {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
