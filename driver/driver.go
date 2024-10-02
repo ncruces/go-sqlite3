@@ -669,27 +669,20 @@ func (r *rows) Next(dest []driver.Value) error {
 	for i := range dest {
 		if t, ok := r.decodeTime(i, dest[i]); ok {
 			dest[i] = t
-			continue
-		}
-		if s, ok := dest[i].(string); ok {
-			t, ok := maybeTime(s)
-			if ok {
-				dest[i] = t
-			}
 		}
 	}
 	return err
 }
 
 func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
-	switch r.tmRead {
-	case sqlite3.TimeFormatDefault, time.RFC3339Nano:
-		// handled by maybeTime
-		return
-	}
-	switch v.(type) {
-	case int64, float64, string:
+	switch v := v.(type) {
+	case int64, float64:
 		// could be a time value
+	case string:
+		t, ok := maybeTime(v)
+		if ok {
+			return t, true
+		}
 	default:
 		return
 	}
