@@ -215,7 +215,7 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 	}
 	defer func() {
 		if err != nil {
-			c.Close()
+			c.Conn.Close()
 		}
 	}()
 
@@ -466,6 +466,7 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 	defer s.Stmt.Conn().SetInterrupt(old)
 
 	err = s.Stmt.Exec()
+	s.Stmt.ClearBindings()
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +489,7 @@ func (s *stmt) setupBindings(args []driver.NamedValue) (err error) {
 		if arg.Name == "" {
 			ids = append(ids, arg.Ordinal)
 		} else {
-			for _, prefix := range []string{":", "@", "$"} {
+			for _, prefix := range [...]string{":", "@", "$"} {
 				if id := s.Stmt.BindIndex(prefix + arg.Name); id != 0 {
 					ids = append(ids, id)
 				}
@@ -522,9 +523,9 @@ func (s *stmt) setupBindings(args []driver.NamedValue) (err error) {
 			default:
 				panic(util.AssertErr())
 			}
-		}
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
