@@ -26,8 +26,21 @@ trap 'rm -f sqlite3.tmp' EXIT
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize sqlite3.wasm -o sqlite3.tmp
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
+"$BINARYEN/wasm-opt" \
 	sqlite3.tmp -o sqlite3.wasm \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \
-	--enable-nontrapping-float-to-int --enable-sign-ext
+	--enable-nontrapping-float-to-int --enable-sign-ext \
+	--optimize-level 4 \
+	--shrink-level 4 \
+	--strip-producers \
+	--dce --vacuum \
+	--flatten \
+	--rereloop \
+	-Oz -Oz \
+	--gufa-optimizing -O4 \
+	--inlining-optimizing \
+	--precompute-propagate \
+	--optimize-instructions \
+	--inlining-optimizing \
+	--converge
