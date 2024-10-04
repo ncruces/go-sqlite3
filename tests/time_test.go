@@ -111,6 +111,7 @@ func TestTimeFormat_Decode(t *testing.T) {
 
 		{sqlite3.TimeFormatDefault, "2013-10-07T04:23:19.12-04:00", reference, 0, offset, false},
 		{sqlite3.TimeFormatDefault, "2013-10-07T08:23:19.12Z", reference, 0, 0, false},
+		{sqlite3.TimeFormatDefault, reference, reference, 0, offset, false},
 		{sqlite3.TimeFormatDefault, false, time.Time{}, 0, 0, true},
 	}
 

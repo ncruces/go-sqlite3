@@ -34,7 +34,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 
 	sql := "SELECT * FROM\n" + arg[0]
 
-	stmt, _, err := db.Prepare(sql)
+	stmt, _, err := db.PrepareFlags(sql, sqlite3.PREPARE_PERSISTENT)
 	if err != nil {
 		return nil, err
 	}

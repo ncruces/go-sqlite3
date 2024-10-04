@@ -40,14 +40,14 @@
 // When using a custom time struct, you'll have to implement
 // [database/sql/driver.Valuer] and [database/sql.Scanner].
 //
-// The Value method should ideally serialise to a time [format] supported by SQLite.
+// The Value method should ideally encode to a time [format] supported by SQLite.
 // This ensures SQL date and time functions work as they should,
 // and that your schema works with other SQLite tools.
 // [sqlite3.TimeFormat.Encode] may help.
 //
 // The Scan method needs to take into account that the value it receives can be of differing types.
 // It can already be a [time.Time], if the driver decoded the value according to "_timefmt" rules.
-// Or it can be a: string, int64, float64, []byte, nil,
+// Or it can be a: string, int64, float64, []byte, or nil,
 // depending on the column type and what whoever wrote the value.
 // [sqlite3.TimeFormat.Decode] may help.
 //
@@ -680,6 +680,9 @@ func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
 	case int64, float64:
 		// could be a time value
 	case string:
+		if r.tmWrite != "" && r.tmWrite != time.RFC3339 && r.tmWrite != time.RFC3339Nano {
+			break
+		}
 		t, ok := maybeTime(v)
 		if ok {
 			return t, true
