@@ -146,6 +146,12 @@ func TestStmt(t *testing.T) {
 	if got := stmt.ReadOnly(); got != true {
 		t.Error("got false, want true")
 	}
+	if got := stmt.DataCount(); got != 0 {
+		t.Errorf("got %d, want 0", got)
+	}
+	if got := stmt.ColumnCount(); got != 1 {
+		t.Errorf("got %d, want 1", got)
+	}
 	if got := stmt.ColumnName(0); got != "c" {
 		t.Errorf(`got %q, want "c"`, got)
 	}
@@ -501,6 +507,10 @@ func TestStmt(t *testing.T) {
 		} else if got != nil {
 			t.Errorf("got %v, want NULL", got)
 		}
+	}
+
+	if got := stmt.DataCount(); got != 1 {
+		t.Errorf("got %d, want 1", got)
 	}
 
 	db.Stmts()(func(s *sqlite3.Stmt) bool {

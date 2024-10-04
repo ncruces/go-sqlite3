@@ -106,7 +106,7 @@ func (s *Stmt) Busy() bool {
 //
 // https://sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
-	s.c.checkInterrupt()
+	s.c.checkInterrupt(s.c.handle)
 	r := s.c.call("sqlite3_step", uint64(s.handle))
 	switch r {
 	case _ROW:
@@ -375,6 +375,15 @@ func (s *Stmt) BindValue(param int, value Value) error {
 	r := s.c.call("sqlite3_bind_value",
 		uint64(s.handle), uint64(param), uint64(value.handle))
 	return s.c.error(r)
+}
+
+// DataCount resets the number of columns in a result set.
+//
+// https://www.sqlite.org/c3ref/data_count.html
+func (s *Stmt) DataCount() int {
+	r := s.c.call("sqlite3_data_count",
+		uint64(s.handle))
+	return int(int32(r))
 }
 
 // ColumnCount returns the number of columns in a result set.

@@ -209,7 +209,7 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 		tmWrite: n.tmWrite,
 	}
 
-	c.Conn, err = sqlite3.Open(n.name)
+	c.Conn, err = sqlite3.OpenContext(ctx, n.name)
 	if err != nil {
 		return nil, err
 	}

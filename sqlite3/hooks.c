@@ -4,7 +4,7 @@
 
 int go_progress_handler(void *);
 int go_busy_handler(void *, int);
-int go_busy_timeout(void *, int count, int tmout);
+int go_busy_timeout(int count, int tmout);
 
 int go_commit_hook(void *);
 void go_rollback_hook(void *);
@@ -20,7 +20,7 @@ unsigned int go_autovacuum_pages(void *, const char *, unsigned int,
                                  unsigned int, unsigned int);
 
 void sqlite3_progress_handler_go(sqlite3 *db, int n) {
-  sqlite3_progress_handler(db, n, go_progress_handler, /*arg=*/db);
+  sqlite3_progress_handler(db, n, go_progress_handler, /*arg=*/NULL);
 }
 
 int sqlite3_busy_handler_go(sqlite3 *db, bool enable) {
@@ -66,7 +66,7 @@ int sqlite3_autovacuum_pages_go(sqlite3 *db, go_handle app) {
 #ifndef sqliteBusyCallback
 
 static int sqliteBusyCallback(sqlite3 *db, int count) {
-  return go_busy_timeout(db, count, db->busyTimeout);
+  return go_busy_timeout(count, db->busyTimeout);
 }
 
 #endif
