@@ -6,7 +6,7 @@
 //	import _ "github.com/ncruces/go-sqlite3/embed/bcw2"
 //
 // [BEGIN CONCURRENT]: https://sqlite.org/src/doc/begin-concurrent/doc/begin_concurrent.md
-// [Wal2]: https://www.sqlite.org/cgi/src/doc/wal2/doc/wal2.md
+// [Wal2]: https://sqlite.org/cgi/src/doc/wal2/doc/wal2.md
 package bcw2
 
 import (

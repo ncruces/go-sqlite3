@@ -379,7 +379,7 @@ func (s *Stmt) BindValue(param int, value Value) error {
 
 // DataCount resets the number of columns in a result set.
 //
-// https://www.sqlite.org/c3ref/data_count.html
+// https://sqlite.org/c3ref/data_count.html
 func (s *Stmt) DataCount() int {
 	r := s.c.call("sqlite3_data_count",
 		uint64(s.handle))
