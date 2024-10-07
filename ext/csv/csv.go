@@ -30,7 +30,7 @@ func Register(db *sqlite3.Conn) error {
 // RegisterFS registers the CSV virtual table.
 // If a filename is specified, fsys is used to open the file.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
-	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
+	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (res *table, err error) {
 		var (
 			filename string
 			data     string
@@ -76,7 +76,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			return nil, util.ErrorString(`csv: must specify either "filename" or "data" but not both`)
 		}
 
-		table := &table{
+		t := &table{
 			fsys:    fsys,
 			name:    filename,
 			data:    data,
@@ -88,7 +88,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 		if schema == "" {
 			var row []string
 			if header || columns < 0 {
-				csv, c, err := table.newReader()
+				csv, c, err := t.newReader()
 				defer c.Close()
 				if err != nil {
 					return nil, err
@@ -100,22 +100,20 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			}
 			schema = getSchema(header, columns, row)
 		} else {
-			defer func() {
-				if err == nil {
-					table.typs, err = getColumnAffinities(schema)
-				}
-			}()
+			t.typs, err = getColumnAffinities(schema)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		err = db.DeclareVTab(schema)
+		if err == nil {
+			err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
+		}
 		if err != nil {
 			return nil, err
 		}
-		err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
-		if err != nil {
-			return nil, err
-		}
-		return table, nil
+		return t, nil
 	}
 
 	return sqlite3.CreateModule(db, "csv", declare, declare)

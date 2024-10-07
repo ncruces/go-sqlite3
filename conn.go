@@ -66,32 +66,36 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 
 type connKey struct{}
 
-func newConn(ctx context.Context, filename string, flags OpenFlag) (conn *Conn, err error) {
-	err = ctx.Err()
+func newConn(ctx context.Context, filename string, flags OpenFlag) (res *Conn, _ error) {
+	err := ctx.Err()
 	if err != nil {
 		return nil, err
 	}
-	sqlite, err := instantiateSQLite()
+
+	c := &Conn{interrupt: ctx}
+	c.sqlite, err = instantiateSQLite()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err != nil {
-			conn.Close()
-			conn = nil
-			sqlite.close()
+		if res == nil {
+			c.Close()
+			c.sqlite.close()
+		} else {
+			c.interrupt = context.Background()
 		}
 	}()
 
-	c := &Conn{sqlite: sqlite, interrupt: ctx}
 	c.ctx = context.WithValue(c.ctx, connKey{}, c)
 	c.arena = c.newArena(1024)
 	c.handle, err = c.openDB(filename, flags)
 	if err == nil {
 		err = initExtensions(c)
 	}
-	c.interrupt = context.Background()
-	return c, err
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 func (c *Conn) openDB(filename string, flags OpenFlag) (uint32, error) {

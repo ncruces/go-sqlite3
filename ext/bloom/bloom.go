@@ -34,7 +34,7 @@ type bloom struct {
 }
 
 func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom, err error) {
-	t := bloom{
+	b := bloom{
 		db:      db,
 		schema:  schema,
 		storage: table + "_storage",
@@ -54,30 +54,30 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 	}
 
 	if len(arg) > 1 {
-		t.prob, err = strconv.ParseFloat(arg[1], 64)
+		b.prob, err = strconv.ParseFloat(arg[1], 64)
 		if err != nil {
 			return nil, err
 		}
-		if t.prob <= 0 || t.prob >= 1 {
+		if b.prob <= 0 || b.prob >= 1 {
 			return nil, util.ErrorString("bloom: probability must be in the range (0,1)")
 		}
 	} else {
-		t.prob = 0.01
+		b.prob = 0.01
 	}
 
 	if len(arg) > 2 {
-		t.hashes, err = strconv.Atoi(arg[2])
+		b.hashes, err = strconv.Atoi(arg[2])
 		if err != nil {
 			return nil, err
 		}
-		if t.hashes <= 0 {
+		if b.hashes <= 0 {
 			return nil, util.ErrorString("bloom: number of hash functions must be positive")
 		}
 	} else {
-		t.hashes = max(1, numHashes(t.prob))
+		b.hashes = max(1, numHashes(b.prob))
 	}
 
-	t.bytes = numBytes(nelem, t.prob)
+	b.bytes = numBytes(nelem, b.prob)
 
 	err = db.DeclareVTab(
 		`CREATE TABLE x(present, word HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`)
@@ -87,7 +87,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 
 	err = db.Exec(fmt.Sprintf(
 		`CREATE TABLE %s.%s (data BLOB, p REAL, n INTEGER, m INTEGER, k INTEGER)`,
-		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)))
+		sqlite3.QuoteIdentifier(b.schema), sqlite3.QuoteIdentifier(b.storage)))
 	if err != nil {
 		return nil, err
 	}
@@ -98,17 +98,17 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 	err = db.Exec(fmt.Sprintf(
 		`INSERT INTO %s.%s (rowid, data, p, n, m, k)
 		 VALUES (1, zeroblob(%d), %f, %d, %d, %d)`,
-		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage),
-		t.bytes, t.prob, nelem, 8*t.bytes, t.hashes))
+		sqlite3.QuoteIdentifier(b.schema), sqlite3.QuoteIdentifier(b.storage),
+		b.bytes, b.prob, nelem, 8*b.bytes, b.hashes))
 	if err != nil {
-		t.Destroy()
+		b.Destroy()
 		return nil, err
 	}
-	return &t, nil
+	return &b, nil
 }
 
 func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom, err error) {
-	t := bloom{
+	b := bloom{
 		db:      db,
 		schema:  schema,
 		storage: table + "_storage",
@@ -122,7 +122,7 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 
 	load, _, err := db.Prepare(fmt.Sprintf(
 		`SELECT m/8, p, k FROM %s.%s WHERE rowid = 1`,
-		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)))
+		sqlite3.QuoteIdentifier(b.schema), sqlite3.QuoteIdentifier(b.storage)))
 	if err != nil {
 		return nil, err
 	}
@@ -135,10 +135,10 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 		return nil, sqlite3.CORRUPT_VTAB
 	}
 
-	t.bytes = load.ColumnInt64(0)
-	t.prob = load.ColumnFloat(1)
-	t.hashes = load.ColumnInt(2)
-	return &t, nil
+	b.bytes = load.ColumnInt64(0)
+	b.prob = load.ColumnFloat(1)
+	b.hashes = load.ColumnInt(2)
+	return &b, nil
 }
 
 func (b *bloom) Destroy() error {

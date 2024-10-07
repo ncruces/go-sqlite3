@@ -25,15 +25,15 @@ type table struct {
 	cols []*sqlite3.Value
 }
 
-func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
+func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (res *table, err error) {
 	if len(arg) != 3 {
 		return nil, fmt.Errorf("pivot: wrong number of arguments")
 	}
 
-	table := &table{db: db}
+	t := &table{db: db}
 	defer func() {
-		if err != nil {
-			table.Close()
+		if res == nil {
+			t.Close()
 		}
 	}()
 
@@ -42,17 +42,17 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 	create.WriteString("CREATE TABLE x(")
 
 	// Row key query.
-	table.scan = "SELECT * FROM\n" + arg[0]
-	stmt, _, err := db.Prepare(table.scan)
+	t.scan = "SELECT * FROM\n" + arg[0]
+	stmt, _, err := db.Prepare(t.scan)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	table.keys = make([]string, stmt.ColumnCount())
-	for i := range table.keys {
+	t.keys = make([]string, stmt.ColumnCount())
+	for i := range t.keys {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnName(i))
-		table.keys[i] = name
+		t.keys[i] = name
 		create.WriteString(sep)
 		create.WriteString(name)
 		sep = ","
@@ -70,15 +70,15 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 	}
 	for stmt.Step() {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnText(1))
-		table.cols = append(table.cols, stmt.ColumnValue(0).Dup())
+		t.cols = append(t.cols, stmt.ColumnValue(0).Dup())
 		create.WriteString(",")
 		create.WriteString(name)
 	}
 	stmt.Close()
 
 	// Pivot cell query.
-	table.cell = "SELECT * FROM\n" + arg[2]
-	stmt, _, err = db.Prepare(table.cell)
+	t.cell = "SELECT * FROM\n" + arg[2]
+	stmt, _, err = db.Prepare(t.cell)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,8 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 	if stmt.ColumnCount() != 1 {
 		return nil, util.ErrorString("pivot: cell query expects 1 result columns")
 	}
-	if stmt.BindCount() != len(table.keys)+1 {
-		return nil, fmt.Errorf("pivot: cell query expects %d bound parameters", len(table.keys)+1)
+	if stmt.BindCount() != len(t.keys)+1 {
+		return nil, fmt.Errorf("pivot: cell query expects %d bound parameters", len(t.keys)+1)
 	}
 
 	create.WriteByte(')')
@@ -95,7 +95,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err err
 	if err != nil {
 		return nil, err
 	}
-	return table, nil
+	return t, nil
 }
 
 func (t *table) Close() error {

@@ -202,7 +202,7 @@ func (n *connector) Driver() driver.Driver {
 	return n.driver
 }
 
-func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
+func (n *connector) Connect(ctx context.Context) (res driver.Conn, err error) {
 	c := &conn{
 		txLock:  n.txLock,
 		tmRead:  n.tmRead,
@@ -214,8 +214,8 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 		return nil, err
 	}
 	defer func() {
-		if err != nil {
-			c.Conn.Close()
+		if res == nil {
+			c.Close()
 		}
 	}()
 
@@ -239,6 +239,7 @@ func (n *connector) Connect(ctx context.Context) (_ driver.Conn, err error) {
 		if err != nil {
 			return nil, err
 		}
+		defer s.Close()
 		if s.Step() && s.ColumnBool(0) {
 			c.readOnly = '1'
 		} else {
