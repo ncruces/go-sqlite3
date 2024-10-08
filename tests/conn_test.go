@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -148,7 +149,10 @@ func TestConn_SetInterrupt(t *testing.T) {
 	defer stmt.Close()
 
 	db.SetInterrupt(ctx)
-	go cancel()
+	go func() {
+		time.Sleep(time.Millisecond)
+		cancel()
+	}()
 
 	// Interrupting works.
 	err = stmt.Exec()
