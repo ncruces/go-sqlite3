@@ -13,7 +13,7 @@ import (
 
 type hbshVFS struct {
 	vfs.VFS
-	hbsh HBSHCreator
+	init HBSHCreator
 }
 
 func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
@@ -39,24 +39,24 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	} else {
 		var key []byte
 		if params := name.URIParameters(); name == nil {
-			key = h.hbsh.KDF("") // Temporary files get a random key.
+			key = h.init.KDF("") // Temporary files get a random key.
 		} else if t, ok := params["key"]; ok {
 			key = []byte(t[0])
 		} else if t, ok := params["hexkey"]; ok {
 			key, _ = hex.DecodeString(t[0])
 		} else if t, ok := params["textkey"]; ok {
-			key = h.hbsh.KDF(t[0])
+			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main datatabases may have their key specified as a PRAGMA.
-			return &hbshFile{File: file, reset: h.hbsh}, flags, nil
+			return &hbshFile{File: file, init: h.init}, flags, nil
 		}
-		hbsh = h.hbsh.HBSH(key)
+		hbsh = h.init.HBSH(key)
 	}
 
 	if hbsh == nil {
 		return nil, flags, sqlite3.CANTOPEN
 	}
-	return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, nil
+	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
 }
 
 const (
@@ -66,8 +66,8 @@ const (
 
 type hbshFile struct {
 	vfs.File
+	init  HBSHCreator
 	hbsh  *hbsh.HBSH
-	reset HBSHCreator
 	tweak [tweakSize]byte
 	block [blockSize]byte
 }
@@ -80,7 +80,7 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 	case "hexkey":
 		key, _ = hex.DecodeString(value)
 	case "textkey":
-		key = h.reset.KDF(value)
+		key = h.init.KDF(value)
 	default:
 		if f, ok := h.File.(vfs.FilePragma); ok {
 			return f.Pragma(name, value)
@@ -88,7 +88,7 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 		return "", sqlite3.NOTFOUND
 	}
 
-	if h.hbsh = h.reset.HBSH(key); h.hbsh != nil {
+	if h.hbsh = h.init.HBSH(key); h.hbsh != nil {
 		return "ok", nil
 	}
 	return "", sqlite3.CANTOPEN

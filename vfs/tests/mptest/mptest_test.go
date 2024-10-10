@@ -21,6 +21,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/experimental"
@@ -287,6 +288,52 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
 		"--vfs", "adiantum", "--journalmode", "wal")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_xts(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
+	ctx := util.NewContext(newContext(t))
+	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+		"--vfs", "xts")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_xts_wal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	if os.Getenv("CI") != "" {
+		t.Skip("skipping in CI")
+	}
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
+	}
+
+	ctx := util.NewContext(newContext(t))
+	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+		"--vfs", "xts", "--journalmode", "wal")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)

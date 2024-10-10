@@ -51,7 +51,7 @@ func Register(name string, base vfs.VFS, cipher HBSHCreator) {
 	}
 	vfs.Register(name, &hbshVFS{
 		VFS:  base,
-		hbsh: cipher,
+		init: cipher,
 	})
 }
 
