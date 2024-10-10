@@ -5,8 +5,17 @@ cd -P -- "$(dirname -- "$0")"
 
 curl -#OL "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip"
 unzip -d . sqlite-amalgamation-*.zip
-mv sqlite-amalgamation-*/sqlite3* .
+mv sqlite-amalgamation-*/sqlite3.c .
+mv sqlite-amalgamation-*/sqlite3.h .
+mv sqlite-amalgamation-*/sqlite3ext.h .
 rm -rf sqlite-amalgamation-*
+
+# To test a snapshot:
+# curl -# https://sqlite.org/snapshot/sqlite-snapshot-202410081727.tar.gz | tar xz
+# mv sqlite-snapshot-*/sqlite3.c .
+# mv sqlite-snapshot-*/sqlite3.h .
+# mv sqlite-snapshot-*/sqlite3ext.h .
+# rm -rf sqlite-snapshot-*
 
 cat *.patch | patch --no-backup-if-mismatch
 

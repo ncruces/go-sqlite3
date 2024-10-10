@@ -2,7 +2,7 @@
 
 This folder includes an embeddable Wasm build of SQLite 3.46.1, including the experimental
 [`BEGIN CONCURRENT`](https://sqlite.org/src/doc/begin-concurrent/doc/begin_concurrent.md) and
-[Wal2](https://www.sqlite.org/cgi/src/doc/wal2/doc/wal2.md) patches.
+[Wal2](https://sqlite.org/cgi/src/doc/wal2/doc/wal2.md) patches.
 
 > [!IMPORTANT]  
 > This package is experimental.
