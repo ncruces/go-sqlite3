@@ -183,7 +183,7 @@ func (x *xtsFile) Truncate(size int64) error {
 }
 
 func (x *xtsFile) SectorSize() int {
-	return lcm(x.File.SectorSize(), sectorSize)
+	return util.LCM(x.File.SectorSize(), sectorSize)
 }
 
 func (x *xtsFile) DeviceCharacteristics() vfs.DeviceCharacteristic {

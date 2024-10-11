@@ -1,4 +1,4 @@
-package adiantum
+package util
 
 import (
 	"math"
@@ -46,7 +46,7 @@ func Test_gcd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			if got := gcd(tt.arg1, tt.arg2); got != tt.want {
+			if got := GCD(tt.arg1, tt.arg2); got != tt.want {
 				t.Errorf("gcd(%d, %d) = %d, want %d", tt.arg1, tt.arg2, got, tt.want)
 			}
 		})
@@ -74,7 +74,7 @@ func Test_lcm(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			if got := lcm(tt.arg1, tt.arg2); got != tt.want {
+			if got := LCM(tt.arg1, tt.arg2); got != tt.want {
 				t.Errorf("lcm(%d, %d) = %d, want %d", tt.arg1, tt.arg2, got, tt.want)
 			}
 		})
