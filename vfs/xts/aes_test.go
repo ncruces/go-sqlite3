@@ -42,6 +42,11 @@ func Test_fileformat(t *testing.T) {
 	if version != 0xBADDB {
 		t.Error(version)
 	}
+
+	_, err = db.Exec(`PRAGMA integrity_check`)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func Benchmark_nokey(b *testing.B) {
