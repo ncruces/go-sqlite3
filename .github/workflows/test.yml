@@ -3,6 +3,10 @@ name: Test
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - '**.go'
+      - '**.wasm'
+      - '**.wasm.bz2'
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
