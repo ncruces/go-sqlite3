@@ -46,18 +46,14 @@ to check if your build supports file locking.
 
 ### Write-Ahead Logging
 
-On 64-bit little-endian Unix, this module uses `mmap` to implement
+On little-endian Unix, this module uses `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
-
-To allow `mmap` to work, each connection needs to reserve up to 4GB of address space.
-To limit the address space each connection reserves,
-use [`WithMemoryLimitPages`](../tests/testcfg/testcfg.go).
 
 With [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2)
 a WAL database can only be accessed by a single proccess.
 Other processes that attempt to access a database locked with BSD locks,
-will fail with the `SQLITE_PROTOCOL` error code.
+will fail with the [`SQLITE_PROTOCOL`](https://sqlite.org/rescode.html#protocol) error code.
 
 Otherwise, [WAL support is limited](https://sqlite.org/wal.html#noshm),
 and `EXCLUSIVE` locking mode must be set to create, read, and write WAL databases.

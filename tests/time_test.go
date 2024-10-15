@@ -223,6 +223,9 @@ func TestDB_timeCollation(t *testing.T) {
 }
 
 func TestDB_isoWeek(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
 	t.Parallel()
 
 	db, err := sqlite3.Open(":memory:")

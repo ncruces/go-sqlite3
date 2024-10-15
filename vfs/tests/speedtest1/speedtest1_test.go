@@ -42,7 +42,8 @@ func TestMain(m *testing.M) {
 
 	ctx := context.Background()
 	cfg := wazero.NewRuntimeConfig().
-		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads)
+		WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesThreads).
+		WithMemoryLimitPages(512)
 	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
