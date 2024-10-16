@@ -13,6 +13,7 @@ import (
 
 const (
 	median = iota
+	percentile_100
 	percentile_cont
 	percentile_disc
 )
@@ -54,13 +55,13 @@ func (q *percentile) Value(ctx sqlite3.Context) {
 		floats []float64
 	)
 	if q.kind == median {
-		float, err = getPercentile(q.nums, 0.5, false)
+		float, err = getPercentile(q.nums, 0.5, q.kind)
 		ctx.ResultFloat(float)
 	} else if err = json.Unmarshal(q.arg1, &float); err == nil {
-		float, err = getPercentile(q.nums, float, q.kind == percentile_disc)
+		float, err = getPercentile(q.nums, float, q.kind)
 		ctx.ResultFloat(float)
 	} else if err = json.Unmarshal(q.arg1, &floats); err == nil {
-		err = getPercentiles(q.nums, floats, q.kind == percentile_disc)
+		err = getPercentiles(q.nums, floats, q.kind)
 		ctx.ResultJSON(floats)
 	}
 	if err != nil {
@@ -68,7 +69,10 @@ func (q *percentile) Value(ctx sqlite3.Context) {
 	}
 }
 
-func getPercentile(nums []float64, pos float64, disc bool) (float64, error) {
+func getPercentile(nums []float64, pos float64, kind int) (float64, error) {
+	if kind == percentile_100 {
+		pos = pos / 100
+	}
 	if pos < 0 || pos > 1 {
 		return 0, util.ErrorString("invalid pos")
 	}
@@ -76,7 +80,7 @@ func getPercentile(nums []float64, pos float64, disc bool) (float64, error) {
 	i, f := math.Modf(pos * float64(len(nums)-1))
 	m0 := quick.Select(nums, int(i))
 
-	if f == 0 || disc {
+	if f == 0 || kind == percentile_disc {
 		return m0, nil
 	}
 
@@ -84,9 +88,9 @@ func getPercentile(nums []float64, pos float64, disc bool) (float64, error) {
 	return math.FMA(f, m1, math.FMA(-f, m0, m0)), nil
 }
 
-func getPercentiles(nums []float64, pos []float64, disc bool) error {
+func getPercentiles(nums []float64, pos []float64, kind int) error {
 	for i := range pos {
-		v, err := getPercentile(nums, pos[i], disc)
+		v, err := getPercentile(nums, pos[i], kind)
 		if err != nil {
 			return err
 		}

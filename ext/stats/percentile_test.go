@@ -31,6 +31,7 @@ func TestRegister_percentile(t *testing.T) {
 	stmt, _, err := db.Prepare(`
 		SELECT
 			median(x),
+			percentile(x, 50),
 			percentile_disc(x, 0.5),
 			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data`)
@@ -41,11 +42,14 @@ func TestRegister_percentile(t *testing.T) {
 		if got := stmt.ColumnFloat(0); got != 10 {
 			t.Errorf("got %v, want 10", got)
 		}
-		if got := stmt.ColumnFloat(1); got != 7 {
+		if got := stmt.ColumnFloat(1); got != 10 {
+			t.Errorf("got %v, want 10", got)
+		}
+		if got := stmt.ColumnFloat(2); got != 7 {
 			t.Errorf("got %v, want 7", got)
 		}
 		var got []float64
-		if err := stmt.ColumnJSON(2, &got); err != nil {
+		if err := stmt.ColumnJSON(3, &got); err != nil {
 			t.Error(err)
 		}
 		if !slices.Equal(got, []float64{6.25, 10, 13.75}) {
@@ -57,6 +61,7 @@ func TestRegister_percentile(t *testing.T) {
 	stmt, _, err = db.Prepare(`
 		SELECT
 			median(x),
+			percentile(x, 50),
 			percentile_disc(x, 0.5),
 			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data
@@ -71,8 +76,11 @@ func TestRegister_percentile(t *testing.T) {
 		if got := stmt.ColumnFloat(1); got != 4 {
 			t.Errorf("got %v, want 4", got)
 		}
+		if got := stmt.ColumnFloat(2); got != 4 {
+			t.Errorf("got %v, want 4", got)
+		}
 		var got []float64
-		if err := stmt.ColumnJSON(2, &got); err != nil {
+		if err := stmt.ColumnJSON(3, &got); err != nil {
 			t.Error(err)
 		}
 		if !slices.Equal(got, []float64{4, 4, 4}) {
@@ -84,6 +92,7 @@ func TestRegister_percentile(t *testing.T) {
 	stmt, _, err = db.Prepare(`
 		SELECT
 			median(x),
+			percentile(x, 50),
 			percentile_disc(x, 0.5),
 			percentile_cont(x, '[0.25, 0.5, 0.75]')
 		FROM data
@@ -99,6 +108,9 @@ func TestRegister_percentile(t *testing.T) {
 			t.Error("want NULL")
 		}
 		if got := stmt.ColumnType(2); got != sqlite3.NULL {
+			t.Error("want NULL")
+		}
+		if got := stmt.ColumnType(3); got != sqlite3.NULL {
 			t.Error("want NULL")
 		}
 	}

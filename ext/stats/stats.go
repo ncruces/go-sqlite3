@@ -53,6 +53,7 @@ import (
 // Register registers statistics functions.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const order = sqlite3.SELFORDER1 | flags
 	return errors.Join(
 		db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop)),
 		db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp)),
@@ -71,9 +72,10 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept)),
 		db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count)),
 		db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json)),
-		db.CreateWindowFunction("median", 1, flags, newPercentile(median)),
-		db.CreateWindowFunction("percentile_cont", 2, flags, newPercentile(percentile_cont)),
-		db.CreateWindowFunction("percentile_disc", 2, flags, newPercentile(percentile_disc)),
+		db.CreateWindowFunction("median", 1, order, newPercentile(median)),
+		db.CreateWindowFunction("percentile", 2, order, newPercentile(percentile_100)),
+		db.CreateWindowFunction("percentile_cont", 2, order, newPercentile(percentile_cont)),
+		db.CreateWindowFunction("percentile_disc", 2, order, newPercentile(percentile_disc)),
 		db.CreateWindowFunction("every", 1, flags, newBoolean(every)),
 		db.CreateWindowFunction("some", 1, flags, newBoolean(some)))
 }
