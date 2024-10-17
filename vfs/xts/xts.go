@@ -44,7 +44,7 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 			key = []byte(t[0])
 		} else if t, ok := params["hexkey"]; ok {
 			key, _ = hex.DecodeString(t[0])
-		} else if t, ok := params["textkey"]; ok {
+		} else if t, ok := params["textkey"]; ok && len(t[0]) > 0 {
 			key = x.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main datatabases may have their key specified as a PRAGMA.
@@ -59,6 +59,11 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 	return &xtsFile{File: file, cipher: cipher, init: x.init}, flags, nil
 }
 
+// Larger sectors don't seem to significantly improve security,
+// and don't affect perfomance.
+// https://crossbowerbt.github.io/docs/crypto/pdf00086.pdf
+// For flexibility, pick the minimum size of an SQLite page.
+// https://sqlite.org/fileformat.html#pages
 const sectorSize = 512
 
 type xtsFile struct {
@@ -76,7 +81,9 @@ func (x *xtsFile) Pragma(name string, value string) (string, error) {
 	case "hexkey":
 		key, _ = hex.DecodeString(value)
 	case "textkey":
-		key = x.init.KDF(value)
+		if len(value) > 0 {
+			key = x.init.KDF(value)
+		}
 	default:
 		if f, ok := x.File.(vfs.FilePragma); ok {
 			return f.Pragma(name, value)

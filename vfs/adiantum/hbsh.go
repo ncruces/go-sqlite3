@@ -44,7 +44,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 			key = []byte(t[0])
 		} else if t, ok := params["hexkey"]; ok {
 			key, _ = hex.DecodeString(t[0])
-		} else if t, ok := params["textkey"]; ok {
+		} else if t, ok := params["textkey"]; ok && len(t[0]) > 0 {
 			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main datatabases may have their key specified as a PRAGMA.
@@ -59,6 +59,11 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
 }
 
+// Larger blocks improve both security (wide-block cipher)
+// and throughput (cheap hashes amortize the block cipher's cost).
+// Use the default SQLite page size;
+// smaller pages pay the cost of unaligned access.
+// https://sqlite.org/pgszchng2016.html
 const (
 	tweakSize = 8
 	blockSize = 4096
@@ -80,7 +85,9 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 	case "hexkey":
 		key, _ = hex.DecodeString(value)
 	case "textkey":
-		key = h.init.KDF(value)
+		if len(value) > 0 {
+			key = h.init.KDF(value)
+		}
 	default:
 		if f, ok := h.File.(vfs.FilePragma); ok {
 			return f.Pragma(name, value)
@@ -99,7 +106,7 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		// Only OPEN_MAIN_DB can have a missing key.
 		if off == 0 && len(p) == 100 {
 			// SQLite is trying to read the header of a database file.
-			// Pretend the file is empty so the key may specified as a PRAGMA.
+			// Pretend the file is empty so the key may be specified as a PRAGMA.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN

@@ -45,6 +45,10 @@ func init() {
 // Register registers an encrypting VFS, wrapping a base VFS,
 // and possibly using a custom HBSH cipher construction.
 // To use the default Adiantum construction, set cipher to nil.
+//
+// The default construction uses a 32 byte key/hexkey.
+// If a textkey is provided, the default KDF is Argon2id
+// with 64 MiB of memory, 3 iterations, and 4 threads.
 func Register(name string, base vfs.VFS, cipher HBSHCreator) {
 	if cipher == nil {
 		cipher = adiantumCreator{}

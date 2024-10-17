@@ -7,7 +7,7 @@ The `"xts"` VFS wraps the default SQLite VFS using the
 tweakable and length-preserving encryption.\
 In general, any XTS construction can be used to wrap any VFS.
 
-The default AES-XTS construction uses AES-128, AES-192 or AES-256
+The default AES-XTS construction uses AES-128, AES-192, or AES-256
 for its block cipher.
 Additionally, we use [PBKDF2-HMAC-SHA512](https://pkg.go.dev/golang.org/x/crypto/pbkdf2)
 to derive AES-128 keys from plain text where needed.

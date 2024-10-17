@@ -45,6 +45,11 @@ func init() {
 // Register registers an encrypting VFS, wrapping a base VFS,
 // and possibly using a custom XTS cipher construction.
 // To use the default AES-XTS construction, set cipher to nil.
+//
+// The default construction uses AES-128, AES-192, or AES-256
+// if the key/hexkey is 32, 48, or 64 bytes, respectively.
+// If a textkey is provided, the default KDF is PBKDF2-HMAC-SHA512
+// with 10,000 iterations, always producing a 32 byte key.
 func Register(name string, base vfs.VFS, cipher XTSCreator) {
 	if cipher == nil {
 		cipher = aesCreator{}

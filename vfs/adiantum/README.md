@@ -11,7 +11,7 @@ The default Adiantum construction uses XChaCha12 for its stream cipher,
 AES for its block cipher, and NH and Poly1305 for hashing.\
 Additionally, we use [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2#hdr-Argon2id)
 to derive 256-bit keys from plain text where needed.
-File contents are encrypted in 4K blocks, matching the
+File contents are encrypted in 4 KiB blocks, matching the
 [default](https://sqlite.org/pgszchng2016.html) SQLite page size.
 
 The VFS encrypts all files _except_

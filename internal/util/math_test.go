@@ -25,7 +25,7 @@ func Test_abs(t *testing.T) {
 	}
 }
 
-func Test_gcd(t *testing.T) {
+func Test_GCD(t *testing.T) {
 	tests := []struct {
 		arg1 int
 		arg2 int
@@ -53,7 +53,7 @@ func Test_gcd(t *testing.T) {
 	}
 }
 
-func Test_lcm(t *testing.T) {
+func Test_LCM(t *testing.T) {
 	tests := []struct {
 		arg1 int
 		arg2 int

@@ -62,6 +62,7 @@ func Benchmark_nokey(b *testing.B) {
 		db.Close()
 	}
 }
+
 func Benchmark_hexkey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
 	sqlite3.Initialize()
