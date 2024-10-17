@@ -53,6 +53,10 @@ and want to protect against forgery, you should sign your backups,
 and verify signatures before restoring them.
 
 This is slightly weaker than other forms of SQLite encryption
-that include block-level [MACs](https://en.wikipedia.org/wiki/Message_authentication_code).
-Block-level MACs can protect against forging individual blocks,
+that include page-level [MACs](https://en.wikipedia.org/wiki/Message_authentication_code).
+Page-level MACs can protect against forging individual pages,
 but can't prevent them from being reverted to former versions of themselves.
+
+> [!TIP]
+> The [`"xts"`](../xts/README.md) package also offers encryption at rest.
+> AES-XTS uses _only_ NIST and FIPS-140 approved cryptographic primitives.

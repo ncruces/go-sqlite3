@@ -1,4 +1,36 @@
 // Package xts wraps an SQLite VFS to offer encryption at rest.
+//
+// The "xts" [vfs.VFS] wraps the default VFS using the
+// AES-XTS tweakable, length-preserving encryption.
+//
+// Importing package xts registers that VFS:
+//
+//	import _ "github.com/ncruces/go-sqlite3/vfs/xts"
+//
+// To open an encrypted database you need to provide key material.
+//
+// The simplest way to do that is to specify the key through an [URI] parameter:
+//
+//   - key: key material in binary (32, 48 or 64 bytes)
+//   - hexkey: key material in hex (64, 96 or 128 hex digits)
+//   - textkey: key material in text (any length)
+//
+// However, this makes your key easily accessible to other parts of
+// your application (e.g. through [vfs.Filename.URIParameters]).
+//
+// To avoid this, invoke any of the following PRAGMAs
+// immediately after opening a connection:
+//
+//	PRAGMA key='D41d8cD98f00b204e9800998eCf8427e';
+//	PRAGMA hexkey='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+//	PRAGMA textkey='your-secret-key';
+//
+// For an ATTACH-ed database, you must specify the schema name:
+//
+//	ATTACH DATABASE 'demo.db' AS demo;
+//	PRAGMA demo.textkey='your-secret-key';
+//
+// [URI]: https://sqlite.org/uri.html
 package xts
 
 import (
