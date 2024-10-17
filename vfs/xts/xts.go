@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"io"
 
+	"golang.org/x/crypto/xts"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"golang.org/x/crypto/xts"
 )
 
 type xtsVFS struct {
@@ -94,7 +95,7 @@ func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
 		// Only OPEN_MAIN_DB can have a missing key.
 		if off == 0 && len(p) == 100 {
 			// SQLite is trying to read the header of a database file.
-			// Pretend the file is empty so the key may specified as a PRAGMA.
+			// Pretend the file is empty so the key may be specified as a PRAGMA.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN
