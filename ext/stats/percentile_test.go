@@ -60,6 +60,40 @@ func TestRegister_percentile(t *testing.T) {
 
 	stmt, _, err = db.Prepare(`
 		SELECT
+			median(x) OVER (ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING)
+		FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnFloat(0); got != 5.5 {
+			t.Errorf("got %v, want 5.5", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnFloat(0); got != 7 {
+			t.Errorf("got %v, want 7", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnFloat(0); got != 10 {
+			t.Errorf("got %v, want 10", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnFloat(0); got != 14.5 {
+			t.Errorf("got %v, want 14.5", got)
+		}
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnFloat(0); got != 16 {
+			t.Errorf("got %v, want 16", got)
+		}
+	}
+	stmt.Close()
+
+	stmt, _, err = db.Prepare(`
+		SELECT
 			median(x),
 			percentile(x, 50),
 			percentile_disc(x, 0.5),
