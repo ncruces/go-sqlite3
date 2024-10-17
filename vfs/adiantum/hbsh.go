@@ -13,7 +13,7 @@ import (
 
 type hbshVFS struct {
 	vfs.VFS
-	hbsh HBSHCreator
+	init HBSHCreator
 }
 
 func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
@@ -39,26 +39,31 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	} else {
 		var key []byte
 		if params := name.URIParameters(); name == nil {
-			key = h.hbsh.KDF("") // Temporary files get a random key.
+			key = h.init.KDF("") // Temporary files get a random key.
 		} else if t, ok := params["key"]; ok {
 			key = []byte(t[0])
 		} else if t, ok := params["hexkey"]; ok {
 			key, _ = hex.DecodeString(t[0])
-		} else if t, ok := params["textkey"]; ok {
-			key = h.hbsh.KDF(t[0])
+		} else if t, ok := params["textkey"]; ok && len(t[0]) > 0 {
+			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main datatabases may have their key specified as a PRAGMA.
-			return &hbshFile{File: file, reset: h.hbsh}, flags, nil
+			return &hbshFile{File: file, init: h.init}, flags, nil
 		}
-		hbsh = h.hbsh.HBSH(key)
+		hbsh = h.init.HBSH(key)
 	}
 
 	if hbsh == nil {
 		return nil, flags, sqlite3.CANTOPEN
 	}
-	return &hbshFile{File: file, hbsh: hbsh, reset: h.hbsh}, flags, nil
+	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
 }
 
+// Larger blocks improve both security (wide-block cipher)
+// and throughput (cheap hashes amortize the block cipher's cost).
+// Use the default SQLite page size;
+// smaller pages pay the cost of unaligned access.
+// https://sqlite.org/pgszchng2016.html
 const (
 	tweakSize = 8
 	blockSize = 4096
@@ -66,8 +71,8 @@ const (
 
 type hbshFile struct {
 	vfs.File
+	init  HBSHCreator
 	hbsh  *hbsh.HBSH
-	reset HBSHCreator
 	tweak [tweakSize]byte
 	block [blockSize]byte
 }
@@ -80,7 +85,9 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 	case "hexkey":
 		key, _ = hex.DecodeString(value)
 	case "textkey":
-		key = h.reset.KDF(value)
+		if len(value) > 0 {
+			key = h.init.KDF(value)
+		}
 	default:
 		if f, ok := h.File.(vfs.FilePragma); ok {
 			return f.Pragma(name, value)
@@ -88,7 +95,7 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 		return "", sqlite3.NOTFOUND
 	}
 
-	if h.hbsh = h.reset.HBSH(key); h.hbsh != nil {
+	if h.hbsh = h.init.HBSH(key); h.hbsh != nil {
 		return "ok", nil
 	}
 	return "", sqlite3.CANTOPEN
@@ -99,7 +106,7 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		// Only OPEN_MAIN_DB can have a missing key.
 		if off == 0 && len(p) == 100 {
 			// SQLite is trying to read the header of a database file.
-			// Pretend the file is empty so the key may specified as a PRAGMA.
+			// Pretend the file is empty so the key may be specified as a PRAGMA.
 			return 0, io.EOF
 		}
 		return 0, sqlite3.CANTOPEN
@@ -187,7 +194,7 @@ func (h *hbshFile) Truncate(size int64) error {
 }
 
 func (h *hbshFile) SectorSize() int {
-	return lcm(h.File.SectorSize(), blockSize)
+	return util.LCM(h.File.SectorSize(), blockSize)
 }
 
 func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {

@@ -1,4 +1,4 @@
-package adiantum_test
+package xts_test
 
 import (
 	_ "embed"
@@ -12,8 +12,8 @@ import (
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/readervfs"
+	"github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
 //go:embed testdata/test.db
@@ -21,9 +21,9 @@ var testDB string
 
 func Test_fileformat(t *testing.T) {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
-	adiantum.Register("radiantum", vfs.Find("reader"), nil)
+	xts.Register("rxts", vfs.Find("reader"), nil)
 
-	db, err := driver.Open("file:test.db?vfs=radiantum")
+	db, err := driver.Open("file:test.db?vfs=rxts")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func Benchmark_hexkey(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
-			"&vfs=adiantum&hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+			"&vfs=xts&hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -85,7 +85,7 @@ func Benchmark_textkey(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
-			"&vfs=adiantum&textkey=correct+horse+battery+staple")
+			"&vfs=xts&textkey=correct+horse+battery+staple")
 		if err != nil {
 			b.Fatal(err)
 		}

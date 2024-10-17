@@ -25,6 +25,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
 //go:embed testdata/speedtest1.wasm.bz2
@@ -114,6 +115,25 @@ func Benchmark_adiantum(b *testing.B) {
 	name := "file:" + filepath.Join(b.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	args := append(options, "--vfs", "adiantum", "--size", strconv.Itoa(b.N), name)
+	cfg := wazero.NewModuleConfig().
+		WithArgs(args...).WithName("speedtest1").
+		WithStdout(&output).WithStderr(&output).
+		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
+		WithOsyield(runtime.Gosched).
+		WithRandSource(rand.Reader)
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Benchmark_xts(b *testing.B) {
+	output.Reset()
+	ctx := util.NewContext(context.Background())
+	name := "file:" + filepath.Join(b.TempDir(), "test.db") +
+		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	args := append(options, "--vfs", "xts", "--size", strconv.Itoa(b.N), name)
 	cfg := wazero.NewModuleConfig().
 		WithArgs(args...).WithName("speedtest1").
 		WithStdout(&output).WithStderr(&output).

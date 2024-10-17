@@ -1,18 +1,18 @@
-// Package adiantum wraps an SQLite VFS to offer encryption at rest.
+// Package xts wraps an SQLite VFS to offer encryption at rest.
 //
-// The "adiantum" [vfs.VFS] wraps the default VFS using the
-// Adiantum tweakable, length-preserving encryption.
+// The "xts" [vfs.VFS] wraps the default VFS using the
+// AES-XTS tweakable, length-preserving encryption.
 //
-// Importing package adiantum registers that VFS:
+// Importing package xts registers that VFS:
 //
-//	import _ "github.com/ncruces/go-sqlite3/vfs/adiantum"
+//	import _ "github.com/ncruces/go-sqlite3/vfs/xts"
 //
 // To open an encrypted database you need to provide key material.
 //
 // The simplest way to do that is to specify the key through an [URI] parameter:
 //
-//   - key: key material in binary (32 bytes)
-//   - hexkey: key material in hex (64 hex digits)
+//   - key: key material in binary (32, 48 or 64 bytes)
+//   - hexkey: key material in hex (64, 96 or 128 hex digits)
 //   - textkey: key material in text (any length)
 //
 // However, this makes your key easily accessible to other parts of
@@ -31,42 +31,43 @@
 //	PRAGMA demo.textkey='your-secret-key';
 //
 // [URI]: https://sqlite.org/uri.html
-package adiantum
+package xts
 
 import (
 	"github.com/ncruces/go-sqlite3/vfs"
-	"lukechampine.com/adiantum/hbsh"
+	"golang.org/x/crypto/xts"
 )
 
 func init() {
-	Register("adiantum", vfs.Find(""), nil)
+	Register("xts", vfs.Find(""), nil)
 }
 
 // Register registers an encrypting VFS, wrapping a base VFS,
-// and possibly using a custom HBSH cipher construction.
-// To use the default Adiantum construction, set cipher to nil.
+// and possibly using a custom XTS cipher construction.
+// To use the default AES-XTS construction, set cipher to nil.
 //
-// The default construction uses a 32 byte key/hexkey.
-// If a textkey is provided, the default KDF is Argon2id
-// with 64 MiB of memory, 3 iterations, and 4 threads.
-func Register(name string, base vfs.VFS, cipher HBSHCreator) {
+// The default construction uses AES-128, AES-192, or AES-256
+// if the key/hexkey is 32, 48, or 64 bytes, respectively.
+// If a textkey is provided, the default KDF is PBKDF2-HMAC-SHA512
+// with 10,000 iterations, always producing a 32 byte key.
+func Register(name string, base vfs.VFS, cipher XTSCreator) {
 	if cipher == nil {
-		cipher = adiantumCreator{}
+		cipher = aesCreator{}
 	}
-	vfs.Register(name, &hbshVFS{
+	vfs.Register(name, &xtsVFS{
 		VFS:  base,
 		init: cipher,
 	})
 }
 
-// HBSHCreator creates an [hbsh.HBSH] cipher
+// XTSCreator creates an [xts.Cipher]
 // given key material.
-type HBSHCreator interface {
-	// KDF derives an HBSH key from a secret.
+type XTSCreator interface {
+	// KDF derives an XTS key from a secret.
 	// If no secret is given, a random key is generated.
 	KDF(secret string) (key []byte)
 
-	// HBSH creates an HBSH cipher given a key.
+	// XTS creates an XTS cipher given a key.
 	// If key is not appropriate, nil is returned.
-	HBSH(key []byte) *hbsh.HBSH
+	XTS(key []byte) *xts.Cipher
 }
