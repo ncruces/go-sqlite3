@@ -269,3 +269,8 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 	s.Close()
 }
+
+func (s *vfsShm) shmBarrier() {
+	s.lockMtx.Lock()
+	s.lockMtx.Unlock()
+}

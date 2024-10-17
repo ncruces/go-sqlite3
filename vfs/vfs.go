@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"io"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -245,10 +244,9 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 
 	case _FCNTL_LOCK_TIMEOUT:
 		if file, ok := file.(FileSharedMemory); ok {
-			if iface, ok := file.SharedMemory().(interface{ shmEnableBlocking(bool) }); ok {
-				if i := util.ReadUint32(mod, pArg); i == 0 || i == 1 {
-					iface.shmEnableBlocking(i != 0)
-				}
+			if shm, ok := file.SharedMemory().(blockingSharedMemory); ok {
+				shm.shmEnableBlocking(util.ReadUint32(mod, pArg) != 0)
+				return _OK
 			}
 		}
 
@@ -385,11 +383,9 @@ func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile uint32)
 	return file.DeviceCharacteristics()
 }
 
-var shmBarrier sync.Mutex
-
 func vfsShmBarrier(ctx context.Context, mod api.Module, pFile uint32) {
-	shmBarrier.Lock()
-	defer shmBarrier.Unlock()
+	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
+	shm.shmBarrier()
 }
 
 func vfsShmMap(ctx context.Context, mod api.Module, pFile uint32, iRegion, szRegion int32, bExtend, pp uint32) _ErrorCode {

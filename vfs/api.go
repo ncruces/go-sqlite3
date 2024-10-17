@@ -171,5 +171,11 @@ type SharedMemory interface {
 	shmMap(context.Context, api.Module, int32, int32, bool) (uint32, _ErrorCode)
 	shmLock(int32, int32, _ShmFlag) _ErrorCode
 	shmUnmap(bool)
+	shmBarrier()
 	io.Closer
+}
+
+type blockingSharedMemory interface {
+	SharedMemory
+	shmEnableBlocking(block bool)
 }

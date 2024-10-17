@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -45,12 +46,15 @@ func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
 	}
 }
 
+var _ blockingSharedMemory = &vfsShm{}
+
 type vfsShm struct {
 	*os.File
 	path     string
 	regions  []*util.MappedRegion
 	readOnly bool
 	blocking bool
+	sync.Mutex
 }
 
 func (s *vfsShm) shmOpen() _ErrorCode {
@@ -194,6 +198,11 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 	s.Close()
 	s.File = nil
+}
+
+func (s *vfsShm) shmBarrier() {
+	s.Lock()
+	s.Unlock()
 }
 
 func (s *vfsShm) shmEnableBlocking(block bool) {
