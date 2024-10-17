@@ -1,7 +1,6 @@
 package testcfg
 
 import (
-	"math/bits"
 	"os"
 	"path/filepath"
 
@@ -12,13 +11,8 @@ import (
 // notest
 
 func init() {
-	if bits.UintSize < 64 {
-		return
-	}
-
 	sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().
-		WithMemoryCapacityFromMax(true).
-		WithMemoryLimitPages(1024)
+		WithMemoryLimitPages(512)
 
 	if os.Getenv("CI") != "" {
 		path := filepath.Join(os.TempDir(), "wazero")

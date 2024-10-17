@@ -9,6 +9,6 @@ import (
 
 func TestVirtual(t *testing.T) {
 	defer func() { _ = recover() }()
-	alloc.Virtual(math.MaxInt+2, math.MaxInt+2)
+	alloc.NewMemory(math.MaxInt+2, math.MaxInt+2)
 	t.Error("want panic")
 }

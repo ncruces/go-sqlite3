@@ -160,7 +160,7 @@ jobs:
     - name: Test ppc64le (interpreter)
       run: GOARCH=ppc64le go test -v -short ./...
 
-    - name: Test s390x (big-endian, z/OS demo)
+    - name: Test s390x (big-endian, z/OS like)
       run: GOARCH=s390x go test -v -short -tags sqlite3_flock ./...
 
   test-vm:
