@@ -6,10 +6,9 @@ import (
 	"math"
 	"slices"
 
-	"github.com/ncruces/sort/quick"
-
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/sort/quick"
 )
 
 const (
@@ -92,7 +91,7 @@ func (q *percentile) at(pos float64) (float64, error) {
 	}
 
 	m1 := slices.Min(q.nums[int(i)+1:])
-	return math.FMA(f, m1, math.FMA(-f, m0, m0)), nil
+	return util.Lerp(m0, m1, f), nil
 }
 
 func (q *percentile) atMore(pos []float64) error {
