@@ -104,7 +104,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 }
 
-func TestConn_WalCheckpoint(t *testing.T) {
+func TestConn_WALCheckpoint(t *testing.T) {
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
 	}
@@ -118,13 +118,13 @@ func TestConn_WalCheckpoint(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.WalAutoCheckpoint(1000)
+	err = db.WALAutoCheckpoint(1000)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db.WalHook(func(db *sqlite3.Conn, schema string, pages int) error {
-		log, ckpt, err := db.WalCheckpoint(schema, sqlite3.CHECKPOINT_FULL)
+	db.WALHook(func(db *sqlite3.Conn, schema string, pages int) error {
+		log, ckpt, err := db.WALCheckpoint(schema, sqlite3.CHECKPOINT_FULL)
 		t.Log(log, ckpt, err)
 		return err
 	})
