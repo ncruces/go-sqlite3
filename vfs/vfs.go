@@ -7,10 +7,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/julianday"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/julianday"
 )
 
 // ExportHostFunctions is an internal API users need not call directly.

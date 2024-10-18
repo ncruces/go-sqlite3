@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tetratelabs/wazero/api"
+
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"github.com/tetratelabs/wazero/api"
 )
 
 // Conn is a database connection handle.

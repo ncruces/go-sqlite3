@@ -3,9 +3,10 @@ package gormlite
 import (
 	"testing"
 
-	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestErrorTranslator(t *testing.T) {

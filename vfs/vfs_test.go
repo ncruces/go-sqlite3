@@ -13,9 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tetratelabs/wazero/experimental/wazerotest"
+
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/julianday"
-	"github.com/tetratelabs/wazero/experimental/wazerotest"
 )
 
 func Test_vfsLocaltime(t *testing.T) {

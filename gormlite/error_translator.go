@@ -3,8 +3,9 @@ package gormlite
 import (
 	"errors"
 
-	"github.com/ncruces/go-sqlite3"
 	"gorm.io/gorm"
+
+	"github.com/ncruces/go-sqlite3"
 )
 
 func (_Dialector) Translate(err error) error {

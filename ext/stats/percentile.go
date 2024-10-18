@@ -6,9 +6,10 @@ import (
 	"math"
 	"slices"
 
+	"github.com/ncruces/sort/quick"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/sort/quick"
 )
 
 const (

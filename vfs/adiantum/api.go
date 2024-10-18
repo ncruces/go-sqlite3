@@ -34,8 +34,9 @@
 package adiantum
 
 import (
-	"github.com/ncruces/go-sqlite3/vfs"
 	"lukechampine.com/adiantum/hbsh"
+
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func init() {

@@ -8,11 +8,12 @@ import (
 
 	_ "embed"
 
+	"github.com/psanford/httpreadat"
+
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs/readervfs"
-	"github.com/psanford/httpreadat"
 )
 
 func Example_http() {

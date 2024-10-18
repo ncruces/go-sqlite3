@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"io"
 
+	"lukechampine.com/adiantum/hbsh"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"lukechampine.com/adiantum/hbsh"
 )
 
 type hbshVFS struct {

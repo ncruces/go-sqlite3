@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/julianday"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // TimeFormat specifies how to encode/decode time values.

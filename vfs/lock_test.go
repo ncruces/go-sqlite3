@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/experimental/wazerotest"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func Test_vfsLock(t *testing.T) {

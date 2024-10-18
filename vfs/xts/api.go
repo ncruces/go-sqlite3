@@ -34,8 +34,9 @@
 package xts
 
 import (
-	"github.com/ncruces/go-sqlite3/vfs"
 	"golang.org/x/crypto/xts"
+
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 func init() {

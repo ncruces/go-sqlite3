@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Txn is an in-progress database transaction.

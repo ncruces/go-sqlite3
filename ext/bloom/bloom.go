@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/dchest/siphash"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )

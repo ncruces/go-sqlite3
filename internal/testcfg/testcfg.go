@@ -4,8 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ncruces/go-sqlite3"
 	"github.com/tetratelabs/wazero"
+
+	"github.com/ncruces/go-sqlite3"
 )
 
 // notest

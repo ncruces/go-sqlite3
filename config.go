@@ -3,9 +3,10 @@ package sqlite3
 import (
 	"context"
 
+	"github.com/tetratelabs/wazero/api"
+
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
-	"github.com/tetratelabs/wazero/api"
 )
 
 // Config makes configuration changes to a database connection.

@@ -7,12 +7,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/vfs"
-	"github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"golang.org/x/crypto/argon2"
 	"lukechampine.com/adiantum/hbsh"
 	"lukechampine.com/adiantum/hpolyc"
+
+	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/go-sqlite3/vfs/adiantum"
 )
 
 func ExampleRegister_hpolyc() {

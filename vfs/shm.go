@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/unix"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // SupportsSharedMemory is false on platforms that do not support shared memory.
