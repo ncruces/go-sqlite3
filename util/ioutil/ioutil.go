@@ -1,2 +1,2 @@
-// Package ioutil implements I/O utility functions.
+// Package ioutil implements I/O utilities.
 package ioutil

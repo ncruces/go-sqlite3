@@ -9,6 +9,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -90,10 +91,7 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 			key = h.init.KDF(value)
 		}
 	default:
-		if f, ok := h.File.(vfs.FilePragma); ok {
-			return f.Pragma(name, value)
-		}
-		return "", sqlite3.NOTFOUND
+		return vfsutil.WrapPragma(h.File, name, value)
 	}
 
 	if h.hbsh = h.init.HBSH(key); h.hbsh != nil {
@@ -209,92 +207,55 @@ func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 // Wrap optional methods.
 
 func (h *hbshFile) SharedMemory() vfs.SharedMemory {
-	if f, ok := h.File.(vfs.FileSharedMemory); ok {
-		return f.SharedMemory()
-	}
-	return nil
+	return vfsutil.WrapSharedMemory(h.File)
 }
 
 func (h *hbshFile) ChunkSize(size int) {
-	if f, ok := h.File.(vfs.FileChunkSize); ok {
-		size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
-		f.ChunkSize(size)
-	}
+	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
+	vfsutil.WrapChunkSize(h.File, size)
 }
 
 func (h *hbshFile) SizeHint(size int64) error {
-	if f, ok := h.File.(vfs.FileSizeHint); ok {
-		size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
-		return f.SizeHint(size)
-	}
-	return sqlite3.NOTFOUND
+	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
+	return vfsutil.WrapSizeHint(h.File, size)
 }
 
 func (h *hbshFile) HasMoved() (bool, error) {
-	if f, ok := h.File.(vfs.FileHasMoved); ok {
-		return f.HasMoved()
-	}
-	return false, sqlite3.NOTFOUND
+	return vfsutil.WrapHasMoved(h.File) // notest
 }
 
 func (h *hbshFile) Overwrite() error {
-	if f, ok := h.File.(vfs.FileOverwrite); ok {
-		return f.Overwrite()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapOverwrite(h.File) // notest
 }
 
 func (h *hbshFile) PersistentWAL() bool {
-	if f, ok := h.File.(vfs.FilePersistentWAL); ok {
-		return f.PersistentWAL()
-	}
-	return false
+	return vfsutil.WrapPersistentWAL(h.File) // notest
 }
 
 func (h *hbshFile) SetPersistentWAL(keepWAL bool) {
-	if f, ok := h.File.(vfs.FilePersistentWAL); ok {
-		f.SetPersistentWAL(keepWAL)
-	}
+	vfsutil.WrapSetPersistentWAL(h.File, keepWAL) // notest
 }
 
 func (h *hbshFile) CommitPhaseTwo() error {
-	if f, ok := h.File.(vfs.FileCommitPhaseTwo); ok {
-		return f.CommitPhaseTwo()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapCommitPhaseTwo(h.File) // notest
 }
 
 func (h *hbshFile) BeginAtomicWrite() error {
-	if f, ok := h.File.(vfs.FileBatchAtomicWrite); ok {
-		return f.BeginAtomicWrite()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapBeginAtomicWrite(h.File) // notest
 }
 
 func (h *hbshFile) CommitAtomicWrite() error {
-	if f, ok := h.File.(vfs.FileBatchAtomicWrite); ok {
-		return f.CommitAtomicWrite()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapCommitAtomicWrite(h.File) // notest
 }
 
 func (h *hbshFile) RollbackAtomicWrite() error {
-	if f, ok := h.File.(vfs.FileBatchAtomicWrite); ok {
-		return f.RollbackAtomicWrite()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapRollbackAtomicWrite(h.File) // notest
 }
 
 func (h *hbshFile) CheckpointDone() error {
-	if f, ok := h.File.(vfs.FileCheckpoint); ok {
-		return f.CheckpointDone()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapCheckpointDone(h.File) // notest
 }
 
 func (h *hbshFile) CheckpointStart() error {
-	if f, ok := h.File.(vfs.FileCheckpoint); ok {
-		return f.CheckpointStart()
-	}
-	return sqlite3.NOTFOUND
+	return vfsutil.WrapCheckpointStart(h.File) // notest
 }
