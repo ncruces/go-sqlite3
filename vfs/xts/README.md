@@ -14,6 +14,9 @@ to derive AES-128 keys from plain text where needed.
 File contents are encrypted in 512 byte sectors, matching the
 [minimum](https://sqlite.org/fileformat.html#pages) SQLite page size.
 
+This VFS uses _only_ NIST and FIPS 140-2 approved cryptographic primitives,
+which _may_ help you become FIPS compliant.
+
 The VFS encrypts all files _except_
 [super journals](https://sqlite.org/tempfiles.html#super_journal_files):
 these _never_ contain database data, only filenames,
@@ -39,10 +42,12 @@ This means that an adversary who can get ahold of multiple snapshots
 (e.g. backups) of a database file can learn precisely:
 which sectors changed, which ones didn't, which got reverted.
 
-This is slightly weaker than other forms of SQLite encryption
-that include *some* nondeterminism; with limited nondeterminism,
-an adversary can't distinguish between
-sectors that actually changed, and sectors that got reverted.
+This is weaker than other forms of SQLite encryption
+that include *some* nondeterminism.
+With limited nondeterminism, an adversary can't distinguish between
+pages that actually changed, and pages that got reverted;
+a `VACUUM` can fully rebuild the database file,
+preventing this differential analysis.
 
 > [!CAUTION]
 > This package does not claim protect databases against tampering or forgery.
@@ -52,12 +57,12 @@ if you're keeping `"xts"` encrypted backups of your database,
 and want to protect against forgery, you should sign your backups,
 and verify signatures before restoring them.
 
-This is slightly weaker than other forms of SQLite encryption
+This is weaker than other forms of SQLite encryption
 that include page-level [MACs](https://en.wikipedia.org/wiki/Message_authentication_code).
 Page-level MACs can protect against forging individual pages,
 but can't prevent them from being reverted to former versions of themselves.
 
 > [!TIP]
-> The [`"adiantum"`](../adiantum/README.md) package also offers encryption at rest.
+> The [`"adiantum"`](../adiantum/README.md) VFS also offers encryption at rest.
 > In general Adiantum performs significantly better,
 > and as a "wide-block" cipher, _may_ offer improved security.

@@ -39,10 +39,12 @@ This means that an adversary who can get ahold of multiple snapshots
 (e.g. backups) of a database file can learn precisely:
 which blocks changed, which ones didn't, which got reverted.
 
-This is slightly weaker than other forms of SQLite encryption
-that include *some* nondeterminism; with limited nondeterminism,
-an adversary can't distinguish between
-blocks that actually changed, and blocks that got reverted.
+This is weaker than other forms of SQLite encryption
+that include *some* nondeterminism.
+With limited nondeterminism, an adversary can't distinguish between
+pages that actually changed, and pages that got reverted;
+a `VACUUM` can fully rebuild the database file,
+preventing this differential analysis.
 
 > [!CAUTION]
 > This package does not claim protect databases against tampering or forgery.
@@ -52,11 +54,11 @@ if you're keeping `"adiantum"` encrypted backups of your database,
 and want to protect against forgery, you should sign your backups,
 and verify signatures before restoring them.
 
-This is slightly weaker than other forms of SQLite encryption
+This is weaker than other forms of SQLite encryption
 that include page-level [MACs](https://en.wikipedia.org/wiki/Message_authentication_code).
 Page-level MACs can protect against forging individual pages,
 but can't prevent them from being reverted to former versions of themselves.
 
 > [!TIP]
-> The [`"xts"`](../xts/README.md) package also offers encryption at rest.
-> AES-XTS uses _only_ NIST and FIPS-140 approved cryptographic primitives.
+> The [`"xts"`](../xts/README.md) VFS also offers encryption at rest.
+> AES-XTS uses _only_ NIST and FIPS 140 approved cryptographic primitives.

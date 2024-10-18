@@ -243,6 +243,19 @@ func (h *hbshFile) Overwrite() error {
 	return sqlite3.NOTFOUND
 }
 
+func (h *hbshFile) PersistentWAL() bool {
+	if f, ok := h.File.(vfs.FilePersistentWAL); ok {
+		return f.PersistentWAL()
+	}
+	return false
+}
+
+func (h *hbshFile) SetPersistentWAL(keepWAL bool) {
+	if f, ok := h.File.(vfs.FilePersistentWAL); ok {
+		f.SetPersistentWAL(keepWAL)
+	}
+}
+
 func (h *hbshFile) CommitPhaseTwo() error {
 	if f, ok := h.File.(vfs.FileCommitPhaseTwo); ok {
 		return f.CommitPhaseTwo()

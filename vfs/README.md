@@ -95,3 +95,5 @@ The VFS can be customized with a few build tags:
   implements an in-memory VFS.
 - [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
   implements a VFS for immutable databases.
+- [`github.com/ncruces/go-sqlite3/vfs/xts`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/xts)
+  wraps a VFS to offer encryption at rest.

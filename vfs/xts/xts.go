@@ -240,6 +240,19 @@ func (x *xtsFile) Overwrite() error {
 	return sqlite3.NOTFOUND
 }
 
+func (x *xtsFile) PersistentWAL() bool {
+	if f, ok := x.File.(vfs.FilePersistentWAL); ok {
+		return f.PersistentWAL()
+	}
+	return false
+}
+
+func (x *xtsFile) SetPersistentWAL(keepWAL bool) {
+	if f, ok := x.File.(vfs.FilePersistentWAL); ok {
+		f.SetPersistentWAL(keepWAL)
+	}
+}
+
 func (x *xtsFile) CommitPhaseTwo() error {
 	if f, ok := x.File.(vfs.FileCommitPhaseTwo); ok {
 		return f.CommitPhaseTwo()
