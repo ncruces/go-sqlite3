@@ -14,6 +14,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
 //go:embed testdata/wal.db
@@ -74,6 +75,13 @@ func TestDB_adiantum(t *testing.T) {
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
 		"&vfs=adiantum&textkey=correct+horse+battery+staple")
+}
+
+func TestDB_xts(t *testing.T) {
+	t.Parallel()
+	tmp := filepath.Join(t.TempDir(), "test.db")
+	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
+		"&vfs=xts&textkey=correct+horse+battery+staple")
 }
 
 func TestDB_nolock(t *testing.T) {

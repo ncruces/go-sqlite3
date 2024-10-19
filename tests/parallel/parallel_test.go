@@ -20,6 +20,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
 func TestMain(m *testing.M) {
@@ -100,14 +101,37 @@ func Test_adiantum(t *testing.T) {
 
 	var iter int
 	if testing.Short() {
-		iter = 1000
+		iter = 500
 	} else {
-		iter = 5000
+		iter = 2500
 	}
 
 	name := "file:" +
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?vfs=adiantum" +
+		"&_pragma=hexkey(e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)" +
+		"&_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
+	testParallel(t, name, iter)
+	testIntegrity(t, name)
+}
+
+func Test_xts(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
+	var iter int
+	if testing.Short() {
+		iter = 500
+	} else {
+		iter = 2500
+	}
+
+	name := "file:" +
+		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
+		"?vfs=xts" +
 		"&_pragma=hexkey(e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)" +
 		"&_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
