@@ -239,14 +239,8 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 	switch op {
 	case _FCNTL_LOCKSTATE:
 		if file, ok := file.(FileLockState); ok {
-			util.WriteUint32(mod, pArg, uint32(file.LockState()))
-			return _OK
-		}
-
-	case _FCNTL_LOCK_TIMEOUT:
-		if file, ok := file.(FileSharedMemory); ok {
-			if shm, ok := file.SharedMemory().(blockingSharedMemory); ok {
-				shm.shmEnableBlocking(util.ReadUint32(mod, pArg) != 0)
+			if lk := file.LockState(); lk <= LOCK_EXCLUSIVE {
+				util.WriteUint32(mod, pArg, uint32(lk))
 				return _OK
 			}
 		}
@@ -328,15 +322,15 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 			return vfsErrorCode(err, _IOERR_ROLLBACK_ATOMIC)
 		}
 
-	case _FCNTL_CKPT_DONE:
-		if file, ok := file.(FileCheckpoint); ok {
-			err := file.CheckpointDone()
-			return vfsErrorCode(err, _IOERR)
-		}
 	case _FCNTL_CKPT_START:
 		if file, ok := file.(FileCheckpoint); ok {
-			err := file.CheckpointStart()
-			return vfsErrorCode(err, _IOERR)
+			file.CheckpointStart()
+			return _OK
+		}
+	case _FCNTL_CKPT_DONE:
+		if file, ok := file.(FileCheckpoint); ok {
+			file.CheckpointDone()
+			return _OK
 		}
 
 	case _FCNTL_PRAGMA:
@@ -364,6 +358,14 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 				util.WriteString(mod, uint32(stack[0]), out)
 			}
 			return ret
+		}
+
+	case _FCNTL_LOCK_TIMEOUT:
+		if file, ok := file.(FileSharedMemory); ok {
+			if shm, ok := file.SharedMemory().(blockingSharedMemory); ok {
+				shm.shmEnableBlocking(util.ReadUint32(mod, pArg) != 0)
+				return _OK
+			}
 		}
 	}
 

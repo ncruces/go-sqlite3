@@ -36,7 +36,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	}
 
 	var hbsh *hbsh.HBSH
-	if f, ok := name.DatabaseFile().(*hbshFile); ok {
+	if f, ok := vfsutil.UnwrapFile[*hbshFile](name.DatabaseFile()); ok {
 		hbsh = f.hbsh
 	} else {
 		var key []byte
@@ -70,6 +70,17 @@ const (
 	tweakSize = 8
 	blockSize = 4096
 )
+
+// Ensure blockSize is a power of two.
+var _ [0]struct{} = [blockSize & (blockSize - 1)]struct{}{}
+
+func roundDown(i int64) int64 {
+	return i &^ (blockSize - 1)
+}
+
+func roundUp[T int | int64](i T) T {
+	return (i + (blockSize - 1)) &^ (blockSize - 1)
+}
 
 type hbshFile struct {
 	vfs.File
@@ -111,8 +122,8 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, sqlite3.CANTOPEN
 	}
 
-	min := (off) &^ (blockSize - 1)                                   // round down
-	max := (off + int64(len(p)) + (blockSize - 1)) &^ (blockSize - 1) // round up
+	min := roundDown(off)
+	max := roundUp(off + int64(len(p)))
 
 	// Read one block at a time.
 	for ; min < max; min += blockSize {
@@ -141,8 +152,8 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		return 0, sqlite3.READONLY
 	}
 
-	min := (off) &^ (blockSize - 1)                                   // round down
-	max := (off + int64(len(p)) + (blockSize - 1)) &^ (blockSize - 1) // round up
+	min := roundDown(off)
+	max := roundUp(off + int64(len(p)))
 
 	// Write one block at a time.
 	for ; min < max; min += blockSize {
@@ -187,45 +198,44 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 	return n, nil
 }
 
-func (h *hbshFile) Truncate(size int64) error {
-	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
-	return h.File.Truncate(size)
+func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
+	var _ [0]struct{} = [blockSize - 4096]struct{}{} // Ensure blockSize is 4K.
+	return h.File.DeviceCharacteristics() & (0 |
+		// The only safe flags are these:
+		vfs.IOCAP_ATOMIC4K |
+		vfs.IOCAP_UNDELETABLE_WHEN_OPEN |
+		vfs.IOCAP_IMMUTABLE |
+		vfs.IOCAP_BATCH_ATOMIC)
 }
 
 func (h *hbshFile) SectorSize() int {
 	return util.LCM(h.File.SectorSize(), blockSize)
 }
 
-func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
-	return h.File.DeviceCharacteristics() & (0 |
-		// The only safe flags are these:
-		vfs.IOCAP_UNDELETABLE_WHEN_OPEN |
-		vfs.IOCAP_IMMUTABLE |
-		vfs.IOCAP_BATCH_ATOMIC)
+func (h *hbshFile) Truncate(size int64) error {
+	return h.File.Truncate(roundUp(size))
 }
 
-// Wrap optional methods.
+func (h *hbshFile) ChunkSize(size int) {
+	vfsutil.WrapChunkSize(h.File, roundUp(size))
+}
+
+func (h *hbshFile) SizeHint(size int64) error {
+	return vfsutil.WrapSizeHint(h.File, roundUp(size))
+}
+
+func (h *hbshFile) Unwrap() vfs.File {
+	return h.File
+}
 
 func (h *hbshFile) SharedMemory() vfs.SharedMemory {
 	return vfsutil.WrapSharedMemory(h.File)
 }
 
-func (h *hbshFile) ChunkSize(size int) {
-	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
-	vfsutil.WrapChunkSize(h.File, size)
-}
+// Wrap optional methods.
 
-func (h *hbshFile) SizeHint(size int64) error {
-	size = (size + (blockSize - 1)) &^ (blockSize - 1) // round up
-	return vfsutil.WrapSizeHint(h.File, size)
-}
-
-func (h *hbshFile) HasMoved() (bool, error) {
-	return vfsutil.WrapHasMoved(h.File) // notest
-}
-
-func (h *hbshFile) Overwrite() error {
-	return vfsutil.WrapOverwrite(h.File) // notest
+func (h *hbshFile) LockState() vfs.LockLevel {
+	return vfsutil.WrapLockState(h.File) // notest
 }
 
 func (h *hbshFile) PersistentWAL() bool {
@@ -234,6 +244,14 @@ func (h *hbshFile) PersistentWAL() bool {
 
 func (h *hbshFile) SetPersistentWAL(keepWAL bool) {
 	vfsutil.WrapSetPersistentWAL(h.File, keepWAL) // notest
+}
+
+func (h *hbshFile) HasMoved() (bool, error) {
+	return vfsutil.WrapHasMoved(h.File) // notest
+}
+
+func (h *hbshFile) Overwrite() error {
+	return vfsutil.WrapOverwrite(h.File) // notest
 }
 
 func (h *hbshFile) CommitPhaseTwo() error {
@@ -252,10 +270,10 @@ func (h *hbshFile) RollbackAtomicWrite() error {
 	return vfsutil.WrapRollbackAtomicWrite(h.File) // notest
 }
 
-func (h *hbshFile) CheckpointDone() error {
-	return vfsutil.WrapCheckpointDone(h.File) // notest
+func (h *hbshFile) CheckpointStart() {
+	vfsutil.WrapCheckpointStart(h.File) // notest
 }
 
-func (h *hbshFile) CheckpointStart() error {
-	return vfsutil.WrapCheckpointStart(h.File) // notest
+func (h *hbshFile) CheckpointDone() {
+	vfsutil.WrapCheckpointDone(h.File) // notest
 }

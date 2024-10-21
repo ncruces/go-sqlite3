@@ -6,12 +6,58 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
-// WrapSharedMemory helps wrap [vfs.FileSharedMemory].
-func WrapSharedMemory(f vfs.File) vfs.SharedMemory {
-	if f, ok := f.(vfs.FileSharedMemory); ok {
-		return f.SharedMemory()
+// UnwrapFile unwraps a [vfs.File],
+// possibly implementing [vfs.FileUnwrap],
+// to a concrete type.
+func UnwrapFile[T vfs.File](f vfs.File) (_ T, _ bool) {
+	for {
+		switch t := f.(type) {
+		default:
+			return
+		case T:
+			return t, true
+		case vfs.FileUnwrap:
+			f = t.Unwrap()
+		}
 	}
-	return nil
+}
+
+// WrapLockState helps wrap [vfs.FileLockState].
+func WrapLockState(f vfs.File) vfs.LockLevel {
+	if f, ok := f.(vfs.FileLockState); ok {
+		return f.LockState()
+	}
+	return vfs.LOCK_EXCLUSIVE + 1 // UNKNOWN_LOCK
+}
+
+// WrapPersistentWAL helps wrap [vfs.FilePersistentWAL].
+func WrapPersistentWAL(f vfs.File) bool {
+	if f, ok := f.(vfs.FilePersistentWAL); ok {
+		return f.PersistentWAL()
+	}
+	return false
+}
+
+// WrapSetPersistentWAL helps wrap [vfs.FilePersistentWAL].
+func WrapSetPersistentWAL(f vfs.File, keepWAL bool) {
+	if f, ok := f.(vfs.FilePersistentWAL); ok {
+		f.SetPersistentWAL(keepWAL)
+	}
+}
+
+// WrapPowersafeOverwrite helps wrap [vfs.FilePowersafeOverwrite].
+func WrapPowersafeOverwrite(f vfs.File) bool {
+	if f, ok := f.(vfs.FilePowersafeOverwrite); ok {
+		return f.PowersafeOverwrite()
+	}
+	return false
+}
+
+// WrapSetPowersafeOverwrite helps wrap [vfs.FilePowersafeOverwrite].
+func WrapSetPowersafeOverwrite(f vfs.File, psow bool) {
+	if f, ok := f.(vfs.FilePowersafeOverwrite); ok {
+		f.SetPowersafeOverwrite(psow)
+	}
 }
 
 // WrapChunkSize helps wrap [vfs.FileChunkSize].
@@ -43,36 +89,6 @@ func WrapOverwrite(f vfs.File) error {
 		return f.Overwrite()
 	}
 	return sqlite3.NOTFOUND
-}
-
-// WrapPersistentWAL helps wrap [vfs.FilePersistentWAL].
-func WrapPersistentWAL(f vfs.File) bool {
-	if f, ok := f.(vfs.FilePersistentWAL); ok {
-		return f.PersistentWAL()
-	}
-	return false
-}
-
-// WrapSetPersistentWAL helps wrap [vfs.FilePersistentWAL].
-func WrapSetPersistentWAL(f vfs.File, keepWAL bool) {
-	if f, ok := f.(vfs.FilePersistentWAL); ok {
-		f.SetPersistentWAL(keepWAL)
-	}
-}
-
-// WrapPowersafeOverwrite helps wrap [vfs.FilePowersafeOverwrite].
-func WrapPowersafeOverwrite(f vfs.File) bool {
-	if f, ok := f.(vfs.FilePowersafeOverwrite); ok {
-		return f.PowersafeOverwrite()
-	}
-	return false
-}
-
-// WrapSetPowersafeOverwrite helps wrap [vfs.FilePowersafeOverwrite].
-func WrapSetPowersafeOverwrite(f vfs.File, psow bool) {
-	if f, ok := f.(vfs.FilePowersafeOverwrite); ok {
-		f.SetPowersafeOverwrite(psow)
-	}
 }
 
 // WrapCommitPhaseTwo helps wrap [vfs.FileCommitPhaseTwo].
@@ -107,20 +123,18 @@ func WrapRollbackAtomicWrite(f vfs.File) error {
 	return sqlite3.NOTFOUND
 }
 
-// WrapCheckpointDone helps wrap [vfs.FileCheckpoint].
-func WrapCheckpointDone(f vfs.File) error {
+// WrapCheckpointStart helps wrap [vfs.FileCheckpoint].
+func WrapCheckpointStart(f vfs.File) {
 	if f, ok := f.(vfs.FileCheckpoint); ok {
-		return f.CheckpointDone()
+		f.CheckpointStart()
 	}
-	return sqlite3.NOTFOUND
 }
 
-// WrapCheckpointStart helps wrap [vfs.FileCheckpoint].
-func WrapCheckpointStart(f vfs.File) error {
+// WrapCheckpointDone helps wrap [vfs.FileCheckpoint].
+func WrapCheckpointDone(f vfs.File) {
 	if f, ok := f.(vfs.FileCheckpoint); ok {
-		return f.CheckpointStart()
+		f.CheckpointDone()
 	}
-	return sqlite3.NOTFOUND
 }
 
 // WrapPragma helps wrap [vfs.FilePragma].
@@ -129,4 +143,12 @@ func WrapPragma(f vfs.File, name, value string) (string, error) {
 		return f.Pragma(name, value)
 	}
 	return "", sqlite3.NOTFOUND
+}
+
+// WrapSharedMemory helps wrap [vfs.FileSharedMemory].
+func WrapSharedMemory(f vfs.File) vfs.SharedMemory {
+	if f, ok := f.(vfs.FileSharedMemory); ok {
+		return f.SharedMemory()
+	}
+	return nil
 }
