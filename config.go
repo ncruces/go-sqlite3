@@ -16,8 +16,19 @@ import (
 //
 // https://sqlite.org/c3ref/db_config.html
 func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
+	if op < DBCONFIG_ENABLE_FKEY || op > DBCONFIG_REVERSE_SCANORDER {
+		return false, MISUSE
+	}
+
+	// We need to call sqlite3_db_config, a variadic function.
+	// We only support the `int int*` variants.
+	// The int is a three-valued bool: -1 queries, 0/1 sets false/true.
+	// The int* points to where new state will be written to.
+	// The vararg is a pointer to an array containing these arguments:
+	// an int and an int* pointing to that int.
+
 	defer c.arena.mark()()
-	argsPtr := c.arena.new(2 * ptrlen)
+	argsPtr := c.arena.new(intlen + ptrlen)
 
 	var flag int
 	switch {
@@ -64,18 +75,23 @@ func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg uint32) {
 // https://sqlite.org/c3ref/file_control.html
 func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, error) {
 	defer c.arena.mark()()
+	ptr := c.arena.new(max(ptrlen, intlen))
 
 	var schemaPtr uint32
 	if schema != "" {
 		schemaPtr = c.arena.string(schema)
 	}
 
+	var rc uint64
+	var res any
 	switch op {
+	default:
+		return nil, MISUSE
+
 	case FCNTL_RESET_CACHE:
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), 0)
-		return nil, c.error(r)
 
 	case FCNTL_PERSIST_WAL, FCNTL_POWERSAFE_OVERWRITE:
 		var flag int
@@ -85,70 +101,69 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 		case arg[0]:
 			flag = 1
 		}
-		ptr := c.arena.new(4)
 		util.WriteUint32(c.mod, ptr, uint32(flag))
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		return util.ReadUint32(c.mod, ptr) != 0, c.error(r)
+		res = util.ReadUint32(c.mod, ptr) != 0
 
 	case FCNTL_CHUNK_SIZE:
-		ptr := c.arena.new(4)
 		util.WriteUint32(c.mod, ptr, uint32(arg[0].(int)))
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		return nil, c.error(r)
 
 	case FCNTL_RESERVE_BYTES:
 		bytes := -1
 		if len(arg) > 0 {
 			bytes = arg[0].(int)
 		}
-		ptr := c.arena.new(4)
 		util.WriteUint32(c.mod, ptr, uint32(bytes))
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		return int(util.ReadUint32(c.mod, ptr)), c.error(r)
+		res = int(util.ReadUint32(c.mod, ptr))
 
 	case FCNTL_DATA_VERSION:
-		ptr := c.arena.new(4)
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		return util.ReadUint32(c.mod, ptr), c.error(r)
+		res = util.ReadUint32(c.mod, ptr)
 
 	case FCNTL_LOCKSTATE:
-		ptr := c.arena.new(4)
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		return vfs.LockLevel(util.ReadUint32(c.mod, ptr)), c.error(r)
+		res = vfs.LockLevel(util.ReadUint32(c.mod, ptr))
 
 	case FCNTL_VFS_POINTER:
-		ptr := c.arena.new(4)
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		const zNameOffset = 16
-		ptr = util.ReadUint32(c.mod, ptr)
-		ptr = util.ReadUint32(c.mod, ptr+zNameOffset)
-		name := util.ReadString(c.mod, ptr, _MAX_NAME)
-		return vfs.Find(name), c.error(r)
+		if rc == _OK {
+			const zNameOffset = 16
+			ptr = util.ReadUint32(c.mod, ptr)
+			ptr = util.ReadUint32(c.mod, ptr+zNameOffset)
+			name := util.ReadString(c.mod, ptr, _MAX_NAME)
+			res = vfs.Find(name)
+		}
 
 	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:
-		ptr := c.arena.new(4)
-		r := c.call("sqlite3_file_control",
+		rc = c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr))
-		const fileHandleOffset = 4
-		ptr = util.ReadUint32(c.mod, ptr)
-		ptr = util.ReadUint32(c.mod, ptr+fileHandleOffset)
-		return util.GetHandle(c.ctx, ptr), c.error(r)
+		if rc == _OK {
+			const fileHandleOffset = 4
+			ptr = util.ReadUint32(c.mod, ptr)
+			ptr = util.ReadUint32(c.mod, ptr+fileHandleOffset)
+			res = util.GetHandle(c.ctx, ptr)
+		}
 	}
 
-	return nil, MISUSE
+	if err := c.error(rc); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // Limit allows the size of various constructs to be

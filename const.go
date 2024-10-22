@@ -13,6 +13,7 @@ const (
 	_MAX_FUNCTION_ARG = 100
 
 	ptrlen = 4
+	intlen = 4
 )
 
 // ErrorCode is a result code that [Error.Code] might return.
@@ -246,6 +247,7 @@ const (
 	DBCONFIG_TRUSTED_SCHEMA        DBConfig = 1017
 	DBCONFIG_STMT_SCANSTATUS       DBConfig = 1018
 	DBCONFIG_REVERSE_SCANORDER     DBConfig = 1019
+	// DBCONFIG_MAX                DBConfig = 1019
 )
 
 // FcntlOpcode are the available opcodes for [Conn.FileControl].

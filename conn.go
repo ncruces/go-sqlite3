@@ -459,8 +459,8 @@ func busyCallback(ctx context.Context, mod api.Module, pDB uint32, count int32) 
 // https://sqlite.org/c3ref/db_status.html
 func (c *Conn) Status(op DBStatus, reset bool) (current, highwater int, err error) {
 	defer c.arena.mark()()
-	hiPtr := c.arena.new(4)
-	curPtr := c.arena.new(4)
+	hiPtr := c.arena.new(intlen)
+	curPtr := c.arena.new(intlen)
 
 	var i uint64
 	if reset {
@@ -486,8 +486,8 @@ func (c *Conn) TableColumnMetadata(schema, table, column string) (declType, coll
 	declTypePtr := c.arena.new(ptrlen)
 	collSeqPtr := c.arena.new(ptrlen)
 	notNullPtr := c.arena.new(ptrlen)
-	primaryKeyPtr := c.arena.new(ptrlen)
 	autoIncPtr := c.arena.new(ptrlen)
+	primaryKeyPtr := c.arena.new(ptrlen)
 	if schema != "" {
 		schemaPtr = c.arena.string(schema)
 	}

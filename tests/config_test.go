@@ -60,6 +60,11 @@ func TestConn_Config(t *testing.T) {
 	if o != false {
 		t.Error("want false")
 	}
+
+	_, err = db.Config(0)
+	if !errors.Is(err, sqlite3.MISUSE) {
+		t.Errorf("got %v, want MISUSE", err)
+	}
 }
 
 func TestConn_ConfigLog(t *testing.T) {
