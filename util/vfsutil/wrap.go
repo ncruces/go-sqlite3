@@ -1,4 +1,4 @@
-// Package vtabutil implements virtual filesystem utilities.
+// Package vfsutil implements virtual filesystem utilities.
 package vfsutil
 
 import (

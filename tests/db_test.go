@@ -1,11 +1,10 @@
 package tests
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"testing"
-
-	_ "embed"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -13,7 +12,6 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 

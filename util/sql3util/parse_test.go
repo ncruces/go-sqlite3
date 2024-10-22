@@ -1,13 +1,13 @@
-package vtabutil_test
+package sql3util_test
 
 import (
 	"testing"
 
-	"github.com/ncruces/go-sqlite3/util/vtabutil"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 func TestParse(t *testing.T) {
-	tab, err := vtabutil.Parse(`CREATE TABLE child(x REFERENCES parent)`)
+	tab, err := sql3util.ParseTable(`CREATE TABLE child(x REFERENCES parent)`)
 	if err != nil {
 		t.Fatal(err)
 	}

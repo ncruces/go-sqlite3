@@ -1,4 +1,4 @@
-package vtabutil
+package sql3util
 
 const (
 	_NONE = iota

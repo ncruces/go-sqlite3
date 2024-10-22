@@ -273,5 +273,6 @@ func (s *vfsShm) shmUnmap(delete bool) {
 
 func (s *vfsShm) shmBarrier() {
 	s.lockMtx.Lock()
+	//lint:ignore SA2001 memory barrier.
 	s.lockMtx.Unlock()
 }

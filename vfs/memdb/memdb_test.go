@@ -1,9 +1,8 @@
 package memdb
 
 import (
-	"testing"
-
 	_ "embed"
+	"testing"
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"

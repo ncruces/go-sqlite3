@@ -1,10 +1,9 @@
-package vtabutil
+package sql3util
 
 import (
 	"context"
-	"sync"
-
 	_ "embed"
+	"sync"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -25,11 +24,11 @@ var (
 	compiled wazero.CompiledModule
 )
 
-// Parse parses a [CREATE] or [ALTER TABLE] command.
+// ParseTable parses a [CREATE] or [ALTER TABLE] command.
 //
 // [CREATE]: https://sqlite.org/lang_createtable.html
 // [ALTER TABLE]: https://sqlite.org/lang_altertable.html
-func Parse(sql string) (_ *Table, err error) {
+func ParseTable(sql string) (_ *Table, err error) {
 	once.Do(func() {
 		ctx := context.Background()
 		cfg := wazero.NewRuntimeConfigInterpreter()

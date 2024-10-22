@@ -2,11 +2,10 @@ package readervfs_test
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
-
-	_ "embed"
 
 	"github.com/psanford/httpreadat"
 

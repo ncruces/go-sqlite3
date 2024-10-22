@@ -1,6 +1,7 @@
-# Virtual Table utility functions 
+# SQLite utility functions 
 
-This package implements utilities mostly useful to virtual table implementations.
+This package implements assorted SQLite utilities
+useful to extension writers.
 
 It also wraps a [parser](https://github.com/marcobambini/sqlite-createtable-parser)
 for the [`CREATE`](https://sqlite.org/lang_createtable.html) and

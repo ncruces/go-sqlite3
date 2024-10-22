@@ -5,6 +5,7 @@ import (
 	"compress/bzip2"
 	"context"
 	"crypto/rand"
+	_ "embed"
 	"flag"
 	"io"
 	"os"
@@ -13,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	_ "embed"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"

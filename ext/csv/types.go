@@ -3,7 +3,7 @@ package csv
 import (
 	"strings"
 
-	"github.com/ncruces/go-sqlite3/util/vtabutil"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 type affinity byte
@@ -17,7 +17,7 @@ const (
 )
 
 func getColumnAffinities(schema string) ([]affinity, error) {
-	tab, err := vtabutil.Parse(schema)
+	tab, err := sql3util.ParseTable(schema)
 	if err != nil {
 		return nil, err
 	}

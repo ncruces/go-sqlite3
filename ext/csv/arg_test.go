@@ -3,7 +3,7 @@ package csv
 import (
 	"testing"
 
-	"github.com/ncruces/go-sqlite3/util/vtabutil"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 func Test_uintArg(t *testing.T) {
@@ -24,7 +24,7 @@ func Test_uintArg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := vtabutil.NamedArg(tt.arg)
+			key, val := sql3util.NamedArg(tt.arg)
 			if key != tt.key {
 				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}
@@ -62,7 +62,7 @@ func Test_boolArg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := vtabutil.NamedArg(tt.arg)
+			key, val := sql3util.NamedArg(tt.arg)
 			if key != tt.key {
 				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}
@@ -96,7 +96,7 @@ func Test_runeArg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.arg, func(t *testing.T) {
-			key, val := vtabutil.NamedArg(tt.arg)
+			key, val := sql3util.NamedArg(tt.arg)
 			if key != tt.key {
 				t.Errorf("NamedArg() %v, want err %v", key, tt.key)
 			}

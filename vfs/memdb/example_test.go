@@ -2,10 +2,9 @@ package memdb_test
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"log"
-
-	_ "embed"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"

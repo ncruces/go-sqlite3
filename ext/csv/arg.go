@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/vtabutil"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 func uintArg(key, val string) (int, error) {
@@ -20,7 +19,7 @@ func boolArg(key, val string) (bool, error) {
 	if val == "" {
 		return true, nil
 	}
-	b, ok := util.ParseBool(val)
+	b, ok := sql3util.ParseBool(val)
 	if ok {
 		return b, nil
 	}
@@ -28,7 +27,7 @@ func boolArg(key, val string) (bool, error) {
 }
 
 func runeArg(key, val string) (rune, error) {
-	r, _, tail, err := strconv.UnquoteChar(vtabutil.Unquote(val), 0)
+	r, _, tail, err := strconv.UnquoteChar(sql3util.Unquote(val), 0)
 	if tail != "" || err != nil {
 		return 0, fmt.Errorf("csv: invalid %q parameter: %s", key, val)
 	}

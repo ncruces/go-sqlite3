@@ -18,7 +18,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/osutil"
-	"github.com/ncruces/go-sqlite3/util/vtabutil"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 // Register registers the CSV virtual table.
@@ -44,17 +44,17 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 		)
 
 		for _, arg := range arg {
-			key, val := vtabutil.NamedArg(arg)
+			key, val := sql3util.NamedArg(arg)
 			if done.Contains(key) {
 				return nil, fmt.Errorf("csv: more than one %q parameter", key)
 			}
 			switch key {
 			case "filename":
-				filename = vtabutil.Unquote(val)
+				filename = sql3util.Unquote(val)
 			case "data":
-				data = vtabutil.Unquote(val)
+				data = sql3util.Unquote(val)
 			case "schema":
-				schema = vtabutil.Unquote(val)
+				schema = sql3util.Unquote(val)
 			case "header":
 				header, err = boolArg(key, val)
 			case "columns":
