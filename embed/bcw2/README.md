@@ -1,6 +1,6 @@
 # Embeddable Wasm build of SQLite
 
-This folder includes an embeddable Wasm build of SQLite 3.46.1, including the experimental
+This folder includes an embeddable Wasm build of SQLite 3.47.0, including the experimental
 [`BEGIN CONCURRENT`](https://sqlite.org/src/doc/begin-concurrent/doc/begin_concurrent.md) and
 [Wal2](https://sqlite.org/cgi/src/doc/wal2/doc/wal2.md) patches.
 

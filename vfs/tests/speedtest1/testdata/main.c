@@ -1,6 +1,3 @@
-#include <stdbool.h>
-#include <stddef.h>
-
 #define sqliteBusyCallback sqliteDefaultBusyCallback
 
 // Amalgamation

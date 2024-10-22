@@ -89,59 +89,13 @@ struct go_file {
   go_handle handle;
 };
 
-int sqlite3_os_init() {
-  static sqlite3_vfs os_vfs = {
-      .iVersion = 2,
-      .szOsFile = sizeof(struct go_file),
-      .mxPathname = 1024,
-      .zName = "os",
-
-      .xOpen = go_open_wrapper,
-      .xDelete = go_delete,
-      .xAccess = go_access,
-      .xFullPathname = go_full_pathname,
-
-      .xRandomness = go_randomness,
-      .xSleep = go_sleep,
-      .xCurrentTimeInt64 = go_current_time_64,
-  };
-  return sqlite3_vfs_register(&os_vfs, /*default=*/true);
-}
-
-int localtime_s(struct tm *const pTm, time_t const *const pTime) {
-  return go_localtime(pTm, (sqlite3_int64)*pTime);
-}
-
 sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
-  if (zVfsName && go_vfs_find(zVfsName)) {
-    static sqlite3_vfs *go_vfs_list;
-
-    for (sqlite3_vfs *it = go_vfs_list; it; it = it->pNext) {
-      if (!strcmp(zVfsName, it->zName)) {
-        return it;
-      }
-    }
-
-    for (sqlite3_vfs **ptr = &go_vfs_list; *ptr;) {
-      sqlite3_vfs *it = *ptr;
-      if (go_vfs_find(it->zName)) {
-        ptr = &it->pNext;
-      } else {
-        *ptr = it->pNext;
-        free(it);
-      }
-    }
-
-    sqlite3_vfs *head = go_vfs_list;
-    go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
-    char *name = (char *)(go_vfs_list + 1);
-    strcpy(name, zVfsName);
-    *go_vfs_list = (sqlite3_vfs){
+  if (!zVfsName || !strcmp(zVfsName, "os")) {
+    static sqlite3_vfs os_vfs = {
         .iVersion = 2,
         .szOsFile = sizeof(struct go_file),
         .mxPathname = 1024,
-        .zName = name,
-        .pNext = head,
+        .zName = "os",
 
         .xOpen = go_open_wrapper,
         .xDelete = go_delete,
@@ -152,9 +106,60 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
         .xSleep = go_sleep,
         .xCurrentTimeInt64 = go_current_time_64,
     };
-    return go_vfs_list;
+    return &os_vfs;
   }
-  return sqlite3_vfs_find_orig(zVfsName);
+
+  if (!go_vfs_find(zVfsName)) {
+    return NULL;
+  }
+
+  static sqlite3_vfs *go_vfs_list;
+
+  for (sqlite3_vfs *it = go_vfs_list; it; it = it->pNext) {
+    if (!strcmp(zVfsName, it->zName)) {
+      return it;
+    }
+  }
+
+  for (sqlite3_vfs **ptr = &go_vfs_list; *ptr;) {
+    sqlite3_vfs *it = *ptr;
+    if (go_vfs_find(it->zName)) {
+      ptr = &it->pNext;
+    } else {
+      *ptr = it->pNext;
+      free(it);
+    }
+  }
+
+  sqlite3_vfs *head = go_vfs_list;
+  go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
+  char *name = (char *)(go_vfs_list + 1);
+  strcpy(name, zVfsName);
+  *go_vfs_list = (sqlite3_vfs){
+      .iVersion = 2,
+      .szOsFile = sizeof(struct go_file),
+      .mxPathname = 1024,
+      .zName = name,
+      .pNext = head,
+
+      .xOpen = go_open_wrapper,
+      .xDelete = go_delete,
+      .xAccess = go_access,
+      .xFullPathname = go_full_pathname,
+
+      .xRandomness = go_randomness,
+      .xSleep = go_sleep,
+      .xCurrentTimeInt64 = go_current_time_64,
+  };
+  return go_vfs_list;
+}
+
+int localtime_s(struct tm *const pTm, time_t const *const pTime) {
+  return go_localtime(pTm, (sqlite3_int64)*pTime);
+}
+
+int sqlite3_os_init() {
+  return SQLITE_OK;
 }
 
 static_assert(offsetof(sqlite3_vfs, zName) == 16, "Unexpected offset");

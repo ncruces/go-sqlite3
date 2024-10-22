@@ -1,13 +1,21 @@
-# Wrap sqlite3_vfs_find.
-# This patch allows Go VFSes to be (un)registered.
+# Remove VFS registration. Go handles it.
 --- sqlite3.c.orig
 +++ sqlite3.c
-@@ -26396,7 +26396,7 @@
- ** Locate a VFS by name.  If no name is given, simply return the
- ** first VFS on the list.
+@@ -26594,7 +26594,7 @@
+   sqlite3_free(p);
+   return sqlite3_os_init();
+ }
+-
++#if 0 // Go handles VFS registration.
+ /*
+ ** The list of all registered VFS implementations.
  */
--SQLITE_API sqlite3_vfs *sqlite3_vfs_find(const char *zVfs){
-+SQLITE_API sqlite3_vfs *sqlite3_vfs_find_orig(const char *zVfs){
-   sqlite3_vfs *pVfs = 0;
- #if SQLITE_THREADSAFE
-   sqlite3_mutex *mutex;
+@@ -26691,7 +26691,7 @@
+   sqlite3_mutex_leave(mutex);
+   return SQLITE_OK;
+ }
+-
++#endif
+ /************** End of os.c **************************************************/
+ /************** Begin file fault.c *******************************************/
+ /*

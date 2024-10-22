@@ -13,7 +13,8 @@ mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
 
-curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=bedrock-3.46 | tar xz
+# https://sqlite.org/src/info/d2d954d43abe20a3
+curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=d2d954d4 | tar xz
 
 cd sqlite
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then

@@ -42,7 +42,7 @@ func Test_bcw2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != "3.46.1" {
+	if version != "3.47.0" {
 		t.Error(version)
 	}
 }

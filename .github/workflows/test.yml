@@ -65,9 +65,7 @@ jobs:
       run: gormlite/test.sh
 
     - name: Collect coverage
-      run: |
-        go install github.com/dave/courtney@latest
-        courtney
+      run: go run github.com/dave/courtney@latest
       if: |
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
