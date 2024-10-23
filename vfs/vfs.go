@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"io"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/tetratelabs/wazero"
@@ -343,7 +344,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _Fcntl
 				value = util.ReadString(mod, ptr, _MAX_SQL_LENGTH)
 			}
 
-			out, err := file.Pragma(name, value)
+			out, err := file.Pragma(strings.ToLower(name), value)
 
 			ret := vfsErrorCode(err, _ERROR)
 			if ret == _ERROR {

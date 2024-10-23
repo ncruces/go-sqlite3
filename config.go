@@ -250,10 +250,10 @@ func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pAr
 	return rc
 }
 
-// WalCheckpoint checkpoints a WAL database.
+// WALCheckpoint checkpoints a WAL database.
 //
 // https://sqlite.org/c3ref/wal_checkpoint_v2.html
-func (c *Conn) WalCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt int, err error) {
+func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt int, err error) {
 	defer c.arena.mark()()
 	nLogPtr := c.arena.new(ptrlen)
 	nCkptPtr := c.arena.new(ptrlen)
@@ -266,19 +266,19 @@ func (c *Conn) WalCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt in
 	return nLog, nCkpt, c.error(r)
 }
 
-// WalAutoCheckpoint configures WAL auto-checkpoints.
+// WALAutoCheckpoint configures WAL auto-checkpoints.
 //
 // https://sqlite.org/c3ref/wal_autocheckpoint.html
-func (c *Conn) WalAutoCheckpoint(pages int) error {
+func (c *Conn) WALAutoCheckpoint(pages int) error {
 	r := c.call("sqlite3_wal_autocheckpoint", uint64(c.handle), uint64(pages))
 	return c.error(r)
 }
 
-// WalHook registers a callback function to be invoked
+// WALHook registers a callback function to be invoked
 // each time data is committed to a database in WAL mode.
 //
 // https://sqlite.org/c3ref/wal_hook.html
-func (c *Conn) WalHook(cb func(db *Conn, schema string, pages int) error) {
+func (c *Conn) WALHook(cb func(db *Conn, schema string, pages int) error) {
 	var enable uint64
 	if cb != nil {
 		enable = 1

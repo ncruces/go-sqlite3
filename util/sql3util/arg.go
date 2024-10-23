@@ -13,6 +13,8 @@ func NamedArg(arg string) (key, val string) {
 }
 
 // Unquote unquotes a string.
+//
+// https://sqlite.org/lang_keywords.html
 func Unquote(val string) string {
 	if len(val) < 2 {
 		return val
@@ -40,6 +42,9 @@ func Unquote(val string) string {
 	return strings.ReplaceAll(rst, old, new)
 }
 
+// ParseBool parses a boolean.
+//
+// https://sqlite.org/pragma.html#syntax
 func ParseBool(s string) (b, ok bool) {
 	if len(s) == 0 {
 		return false, false
