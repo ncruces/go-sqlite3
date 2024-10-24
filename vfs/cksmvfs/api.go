@@ -29,9 +29,12 @@ func Wrap(base vfs.VFS) vfs.VFS {
 	return &cksmVFS{VFS: base}
 }
 
-// Enable enables checksums on a database.
-func Enable(db *sqlite3.Conn, schema string) error {
-	// Set reserve bytes to 8.
+// EnableChecksums enables checksums on a database.
+func EnableChecksums(db *sqlite3.Conn, schema string) error {
+	if f, ok := db.Filename("").DatabaseFile().(*cksmFile); !ok {
+		return fmt.Errorf("cksmvfs: incorrect type: %T", f)
+	}
+
 	r, err := db.FileControl(schema, sqlite3.FCNTL_RESERVE_BYTES)
 	if err != nil {
 		return err
@@ -42,10 +45,14 @@ func Enable(db *sqlite3.Conn, schema string) error {
 	}
 	if r == 0 {
 		// Default value, enable.
-		r, err = db.FileControl(schema, sqlite3.FCNTL_RESERVE_BYTES, 8)
-	}
-	if err != nil {
-		return err
+		_, err = db.FileControl(schema, sqlite3.FCNTL_RESERVE_BYTES, 8)
+		if err != nil {
+			return err
+		}
+		r, err = db.FileControl(schema, sqlite3.FCNTL_RESERVE_BYTES)
+		if err != nil {
+			return err
+		}
 	}
 	if r != 8 {
 		// Invalid value.
@@ -54,9 +61,9 @@ func Enable(db *sqlite3.Conn, schema string) error {
 
 	// VACUUM the database.
 	if schema != "" {
-		err = db.Exec("VACUUM " + sqlite3.QuoteIdentifier(schema))
+		err = db.Exec(`VACUUM ` + sqlite3.QuoteIdentifier(schema))
 	} else {
-		err = db.Exec("VACUUM")
+		err = db.Exec(`VACUUM`)
 	}
 	if err != nil {
 		return err
