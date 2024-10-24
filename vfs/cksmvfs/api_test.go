@@ -21,7 +21,7 @@ var testDB string
 
 func Test_fileformat(t *testing.T) {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
-	cksmvfs.Register("rcksm", vfs.Find("reader"))
+	vfs.Register("rcksm", cksmvfs.Wrap(vfs.Find("reader")))
 
 	db, err := driver.Open("file:test.db?vfs=rcksm")
 	if err != nil {

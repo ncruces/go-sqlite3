@@ -521,10 +521,3 @@ func (c *Conn) stmtsIter(yield func(*Stmt) bool) {
 		}
 	}
 }
-
-// DriverConn is implemented by the SQLite [database/sql] driver connection.
-//
-// Deprecated: use [github.com/ncruces/go-sqlite3/driver.Conn] instead.
-type DriverConn interface {
-	Raw() *Conn
-}

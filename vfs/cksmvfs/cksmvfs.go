@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"io"
+	"runtime"
+	"strconv"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -23,13 +25,18 @@ func (c *cksmVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag,
 }
 
 func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
-	if cf, ok := c.VFS.(vfs.VFSFilename); ok {
-		file, flags, err = cf.OpenFilename(name, flags)
-	} else {
-		file, flags, err = c.VFS.Open(name.String(), flags)
+	// Prevent accidental wrapping.
+	if pc, _, _, ok := runtime.Caller(1); ok {
+		if fn := runtime.FuncForPC(pc); fn != nil {
+			if fn.Name() != "github.com/ncruces/go-sqlite3/vfs.vfsOpen" {
+				return nil, 0, sqlite3.CANTOPEN
+			}
+		}
 	}
 
-	// Checksum only databases and WALs.
+	file, flags, err = vfsutil.WrapOpenFilename(c.VFS, name, flags)
+
+	// Checksum only main databases and WALs.
 	if err != nil || flags&(vfs.OPEN_MAIN_DB|vfs.OPEN_WAL) == 0 {
 		return file, flags, err
 	}
@@ -37,10 +44,10 @@ func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	cksm := cksmFile{File: file}
 
 	if flags&vfs.OPEN_WAL != 0 {
-		main, _ := vfsutil.UnwrapFile[*cksmFile](name.DatabaseFile())
+		main, _ := name.DatabaseFile().(*cksmFile)
 		cksm.cksmFlags = main.cksmFlags
-		cksm.isWAL = true
 	} else {
+		cksm.isDB = true
 		cksm.cksmFlags = new(cksmFlags)
 	}
 
@@ -50,13 +57,14 @@ func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 type cksmFile struct {
 	vfs.File
 	*cksmFlags
+	isDB bool
 }
 
 type cksmFlags struct {
 	computeCksm bool
 	verifyCksm  bool
 	inCkpt      bool
-	isWAL       bool
+	pageSize    int
 }
 
 //go:embed empty.db
@@ -66,9 +74,9 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	n, err = c.File.ReadAt(p, off)
 
 	// SQLite is trying to read from the first page of an empty database file.
-	// Read from an empty database that had checksums enabled,
+	// Instead, read from an empty database that had checksums enabled,
 	// so checksums are enabled by default.
-	if n == 0 && err == io.EOF && off < 100 && !c.isWAL {
+	if c.isDB && n == 0 && err == io.EOF && off < 100 {
 		n = copy(p, empty[off:])
 		if n < len(p) {
 			clear(p[n:])
@@ -76,12 +84,14 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 		err = nil
 	}
 
-	// SQLite is trying to read the header of a database file.
-	if off == 0 && len(p) >= 100 && bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
-		c.setFlags(p[20])
+	// SQLite is reading the header of a database file.
+	if c.isDB && off == 0 && len(p) >= 100 &&
+		bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
+		c.updateFlags(p)
 	}
 
-	if sql3util.ValidPageSize(len(p)) && c.verifyCksm && !c.inCkpt {
+	// Verify checksums.
+	if c.verifyCksm && !c.inCkpt && len(p) == c.pageSize {
 		cksm1 := cksmCompute(p[:len(p)-8])
 		cksm2 := *(*[8]byte)(p[len(p)-8:])
 		if cksm1 != cksm2 {
@@ -92,16 +102,26 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 }
 
 func (c *cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
-	// SQLite is trying to write the first page of a database file.
-	if off == 0 && len(p) >= 100 && bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
-		c.setFlags(p[20])
+	// SQLite is writing the first page of a database file.
+	if c.isDB && off == 0 && len(p) >= 100 &&
+		bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
+		c.updateFlags(p)
 	}
 
-	if sql3util.ValidPageSize(len(p)) && c.computeCksm && !c.inCkpt {
+	// Compute checksums.
+	if c.computeCksm && !c.inCkpt && len(p) == c.pageSize {
 		*(*[8]byte)(p[len(p)-8:]) = cksmCompute(p[:len(p)-8])
 	}
 
 	return c.File.WriteAt(p, off)
+}
+
+func (c *cksmFile) updateFlags(header []byte) {
+	c.pageSize = 256 * int(binary.LittleEndian.Uint16(header[16:18]))
+	if r := header[20] == 8; r != c.computeCksm {
+		c.computeCksm = r
+		c.verifyCksm = r
+	}
 }
 
 func (c *cksmFile) CheckpointStart() {
@@ -110,13 +130,6 @@ func (c *cksmFile) CheckpointStart() {
 
 func (c *cksmFile) CheckpointDone() {
 	c.inCkpt = false
-}
-
-func (c *cksmFile) setFlags(reserved uint8) {
-	if r := reserved == 8; r != c.computeCksm {
-		c.verifyCksm = r
-		c.computeCksm = r
-	}
 }
 
 func (c *cksmFile) Pragma(name string, value string) (string, error) {
@@ -132,9 +145,9 @@ func (c *cksmFile) Pragma(name string, value string) (string, error) {
 		return "1", nil
 
 	case "page_size":
-		if value != "" && c.computeCksm {
+		if c.computeCksm {
 			// Do not allow page size changes on a checksum database.
-			return "", nil
+			return strconv.Itoa(c.pageSize), nil
 		}
 	}
 	return vfsutil.WrapPragma(c.File, name, value)

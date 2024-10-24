@@ -23,11 +23,7 @@ func (x *xtsVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, 
 }
 
 func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
-	if hf, ok := x.VFS.(vfs.VFSFilename); ok {
-		file, flags, err = hf.OpenFilename(name, flags)
-	} else {
-		file, flags, err = x.VFS.Open(name.String(), flags)
-	}
+	file, flags, err = vfsutil.WrapOpenFilename(x.VFS, name, flags)
 
 	// Encrypt everything except super journals and memory files.
 	if err != nil || flags&(vfs.OPEN_SUPER_JOURNAL|vfs.OPEN_MEMORY) != 0 {
@@ -48,13 +44,14 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 		} else if t, ok := params["textkey"]; ok && len(t[0]) > 0 {
 			key = x.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
-			// Main datatabases may have their key specified as a PRAGMA.
+			// Main databases may have their key specified as a PRAGMA.
 			return &xtsFile{File: file, init: x.init}, flags, nil
 		}
 		cipher = x.init.XTS(key)
 	}
 
 	if cipher == nil {
+		file.Close()
 		return nil, flags, sqlite3.CANTOPEN
 	}
 	return &xtsFile{File: file, cipher: cipher, init: x.init}, flags, nil
