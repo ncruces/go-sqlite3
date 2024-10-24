@@ -29,13 +29,26 @@ func Test_fileformat(t *testing.T) {
 	}
 	defer db.Close()
 
+	var enabled bool
+	err = db.QueryRow(`PRAGMA checksum_verification`).Scan(&enabled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !enabled {
+		t.Error("want true")
+	}
+
 	_, err = db.Exec(`PRAGMA integrity_check`)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 }
 
 func Test_new(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	name := "file:" +
 		filepath.ToSlash(filepath.Join(t.TempDir(), "test.db")) +
 		"?vfs=cksmvfs&_pragma=journal_mode(wal)"
@@ -45,6 +58,24 @@ func Test_new(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+
+	var enabled bool
+	err = db.QueryRow(`PRAGMA checksum_verification`).Scan(&enabled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !enabled {
+		t.Error("want true")
+	}
+
+	var size int
+	err = db.QueryRow(`PRAGMA page_size=1024`).Scan(&size)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != 4096 {
+		t.Errorf("got %d, want 4096", size)
+	}
 
 	_, err = db.Exec(`CREATE TABLE users (id INT, name VARCHAR(10))`)
 	if err != nil {
@@ -60,6 +91,6 @@ func Test_new(t *testing.T) {
 
 	_, err = db.Exec(`PRAGMA integrity_check`)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 }
