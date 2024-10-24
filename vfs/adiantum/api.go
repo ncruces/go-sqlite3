@@ -40,24 +40,25 @@ import (
 )
 
 func init() {
-	Register("adiantum", vfs.Find(""), nil)
+	vfs.Register("adiantum", Wrap(vfs.Find(""), nil))
 }
 
-// Register registers an encrypting VFS, wrapping a base VFS,
-// and possibly using a custom HBSH cipher construction.
+// Wrap wraps a base VFS to create an encrypting VFS,
+// possibly using a custom HBSH cipher construction.
+//
 // To use the default Adiantum construction, set cipher to nil.
 //
 // The default construction uses a 32 byte key/hexkey.
 // If a textkey is provided, the default KDF is Argon2id
 // with 64 MiB of memory, 3 iterations, and 4 threads.
-func Register(name string, base vfs.VFS, cipher HBSHCreator) {
+func Wrap(base vfs.VFS, cipher HBSHCreator) vfs.VFS {
 	if cipher == nil {
 		cipher = adiantumCreator{}
 	}
-	vfs.Register(name, &hbshVFS{
+	return &hbshVFS{
 		VFS:  base,
 		init: cipher,
-	})
+	}
 }
 
 // HBSHCreator creates an [hbsh.HBSH] cipher

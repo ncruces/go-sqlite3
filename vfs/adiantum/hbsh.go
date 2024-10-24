@@ -24,11 +24,7 @@ func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag,
 }
 
 func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
-	if hf, ok := h.VFS.(vfs.VFSFilename); ok {
-		file, flags, err = hf.OpenFilename(name, flags)
-	} else {
-		file, flags, err = h.VFS.Open(name.String(), flags)
-	}
+	file, flags, err = vfsutil.WrapOpenFilename(h.VFS, name, flags)
 
 	// Encrypt everything except super journals and memory files.
 	if err != nil || flags&(vfs.OPEN_SUPER_JOURNAL|vfs.OPEN_MEMORY) != 0 {
@@ -49,13 +45,14 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 		} else if t, ok := params["textkey"]; ok && len(t[0]) > 0 {
 			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
-			// Main datatabases may have their key specified as a PRAGMA.
+			// Main databases may have their key specified as a PRAGMA.
 			return &hbshFile{File: file, init: h.init}, flags, nil
 		}
 		hbsh = h.init.HBSH(key)
 	}
 
 	if hbsh == nil {
+		file.Close()
 		return nil, flags, sqlite3.CANTOPEN
 	}
 	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil

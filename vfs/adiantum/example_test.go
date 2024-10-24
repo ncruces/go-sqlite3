@@ -17,7 +17,7 @@ import (
 )
 
 func ExampleRegister_hpolyc() {
-	adiantum.Register("hpolyc", vfs.Find(""), hpolycCreator{})
+	vfs.Register("hpolyc", adiantum.Wrap(vfs.Find(""), hpolycCreator{}))
 
 	db, err := sqlite3.Open("file:demo.db?vfs=hpolyc" +
 		"&textkey=correct+horse+battery+staple")

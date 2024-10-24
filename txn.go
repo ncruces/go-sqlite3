@@ -143,7 +143,7 @@ func (c *Conn) Savepoint() Savepoint {
 	// Names can be reused, but this makes catching bugs more likely.
 	name = QuoteIdentifier(name + "_" + strconv.Itoa(int(rand.Int31())))
 
-	err := c.txnExecInterrupted("SAVEPOINT " + name)
+	err := c.txnExecInterrupted(`SAVEPOINT ` + name)
 	if err != nil {
 		panic(err)
 	}
@@ -187,7 +187,7 @@ func (s Savepoint) Release(errp *error) {
 		if s.c.GetAutocommit() { // There is nothing to commit.
 			return
 		}
-		*errp = s.c.Exec("RELEASE " + s.name)
+		*errp = s.c.Exec(`RELEASE ` + s.name)
 		if *errp == nil {
 			return
 		}
@@ -199,8 +199,7 @@ func (s Savepoint) Release(errp *error) {
 		return
 	}
 	// ROLLBACK and RELEASE even if interrupted.
-	err := s.c.txnExecInterrupted("ROLLBACK TO " +
-		s.name + "; RELEASE " + s.name)
+	err := s.c.txnExecInterrupted(`ROLLBACK TO ` + s.name + `; RELEASE ` + s.name)
 	if err != nil {
 		panic(err)
 	}
@@ -213,7 +212,7 @@ func (s Savepoint) Release(errp *error) {
 // https://sqlite.org/lang_transaction.html
 func (s Savepoint) Rollback() error {
 	// ROLLBACK even if interrupted.
-	return s.c.txnExecInterrupted("ROLLBACK TO " + s.name)
+	return s.c.txnExecInterrupted(`ROLLBACK TO ` + s.name)
 }
 
 func (c *Conn) txnExecInterrupted(sql string) error {

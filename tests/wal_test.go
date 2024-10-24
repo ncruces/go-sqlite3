@@ -77,7 +77,7 @@ func TestWAL_readonly(t *testing.T) {
 
 	// Select the data using the second (readonly) connection.
 	var name string
-	err = db2.QueryRow("SELECT name FROM t").Scan(&name)
+	err = db2.QueryRow(`SELECT name FROM t`).Scan(&name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 
 	// Select the data using the second (readonly) connection.
-	err = db2.QueryRow("SELECT name FROM t").Scan(&name)
+	err = db2.QueryRow(`SELECT name FROM t`).Scan(&name)
 	if err != nil {
 		t.Fatal(err)
 	}

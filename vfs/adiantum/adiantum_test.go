@@ -21,7 +21,7 @@ var testDB string
 
 func Test_fileformat(t *testing.T) {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
-	adiantum.Register("radiantum", vfs.Find("reader"), nil)
+	vfs.Register("radiantum", adiantum.Wrap(vfs.Find("reader"), nil))
 
 	db, err := driver.Open("file:test.db?vfs=radiantum")
 	if err != nil {
