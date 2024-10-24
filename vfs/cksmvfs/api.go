@@ -7,7 +7,7 @@
 // The checksum is intended to help detect database corruption
 // caused by random bit-flips in the mass storage device.
 //
-// This implementation is fully compatible with SQLite's
+// This implementation is compatible with SQLite's
 // [Checksum VFS Shim].
 //
 // [Checksum VFS Shim]: https://sqlite.org/cksumvfs.html

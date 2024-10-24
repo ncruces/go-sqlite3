@@ -50,6 +50,8 @@ func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 		cksm.isDB = true
 		cksm.cksmFlags = new(cksmFlags)
 	}
+	const createDB = vfs.OPEN_CREATE | vfs.OPEN_READWRITE | vfs.OPEN_MAIN_DB
+	cksm.createDB = flags&createDB == createDB
 
 	return &cksm, flags, err
 }
@@ -57,7 +59,8 @@ func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 type cksmFile struct {
 	vfs.File
 	*cksmFlags
-	isDB bool
+	isDB     bool
+	createDB bool
 }
 
 type cksmFlags struct {
@@ -76,7 +79,7 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	// SQLite is trying to read from the first page of an empty database file.
 	// Instead, read from an empty database that had checksums enabled,
 	// so checksums are enabled by default.
-	if c.isDB && n == 0 && err == io.EOF && off < 100 {
+	if c.createDB && n == 0 && err == io.EOF && off < 100 {
 		n = copy(p, empty[off:])
 		if n < len(p) {
 			clear(p[n:])
