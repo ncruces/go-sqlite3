@@ -73,8 +73,8 @@ on the F2FS filesystem.
 
 ### Checksums
 
-This package can be configured to add an 8-byte checksum
-to the end of every page in an SQLite database.\
+This package can be [configured](https://pkg.go.dev/github.com/ncruces/go-sqlite3#Conn.EnableChecksums)
+to add an 8-byte checksum to the end of every page in an SQLite database.
 The checksum is added as each page is written
 and verified as each page is read.\
 The checksum is intended to help detect database corruption
