@@ -159,6 +159,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile uint32, fla
 	if pOutFlags != 0 {
 		util.WriteUint32(mod, pOutFlags, uint32(flags))
 	}
+	file = cksmWrapFile(name, flags, file)
 	vfsFileRegister(ctx, mod, pFile, file)
 	return _OK
 }

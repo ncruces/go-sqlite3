@@ -16,12 +16,12 @@ The main differences are [file locking](#file-locking) and [WAL mode](#write-ahe
 POSIX advisory locks, which SQLite uses on Unix, are
 [broken by design](https://github.com/sqlite/sqlite/blob/b74eb0/src/os_unix.c#L1073-L1161).
 
-On Linux and macOS, this module uses
+On Linux and macOS, this package uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
 OFD locks are fully compatible with POSIX advisory locks.
 
-This module can also use
+This package can also use
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2),
 albeit with reduced concurrency (`BEGIN IMMEDIATE` behaves like `BEGIN EXCLUSIVE`).
 On BSD, macOS, and illumos, BSD locks are fully compatible with POSIX advisory locks;
@@ -30,7 +30,7 @@ elsewhere, they are very likely broken.
 BSD locks are the default on BSD and illumos,
 but you can opt into them with the `sqlite3_flock` build tag.
 
-On Windows, this module uses `LockFileEx` and `UnlockFileEx`,
+On Windows, this package uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
 
 Otherwise, file locking is not supported, and you must use
@@ -46,7 +46,7 @@ to check if your build supports file locking.
 
 ### Write-Ahead Logging
 
-On little-endian Unix, this module uses `mmap` to implement
+On little-endian Unix, this package uses `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
 
@@ -67,8 +67,21 @@ to check if your build supports shared memory.
 
 ### Batch-Atomic Write
 
-On 64-bit Linux, this module supports [batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
+On 64-bit Linux, this package supports
+[batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
 on the F2FS filesystem.
+
+### Checksums
+
+This package can be configured to add an 8-byte checksum
+to the end of every page in an SQLite database.\
+The checksum is added as each page is written
+and verified as each page is read.\
+The checksum is intended to help detect database corruption
+caused by random bit-flips in the mass storage device.
+
+The implementation is compatible with SQLite's
+[Checksum VFS Shim](https://sqlite.org/cksumvfs.html).
 
 ### Build Tags
 

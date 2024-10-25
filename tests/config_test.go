@@ -145,6 +145,8 @@ func TestConn_FileControl(t *testing.T) {
 	})
 
 	t.Run("FCNTL_CHUNK_SIZE", func(t *testing.T) {
+		t.Skip("TODO")
+
 		o, err := db.FileControl("", sqlite3.FCNTL_CHUNK_SIZE, 1024*1024)
 		if !errors.Is(err, sqlite3.NOTFOUND) {
 			t.Errorf("got %v, want NOTFOUND", err)

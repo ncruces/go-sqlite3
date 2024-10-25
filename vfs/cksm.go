@@ -1,66 +1,38 @@
-package cksmvfs
+package vfs
 
 import (
 	"bytes"
 	_ "embed"
 	"encoding/binary"
-	"io"
-	"runtime"
 	"strconv"
 
-	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
-	"github.com/ncruces/go-sqlite3/util/vfsutil"
-	"github.com/ncruces/go-sqlite3/vfs"
 )
 
-type cksmVFS struct {
-	vfs.VFS
-}
-
-func (c *cksmVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// notest // OpenFilename is called instead
-	return nil, 0, sqlite3.CANTOPEN
-}
-
-func (c *cksmVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
-	// Prevent accidental wrapping.
-	if pc, _, _, ok := runtime.Caller(1); ok {
-		if fn := runtime.FuncForPC(pc); fn != nil {
-			if fn.Name() != "github.com/ncruces/go-sqlite3/vfs.vfsOpen" {
-				return nil, 0, sqlite3.CANTOPEN
-			}
-		}
-	}
-
-	file, flags, err = vfsutil.WrapOpenFilename(c.VFS, name, flags)
-
+func cksmWrapFile(name *Filename, flags OpenFlag, file File) File {
 	// Checksum only main databases and WALs.
-	if err != nil || flags&(vfs.OPEN_MAIN_DB|vfs.OPEN_WAL) == 0 {
-		return file, flags, err
+	if flags&(OPEN_MAIN_DB|OPEN_WAL) == 0 {
+		return file
 	}
 
 	cksm := cksmFile{File: file}
 
-	if flags&vfs.OPEN_WAL != 0 {
+	if flags&OPEN_WAL != 0 {
 		main, _ := name.DatabaseFile().(*cksmFile)
 		cksm.cksmFlags = main.cksmFlags
 	} else {
-		cksm.isDB = true
 		cksm.cksmFlags = new(cksmFlags)
+		cksm.isDB = true
 	}
-	const createDB = vfs.OPEN_CREATE | vfs.OPEN_READWRITE | vfs.OPEN_MAIN_DB
-	cksm.createDB = flags&createDB == createDB
 
-	return &cksm, flags, err
+	return &cksm
 }
 
 type cksmFile struct {
-	vfs.File
+	File
 	*cksmFlags
-	isDB     bool
-	createDB bool
+	isDB bool
 }
 
 type cksmFlags struct {
@@ -70,22 +42,8 @@ type cksmFlags struct {
 	pageSize    int
 }
 
-//go:embed empty.db
-var empty string
-
 func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	n, err = c.File.ReadAt(p, off)
-
-	// SQLite is trying to read from the first page of an empty database file.
-	// Instead, read from an empty database that had checksums enabled,
-	// so checksums are enabled by default.
-	if c.createDB && n == 0 && err == io.EOF && off < 100 {
-		n = copy(p, empty[off:])
-		if n < len(p) {
-			clear(p[n:])
-		}
-		err = nil
-	}
 
 	// SQLite is reading the header of a database file.
 	if c.isDB && off == 0 && len(p) >= 100 &&
@@ -98,7 +56,7 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 		cksm1 := cksmCompute(p[:len(p)-8])
 		cksm2 := *(*[8]byte)(p[len(p)-8:])
 		if cksm1 != cksm2 {
-			return 0, sqlite3.IOERR_DATA
+			return 0, _IOERR_DATA
 		}
 	}
 	return n, err
@@ -128,10 +86,16 @@ func (c *cksmFile) updateFlags(header []byte) {
 }
 
 func (c *cksmFile) CheckpointStart() {
+	if f, ok := c.File.(FileCheckpoint); ok {
+		f.CheckpointStart()
+	}
 	c.inCkpt = true
 }
 
 func (c *cksmFile) CheckpointDone() {
+	if f, ok := c.File.(FileCheckpoint); ok {
+		f.CheckpointDone()
+	}
 	c.inCkpt = false
 }
 
@@ -153,7 +117,10 @@ func (c *cksmFile) Pragma(name string, value string) (string, error) {
 			return strconv.Itoa(c.pageSize), nil
 		}
 	}
-	return vfsutil.WrapPragma(c.File, name, value)
+	if f, ok := c.File.(FilePragma); ok {
+		return f.Pragma(name, value)
+	}
+	return "", _NOTFOUND
 }
 
 func cksmCompute(a []byte) (cksm [8]byte) {
@@ -171,64 +138,103 @@ func cksmCompute(a []byte) (cksm [8]byte) {
 	return
 }
 
-func (c *cksmFile) Unwrap() vfs.File {
+func (c *cksmFile) Unwrap() File {
 	return c.File
 }
 
-func (c *cksmFile) SharedMemory() vfs.SharedMemory {
-	return vfsutil.WrapSharedMemory(c.File)
+func (c *cksmFile) SharedMemory() SharedMemory {
+	if f, ok := c.File.(FileSharedMemory); ok {
+		return f.SharedMemory()
+	}
+	return nil
 }
 
 // Wrap optional methods.
 
-func (c *cksmFile) LockState() vfs.LockLevel {
-	return vfsutil.WrapLockState(c.File) // notest
+func (c *cksmFile) LockState() LockLevel {
+	if f, ok := c.File.(FileLockState); ok {
+		return f.LockState()
+	}
+	return LOCK_EXCLUSIVE + 1 // UNKNOWN_LOCK
 }
 
 func (c *cksmFile) PersistentWAL() bool {
-	return vfsutil.WrapPersistentWAL(c.File) // notest
+	if f, ok := c.File.(FilePersistentWAL); ok {
+		return f.PersistentWAL()
+	}
+	return false
 }
 
 func (c *cksmFile) SetPersistentWAL(keepWAL bool) {
-	vfsutil.WrapSetPersistentWAL(c.File, keepWAL) // notest
+	if f, ok := c.File.(FilePersistentWAL); ok {
+		f.SetPersistentWAL(keepWAL)
+	}
 }
 
 func (c *cksmFile) PowersafeOverwrite() bool {
-	return vfsutil.WrapPowersafeOverwrite(c.File) // notest
+	if f, ok := c.File.(FilePowersafeOverwrite); ok {
+		return f.PowersafeOverwrite()
+	}
+	return false
 }
 
 func (c *cksmFile) SetPowersafeOverwrite(psow bool) {
-	vfsutil.WrapSetPowersafeOverwrite(c.File, psow) // notest
+	if f, ok := c.File.(FilePowersafeOverwrite); ok {
+		f.SetPowersafeOverwrite(psow)
+	}
 }
 
 func (c *cksmFile) ChunkSize(size int) {
-	vfsutil.WrapChunkSize(c.File, size) // notest
+	if f, ok := c.File.(FileChunkSize); ok {
+		f.ChunkSize(size)
+	}
 }
 
 func (c *cksmFile) SizeHint(size int64) error {
-	return vfsutil.WrapSizeHint(c.File, size) // notest
+	if f, ok := c.File.(FileSizeHint); ok {
+		f.SizeHint(size)
+	}
+	return _NOTFOUND
 }
 
 func (c *cksmFile) HasMoved() (bool, error) {
-	return vfsutil.WrapHasMoved(c.File) // notest
+	if f, ok := c.File.(FileHasMoved); ok {
+		return f.HasMoved()
+	}
+	return false, _NOTFOUND
 }
 
 func (c *cksmFile) Overwrite() error {
-	return vfsutil.WrapOverwrite(c.File) // notest
+	if f, ok := c.File.(FileOverwrite); ok {
+		return f.Overwrite()
+	}
+	return _NOTFOUND
 }
 
 func (c *cksmFile) CommitPhaseTwo() error {
-	return vfsutil.WrapCommitPhaseTwo(c.File) // notest
+	if f, ok := c.File.(FileCommitPhaseTwo); ok {
+		return f.CommitPhaseTwo()
+	}
+	return _NOTFOUND
 }
 
 func (c *cksmFile) BeginAtomicWrite() error {
-	return vfsutil.WrapBeginAtomicWrite(c.File) // notest
+	if f, ok := c.File.(FileBatchAtomicWrite); ok {
+		return f.BeginAtomicWrite()
+	}
+	return _NOTFOUND
 }
 
 func (c *cksmFile) CommitAtomicWrite() error {
-	return vfsutil.WrapCommitAtomicWrite(c.File) // notest
+	if f, ok := c.File.(FileBatchAtomicWrite); ok {
+		return f.CommitAtomicWrite()
+	}
+	return _NOTFOUND
 }
 
 func (c *cksmFile) RollbackAtomicWrite() error {
-	return vfsutil.WrapRollbackAtomicWrite(c.File) // notest
+	if f, ok := c.File.(FileBatchAtomicWrite); ok {
+		return f.RollbackAtomicWrite()
+	}
+	return _NOTFOUND
 }
