@@ -27,8 +27,8 @@ embed/build.sh
 embed/bcw2/build.sh
 
 # Download and build sqlite-createtable-parser
-util/vtabutil/parse/download.sh
-util/vtabutil/parse/build.sh
+util/sql3util/parse/download.sh
+util/sql3util/parse/build.sh
 
 # Check diffs
 git diff --exit-code

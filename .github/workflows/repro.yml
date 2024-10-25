@@ -31,4 +31,4 @@ jobs:
         subject-path: |
           embed/sqlite3.wasm
           embed/bcw2/bcw2.wasm
-          util/vtabutil/parse/sql3parse_table.wasm
+          util/sql3util/parse/sql3parse_table.wasm
