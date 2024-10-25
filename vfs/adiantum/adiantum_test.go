@@ -20,6 +20,8 @@ import (
 var testDB string
 
 func Test_fileformat(t *testing.T) {
+	t.Parallel()
+
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
 	vfs.Register("radiantum", adiantum.Wrap(vfs.Find("reader"), nil))
 

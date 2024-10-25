@@ -13,6 +13,8 @@ import (
 var walDB []byte
 
 func Test_wal(t *testing.T) {
+	t.Parallel()
+
 	Create("test.db", walDB)
 
 	db, err := sqlite3.Open("file:/test.db?vfs=memdb")

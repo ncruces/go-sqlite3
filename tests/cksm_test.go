@@ -18,6 +18,8 @@ import (
 var cksmDB string
 
 func Test_fileformat(t *testing.T) {
+	t.Parallel()
+
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(cksmDB)))
 
 	db, err := driver.Open("file:test.db?vfs=reader")
@@ -43,15 +45,12 @@ func Test_fileformat(t *testing.T) {
 	}
 }
 
-//go:embed testdata/test.db
-var testDBi []byte
-
 func Test_enable(t *testing.T) {
-	memdb.Create("nockpt.db", testDBi)
+	t.Parallel()
 
-	db, err := driver.Open("file:/nockpt.db?vfs=memdb",
+	db, err := driver.Open(memdb.TestDB(t),
 		func(db *sqlite3.Conn) error {
-			return db.EnableChecksums("")
+			return db.EnableChecksums("main")
 		})
 	if err != nil {
 		t.Fatal(err)

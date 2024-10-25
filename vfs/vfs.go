@@ -238,7 +238,13 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ui
 
 func vfsFileControl(ctx context.Context, mod api.Module, pFile uint32, op _FcntlOpcode, pArg uint32) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
+	if file, ok := file.(fileControl); ok {
+		return file.fileControl(ctx, mod, op, pArg)
+	}
+	return vfsFileControlImpl(ctx, mod, file, op, pArg)
+}
 
+func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _FcntlOpcode, pArg uint32) _ErrorCode {
 	switch op {
 	case _FCNTL_LOCKSTATE:
 		if file, ok := file.(FileLockState); ok {

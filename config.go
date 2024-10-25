@@ -2,7 +2,7 @@ package sqlite3
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/tetratelabs/wazero/api"
 
@@ -329,6 +329,9 @@ func (c *Conn) HardHeapLimit(n int64) int64 {
 	return int64(c.call("sqlite3_hard_heap_limit64", uint64(n)))
 }
 
+// EnableChecksums enables checksums on a database.
+//
+// https://sqlite.org/cksumvfs.html
 func (c *Conn) EnableChecksums(schema string) error {
 	r, err := c.FileControl(schema, FCNTL_RESERVE_BYTES)
 	if err != nil {
@@ -351,7 +354,7 @@ func (c *Conn) EnableChecksums(schema string) error {
 	}
 	if r != 8 {
 		// Invalid value.
-		return fmt.Errorf("cksmvfs: reserve bytes must be 8, is: %d", r)
+		return util.ErrorString("sqlite3: reserve bytes must be 8, is: " + strconv.Itoa(r.(int)))
 	}
 
 	// VACUUM the database.

@@ -2,9 +2,12 @@ package vfs
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/binary"
 	"strconv"
+
+	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
@@ -19,14 +22,14 @@ func cksmWrapFile(name *Filename, flags OpenFlag, file File) File {
 	cksm := cksmFile{File: file}
 
 	if flags&OPEN_WAL != 0 {
-		main, _ := name.DatabaseFile().(*cksmFile)
+		main, _ := name.DatabaseFile().(cksmFile)
 		cksm.cksmFlags = main.cksmFlags
 	} else {
 		cksm.cksmFlags = new(cksmFlags)
 		cksm.isDB = true
 	}
 
-	return &cksm
+	return cksm
 }
 
 type cksmFile struct {
@@ -42,13 +45,13 @@ type cksmFlags struct {
 	pageSize    int
 }
 
-func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
+func (c cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	n, err = c.File.ReadAt(p, off)
 
 	// SQLite is reading the header of a database file.
 	if c.isDB && off == 0 && len(p) >= 100 &&
 		bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
-		c.updateFlags(p)
+		c.init(p)
 	}
 
 	// Verify checksums.
@@ -62,11 +65,11 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	return n, err
 }
 
-func (c *cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
+func (c cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
 	// SQLite is writing the first page of a database file.
 	if c.isDB && off == 0 && len(p) >= 100 &&
 		bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
-		c.updateFlags(p)
+		c.init(p)
 	}
 
 	// Compute checksums.
@@ -77,29 +80,7 @@ func (c *cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
 	return c.File.WriteAt(p, off)
 }
 
-func (c *cksmFile) updateFlags(header []byte) {
-	c.pageSize = 256 * int(binary.LittleEndian.Uint16(header[16:18]))
-	if r := header[20] == 8; r != c.computeCksm {
-		c.computeCksm = r
-		c.verifyCksm = r
-	}
-}
-
-func (c *cksmFile) CheckpointStart() {
-	if f, ok := c.File.(FileCheckpoint); ok {
-		f.CheckpointStart()
-	}
-	c.inCkpt = true
-}
-
-func (c *cksmFile) CheckpointDone() {
-	if f, ok := c.File.(FileCheckpoint); ok {
-		f.CheckpointDone()
-	}
-	c.inCkpt = false
-}
-
-func (c *cksmFile) Pragma(name string, value string) (string, error) {
+func (c cksmFile) Pragma(name string, value string) (string, error) {
 	switch name {
 	case "checksum_verification":
 		b, ok := sql3util.ParseBool(value)
@@ -117,10 +98,28 @@ func (c *cksmFile) Pragma(name string, value string) (string, error) {
 			return strconv.Itoa(c.pageSize), nil
 		}
 	}
-	if f, ok := c.File.(FilePragma); ok {
-		return f.Pragma(name, value)
-	}
 	return "", _NOTFOUND
+}
+
+func (c cksmFile) fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg uint32) _ErrorCode {
+	switch op {
+	case _FCNTL_CKPT_START:
+		c.inCkpt = true
+	case _FCNTL_CKPT_DONE:
+		c.inCkpt = false
+	}
+	if rc := vfsFileControlImpl(ctx, mod, c, op, pArg); rc != _NOTFOUND {
+		return rc
+	}
+	return vfsFileControlImpl(ctx, mod, c.File, op, pArg)
+}
+
+func (f *cksmFlags) init(header []byte) {
+	f.pageSize = 256 * int(binary.LittleEndian.Uint16(header[16:18]))
+	if r := header[20] == 8; r != f.computeCksm {
+		f.computeCksm = r
+		f.verifyCksm = r
+	}
 }
 
 func cksmCompute(a []byte) (cksm [8]byte) {
@@ -138,103 +137,13 @@ func cksmCompute(a []byte) (cksm [8]byte) {
 	return
 }
 
-func (c *cksmFile) Unwrap() File {
-	return c.File
-}
-
-func (c *cksmFile) SharedMemory() SharedMemory {
+func (c cksmFile) SharedMemory() SharedMemory {
 	if f, ok := c.File.(FileSharedMemory); ok {
 		return f.SharedMemory()
 	}
 	return nil
 }
 
-// Wrap optional methods.
-
-func (c *cksmFile) LockState() LockLevel {
-	if f, ok := c.File.(FileLockState); ok {
-		return f.LockState()
-	}
-	return LOCK_EXCLUSIVE + 1 // UNKNOWN_LOCK
-}
-
-func (c *cksmFile) PersistentWAL() bool {
-	if f, ok := c.File.(FilePersistentWAL); ok {
-		return f.PersistentWAL()
-	}
-	return false
-}
-
-func (c *cksmFile) SetPersistentWAL(keepWAL bool) {
-	if f, ok := c.File.(FilePersistentWAL); ok {
-		f.SetPersistentWAL(keepWAL)
-	}
-}
-
-func (c *cksmFile) PowersafeOverwrite() bool {
-	if f, ok := c.File.(FilePowersafeOverwrite); ok {
-		return f.PowersafeOverwrite()
-	}
-	return false
-}
-
-func (c *cksmFile) SetPowersafeOverwrite(psow bool) {
-	if f, ok := c.File.(FilePowersafeOverwrite); ok {
-		f.SetPowersafeOverwrite(psow)
-	}
-}
-
-func (c *cksmFile) ChunkSize(size int) {
-	if f, ok := c.File.(FileChunkSize); ok {
-		f.ChunkSize(size)
-	}
-}
-
-func (c *cksmFile) SizeHint(size int64) error {
-	if f, ok := c.File.(FileSizeHint); ok {
-		f.SizeHint(size)
-	}
-	return _NOTFOUND
-}
-
-func (c *cksmFile) HasMoved() (bool, error) {
-	if f, ok := c.File.(FileHasMoved); ok {
-		return f.HasMoved()
-	}
-	return false, _NOTFOUND
-}
-
-func (c *cksmFile) Overwrite() error {
-	if f, ok := c.File.(FileOverwrite); ok {
-		return f.Overwrite()
-	}
-	return _NOTFOUND
-}
-
-func (c *cksmFile) CommitPhaseTwo() error {
-	if f, ok := c.File.(FileCommitPhaseTwo); ok {
-		return f.CommitPhaseTwo()
-	}
-	return _NOTFOUND
-}
-
-func (c *cksmFile) BeginAtomicWrite() error {
-	if f, ok := c.File.(FileBatchAtomicWrite); ok {
-		return f.BeginAtomicWrite()
-	}
-	return _NOTFOUND
-}
-
-func (c *cksmFile) CommitAtomicWrite() error {
-	if f, ok := c.File.(FileBatchAtomicWrite); ok {
-		return f.CommitAtomicWrite()
-	}
-	return _NOTFOUND
-}
-
-func (c *cksmFile) RollbackAtomicWrite() error {
-	if f, ok := c.File.(FileBatchAtomicWrite); ok {
-		return f.RollbackAtomicWrite()
-	}
-	return _NOTFOUND
+func (c cksmFile) Unwrap() File {
+	return c.File
 }
