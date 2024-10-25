@@ -186,3 +186,8 @@ type blockingSharedMemory interface {
 	SharedMemory
 	shmEnableBlocking(block bool)
 }
+
+type fileControl interface {
+	File
+	fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg uint32) _ErrorCode
+}
