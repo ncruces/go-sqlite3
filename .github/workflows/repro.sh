@@ -3,13 +3,13 @@ set -euo pipefail
 
 if [[ "$OSTYPE" == "linux"* ]]; then
   WASI_SDK="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24/wasi-sdk-24.0-x86_64-linux.tar.gz"
-  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-linux.tar.gz"
+  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_120/binaryen-version_120-x86_64-linux.tar.gz"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   WASI_SDK="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24/wasi-sdk-24.0-x86_64-macos.tar.gz"
-  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-macos.tar.gz"
+  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_120/binaryen-version_120-arm64-macos.tar.gz"
 elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
   WASI_SDK="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24/wasi-sdk-24.0-x86_64-windows.tar.gz"
-  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_119/binaryen-version_119-x86_64-windows.tar.gz"
+  BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_120/binaryen-version_120-x86_64-windows.tar.gz"
 fi
 
 # Download tools
