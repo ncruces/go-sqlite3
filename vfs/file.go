@@ -151,6 +151,7 @@ func (f *vfsFile) Close() error {
 	if f.shm != nil {
 		f.shm.Close()
 	}
+	f.Unlock(LOCK_NONE)
 	return f.File.Close()
 }
 
