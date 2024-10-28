@@ -14,9 +14,9 @@ var (
 )
 
 type vfsDotLocker struct {
-	shared   int32 // +checklocks:vfsDotLocksMtx
-	pending  bool  // +checklocks:vfsDotLocksMtx
-	reserved bool  // +checklocks:vfsDotLocksMtx
+	shared   int      // +checklocks:vfsDotLocksMtx
+	pending  *os.File // +checklocks:vfsDotLocksMtx
+	reserved *os.File // +checklocks:vfsDotLocksMtx
 }
 
 func osGetSharedLock(file *os.File) _ErrorCode {
@@ -36,7 +36,7 @@ func osGetSharedLock(file *os.File) _ErrorCode {
 		vfsDotLocks[name] = locker
 	}
 
-	if locker.pending {
+	if locker.pending != nil {
 		return _BUSY
 	}
 	locker.shared++
@@ -53,14 +53,14 @@ func osGetReservedLock(file *os.File) _ErrorCode {
 		return _IOERR_LOCK
 	}
 
-	if locker.reserved {
+	if locker.reserved != nil && locker.reserved != file {
 		return _BUSY
 	}
-	locker.reserved = true
+	locker.reserved = file
 	return _OK
 }
 
-func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
+func osGetExclusiveLock(file *os.File, _ *LockLevel) _ErrorCode {
 	vfsDotLocksMtx.Lock()
 	defer vfsDotLocksMtx.Unlock()
 
@@ -70,17 +70,17 @@ func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
 		return _IOERR_LOCK
 	}
 
-	if *state < LOCK_PENDING {
-		locker.pending = true
-		*state = LOCK_PENDING
+	if locker.pending != nil && locker.pending != file {
+		return _BUSY
 	}
+	locker.pending = file
 	if locker.shared > 1 {
 		return _BUSY
 	}
 	return _OK
 }
 
-func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
 	vfsDotLocksMtx.Lock()
 	defer vfsDotLocksMtx.Unlock()
 
@@ -90,11 +90,11 @@ func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
 		return _IOERR_UNLOCK
 	}
 
-	if state >= LOCK_RESERVED {
-		locker.reserved = false
+	if locker.reserved == file {
+		locker.reserved = nil
 	}
-	if state >= LOCK_PENDING {
-		locker.pending = false
+	if locker.pending == file {
+		locker.pending = nil
 	}
 	return _OK
 }
@@ -116,11 +116,11 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 		delete(vfsDotLocks, name)
 	}
 
-	if state >= LOCK_RESERVED {
-		locker.reserved = false
+	if locker.reserved == file {
+		locker.reserved = nil
 	}
-	if state >= LOCK_PENDING {
-		locker.pending = false
+	if locker.pending == file {
+		locker.pending = nil
 	}
 	locker.shared--
 	return _OK
@@ -135,5 +135,5 @@ func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
 	if locker == nil {
 		return false, _OK
 	}
-	return locker.reserved, _OK
+	return locker.reserved != nil, _OK
 }
