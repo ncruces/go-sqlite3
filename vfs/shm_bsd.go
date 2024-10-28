@@ -224,7 +224,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 			if s.lock[i] {
 				panic(util.AssertErr())
 			}
-			if s.vfsShmFile.lock[i] < 0 {
+			if s.vfsShmFile.lock[i]+1 <= 0 {
 				return _BUSY
 			}
 		}

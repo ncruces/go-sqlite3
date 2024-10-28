@@ -55,7 +55,7 @@ type vfsShm struct {
 	regions  []*util.MappedRegion
 	readOnly bool
 	blocking bool
-	sync.Mutex
+	barrier  sync.Mutex
 }
 
 func (s *vfsShm) shmOpen() _ErrorCode {
@@ -202,9 +202,9 @@ func (s *vfsShm) shmUnmap(delete bool) {
 }
 
 func (s *vfsShm) shmBarrier() {
-	s.Lock()
+	s.barrier.Lock()
 	//lint:ignore SA2001 memory barrier.
-	s.Unlock()
+	s.barrier.Unlock()
 }
 
 func (s *vfsShm) shmEnableBlocking(block bool) {
