@@ -3,6 +3,8 @@
 package vfs
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"sync"
 )
@@ -26,12 +28,13 @@ func osGetSharedLock(file *os.File) _ErrorCode {
 	name := file.Name()
 	locker := vfsDotLocks[name]
 	if locker == nil {
-		f, err := os.OpenFile(name+".lock", os.O_CREATE|os.O_EXCL, os.ModeDir|0700)
-		if err != nil {
+		err := os.Mkdir(name+".lock", 0777)
+		if errors.Is(err, fs.ErrExist) {
 			return _BUSY // Another process has the lock.
 		}
-		f.Close()
-
+		if err != nil {
+			return _IOERR_LOCK
+		}
 		locker = &vfsDotLocker{}
 		vfsDotLocks[name] = locker
 	}
@@ -110,7 +113,8 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 	}
 
 	if locker.shared == 1 {
-		if err := os.Remove(name + ".lock"); err != nil {
+		err := os.Remove(name + ".lock")
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return _IOERR_UNLOCK
 		}
 		delete(vfsDotLocks, name)
