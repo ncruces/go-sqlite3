@@ -1,4 +1,4 @@
-//go:build (freebsd || openbsd || netbsd || dragonfly || illumos || sqlite3_flock) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !(sqlite3_dotlk || sqlite3_noshm || sqlite3_nosys)
+//go:build ((freebsd || openbsd || netbsd || dragonfly || illumos) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !(sqlite3_dotlk || sqlite3_noshm || sqlite3_nosys)) || sqlite3_flock
 
 package vfs
 
@@ -54,7 +54,7 @@ func (s *vfsShm) Close() error {
 	s.shmLock(0, _SHM_NLOCK, _SHM_UNLOCK)
 
 	// Decrease reference count.
-	if s.vfsShmFile.refs > 1 {
+	if s.vfsShmFile.refs > 0 {
 		s.vfsShmFile.refs--
 		s.vfsShmFile = nil
 		return nil
@@ -119,7 +119,6 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	s.vfsShmFile = &vfsShmFile{
 		File: f,
 		info: fi,
-		refs: 1,
 	}
 	f = nil // Don't close the file.
 	for i, g := range vfsShmFiles {
@@ -234,8 +233,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	for _, r := range s.regions {
 		r.Unmap()
 	}
-	clear(s.regions)
-	s.regions = s.regions[:0]
+	s.regions = nil
 
 	// Close the file.
 	if delete {
