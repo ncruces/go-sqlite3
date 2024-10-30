@@ -5,6 +5,7 @@ package vfs
 import (
 	"context"
 	"sync"
+	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
@@ -211,12 +212,13 @@ func (s *vfsShm) shmBarrier() {
 }
 
 func (s *vfsShm) shmAcquire() {
+	// Copies modified words from shared memory to local memory.
 	for id, p := range s.ptrs {
-		start := id * int(s.size)
-		stop := start + int(s.size)
-		data := s.data[start:stop]
-		shadow := s.shadow[start:stop]
-		local := util.View(s.mod, p, uint64(s.size))
+		i0 := id * int(s.size)
+		i1 := i0 + int(s.size)
+		data := shmWords(s.data[i0:i1])
+		shadow := shmWords(s.shadow[i0:i1])[:len(data)]
+		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(data)]
 		for i, data := range data {
 			if shadow[i] != data {
 				shadow[i] = data
@@ -227,12 +229,13 @@ func (s *vfsShm) shmAcquire() {
 }
 
 func (s *vfsShm) shmRelease() {
+	// Copies modified words from local memory to shared memory.
 	for id, p := range s.ptrs {
-		start := id * int(s.size)
-		stop := start + int(s.size)
-		data := s.data[start:stop]
-		shadow := s.shadow[start:stop]
-		local := util.View(s.mod, p, uint64(s.size))
+		i0 := id * int(s.size)
+		i1 := i0 + int(s.size)
+		data := shmWords(s.data[i0:i1])
+		shadow := shmWords(s.shadow[i0:i1])[:len(data)]
+		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(data)]
 		for i, local := range local {
 			if shadow[i] != local {
 				shadow[i] = local
@@ -240,4 +243,9 @@ func (s *vfsShm) shmRelease() {
 			}
 		}
 	}
+}
+
+func shmWords(s []uint8) []uint32 {
+	p := unsafe.SliceData(s)
+	return unsafe.Slice((*uint32)(unsafe.Pointer(p)), len(s)/4)
 }
