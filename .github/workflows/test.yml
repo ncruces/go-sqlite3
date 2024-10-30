@@ -9,6 +9,10 @@ on:
       - '**.wasm.bz2'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**.go'
+      - '**.wasm'
+      - '**.wasm.bz2'
   workflow_dispatch:
 
 jobs:

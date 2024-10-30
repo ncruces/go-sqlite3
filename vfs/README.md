@@ -19,19 +19,18 @@ POSIX advisory locks, which SQLite uses on Unix, are
 On Linux and macOS, this package uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
-OFD locks are fully compatible with POSIX advisory locks.
 
 This package can also use
 [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2),
 albeit with reduced concurrency (`BEGIN IMMEDIATE` behaves like `BEGIN EXCLUSIVE`).
-On BSD, macOS, and illumos, BSD locks are fully compatible with POSIX advisory locks;
-on Linux and z/OS, they are fully functional, but incompatible;
-elsewhere, they are very likely broken.
 BSD locks are the default on BSD and illumos,
 but you can opt into them with the `sqlite3_flock` build tag.
 
 On Windows, this package uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
+
+You can also opt into a cross platform locking implementation
+with the `sqlite3_dotlk` build tag.
 
 Otherwise, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
@@ -86,8 +85,8 @@ The implementation is compatible with SQLite's
 ### Build Tags
 
 The VFS can be customized with a few build tags:
-- `sqlite3_flock` forces the use of BSD locks; it can be used on z/OS to enable locking,
-  and elsewhere to test BSD locks.
+- `sqlite3_flock` forces the use of BSD locks.
+- `sqlite3_dotlk` forces the use of dot-file locks.
 - `sqlite3_nosys` prevents importing [`x/sys`](https://pkg.go.dev/golang.org/x/sys);
   disables locking _and_ shared memory on all platforms.
 - `sqlite3_noshm` disables shared memory on all platforms.
@@ -96,17 +95,19 @@ The VFS can be customized with a few build tags:
 > The default configuration of this package is compatible with the standard
 > [Unix and Windows SQLite VFSes](https://sqlite.org/vfs.html#multiple_vfses);
 > `sqlite3_flock` builds are compatible with the
-> [`unix-flock` VFS](https://sqlite.org/compile.html#enable_locking_style).
+> [`unix-flock` VFS](https://sqlite.org/compile.html#enable_locking_style);
+> `sqlite3_dotlk` builds are compatible with the
+> [`unix-dotfile` VFS](https://sqlite.org/compile.html#enable_locking_style).
 > If incompatible file locking is used, accessing databases concurrently with
 > _other_ SQLite libraries will eventually corrupt data.
 
 ### Custom VFSes
 
-- [`github.com/ncruces/go-sqlite3/vfs/adiantum`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/adiantum)
-  wraps a VFS to offer encryption at rest.
 - [`github.com/ncruces/go-sqlite3/vfs/memdb`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb)
   implements an in-memory VFS.
 - [`github.com/ncruces/go-sqlite3/vfs/readervfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs)
   implements a VFS for immutable databases.
+- [`github.com/ncruces/go-sqlite3/vfs/adiantum`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/adiantum)
+  wraps a VFS to offer encryption at rest.
 - [`github.com/ncruces/go-sqlite3/vfs/xts`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/xts)
   wraps a VFS to offer encryption at rest.
