@@ -14,14 +14,15 @@ import (
 const _SHM_NLOCK = 8
 
 type vfsShmBuffer struct {
-	data []byte
-	refs int
+	shared []byte // +checklocks:Mutex
+	refs   int    // +checklocks:vfsShmBuffersMtx
 
-	lock [_SHM_NLOCK]int16
+	lock [_SHM_NLOCK]int16 // +checklocks:Mutex
 	sync.Mutex
 }
 
 var (
+	// +checklocks:vfsShmBuffersMtx
 	vfsShmBuffers    = map[string]*vfsShmBuffer{}
 	vfsShmBuffersMtx sync.Mutex
 )
@@ -100,11 +101,11 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 
 	n := (int(id) + 1) * int(size)
 
-	if n > len(s.data) {
+	if n > len(s.shared) {
 		if !extend {
 			return 0, _OK
 		}
-		s.data = append(s.data, make([]byte, n-len(s.data))...)
+		s.shared = append(s.shared, make([]byte, n-len(s.shared))...)
 	}
 
 	if n > len(s.shadow) {
@@ -211,41 +212,43 @@ func (s *vfsShm) shmBarrier() {
 	s.Unlock()
 }
 
+// +checklocks:s.Mutex
 func (s *vfsShm) shmAcquire() {
 	// Copies modified words from shared memory to local memory.
 	for id, p := range s.ptrs {
 		i0 := id * int(s.size)
 		i1 := i0 + int(s.size)
-		data := shmWords(s.data[i0:i1])
-		shadow := shmWords(s.shadow[i0:i1])[:len(data)]
-		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(data)]
-		for i, data := range data {
-			if shadow[i] != data {
-				shadow[i] = data
-				local[i] = data
+		shared := shmWords(s.shared[i0:i1])
+		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
+		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
+		for i, shared := range shared {
+			if shadow[i] != shared {
+				shadow[i] = shared
+				local[i] = shared
 			}
 		}
 	}
 }
 
+// +checklocks:s.Mutex
 func (s *vfsShm) shmRelease() {
 	// Copies modified words from local memory to shared memory.
 	for id, p := range s.ptrs {
 		i0 := id * int(s.size)
 		i1 := i0 + int(s.size)
-		data := shmWords(s.data[i0:i1])
-		shadow := shmWords(s.shadow[i0:i1])[:len(data)]
-		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(data)]
+		shared := shmWords(s.shared[i0:i1])
+		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
+		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
 		for i, local := range local {
 			if shadow[i] != local {
 				shadow[i] = local
-				data[i] = local
+				shared[i] = local
 			}
 		}
 	}
 }
 
 func shmWords(s []uint8) []uint32 {
-	p := unsafe.SliceData(s)
-	return unsafe.Slice((*uint32)(unsafe.Pointer(p)), len(s)/4)
+	p := unsafe.Pointer(unsafe.SliceData(s))
+	return unsafe.Slice((*uint32)(p), len(s)/4)
 }
