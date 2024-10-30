@@ -9,6 +9,10 @@ on:
       - '**.wasm.bz2'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**.go'
+      - '**.wasm'
+      - '**.wasm.bz2'
   workflow_dispatch:
 
 jobs:
@@ -50,6 +54,10 @@ jobs:
 
     - name: Test BSD locks
       run: go test -v -tags sqlite3_flock ./...
+      if: matrix.os == 'macos-latest'
+
+    - name: Test dot locks
+      run: go test -v -tags sqlite3_dotlk ./...
       if: matrix.os == 'macos-latest'
 
     - name: Test no shared memory
