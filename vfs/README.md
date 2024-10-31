@@ -15,8 +15,7 @@ The main differences are [file locking](#file-locking) and [WAL mode](#write-ahe
 
 POSIX advisory locks, which SQLite uses on Unix, are
 [broken by design](https://github.com/sqlite/sqlite/blob/b74eb0/src/os_unix.c#L1073-L1161).
-
-On Linux and macOS, this package uses
+Instead, on Linux and macOS, this package uses
 [OFD locks](https://www.gnu.org/software/libc/manual/html_node/Open-File-Description-Locks.html)
 to synchronize access to database files.
 
@@ -45,7 +44,7 @@ to check if your build supports file locking.
 
 ### Write-Ahead Logging
 
-On little-endian Unix, this package uses `mmap` to implement
+On Unix, this package may use `mmap` to implement
 [shared-memory for the WAL-index](https://sqlite.org/wal.html#implementation_of_shared_memory_for_the_wal_index),
 like SQLite.
 
@@ -53,6 +52,9 @@ With [BSD locks](https://man.freebsd.org/cgi/man.cgi?query=flock&sektion=2)
 a WAL database can only be accessed by a single proccess.
 Other processes that attempt to access a database locked with BSD locks,
 will fail with the [`SQLITE_PROTOCOL`](https://sqlite.org/rescode.html#protocol) error code.
+
+You can also opt into a cross platform, in-process, memory sharing implementation
+with the `sqlite3_dotlk` build tag.
 
 Otherwise, [WAL support is limited](https://sqlite.org/wal.html#noshm),
 and `EXCLUSIVE` locking mode must be set to create, read, and write WAL databases.
@@ -66,7 +68,7 @@ to check if your build supports shared memory.
 
 ### Batch-Atomic Write
 
-On 64-bit Linux, this package supports
+On Linux, this package may support
 [batch-atomic writes](https://sqlite.org/cgi/src/technote/714)
 on the F2FS filesystem.
 
@@ -87,9 +89,7 @@ The implementation is compatible with SQLite's
 The VFS can be customized with a few build tags:
 - `sqlite3_flock` forces the use of BSD locks.
 - `sqlite3_dotlk` forces the use of dot-file locks.
-- `sqlite3_nosys` prevents importing [`x/sys`](https://pkg.go.dev/golang.org/x/sys);
-  disables locking _and_ shared memory on all platforms.
-- `sqlite3_noshm` disables shared memory on all platforms.
+- `sqlite3_nosys` prevents importing [`x/sys`](https://pkg.go.dev/golang.org/x/sys).
 
 > [!IMPORTANT]
 > The default configuration of this package is compatible with the standard
