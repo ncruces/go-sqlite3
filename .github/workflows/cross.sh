@@ -17,11 +17,13 @@ echo aix           ; GOOS=aix       GOARCH=ppc64 go build .
 echo js            ; GOOS=js        GOARCH=wasm  go build .
 echo wasip1        ; GOOS=wasip1    GOARCH=wasm  go build .
 echo linux-flock   ; GOOS=linux     GOARCH=amd64 go build -tags sqlite3_flock .
-echo linux-noshm   ; GOOS=linux     GOARCH=amd64 go build -tags sqlite3_noshm .
+echo linux-dotlk   ; GOOS=linux     GOARCH=amd64 go build -tags sqlite3_dotlk .
 echo linux-nosys   ; GOOS=linux     GOARCH=amd64 go build -tags sqlite3_nosys .
 echo darwin-flock  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_flock .
-echo darwin-noshm  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_noshm .
+echo darwin-dotlk  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_dotlk .
 echo darwin-nosys  ; GOOS=darwin    GOARCH=amd64 go build -tags sqlite3_nosys .
+echo windows-dotlk ; GOOS=windows   GOARCH=amd64 go build -tags sqlite3_dotlk .
 echo windows-nosys ; GOOS=windows   GOARCH=amd64 go build -tags sqlite3_nosys .
+echo freebsd-dotlk ; GOOS=freebsd   GOARCH=amd64 go build -tags sqlite3_dotlk .
 echo freebsd-nosys ; GOOS=freebsd   GOARCH=amd64 go build -tags sqlite3_nosys .
-echo solaris-flock ; GOOS=solaris   GOARCH=amd64 go build -tags sqlite3_flock .
+echo solaris-dotlk ; GOOS=solaris   GOARCH=amd64 go build -tags sqlite3_dotlk .

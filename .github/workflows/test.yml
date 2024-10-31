@@ -60,10 +60,6 @@ jobs:
       run: go test -v -tags sqlite3_dotlk ./...
       if: matrix.os == 'macos-latest'
 
-    - name: Test no shared memory
-      run: go test -v -tags sqlite3_noshm ./...
-      if: matrix.os == 'ubuntu-latest'
-
     - name: Test no locks
       run: go test -v -tags sqlite3_nosys ./...
       if: matrix.os == 'ubuntu-latest'
