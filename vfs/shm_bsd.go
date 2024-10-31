@@ -23,9 +23,9 @@ type vfsShmFile struct {
 	// +checklocks:vfsShmFilesMtx
 	refs int
 
-	// +checklocks:lockMtx
-	lock    [_SHM_NLOCK]int16
-	lockMtx sync.Mutex
+	// +checklocks:Mutex
+	lock [_SHM_NLOCK]int16
+	sync.Mutex
 }
 
 var (
@@ -173,8 +173,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
-	s.lockMtx.Lock()
-	defer s.lockMtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
 	switch {
 	case flags&_SHM_UNLOCK != 0:
@@ -243,7 +243,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 }
 
 func (s *vfsShm) shmBarrier() {
-	s.lockMtx.Lock()
+	s.Lock()
 	//lint:ignore SA2001 memory barrier.
-	s.lockMtx.Unlock()
+	s.Unlock()
 }

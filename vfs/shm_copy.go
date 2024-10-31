@@ -11,7 +11,10 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-const _SHM_NLOCK = 8
+const (
+	_SHM_NLOCK     = 8
+	_WALINDEX_PGSZ = 32768
+)
 
 type vfsShmBuffer struct {
 	shared []byte // +checklocks:Mutex
@@ -37,7 +40,6 @@ type vfsShm struct {
 	ptrs     []uint32
 	stack    [1]uint64
 	lock     [_SHM_NLOCK]bool
-	size     int32
 	readOnly bool
 }
 
@@ -84,14 +86,13 @@ func (s *vfsShm) shmOpen() {
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
-	switch {
-	case s.size == 0:
-		s.size = size
+	if size != _WALINDEX_PGSZ {
+		return 0, _IOERR_SHMMAP
+	}
+	if s.mod == nil {
 		s.mod = mod
 		s.free = mod.ExportedFunction("sqlite3_free")
 		s.alloc = mod.ExportedFunction("sqlite3_malloc64")
-	case s.size != size:
-		return 0, _IOERR_SHMMAP
 	}
 
 	s.shmOpen()
@@ -120,7 +121,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		if s.stack[0] == 0 {
 			panic(util.OOMErr)
 		}
-		clear(util.View(s.mod, uint32(s.stack[0]), uint64(s.size)))
+		clear(util.View(s.mod, uint32(s.stack[0]), _WALINDEX_PGSZ))
 		s.ptrs = append(s.ptrs, uint32(s.stack[0]))
 	}
 
@@ -212,15 +213,34 @@ func (s *vfsShm) shmBarrier() {
 	s.Unlock()
 }
 
+// This looks like a safe, if inefficient, way of keeping memory in sync.
+//
+// The WAL-index file starts with a header.
+// This header starts with two 48 byte, checksummed, copies of the same information,
+// which are accessed independently between memory barriers.
+// The checkpoint information that follows uses 4 byte aligned words.
+//
+// Finally, we have the WAL-index hash tables,
+// which are only modified holding the exclusive WAL_WRITE_LOCK.
+//
+// Since all the data is either redundant+checksummed,
+// 4 byte aligned, or modified under an exclusive lock,
+// the copies below should correctly keep memory in sync.
+//
+// https://sqlite.org/walformat.html#the_wal_index_file_format
+
 // +checklocks:s.Mutex
 func (s *vfsShm) shmAcquire() {
 	// Copies modified words from shared to private memory.
 	for id, p := range s.ptrs {
-		i0 := id * int(s.size)
-		i1 := i0 + int(s.size)
-		shared := shmWords(s.shared[i0:i1])
-		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
-		privat := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
+		i0 := id * _WALINDEX_PGSZ
+		i1 := i0 + _WALINDEX_PGSZ
+		shared := shmPage(s.shared[i0:i1])
+		shadow := shmPage(s.shadow[i0:i1])
+		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
+		if *shadow == *shared {
+			continue
+		}
 		for i, shared := range shared {
 			if shadow[i] != shared {
 				shadow[i] = shared
@@ -234,11 +254,14 @@ func (s *vfsShm) shmAcquire() {
 func (s *vfsShm) shmRelease() {
 	// Copies modified words from private to shared memory.
 	for id, p := range s.ptrs {
-		i0 := id * int(s.size)
-		i1 := i0 + int(s.size)
-		shared := shmWords(s.shared[i0:i1])
-		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
-		privat := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
+		i0 := id * _WALINDEX_PGSZ
+		i1 := i0 + _WALINDEX_PGSZ
+		shared := shmPage(s.shared[i0:i1])
+		shadow := shmPage(s.shadow[i0:i1])
+		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
+		if *shadow == *privat {
+			continue
+		}
 		for i, privat := range privat {
 			if shadow[i] != privat {
 				shadow[i] = privat
@@ -248,7 +271,7 @@ func (s *vfsShm) shmRelease() {
 	}
 }
 
-func shmWords(s []uint8) []uint32 {
-	p := unsafe.Pointer(unsafe.SliceData(s))
-	return unsafe.Slice((*uint32)(p), len(s)/4)
+func shmPage(s []byte) *[_WALINDEX_PGSZ / 4]uint32 {
+	p := (*uint32)(unsafe.Pointer(unsafe.SliceData(s)))
+	return (*[_WALINDEX_PGSZ / 4]uint32)(unsafe.Slice(p, _WALINDEX_PGSZ/4))
 }
