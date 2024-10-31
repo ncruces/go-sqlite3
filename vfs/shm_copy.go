@@ -112,7 +112,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		s.shadow = append(s.shadow, make([]byte, n-len(s.shadow))...)
 	}
 
-	if int(id) == len(s.ptrs) {
+	for int(id) >= len(s.ptrs) {
 		s.stack[0] = uint64(size)
 		if err := s.alloc.CallWithStack(ctx, s.stack[:]); err != nil {
 			panic(err)
@@ -214,17 +214,17 @@ func (s *vfsShm) shmBarrier() {
 
 // +checklocks:s.Mutex
 func (s *vfsShm) shmAcquire() {
-	// Copies modified words from shared memory to local memory.
+	// Copies modified words from shared to private memory.
 	for id, p := range s.ptrs {
 		i0 := id * int(s.size)
 		i1 := i0 + int(s.size)
 		shared := shmWords(s.shared[i0:i1])
 		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
-		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
+		privat := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
 		for i, shared := range shared {
 			if shadow[i] != shared {
 				shadow[i] = shared
-				local[i] = shared
+				privat[i] = shared
 			}
 		}
 	}
@@ -232,17 +232,17 @@ func (s *vfsShm) shmAcquire() {
 
 // +checklocks:s.Mutex
 func (s *vfsShm) shmRelease() {
-	// Copies modified words from local memory to shared memory.
+	// Copies modified words from private to shared memory.
 	for id, p := range s.ptrs {
 		i0 := id * int(s.size)
 		i1 := i0 + int(s.size)
 		shared := shmWords(s.shared[i0:i1])
 		shadow := shmWords(s.shadow[i0:i1])[:len(shared)]
-		local := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
-		for i, local := range local {
-			if shadow[i] != local {
-				shadow[i] = local
-				shared[i] = local
+		privat := shmWords(util.View(s.mod, p, uint64(s.size)))[:len(shared)]
+		for i, privat := range privat {
+			if shadow[i] != privat {
+				shadow[i] = privat
+				shared[i] = privat
 			}
 		}
 	}
