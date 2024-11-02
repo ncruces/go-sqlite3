@@ -15,12 +15,6 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-const (
-	_SHM_NLOCK = 8
-	_SHM_BASE  = 120
-	_SHM_DMS   = _SHM_BASE + _SHM_NLOCK
-)
-
 type vfsShm struct {
 	*os.File
 	path     string

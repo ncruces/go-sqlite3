@@ -11,10 +11,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-const (
-	_SHM_NLOCK     = 8
-	_WALINDEX_PGSZ = 32768
-)
+const _WALINDEX_PGSZ = 32768
 
 type vfsShmBuffer struct {
 	shared []byte // +checklocks:Mutex
@@ -132,9 +129,10 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 	s.Lock()
 	defer s.Unlock()
 
-	if flags&_SHM_UNLOCK == 0 {
+	switch {
+	case flags&_SHM_LOCK != 0:
 		s.shmAcquire()
-	} else {
+	case flags&_SHM_EXCLUSIVE != 0:
 		s.shmRelease()
 	}
 
@@ -222,6 +220,7 @@ func (s *vfsShm) shmBarrier() {
 //
 // Finally, we have the WAL-index hash tables,
 // which are only modified holding the exclusive WAL_WRITE_LOCK.
+// Also, aHash isn't modified unless aPgno changes.
 //
 // Since all the data is either redundant+checksummed,
 // 4 byte aligned, or modified under an exclusive lock,
@@ -238,7 +237,7 @@ func (s *vfsShm) shmAcquire() {
 		shared := shmPage(s.shared[i0:i1])
 		shadow := shmPage(s.shadow[i0:i1])
 		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if *shadow == *shared {
+		if shmPageEq(shadow, shared) {
 			continue
 		}
 		for i, shared := range shared {
@@ -259,7 +258,7 @@ func (s *vfsShm) shmRelease() {
 		shared := shmPage(s.shared[i0:i1])
 		shadow := shmPage(s.shadow[i0:i1])
 		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if *shadow == *privat {
+		if shmPageEq(shadow, privat) {
 			continue
 		}
 		for i, privat := range privat {
@@ -274,4 +273,8 @@ func (s *vfsShm) shmRelease() {
 func shmPage(s []byte) *[_WALINDEX_PGSZ / 4]uint32 {
 	p := (*uint32)(unsafe.Pointer(unsafe.SliceData(s)))
 	return (*[_WALINDEX_PGSZ / 4]uint32)(unsafe.Slice(p, _WALINDEX_PGSZ/4))
+}
+
+func shmPageEq(p1, p2 *[_WALINDEX_PGSZ / 4]uint32) bool {
+	return *(*[_WALINDEX_PGSZ / 8]uint32)(p1[:]) == *(*[_WALINDEX_PGSZ / 8]uint32)(p2[:])
 }
