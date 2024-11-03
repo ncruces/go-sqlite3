@@ -32,11 +32,14 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("regexp_instr", 3, flags, regexInstr),
 		db.CreateFunction("regexp_instr", 4, flags, regexInstr),
 		db.CreateFunction("regexp_instr", 5, flags, regexInstr),
+		db.CreateFunction("regexp_instr", 6, flags, regexInstr),
 		db.CreateFunction("regexp_substr", 2, flags, regexSubstr),
 		db.CreateFunction("regexp_substr", 3, flags, regexSubstr),
 		db.CreateFunction("regexp_substr", 4, flags, regexSubstr),
+		db.CreateFunction("regexp_substr", 5, flags, regexSubstr),
 		db.CreateFunction("regexp_replace", 3, flags, regexReplace),
-		db.CreateFunction("regexp_replace", 4, flags, regexReplace))
+		db.CreateFunction("regexp_replace", 4, flags, regexReplace),
+		db.CreateFunction("regexp_replace", 5, flags, regexReplace))
 }
 
 func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {
@@ -68,6 +71,7 @@ func regexLike(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err)
 		return // notest
 	}
+
 	text := arg[0].RawText()
 	ctx.ResultBool(re.Match(text))
 }
@@ -78,10 +82,11 @@ func regexCount(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err)
 		return // notest
 	}
+
 	text := arg[0].RawText()
 	if len(arg) > 2 {
 		pos := arg[2].Int()
-		_, text = split(text, pos)
+		text = text[skip(text, pos):]
 	}
 	ctx.ResultInt(len(re.FindAll(text, -1)))
 }
@@ -92,26 +97,23 @@ func regexSubstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err)
 		return // notest
 	}
+
 	text := arg[0].RawText()
+	var pos, n, subexpr int
 	if len(arg) > 2 {
-		pos := arg[2].Int()
-		_, text = split(text, pos)
+		pos = arg[2].Int()
 	}
-	n := 0
 	if len(arg) > 3 {
 		n = arg[3].Int()
 	}
-
-	var res []byte
-	if n <= 1 {
-		res = re.Find(text)
-	} else {
-		all := re.FindAll(text, n)
-		if n <= len(all) {
-			res = all[n-1]
-		}
+	if len(arg) > 4 {
+		subexpr = arg[4].Int()
 	}
-	ctx.ResultRawText(res)
+
+	loc := regexFind(re, text, pos, n, subexpr)
+	if loc != nil {
+		ctx.ResultRawText(text[loc[0]:loc[1]])
+	}
 }
 
 func regexInstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -120,35 +122,26 @@ func regexInstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err)
 		return // notest
 	}
-	pos := 1
+
 	text := arg[0].RawText()
+	var pos, n, end, subexpr int
 	if len(arg) > 2 {
 		pos = arg[2].Int()
-		_, text = split(text, pos)
 	}
-	n := 0
 	if len(arg) > 3 {
 		n = arg[3].Int()
 	}
-
-	var loc []int
-	if n <= 1 {
-		loc = re.FindIndex(text)
-	} else {
-		all := re.FindAllIndex(text, n)
-		if n <= len(all) {
-			loc = all[n-1]
-		}
-	}
-	if loc == nil {
-		return
-	}
-
-	end := 0
 	if len(arg) > 4 && arg[4].Bool() {
 		end = 1
 	}
-	ctx.ResultInt(pos + loc[end])
+	if len(arg) > 5 {
+		subexpr = arg[5].Int()
+	}
+
+	loc := regexFind(re, text, pos, n, subexpr)
+	if loc != nil {
+		ctx.ResultInt(loc[end] + 1)
+	}
 }
 
 func regexReplace(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -157,24 +150,71 @@ func regexReplace(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err)
 		return // notest
 	}
-	var head, tail []byte
-	tail = arg[0].RawText()
+
+	text := arg[0].RawText()
+	repl := arg[2].RawText()
+	var pos, n int
 	if len(arg) > 3 {
-		pos := arg[3].Int()
-		head, tail = split(tail, pos)
+		pos = arg[3].Int()
 	}
-	tail = re.ReplaceAll(tail, arg[2].RawText())
-	if head != nil {
-		tail = append(head, tail...)
+	if len(arg) > 4 {
+		n = arg[4].Int()
 	}
-	ctx.ResultRawText(tail)
+
+	res := text
+	pos = skip(text, pos)
+	if n > 0 {
+		all := re.FindAllSubmatchIndex(text[pos:], n)
+		if n <= len(all) {
+			loc := all[n-1]
+			res = text[:pos+loc[0]]
+			res = re.Expand(res, repl, text[pos:], loc)
+			res = append(res, text[pos+loc[1]:]...)
+		}
+	} else {
+		res = append(text[:pos], re.ReplaceAll(text[pos:], repl)...)
+	}
+	ctx.ResultRawText(res)
 }
 
-func split(s []byte, i int) (head, tail []byte) {
-	for pos := range string(s) {
-		if i--; i <= 0 {
-			return s[:pos:pos], s[pos:]
+func regexFind(re *regexp.Regexp, text []byte, pos, n, subexpr int) (loc []int) {
+	pos = skip(text, pos)
+	text = text[pos:]
+
+	if n <= 1 {
+		if subexpr == 0 {
+			loc = re.FindIndex(text)
+		} else {
+			loc = re.FindSubmatchIndex(text)
+		}
+	} else {
+		if subexpr == 0 {
+			all := re.FindAllIndex(text, n)
+			if n <= len(all) {
+				loc = all[n-1]
+			}
+		} else {
+			all := re.FindAllSubmatchIndex(text, n)
+			if n <= len(all) {
+				loc = all[n-1]
+			}
 		}
 	}
-	return s, nil
+
+	if 2+2*subexpr <= len(loc) {
+		loc = loc[2*subexpr : 2+2*subexpr]
+		loc[0] += pos
+		loc[1] += pos
+		return loc
+	}
+	return nil
+}
+
+func skip(text []byte, start int) int {
+	for pos := range string(text) {
+		if start--; start <= 0 {
+			return pos
+		}
+	}
+	return len(text)
 }
