@@ -1,11 +1,11 @@
 // Package regexp provides additional regular expression functions.
 //
 // It provides the following Unicode aware functions:
-//   - regexp_like(),
-//   - regexp_count(),
-//   - regexp_instr(),
-//   - regexp_substr(),
-//   - regexp_replace(),
+//   - regexp_like(text, pattern),
+//   - regexp_count(text, pattern [, start]),
+//   - regexp_instr(text, pattern [, start [, N [, endoption [, subexpr ]]]]),
+//   - regexp_substr(text, pattern [, start [, N [, subexpr ]]]),
+//   - regexp_replace(text, pattern, replacement [, start [, N ]]),
 //   - and a REGEXP operator.
 //
 // The implementation uses Go [regexp/syntax] for regular expressions.
@@ -16,6 +16,7 @@ package regexp
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	"github.com/ncruces/go-sqlite3"
 )
@@ -40,6 +41,25 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("regexp_replace", 3, flags, regexReplace),
 		db.CreateFunction("regexp_replace", 4, flags, regexReplace),
 		db.CreateFunction("regexp_replace", 5, flags, regexReplace))
+}
+
+// GlobPrefix returns a GLOB for a regular expression
+// appropriate to take advantage of the [LIKE optimization]
+// in a query such as:
+//
+//	SELECT column WHERE column GLOB :glob_prefix AND column REGEXP :regexp
+//
+// [LIKE optimization]: https://sqlite.org/optoverview.html#the_like_optimization
+func GlobPrefix(re *regexp.Regexp) string {
+	prefix, complete := re.LiteralPrefix()
+	i := strings.IndexAny(prefix, "*?[")
+	if i < 0 {
+		if complete {
+			return prefix
+		}
+		i = len(prefix)
+	}
+	return prefix[:i] + "*"
 }
 
 func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {

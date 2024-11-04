@@ -2,6 +2,7 @@ package regexp
 
 import (
 	"database/sql"
+	"regexp"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
@@ -99,5 +100,27 @@ func TestRegister_errors(t *testing.T) {
 		if err == nil {
 			t.Fatal("want error")
 		}
+	}
+}
+
+func TestGlobPrefix(t *testing.T) {
+	tests := []struct {
+		re   string
+		want string
+	}{
+		{``, ""},
+		{`a`, "a"},
+		{`a*`, "*"},
+		{`a+`, "a*"},
+		{`ab*`, "a*"},
+		{`ab+`, "ab*"},
+		{`a\?b`, "a*"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.re, func(t *testing.T) {
+			if got := GlobPrefix(regexp.MustCompile(tt.re)); got != tt.want {
+				t.Errorf("GlobPrefix() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
