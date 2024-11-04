@@ -52,17 +52,17 @@ jobs:
     - name: Test
       run: go test -v ./... -bench . -benchtime=1x
 
+    - name: Test no locks
+      run: go test -v -tags sqlite3_nosys ./...
+      if: matrix.os == 'ubuntu-latest'
+
     - name: Test BSD locks
       run: go test -v -tags sqlite3_flock ./...
       if: matrix.os == 'macos-latest'
 
     - name: Test dot locks
       run: go test -v -tags sqlite3_dotlk ./...
-      if: matrix.os == 'macos-latest'
-
-    - name: Test no locks
-      run: go test -v -tags sqlite3_nosys ./...
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os != 'windows-latest'
 
     - name: Test GORM
       shell: bash

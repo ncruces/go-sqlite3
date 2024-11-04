@@ -19,7 +19,8 @@ func init() {
 		path := filepath.Join(os.TempDir(), "wazero")
 		if err := os.MkdirAll(path, 0777); err == nil {
 			if cache, err := wazero.NewCompilationCacheWithDir(path); err == nil {
-				sqlite3.RuntimeConfig.WithCompilationCache(cache)
+				sqlite3.RuntimeConfig = sqlite3.RuntimeConfig.
+					WithCompilationCache(cache)
 			}
 		}
 	}

@@ -28,14 +28,13 @@ var _ blockingSharedMemory = &vfsShm{}
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		var flag int
-		if s.readOnly {
-			flag = unix.O_RDONLY
-		} else {
-			flag = unix.O_RDWR
-		}
 		f, err := os.OpenFile(s.path,
-			flag|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+			unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+		if err != nil {
+			f, err = os.OpenFile(s.path,
+				unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+			s.readOnly = true
+		}
 		if err != nil {
 			return _CANTOPEN
 		}

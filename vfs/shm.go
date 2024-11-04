@@ -22,8 +22,5 @@ func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
 	if flags&OPEN_MAIN_DB == 0 || flags&(OPEN_DELETEONCLOSE|OPEN_MEMORY) != 0 {
 		return nil
 	}
-	return &vfsShm{
-		path:     path,
-		readOnly: flags&OPEN_READONLY != 0,
-	}
+	return &vfsShm{path: path}
 }

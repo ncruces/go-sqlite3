@@ -18,11 +18,9 @@ type vfsShmFile struct {
 	*os.File
 	info os.FileInfo
 
-	// +checklocks:vfsShmFilesMtx
-	refs int
+	refs int // +checklocks:vfsShmFilesMtx
 
-	// +checklocks:Mutex
-	lock [_SHM_NLOCK]int16
+	lock [_SHM_NLOCK]int16 // +checklocks:Mutex
 	sync.Mutex
 }
 
@@ -34,10 +32,9 @@ var (
 
 type vfsShm struct {
 	*vfsShmFile
-	path     string
-	lock     [_SHM_NLOCK]bool
-	regions  []*util.MappedRegion
-	readOnly bool
+	path    string
+	lock    [_SHM_NLOCK]bool
+	regions []*util.MappedRegion
 }
 
 func (s *vfsShm) Close() error {
@@ -69,7 +66,7 @@ func (s *vfsShm) Close() error {
 	panic(util.AssertErr())
 }
 
-func (s *vfsShm) shmOpen() (rc _ErrorCode) {
+func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.vfsShmFile != nil {
 		return _OK
 	}
@@ -100,17 +97,13 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 		}
 	}
 
-	// Lock and truncate the file, if not readonly.
+	// Lock and truncate the file.
 	// The lock is only released by closing the file.
-	if s.readOnly {
-		rc = _READONLY_CANTINIT
-	} else {
-		if rc := osLock(f, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK); rc != _OK {
-			return rc
-		}
-		if err := f.Truncate(0); err != nil {
-			return _IOERR_SHMOPEN
-		}
+	if rc := osLock(f, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK); rc != _OK {
+		return rc
+	}
+	if err := f.Truncate(0); err != nil {
+		return _IOERR_SHMOPEN
 	}
 
 	// Add the new shared file.
@@ -122,11 +115,11 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	for i, g := range vfsShmFiles {
 		if g == nil {
 			vfsShmFiles[i] = s.vfsShmFile
-			return rc
+			return _OK
 		}
 	}
 	vfsShmFiles = append(vfsShmFiles, s.vfsShmFile)
-	return rc
+	return _OK
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
@@ -148,25 +141,17 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		if !extend {
 			return 0, _OK
 		}
-		if s.readOnly || osAllocate(s.File, n) != nil {
+		if osAllocate(s.File, n) != nil {
 			return 0, _IOERR_SHMSIZE
 		}
 	}
 
-	var prot int
-	if s.readOnly {
-		prot = unix.PROT_READ
-	} else {
-		prot = unix.PROT_READ | unix.PROT_WRITE
-	}
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, prot)
+	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size,
+		unix.PROT_READ|unix.PROT_WRITE)
 	if err != nil {
 		return 0, _IOERR_SHMMAP
 	}
 	s.regions = append(s.regions, r)
-	if s.readOnly {
-		return r.Ptr, _READONLY
-	}
 	return r.Ptr, _OK
 }
 
