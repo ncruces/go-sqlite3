@@ -42,7 +42,6 @@ func (s *vfsShm) Close() error {
 	s.regions = nil
 
 	// Close the file.
-	s.File = nil
 	return s.File.Close()
 }
 
@@ -173,11 +172,11 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	s.shared = nil
 
 	// Close the file.
+	s.Close()
+	s.File = nil
 	if delete {
 		os.Remove(s.path)
 	}
-	s.Close()
-	s.File = nil
 }
 
 func (s *vfsShm) shmBarrier() {
