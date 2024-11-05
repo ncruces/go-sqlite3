@@ -194,6 +194,7 @@ jobs:
       env:
         GOOS: solaris
         TESTFLAGS: '-test.v -test.short'
+        BUILDFLAGS: '-tags sqlite3_dotlk'
       run: .github/workflows/build-test.sh
 
     - name: Test Solaris

@@ -96,7 +96,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	// Map the file into memory.
+	// Map the region into memory.
 	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size)
 	if err != nil {
 		return 0, _IOERR_SHMMAP
@@ -130,24 +130,6 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
-	// Argument check.
-	if n <= 0 || offset < 0 || offset+n > _SHM_NLOCK {
-		panic(util.AssertErr())
-	}
-	switch flags {
-	case
-		_SHM_LOCK | _SHM_SHARED,
-		_SHM_LOCK | _SHM_EXCLUSIVE,
-		_SHM_UNLOCK | _SHM_SHARED,
-		_SHM_UNLOCK | _SHM_EXCLUSIVE:
-		//
-	default:
-		panic(util.AssertErr())
-	}
-	if n != 1 && flags&_SHM_EXCLUSIVE == 0 {
-		panic(util.AssertErr())
-	}
-
 	switch {
 	case flags&_SHM_LOCK != 0:
 		defer s.shmAcquire()
