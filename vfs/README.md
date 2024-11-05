@@ -53,6 +53,8 @@ a WAL database can only be accessed by a single proccess.
 Other processes that attempt to access a database locked with BSD locks,
 will fail with the [`SQLITE_PROTOCOL`](https://sqlite.org/rescode.html#protocol) error code.
 
+On Windows, this package may use `MapViewOfFile`, like SQLite.
+
 You can also opt into a cross platform, in-process, memory sharing implementation
 with the `sqlite3_dotlk` build tag.
 
