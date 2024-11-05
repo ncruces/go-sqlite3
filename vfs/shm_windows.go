@@ -104,7 +104,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	s.regions = append(s.regions, r)
 
 	if int(id) >= len(s.shared) {
-		s.shared = append(s.shared, make([][]byte, int(id)-len(s.shared))...)
+		s.shared = append(s.shared, make([][]byte, int(id)-len(s.shared)+1)...)
 	}
 	s.shared[id] = r.Data
 
