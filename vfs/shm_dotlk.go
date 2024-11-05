@@ -14,8 +14,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-const _WALINDEX_PGSZ = 32768
-
 type vfsShmBuffer struct {
 	shared []byte // +checklocks:Mutex
 	refs   int    // +checklocks:vfsShmBuffersMtx
@@ -151,7 +149,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 
 	switch {
 	case flags&_SHM_LOCK != 0:
-		s.shmAcquire()
+		defer s.shmAcquire()
 	case flags&_SHM_EXCLUSIVE != 0:
 		s.shmRelease()
 	}
@@ -247,6 +245,8 @@ func (s *vfsShm) shmBarrier() {
 // the copies below should correctly keep memory in sync.
 //
 // https://sqlite.org/walformat.html#the_wal_index_file_format
+
+const _WALINDEX_PGSZ = 32768
 
 // +checklocks:s.Mutex
 func (s *vfsShm) shmAcquire() {

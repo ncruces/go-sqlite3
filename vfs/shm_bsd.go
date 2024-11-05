@@ -146,8 +146,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size,
-		unix.PROT_READ|unix.PROT_WRITE)
+	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, false)
 	if err != nil {
 		return 0, _IOERR_SHMMAP
 	}

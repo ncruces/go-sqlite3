@@ -1,4 +1,4 @@
-//go:build (darwin || linux) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !(sqlite3_flock || sqlite3_dotlk || sqlite3_nosys)
+//go:build (linux || darwin) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !(sqlite3_flock || sqlite3_dotlk || sqlite3_nosys)
 
 package vfs
 
@@ -21,7 +21,7 @@ type vfsShm struct {
 	regions  []*util.MappedRegion
 	readOnly bool
 	blocking bool
-	barrier  sync.Mutex
+	sync.Mutex
 }
 
 var _ blockingSharedMemory = &vfsShm{}
@@ -32,7 +32,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 		if err != nil {
 			f, err = os.OpenFile(s.path,
-				unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+				unix.O_RDONLY|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
 			s.readOnly = true
 		}
 		if err != nil {
@@ -64,10 +64,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _IOERR_SHMOPEN
 		}
 	}
-	if rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond); rc != _OK {
-		return rc
-	}
-	return _OK
+	return osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
@@ -94,13 +91,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	var prot int
-	if s.readOnly {
-		prot = unix.PROT_READ
-	} else {
-		prot = unix.PROT_READ | unix.PROT_WRITE
-	}
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, prot)
+	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, s.readOnly)
 	if err != nil {
 		return 0, _IOERR_SHMMAP
 	}
@@ -156,8 +147,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	for _, r := range s.regions {
 		r.Unmap()
 	}
-	clear(s.regions)
-	s.regions = s.regions[:0]
+	s.regions = nil
 
 	// Close the file.
 	if delete {
@@ -168,9 +158,9 @@ func (s *vfsShm) shmUnmap(delete bool) {
 }
 
 func (s *vfsShm) shmBarrier() {
-	s.barrier.Lock()
+	s.Lock()
 	//lint:ignore SA2001 memory barrier.
-	s.barrier.Unlock()
+	s.Unlock()
 }
 
 func (s *vfsShm) shmEnableBlocking(block bool) {
