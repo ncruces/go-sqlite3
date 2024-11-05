@@ -145,9 +145,6 @@ func Test_crash01(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
 	}
