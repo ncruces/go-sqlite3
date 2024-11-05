@@ -1,4 +1,4 @@
-//go:build ((darwin || linux || freebsd || openbsd || netbsd || dragonfly || illumos) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !sqlite3_nosys) || sqlite3_flock || sqlite3_dotlk
+//go:build ((linux || darwin || windows || freebsd || openbsd || netbsd || dragonfly || illumos) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !sqlite3_nosys) || sqlite3_flock || sqlite3_dotlk
 
 package vfs
 
@@ -22,8 +22,5 @@ func NewSharedMemory(path string, flags OpenFlag) SharedMemory {
 	if flags&OPEN_MAIN_DB == 0 || flags&(OPEN_DELETEONCLOSE|OPEN_MEMORY) != 0 {
 		return nil
 	}
-	return &vfsShm{
-		path:     path,
-		readOnly: flags&OPEN_READONLY != 0,
-	}
+	return &vfsShm{path: path}
 }

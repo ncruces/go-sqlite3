@@ -4,14 +4,15 @@ package vfs
 
 import (
 	"context"
+	"errors"
+	"io/fs"
+	"os"
 	"sync"
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
 )
-
-const _WALINDEX_PGSZ = 32768
 
 type vfsShmBuffer struct {
 	shared []byte // +checklocks:Mutex
@@ -29,15 +30,14 @@ var (
 
 type vfsShm struct {
 	*vfsShmBuffer
-	mod      api.Module
-	alloc    api.Function
-	free     api.Function
-	path     string
-	shadow   []byte
-	ptrs     []uint32
-	stack    [1]uint64
-	lock     [_SHM_NLOCK]bool
-	readOnly bool
+	mod    api.Module
+	alloc  api.Function
+	free   api.Function
+	path   string
+	shadow []byte
+	ptrs   []uint32
+	stack  [1]uint64
+	lock   [_SHM_NLOCK]bool
 }
 
 func (s *vfsShm) Close() error {
@@ -58,13 +58,18 @@ func (s *vfsShm) Close() error {
 		return nil
 	}
 
+	err := os.Remove(s.path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return _IOERR_UNLOCK
+	}
 	delete(vfsShmBuffers, s.path)
+	s.vfsShmBuffer = nil
 	return nil
 }
 
-func (s *vfsShm) shmOpen() {
+func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.vfsShmBuffer != nil {
-		return
+		return _OK
 	}
 
 	vfsShmBuffersMtx.Lock()
@@ -74,12 +79,23 @@ func (s *vfsShm) shmOpen() {
 	if g, ok := vfsShmBuffers[s.path]; ok {
 		s.vfsShmBuffer = g
 		g.refs++
-		return
+		return _OK
+	}
+
+	// Create a directory on disk to ensure only this process
+	// uses this path to register a shared memory.
+	err := os.Mkdir(s.path, 0777)
+	if errors.Is(err, fs.ErrExist) {
+		return _BUSY
+	}
+	if err != nil {
+		return _IOERR_LOCK
 	}
 
 	// Add the new shared buffer.
 	s.vfsShmBuffer = &vfsShmBuffer{}
 	vfsShmBuffers[s.path] = s.vfsShmBuffer
+	return _OK
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
@@ -91,8 +107,10 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		s.free = mod.ExportedFunction("sqlite3_free")
 		s.alloc = mod.ExportedFunction("sqlite3_malloc64")
 	}
+	if rc := s.shmOpen(); rc != _OK {
+		return 0, rc
+	}
 
-	s.shmOpen()
 	s.Lock()
 	defer s.Unlock()
 	defer s.shmAcquire()
@@ -131,7 +149,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 
 	switch {
 	case flags&_SHM_LOCK != 0:
-		s.shmAcquire()
+		defer s.shmAcquire()
 	case flags&_SHM_EXCLUSIVE != 0:
 		s.shmRelease()
 	}
@@ -227,6 +245,8 @@ func (s *vfsShm) shmBarrier() {
 // the copies below should correctly keep memory in sync.
 //
 // https://sqlite.org/walformat.html#the_wal_index_file_format
+
+const _WALINDEX_PGSZ = 32768
 
 // +checklocks:s.Mutex
 func (s *vfsShm) shmAcquire() {

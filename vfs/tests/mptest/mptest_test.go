@@ -145,9 +145,6 @@ func Test_crash01(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
 	}
@@ -211,9 +208,6 @@ func Test_multiwrite01_memory(t *testing.T) {
 func Test_crash01_wal(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
 	}
 	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without shared memory")
