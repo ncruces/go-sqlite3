@@ -114,6 +114,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	defer s.Unlock()
 	defer s.shmAcquire()
 
+	// Extend shared memory.
 	if int(id) >= len(s.shared) {
 		if !extend {
 			return 0, _OK
@@ -121,10 +122,13 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		s.shared = append(s.shared, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shared)+1)...)
 	}
 
+	// Allocate shadow memory.
 	if int(id) >= len(s.shadow) {
 		s.shadow = append(s.shadow, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shadow)+1)...)
+		s.shadow[0][4] = 1 // force invalidation
 	}
 
+	// Allocate local memory.
 	for int(id) >= len(s.ptrs) {
 		s.stack[0] = uint64(size)
 		if err := s.alloc.CallWithStack(ctx, s.stack[:]); err != nil {

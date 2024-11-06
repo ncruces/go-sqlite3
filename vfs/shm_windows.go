@@ -94,21 +94,20 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	// Map the region into memory.
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size)
-	if err != nil {
-		return 0, _IOERR_SHMMAP
+	// Maps regions into memory.
+	for int(id) >= len(s.shared) {
+		r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size)
+		if err != nil {
+			return 0, _IOERR_SHMMAP
+		}
+		s.regions = append(s.regions, r)
+		s.shared = append(s.shared, r.Data)
 	}
-	s.regions = append(s.regions, r)
-
-	if int(id) >= len(s.shared) {
-		s.shared = append(s.shared, make([][]byte, int(id)-len(s.shared)+1)...)
-	}
-	s.shared[id] = r.Data
 
 	// Allocate shadow memory.
 	if int(id) >= len(s.shadow) {
 		s.shadow = append(s.shadow, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shadow)+1)...)
+		s.shadow[0][4] = 1 // force invalidation
 	}
 
 	// Allocate local memory.

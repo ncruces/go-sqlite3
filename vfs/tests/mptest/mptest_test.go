@@ -35,6 +35,8 @@ var compressed string
 //go:embed testdata/*.*test
 var scripts embed.FS
 
+const qemuCI = runtime.GOARCH != "386" && runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64"
+
 var (
 	rt        wazero.Runtime
 	module    wazero.CompiledModule
@@ -160,8 +162,8 @@ func Test_crash01(t *testing.T) {
 }
 
 func Test_multiwrite01(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
+	if os.Getenv("CI") != "" && qemuCI {
+		t.Skip("skipping in CI")
 	}
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
@@ -190,8 +192,8 @@ func Test_config01_memory(t *testing.T) {
 }
 
 func Test_multiwrite01_memory(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
+	if os.Getenv("CI") != "" && qemuCI {
+		t.Skip("skipping in CI")
 	}
 
 	memdb.Create("test.db", nil)
@@ -225,8 +227,8 @@ func Test_crash01_wal(t *testing.T) {
 }
 
 func Test_multiwrite01_wal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
+	if os.Getenv("CI") != "" && qemuCI {
+		t.Skip("skipping in CI")
 	}
 	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without shared memory")
