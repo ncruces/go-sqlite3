@@ -28,8 +28,9 @@ but you can opt into them with the `sqlite3_flock` build tag.
 On Windows, this package uses `LockFileEx` and `UnlockFileEx`,
 like SQLite.
 
-You can also opt into a cross platform locking implementation
+You can also opt into a cross-platform locking implementation
 with the `sqlite3_dotlk` build tag.
+The only requirement is an atomic `os.Mkdir`.
 
 Otherwise, file locking is not supported, and you must use
 [`nolock=1`](https://sqlite.org/uri.html#urinolock)
@@ -55,7 +56,7 @@ will fail with the [`SQLITE_PROTOCOL`](https://sqlite.org/rescode.html#protocol)
 
 On Windows, this package may use `MapViewOfFile`, like SQLite.
 
-You can also opt into a cross platform, in-process, memory sharing implementation
+You can also opt into a cross-platform, in-process, memory sharing implementation
 with the `sqlite3_dotlk` build tag.
 
 Otherwise, [WAL support is limited](https://sqlite.org/wal.html#noshm),
