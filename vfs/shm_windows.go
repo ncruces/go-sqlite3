@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/windows"
@@ -25,7 +24,7 @@ type vfsShm struct {
 	path     string
 	regions  []*util.MappedRegion
 	shared   [][]byte
-	shadow   []byte
+	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []uint32
 	stack    [1]uint64
 	blocking bool
@@ -108,8 +107,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	s.shared[id] = r.Data
 
 	// Allocate shadow memory.
-	if n := (int(id) + 1) * int(size); n > len(s.shadow) {
-		s.shadow = append(s.shadow, make([]byte, n-len(s.shadow))...)
+	if int(id) >= len(s.shadow) {
+		s.shadow = append(s.shadow, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shadow)+1)...)
 	}
 
 	// Allocate local memory.
@@ -177,64 +176,6 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	if delete {
 		os.Remove(s.path)
 	}
-}
-
-func (s *vfsShm) shmBarrier() {
-	s.Lock()
-	s.shmAcquire()
-	s.shmRelease()
-	s.Unlock()
-}
-
-const _WALINDEX_PGSZ = 32768
-
-func (s *vfsShm) shmAcquire() {
-	// Copies modified words from shared to private memory.
-	for id, p := range s.ptrs {
-		i0 := id * _WALINDEX_PGSZ
-		i1 := i0 + _WALINDEX_PGSZ
-		shared := shmPage(s.shared[id])
-		shadow := shmPage(s.shadow[i0:i1])
-		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if shmPageEq(shadow, shared) {
-			continue
-		}
-		for i, shared := range shared {
-			if shadow[i] != shared {
-				shadow[i] = shared
-				privat[i] = shared
-			}
-		}
-	}
-}
-
-func (s *vfsShm) shmRelease() {
-	// Copies modified words from private to shared memory.
-	for id, p := range s.ptrs {
-		i0 := id * _WALINDEX_PGSZ
-		i1 := i0 + _WALINDEX_PGSZ
-		shared := shmPage(s.shared[id])
-		shadow := shmPage(s.shadow[i0:i1])
-		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if shmPageEq(shadow, privat) {
-			continue
-		}
-		for i, privat := range privat {
-			if shadow[i] != privat {
-				shadow[i] = privat
-				shared[i] = privat
-			}
-		}
-	}
-}
-
-func shmPage(s []byte) *[_WALINDEX_PGSZ / 4]uint32 {
-	p := (*uint32)(unsafe.Pointer(unsafe.SliceData(s)))
-	return (*[_WALINDEX_PGSZ / 4]uint32)(unsafe.Slice(p, _WALINDEX_PGSZ/4))
-}
-
-func shmPageEq(p1, p2 *[_WALINDEX_PGSZ / 4]uint32) bool {
-	return *(*[_WALINDEX_PGSZ / 8]uint32)(p1[:]) == *(*[_WALINDEX_PGSZ / 8]uint32)(p2[:])
 }
 
 func (s *vfsShm) shmEnableBlocking(block bool) {

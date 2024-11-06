@@ -8,15 +8,14 @@ import (
 	"io/fs"
 	"os"
 	"sync"
-	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/tetratelabs/wazero/api"
 )
 
 type vfsShmBuffer struct {
-	shared []byte // +checklocks:Mutex
-	refs   int    // +checklocks:vfsShmBuffersMtx
+	shared [][_WALINDEX_PGSZ]byte
+	refs   int // +checklocks:vfsShmBuffersMtx
 
 	lock [_SHM_NLOCK]int16 // +checklocks:Mutex
 	sync.Mutex
@@ -34,7 +33,7 @@ type vfsShm struct {
 	alloc  api.Function
 	free   api.Function
 	path   string
-	shadow []byte
+	shadow [][_WALINDEX_PGSZ]byte
 	ptrs   []uint32
 	stack  [1]uint64
 	lock   [_SHM_NLOCK]bool
@@ -115,17 +114,15 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	defer s.Unlock()
 	defer s.shmAcquire()
 
-	n := (int(id) + 1) * int(size)
-
-	if n > len(s.shared) {
+	if int(id) >= len(s.shared) {
 		if !extend {
 			return 0, _OK
 		}
-		s.shared = append(s.shared, make([]byte, n-len(s.shared))...)
+		s.shared = append(s.shared, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shared)+1)...)
 	}
 
-	if n > len(s.shadow) {
-		s.shadow = append(s.shadow, make([]byte, n-len(s.shadow))...)
+	if int(id) >= len(s.shadow) {
+		s.shadow = append(s.shadow, make([][_WALINDEX_PGSZ]byte, int(id)-len(s.shadow)+1)...)
 	}
 
 	for int(id) >= len(s.ptrs) {
@@ -220,81 +217,4 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 	s.ptrs = nil
 	s.shadow = nil
-}
-
-func (s *vfsShm) shmBarrier() {
-	s.Lock()
-	s.shmAcquire()
-	s.shmRelease()
-	s.Unlock()
-}
-
-// This looks like a safe, if inefficient, way of keeping memory in sync.
-//
-// The WAL-index file starts with a header.
-// This header starts with two 48 byte, checksummed, copies of the same information,
-// which are accessed independently between memory barriers.
-// The checkpoint information that follows uses 4 byte aligned words.
-//
-// Finally, we have the WAL-index hash tables,
-// which are only modified holding the exclusive WAL_WRITE_LOCK.
-// Also, aHash isn't modified unless aPgno changes.
-//
-// Since all the data is either redundant+checksummed,
-// 4 byte aligned, or modified under an exclusive lock,
-// the copies below should correctly keep memory in sync.
-//
-// https://sqlite.org/walformat.html#the_wal_index_file_format
-
-const _WALINDEX_PGSZ = 32768
-
-// +checklocks:s.Mutex
-func (s *vfsShm) shmAcquire() {
-	// Copies modified words from shared to private memory.
-	for id, p := range s.ptrs {
-		i0 := id * _WALINDEX_PGSZ
-		i1 := i0 + _WALINDEX_PGSZ
-		shared := shmPage(s.shared[i0:i1])
-		shadow := shmPage(s.shadow[i0:i1])
-		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if shmPageEq(shadow, shared) {
-			continue
-		}
-		for i, shared := range shared {
-			if shadow[i] != shared {
-				shadow[i] = shared
-				privat[i] = shared
-			}
-		}
-	}
-}
-
-// +checklocks:s.Mutex
-func (s *vfsShm) shmRelease() {
-	// Copies modified words from private to shared memory.
-	for id, p := range s.ptrs {
-		i0 := id * _WALINDEX_PGSZ
-		i1 := i0 + _WALINDEX_PGSZ
-		shared := shmPage(s.shared[i0:i1])
-		shadow := shmPage(s.shadow[i0:i1])
-		privat := shmPage(util.View(s.mod, p, _WALINDEX_PGSZ))
-		if shmPageEq(shadow, privat) {
-			continue
-		}
-		for i, privat := range privat {
-			if shadow[i] != privat {
-				shadow[i] = privat
-				shared[i] = privat
-			}
-		}
-	}
-}
-
-func shmPage(s []byte) *[_WALINDEX_PGSZ / 4]uint32 {
-	p := (*uint32)(unsafe.Pointer(unsafe.SliceData(s)))
-	return (*[_WALINDEX_PGSZ / 4]uint32)(unsafe.Slice(p, _WALINDEX_PGSZ/4))
-}
-
-func shmPageEq(p1, p2 *[_WALINDEX_PGSZ / 4]uint32) bool {
-	return *(*[_WALINDEX_PGSZ / 8]uint32)(p1[:]) == *(*[_WALINDEX_PGSZ / 8]uint32)(p2[:])
 }
