@@ -87,8 +87,14 @@ func TestConn_ConfigLog(t *testing.T) {
 
 	db.Prepare(`SELECT * FRM sqlite_schema`)
 
-	if code != sqlite3.ExtendedErrorCode(sqlite3.ERROR) {
+	if code != sqlite3.ERROR.ExtendedCode() {
 		t.Error("want sqlite3.ERROR")
+	}
+
+	db.Log(sqlite3.NOTICE.ExtendedCode(), "")
+
+	if code.Code() != sqlite3.NOTICE {
+		t.Error("want sqlite3.NOTICE")
 	}
 }
 
