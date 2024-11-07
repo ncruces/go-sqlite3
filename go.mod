@@ -13,7 +13,7 @@ require (
 	github.com/tetratelabs/wazero v1.8.1
 	golang.org/x/crypto v0.28.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.26.0
+	golang.org/x/sys v0.27.0
 	golang.org/x/text v0.19.0
 	lukechampine.com/adiantum v1.1.1
 )
