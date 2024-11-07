@@ -127,16 +127,16 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
+	var timeout time.Duration
+	if s.blocking {
+		timeout = time.Millisecond
+	}
+
 	switch {
 	case flags&_SHM_LOCK != 0:
 		defer s.shmAcquire()
 	case flags&_SHM_EXCLUSIVE != 0:
 		s.shmRelease()
-	}
-
-	var timeout time.Duration
-	if s.blocking {
-		timeout = time.Millisecond
 	}
 
 	switch {
