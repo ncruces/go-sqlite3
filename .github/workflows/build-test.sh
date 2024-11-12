@@ -9,3 +9,7 @@ for p in $(go list ./...); do
   (cd ${dir}; go test -c ${BUILDFLAGS:-})
   [ -f "${dir}/${name}" ] && echo "(cd ${dir}; ./${name} ${TESTFLAGS:-})" >> test.sh
 done
+
+if [[ -v VMACTIONS ]]; then
+  envsubst < .github/actions/vmactions/template.yml > .github/actions/vmactions/action.yml
+fi

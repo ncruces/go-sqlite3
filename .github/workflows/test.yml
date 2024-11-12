@@ -83,21 +83,6 @@ jobs:
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
 
-  test-intel:
-    runs-on: macos-13
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with: { go-version: stable }
-
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
-
-    - name: Test
-      run: go test -v ./...
-
   test-bsd:
     strategy:
       matrix:
@@ -116,8 +101,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-go@v5
-      with: { go-version: stable }
 
     - name: Git LFS pull
       uses: ./.github/actions/lfs
@@ -136,6 +119,42 @@ jobs:
         shell: bash
         run: . ./test.sh
         sync_files: runner-to-vm
+
+  test-vm:
+    strategy:
+      matrix:
+        os:
+          - name: dragonfly
+            action: 'vmactions/dragonflybsd-vm@v1'
+            flags: '-test.v -test.short'
+          - name: illumos
+            action: 'vmactions/omnios-vm@v1'
+            flags: '-test.v -test.short'
+          - name: solaris
+            action: 'vmactions/solaris-vm@v1'
+            flags: '-test.v -test.short'
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Git LFS pull
+      uses: ./.github/actions/lfs
+
+    - name: Build
+      env:
+        GOOS: ${{ matrix.os.name }}
+        TESTFLAGS: ${{ matrix.os.flags }}
+        VMACTIONS: ${{ matrix.os.action }}
+      run: .github/workflows/build-test.sh
+
+    - name: Test
+      uses: ./.github/actions/vmactions
+      with:
+        usesh: true
+        copyback: false
+        run: . ./test.sh
 
   test-qemu:
     runs-on: ubuntu-latest
@@ -165,8 +184,8 @@ jobs:
     - name: Test s390x (big-endian)
       run: GOARCH=s390x go test -v -short -tags sqlite3_dotlk ./...
 
-  test-vm:
-    runs-on: ubuntu-latest
+  test-macintel:
+    runs-on: macos-13
     needs: test
 
     steps:
@@ -177,30 +196,5 @@ jobs:
     - name: Git LFS pull
       uses: ./.github/actions/lfs
 
-    - name: Build illumos
-      env:
-        GOOS: illumos
-        TESTFLAGS: '-test.v -test.short'
-      run: .github/workflows/build-test.sh
-
-    - name: Test illumos
-      uses: vmactions/omnios-vm@v1
-      with:
-        usesh: true
-        copyback: false
-        run: . ./test.sh
-
-    - name: Build Solaris
-      env:
-        GOOS: solaris
-        TESTFLAGS: '-test.v -test.short'
-        BUILDFLAGS: '-tags sqlite3_dotlk'
-      run: .github/workflows/build-test.sh
-
-    - name: Test Solaris
-      uses: vmactions/solaris-vm@v1
-      with:
-        usesh: true
-        copyback: false
-        run: . ./test.sh
-      continue-on-error: true
+    - name: Test
+      run: go test -v ./...

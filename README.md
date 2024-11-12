@@ -77,7 +77,7 @@ It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 Every commit is [tested](https://github.com/ncruces/go-sqlite3/wiki/Test-matrix) on
 Linux (amd64/arm64/386/riscv64/ppc64le/s390x), macOS (amd64/arm64),
 Windows (amd64), FreeBSD (amd64), OpenBSD (amd64), NetBSD (amd64),
-illumos (amd64), and Solaris (amd64).
+DragonFly BSD (amd64), illumos (amd64), and Solaris (amd64).
 
 The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c).
