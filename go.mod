@@ -7,7 +7,7 @@ toolchain go1.23.0
 require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.2
-	github.com/tetratelabs/wazero v1.8.1
+	github.com/tetratelabs/wazero v1.8.2-0.20241115151925-0a207958052e
 	golang.org/x/crypto v0.29.0
 	golang.org/x/sys v0.27.0
 )
