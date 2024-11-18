@@ -90,11 +90,11 @@ jobs:
           - name: freebsd
             version: '14.1'
             flags: '-test.v'
-          - name: openbsd
-            version: '7.5'
-            flags: '-test.v -test.short'
           - name: netbsd
             version: '10.0'
+            flags: '-test.v -test.short'
+          - name: openbsd
+            version: '7.5'
             flags: '-test.v -test.short'
     runs-on: ubuntu-latest
     needs: test
@@ -126,13 +126,14 @@ jobs:
         os:
           - name: dragonfly
             action: 'vmactions/dragonflybsd-vm@v1'
-            flags: '-test.v -test.short'
+            tflags: '-test.v -test.short'
           - name: illumos
             action: 'vmactions/omnios-vm@v1'
-            flags: '-test.v -test.short'
+            tflags: '-test.v -test.short'
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
-            flags: '-test.v -test.short'
+            bflags: '-tags sqlite3_dotlk'
+            tflags: '-test.v -test.short'
     runs-on: ubuntu-latest
     needs: test
 
@@ -145,8 +146,9 @@ jobs:
     - name: Build
       env:
         GOOS: ${{ matrix.os.name }}
-        TESTFLAGS: ${{ matrix.os.flags }}
-        VMACTIONS: ${{ matrix.os.action }}
+        BUILDFLAGS: ${{ matrix.os.bflags }}
+        TESTFLAGS:  ${{ matrix.os.tflags }}
+        VMACTIONS:  ${{ matrix.os.action }}
       run: .github/workflows/build-test.sh
 
     - name: Test
