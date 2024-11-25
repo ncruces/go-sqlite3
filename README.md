@@ -30,7 +30,6 @@ Notice: Neither `:memory:` nor `?cache=shared` works with Golang's SQL driver, i
 use `import _ "github.com/ncruces/go-sqlite3/vfs/memdb"` and `sql.Open("sqlite3", "file:/test.db?vfs=memdb")`
 to create a memory database for testing purpose, or use `memdb.TestDB(t)` to create isolated memory database in tests.
 
-
 ### Packages
 
 - [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
