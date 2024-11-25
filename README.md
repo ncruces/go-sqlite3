@@ -90,6 +90,17 @@ Perfomance of the [`database/sql`](https://pkg.go.dev/database/sql) driver is
 The Wasm and VFS layers are also tested by running SQLite's
 [speedtest1](https://github.com/sqlite/sqlite/blob/master/test/speedtest1.c).
 
+### FAQ, issues, new features
+
+For questions, please see [Discussions](https://github.com/ncruces/go-sqlite3/discussions/categories/q-a).
+
+Also, post there if you used this driver for something interesting
+([_"Show and tell"_](https://github.com/ncruces/go-sqlite3/discussions/categories/show-and-tell)),
+have an [idea](https://github.com/ncruces/go-sqlite3/discussions/categories/ideas)…
+
+The [Issue](https://github.com/ncruces/go-sqlite3/issues) tracker is for bugs we want fixed,
+and features we're working on, planning to work on, or asking for help with.
+
 ### Alternatives
 
 - [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite)
