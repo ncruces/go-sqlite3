@@ -26,9 +26,9 @@ db, _ := sql.Open("sqlite3", "file:demo.db")
 db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 ```
 
-Notice: Neither `:memory:` nor `?cache=shared` works properly with Golang's SQL driver, instead, 
+Notice: Neither `:memory:` nor `?cache=shared` works with Golang's SQL driver, instead, 
 use `import _ "github.com/ncruces/go-sqlite3/vfs/memdb"` and `sql.Open("sqlite3", "file:/test.db?vfs=memdb")`
-to create a memory database for testing purpose.
+to create a memory database for testing purpose, or use `memdb.TestDB(t)` to create isolated memory database in tests.
 
 
 ### Packages
