@@ -5,12 +5,14 @@ on:
     branches: [ "main" ]
     paths:
       - '**.go'
+      - '**.mod'
       - '**.wasm'
       - '**.wasm.bz2'
   pull_request:
     branches: [ "main" ]
     paths:
       - '**.go'
+      - '**.mod'
       - '**.wasm'
       - '**.wasm.bz2'
   workflow_dispatch:

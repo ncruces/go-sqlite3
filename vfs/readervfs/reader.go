@@ -77,5 +77,5 @@ func (readerFile) SectorSize() int {
 }
 
 func (readerFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
-	return vfs.IOCAP_IMMUTABLE
+	return vfs.IOCAP_IMMUTABLE | vfs.IOCAP_SUBPAGE_READ
 }

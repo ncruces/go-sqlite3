@@ -194,11 +194,13 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 func (x *xtsFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 	var _ [0]struct{} = [sectorSize - 512]struct{}{} // Ensure sectorSize is 512.
 	return x.File.DeviceCharacteristics() & (0 |
-		// The only safe flags are these:
+		// These flags are safe:
 		vfs.IOCAP_ATOMIC512 |
-		vfs.IOCAP_UNDELETABLE_WHEN_OPEN |
 		vfs.IOCAP_IMMUTABLE |
-		vfs.IOCAP_BATCH_ATOMIC)
+		vfs.IOCAP_SEQUENTIAL |
+		vfs.IOCAP_SUBPAGE_READ |
+		vfs.IOCAP_BATCH_ATOMIC |
+		vfs.IOCAP_UNDELETABLE_WHEN_OPEN)
 }
 
 func (x *xtsFile) SectorSize() int {

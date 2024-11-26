@@ -13,8 +13,8 @@ mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
 
-# https://sqlite.org/src/info/d2d954d43abe20a3
-curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=d2d954d4 | tar xz
+# https://sqlite.org/src/info/e03dd0bd313817da
+curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=e03dd0bd | tar xz
 
 cd sqlite
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then

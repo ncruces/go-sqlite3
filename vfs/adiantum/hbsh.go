@@ -198,11 +198,13 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 	var _ [0]struct{} = [blockSize - 4096]struct{}{} // Ensure blockSize is 4K.
 	return h.File.DeviceCharacteristics() & (0 |
-		// The only safe flags are these:
+		// These flags are safe:
 		vfs.IOCAP_ATOMIC4K |
-		vfs.IOCAP_UNDELETABLE_WHEN_OPEN |
 		vfs.IOCAP_IMMUTABLE |
-		vfs.IOCAP_BATCH_ATOMIC)
+		vfs.IOCAP_SEQUENTIAL |
+		vfs.IOCAP_SUBPAGE_READ |
+		vfs.IOCAP_BATCH_ATOMIC |
+		vfs.IOCAP_UNDELETABLE_WHEN_OPEN)
 }
 
 func (h *hbshFile) SectorSize() int {
