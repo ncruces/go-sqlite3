@@ -56,6 +56,7 @@ func (b *Bulk) Flush() error {
 }
 
 func (b *Bulk) AppendRow(args ...any) error {
+retry:
 	buf := b.buffer
 
 	if off := len(buf); off != 0 {
@@ -71,18 +72,13 @@ func (b *Bulk) AppendRow(args ...any) error {
 	}
 	buf = append(buf, ')')
 
-	if len(buf)+len(b.suffix) >= cap(b.buffer)-len(b.buffer) {
-		if err := b.Flush(); err != nil {
-			return err
-		}
-		if buf[0] == ',' {
-			buf = buf[1:]
-		}
-	}
-	if len(buf)+len(b.suffix) >= cap(b.buffer)-len(b.buffer) {
-		return TOOBIG
+	if len(buf)+len(b.suffix) < cap(b.buffer)-len(b.buffer) {
+		b.buffer = b.buffer[:len(b.buffer)+len(buf)]
+		return nil
 	}
 
-	b.buffer = append(b.buffer, buf...)
-	return nil
+	if err := b.Flush(); err != nil {
+		return err
+	}
+	goto retry
 }
