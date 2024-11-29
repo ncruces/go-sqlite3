@@ -1,4 +1,4 @@
-//go:build (windows && (386 || arm || amd64 || arm64 || riscv64 || ppc64le) && !sqlite3_nosys) || sqlite3_dotlk
+//go:build (windows && (386 || arm || amd64 || arm64 || riscv64 || ppc64le)) || sqlite3_dotlk
 
 package vfs
 
