@@ -665,7 +665,7 @@ func (r *rows) Next(dest []driver.Value) error {
 	}
 
 	data := unsafe.Slice((*any)(unsafe.SliceData(dest)), len(dest))
-	err := r.Stmt.Columns(data)
+	err := r.Stmt.Columns(data...)
 	for i := range dest {
 		if t, ok := r.decodeTime(i, dest[i]); ok {
 			dest[i] = t
