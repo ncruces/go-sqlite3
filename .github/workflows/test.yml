@@ -86,13 +86,13 @@ jobs:
       matrix:
         os:
           - name: freebsd
-            version: '14.1'
+            version: '14.2'
             flags: '-test.v'
           - name: netbsd
             version: '10.0'
             flags: '-test.v'
           - name: openbsd
-            version: '7.5'
+            version: '7.6'
             flags: '-test.v -test.short'
     runs-on: ubuntu-latest
     needs: test
@@ -110,7 +110,7 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.25.0
+      uses: cross-platform-actions/action@v0.26.0
       with:
         operating_system: ${{ matrix.os.name }}
         version: ${{ matrix.os.version }}
