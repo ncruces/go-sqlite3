@@ -615,6 +615,7 @@ func (r *rows) loadTypes() {
 					r.Stmt.ColumnDatabaseName(i),
 					r.Stmt.ColumnTableName(i),
 					col)
+				types[i] = strings.ToUpper(types[i])
 			}
 		}
 		r.nulls = nulls
