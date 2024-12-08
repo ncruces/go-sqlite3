@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -363,5 +364,83 @@ func Test_time(t *testing.T) {
 				t.Errorf("got: %v", got)
 			}
 		})
+	}
+}
+
+func TestColumnTypeScanType(t *testing.T) {
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db, err := Open(tmp, nil, func(c *sqlite3.Conn) error {
+		return c.Exec(`PRAGMA optimize`)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx,
+		`CREATE TABLE test_types (
+			col_int INTEGER,
+			col_text TEXT,
+			col_blob BLOB,
+			col_real REAL,
+			col_bool BOOLEAN,
+			col_date DATE,
+			col_time TIME,
+			col_datetime DATETIME,
+			col_timestamp TIMESTAMP
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, err := conn.PrepareContext(context.Background(),
+		`SELECT col_int, col_text, col_blob, col_real, col_bool, col_date, col_time, col_datetime, col_timestamp FROM test_types`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	typs, err := rows.ColumnTypes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		index int
+		want  reflect.Type
+	}{
+		{0, reflect.TypeOf(int64(0))},
+		{1, reflect.TypeOf("")},
+		{2, reflect.TypeOf([]byte(nil))},
+		{3, reflect.TypeOf(float64(0))},
+		{4, reflect.TypeOf(false)},
+		{5, reflect.TypeOf(time.Time{})},
+		{6, reflect.TypeOf(time.Time{})},
+		{7, reflect.TypeOf(time.Time{})},
+		{8, reflect.TypeOf(time.Time{})},
+	}
+
+	for _, tt := range tests {
+		got := typs[tt.index].ScanType()
+		if got != tt.want {
+			t.Errorf("ColumnTypeScanType(%d) = %v, want %v", tt.index, got, tt.want)
+		}
 	}
 }

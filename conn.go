@@ -501,7 +501,7 @@ func (c *Conn) TableColumnMetadata(schema, table, column string) (declType, coll
 		uint64(declTypePtr), uint64(collSeqPtr),
 		uint64(notNullPtr), uint64(primaryKeyPtr), uint64(autoIncPtr))
 	if err = c.error(r); err == nil && column != "" {
-		declType = util.ReadString(c.mod, util.ReadUint32(c.mod, declTypePtr), _MAX_NAME)
+		declType = strings.ToUpper(util.ReadString(c.mod, util.ReadUint32(c.mod, declTypePtr), _MAX_NAME))
 		collSeq = util.ReadString(c.mod, util.ReadUint32(c.mod, collSeqPtr), _MAX_NAME)
 		notNull = util.ReadUint32(c.mod, notNullPtr) != 0
 		autoInc = util.ReadUint32(c.mod, autoIncPtr) != 0

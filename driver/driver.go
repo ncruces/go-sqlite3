@@ -81,6 +81,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 	"unsafe"
@@ -585,7 +586,57 @@ var (
 	// Ensure these interfaces are implemented:
 	_ driver.RowsColumnTypeDatabaseTypeName = &rows{}
 	_ driver.RowsColumnTypeNullable         = &rows{}
+	_ driver.RowsColumnTypeScanType         = &rows{}
 )
+
+// ColumnTypeScanType returns the Go type that corresponds to the SQLite column type
+// at the given index. It determines the type based on the declared type of the column
+// in the SQLite schema. The mapping is as follows:
+// - "date", "datetime", "time", "timestamp" -> time.Time
+// - "boolean" -> bool
+// - Types containing "int" -> int64
+// - Types containing "char", "clob", "text" -> string
+// - Types containing "blob" -> []byte
+// - Types containing "real", "floa", "doub" -> float64
+// If the declared type does not match any of the above, it defaults to string.
+// Refer to the SQLite documentation for more information on column types.
+// https://sqlite.org/datatype3.html#determination_of_column_affinity
+func (r *rows) ColumnTypeScanType(index int) reflect.Type {
+	declType := strings.ToLower(r.declType(index))
+
+	if declType == "date" ||
+		declType == "datetime" ||
+		declType == "time" ||
+		declType == "timestamp" {
+		return reflect.TypeOf(time.Time{})
+	}
+
+	if declType == "boolean" {
+		return reflect.TypeOf(false)
+	}
+
+	if strings.Contains(declType, "int") {
+		return reflect.TypeOf(int64(0))
+	}
+
+	if strings.Contains(declType, "char") ||
+		strings.Contains(declType, "clob") ||
+		strings.Contains(declType, "text") {
+		return reflect.TypeOf("")
+	}
+
+	if strings.Contains(declType, "blob") {
+		return reflect.TypeOf([]byte(nil))
+	}
+
+	if strings.Contains(declType, "real") ||
+		strings.Contains(declType, "floa") ||
+		strings.Contains(declType, "doub") {
+		return reflect.TypeOf(float64(0))
+	}
+
+	return reflect.TypeOf(any(nil))
+}
 
 func (r *rows) Close() error {
 	r.Stmt.ClearBindings()
