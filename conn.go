@@ -476,6 +476,38 @@ func (c *Conn) Status(op DBStatus, reset bool) (current, highwater int, err erro
 	return
 }
 
+// TableMetadata extracts metadata about a table.
+func (c *Conn) TableMetadata(schema, table string) (ncol int, wr, strict bool, err error) {
+	stmt, _, err := c.Prepare(`SELECT ncol, wr, strict FROM pragma_table_list() WHERE schema = ? AND name = ?`)
+	if err != nil {
+		return
+	}
+	defer stmt.Close()
+
+	if schema == "" {
+		schema = "main"
+	}
+
+	err = stmt.BindText(1, schema)
+	if err != nil {
+		return
+	}
+
+	err = stmt.BindText(2, table)
+	if err != nil {
+		return
+	}
+
+	if stmt.Step() {
+		return stmt.ColumnInt(0), stmt.ColumnBool(1), stmt.ColumnBool(2), nil
+	}
+
+	if err = stmt.Close(); err == nil {
+		err = fmt.Errorf("%w: no such table: %s", ERROR, table)
+	}
+	return
+}
+
 // TableColumnMetadata extracts metadata about a column of a table.
 //
 // https://sqlite.org/c3ref/table_column_metadata.html

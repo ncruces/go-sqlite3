@@ -423,6 +423,40 @@ func TestConn_Status(t *testing.T) {
 	}
 }
 
+func TestConn_TableMetadata(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE test (col ANY) STRICT`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, _, err = db.TableMetadata("", "taby")
+	if err == nil {
+		t.Error("want error")
+	}
+
+	ncol, wr, strict, err := db.TableMetadata("", "test")
+	if err != nil {
+		t.Error("want nil", err)
+	}
+	if ncol != 1 {
+		t.Error("want 1")
+	}
+	if wr != false {
+		t.Error("want false")
+	}
+	if strict != true {
+		t.Error("want true")
+	}
+}
+
 func TestConn_TableColumnMetadata(t *testing.T) {
 	t.Parallel()
 
@@ -437,7 +471,7 @@ func TestConn_TableColumnMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, _, _, _, err = db.TableColumnMetadata("", "table", "")
+	_, _, _, _, _, err = db.TableColumnMetadata("", "taby", "")
 	if err == nil {
 		t.Error("want error")
 	}
