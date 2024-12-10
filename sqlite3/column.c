@@ -38,6 +38,9 @@ int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
     }
     if (ptr == NULL && rc == SQLITE_OK) {
       rc = sqlite3_errcode(sqlite3_db_handle(stmt));
+      if (rc == SQLITE_ROW || rc == SQLITE_DONE) {
+        rc = SQLITE_OK;
+      }
     }
     aData[i].ptr = ptr;
     aData[i].len = sqlite3_column_bytes(stmt, i);

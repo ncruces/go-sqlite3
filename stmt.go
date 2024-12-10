@@ -582,7 +582,9 @@ func (s *Stmt) ColumnRawBlob(col int) []byte {
 func (s *Stmt) columnRawBytes(col int, ptr uint32) []byte {
 	if ptr == 0 {
 		r := s.c.call("sqlite3_errcode", uint64(s.c.handle))
-		s.err = s.c.error(r)
+		if r != _ROW && r != _DONE {
+			s.err = s.c.error(r)
+		}
 		return nil
 	}
 
@@ -666,6 +668,10 @@ func (s *Stmt) Columns(dest ...any) error {
 			dest[i] = nil
 		default:
 			ptr := util.ReadUint32(s.c.mod, dataPtr+0)
+			if ptr == 0 {
+				dest[i] = []byte{}
+				continue
+			}
 			len := util.ReadUint32(s.c.mod, dataPtr+4)
 			buf := util.View(s.c.mod, ptr, uint64(len))
 			if types[i] == byte(TEXT) {
