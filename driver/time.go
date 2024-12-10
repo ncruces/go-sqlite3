@@ -1,20 +1,12 @@
 package driver
 
-import (
-	"time"
-
-	"github.com/ncruces/go-sqlite3"
-)
+import "time"
 
 // Convert a string in [time.RFC3339Nano] format into a [time.Time]
 // if it roundtrips back to the same string.
 // This way times can be persisted to, and recovered from, the database,
 // but if a string is needed, [database/sql] will recover the same string.
-func maybeTime(fmt sqlite3.TimeFormat, text string) (_ time.Time, _ bool) {
-	if fmt != "" && fmt != time.RFC3339 && fmt != time.RFC3339Nano {
-		return
-	}
-
+func maybeTime(text string) (_ time.Time, _ bool) {
 	// Weed out (some) values that can't possibly be
 	// [time.RFC3339Nano] timestamps.
 	if len(text) < len("2006-01-02T15:04:05Z") {

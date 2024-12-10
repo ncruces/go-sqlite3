@@ -692,8 +692,6 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 	if r.Stmt.Busy() {
 		row := scantype(r.Stmt.ColumnType(index))
 		switch {
-		case scan == _BLOB && row == _NULL:
-			//
 		case scan == _TIME && row != _BLOB && row != _NULL:
 			if t := r.Stmt.ColumnTime(index, r.tmRead); t.IsZero() && r.Stmt.Err() != nil {
 				scan = row
@@ -702,13 +700,8 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 			if i := r.Stmt.ColumnInt64(index); i != 0 && i != 1 {
 				scan = row
 			}
-		case row == _TEXT:
-			_, ok := maybeTime(r.tmWrite, r.Stmt.ColumnText(index))
-			if ok {
-				scan = _TIME
-				break
-			}
-			fallthrough
+		case scan == _BLOB && row == _NULL:
+			scan = _BLOB
 		default:
 			scan = row
 		}
@@ -758,7 +751,10 @@ func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
 	case int64, float64:
 		// could be a time value
 	case string:
-		t, ok := maybeTime(r.tmWrite, v)
+		if r.tmWrite != "" && r.tmWrite != time.RFC3339 && r.tmWrite != time.RFC3339Nano {
+			break
+		}
+		t, ok := maybeTime(v)
 		if ok {
 			return t, true
 		}

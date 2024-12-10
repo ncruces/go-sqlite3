@@ -403,6 +403,8 @@ func Test_ColumnType_ScanType(t *testing.T) {
 			('1', '1', '1', '1', '1', '1', '1'),
 			('x', 'x', 'x', 'x', 'x', 'x', 'x'),
 			(x'', x'', x'', x'', x'', x'', x''),
+			('2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z', '2006-01-02T15:04:05Z'),
+			(TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE),
 			(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 	`)
 	if err != nil {
@@ -427,6 +429,8 @@ func Test_ColumnType_ScanType(t *testing.T) {
 		{INT, REAL, TEXT, TEXT, BOOL, TIME, INT},
 		{TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT},
 		{BLOB, BLOB, BLOB, BLOB, BLOB, BLOB, BLOB},
+		{TEXT, TEXT, TEXT, TEXT, TEXT, TIME, TEXT},
+		{INT, REAL, TEXT, INT, BOOL, TIME, INT},
 		{ANY, ANY, ANY, BLOB, ANY, ANY, ANY},
 	}
 	for j, c := range cols {
