@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -363,5 +364,101 @@ func Test_time(t *testing.T) {
 				t.Errorf("got: %v", got)
 			}
 		})
+	}
+}
+
+func Test_ColumnType_ScanType(t *testing.T) {
+	var (
+		INT  = reflect.TypeOf(int64(0))
+		REAL = reflect.TypeOf(float64(0))
+		TEXT = reflect.TypeOf("")
+		BLOB = reflect.TypeOf([]byte{})
+		BOOL = reflect.TypeOf(false)
+		TIME = reflect.TypeOf(time.Time{})
+		ANY  = reflect.TypeOf((*any)(nil)).Elem()
+	)
+
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	db, err := sql.Open("sqlite3", tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`
+		CREATE TABLE test (
+			col_int  INTEGER,
+			col_real REAL,
+			col_text TEXT,
+			col_blob BLOB,
+			col_bool BOOLEAN,
+			col_time DATETIME,
+			col_decimal DECIMAL
+		);
+		INSERT INTO test VALUES
+			(1, 1, 1, 1, 1, 1, 1),
+			(2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0),
+			('1', '1', '1', '1', '1', '1', '1'),
+			('x', 'x', 'x', 'x', 'x', 'x', 'x'),
+			(x'', x'', x'', x'', x'', x'', x''),
+			(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := db.Query(`SELECT * FROM test`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	cols, err := rows.ColumnTypes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := [][]reflect.Type{
+		{INT, REAL, TEXT, BLOB, BOOL, TIME, ANY},
+		{INT, REAL, TEXT, INT, BOOL, TIME, INT},
+		{INT, REAL, TEXT, REAL, INT, TIME, INT},
+		{INT, REAL, TEXT, TEXT, BOOL, TIME, INT},
+		{TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT},
+		{BLOB, BLOB, BLOB, BLOB, BLOB, BLOB, BLOB},
+		{ANY, ANY, ANY, BLOB, ANY, ANY, ANY},
+	}
+	for j, c := range cols {
+		got := c.ScanType()
+		if got != want[0][j] {
+			t.Errorf("want %v, got %v", want[0][j], got)
+		}
+	}
+
+	dest := make([]any, len(cols))
+	for i := 1; rows.Next(); i++ {
+		cols, err := rows.ColumnTypes()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for j, c := range cols {
+			got := c.ScanType()
+			if got != want[i][j] {
+				t.Errorf("%d,%d want %v, got %v", i, j, want[i][j], got)
+			}
+			dest[j] = reflect.New(c.ScanType()).Interface()
+		}
+
+		err = rows.Scan(dest...)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err = rows.Err()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

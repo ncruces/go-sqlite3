@@ -81,6 +81,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 	"unsafe"
@@ -579,7 +580,21 @@ type rows struct {
 	names []string
 	types []string
 	nulls []bool
+	scans []scantype
 }
+
+type scantype byte
+
+const (
+	_ANY  scantype = iota
+	_INT  scantype = scantype(sqlite3.INTEGER)
+	_REAL scantype = scantype(sqlite3.FLOAT)
+	_TEXT scantype = scantype(sqlite3.TEXT)
+	_BLOB scantype = scantype(sqlite3.BLOB)
+	_NULL scantype = scantype(sqlite3.NULL)
+	_BOOL scantype = iota
+	_TIME
+)
 
 var (
 	// Ensure these interfaces are implemented:
@@ -604,11 +619,12 @@ func (r *rows) Columns() []string {
 	return r.names
 }
 
-func (r *rows) loadTypes() {
+func (r *rows) loadColumnMetadata() {
 	if r.nulls == nil {
 		count := r.Stmt.ColumnCount()
 		nulls := make([]bool, count)
 		types := make([]string, count)
+		scans := make([]scantype, count)
 		for i := range nulls {
 			if col := r.Stmt.ColumnOriginName(i); col != "" {
 				types[i], _, nulls[i], _, _, _ = r.Stmt.Conn().TableColumnMetadata(
@@ -616,10 +632,25 @@ func (r *rows) loadTypes() {
 					r.Stmt.ColumnTableName(i),
 					col)
 				types[i] = strings.ToUpper(types[i])
+				switch types[i] {
+				case "INT", "INTEGER":
+					scans[i] = _INT
+				case "REAL":
+					scans[i] = _REAL
+				case "TEXT":
+					scans[i] = _TEXT
+				case "BLOB":
+					scans[i] = _BLOB
+				case "BOOLEAN":
+					scans[i] = _BOOL
+				case "DATE", "TIME", "DATETIME", "TIMESTAMP":
+					scans[i] = _TIME
+				}
 			}
 		}
 		r.nulls = nulls
 		r.types = types
+		r.scans = scans
 	}
 }
 
@@ -636,7 +667,7 @@ func (r *rows) declType(index int) string {
 }
 
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
-	r.loadTypes()
+	r.loadColumnMetadata()
 	decltype := r.types[index]
 	if len := len(decltype); len > 0 && decltype[len-1] == ')' {
 		if i := strings.LastIndexByte(decltype, '('); i >= 0 {
@@ -647,11 +678,58 @@ func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
 }
 
 func (r *rows) ColumnTypeNullable(index int) (nullable, ok bool) {
-	r.loadTypes()
+	r.loadColumnMetadata()
 	if r.nulls[index] {
 		return false, true
 	}
 	return true, false
+}
+
+func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
+	r.loadColumnMetadata()
+	scan := r.scans[index]
+
+	if r.Stmt.Busy() {
+		row := scantype(r.Stmt.ColumnType(index))
+		switch {
+		case scan == _BLOB && row == _NULL:
+			//
+		case scan == _TIME && row != _BLOB && row != _NULL:
+			if t := r.Stmt.ColumnTime(index, r.tmRead); t.IsZero() && r.Stmt.Err() != nil {
+				scan = row
+			}
+		case scan == _BOOL && row == _INT:
+			if i := r.Stmt.ColumnInt64(index); i != 0 && i != 1 {
+				scan = row
+			}
+		case row == _TEXT:
+			_, ok := maybeTime(r.tmWrite, r.Stmt.ColumnText(index))
+			if ok {
+				scan = _TIME
+				break
+			}
+			fallthrough
+		default:
+			scan = row
+		}
+	}
+
+	switch scan {
+	case _INT:
+		return reflect.TypeOf(int64(0))
+	case _REAL:
+		return reflect.TypeOf(float64(0))
+	case _TEXT:
+		return reflect.TypeOf("")
+	case _BLOB:
+		return reflect.TypeOf([]byte{})
+	case _BOOL:
+		return reflect.TypeOf(false)
+	case _TIME:
+		return reflect.TypeOf(time.Time{})
+	default:
+		return reflect.TypeOf((*any)(nil)).Elem()
+	}
 }
 
 func (r *rows) Next(dest []driver.Value) error {
@@ -680,10 +758,7 @@ func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
 	case int64, float64:
 		// could be a time value
 	case string:
-		if r.tmWrite != "" && r.tmWrite != time.RFC3339 && r.tmWrite != time.RFC3339Nano {
-			break
-		}
-		t, ok := maybeTime(v)
+		t, ok := maybeTime(r.tmWrite, v)
 		if ok {
 			return t, true
 		}
