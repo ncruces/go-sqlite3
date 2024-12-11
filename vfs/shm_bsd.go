@@ -73,7 +73,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 
 	// Always open file read-write, as it will be shared.
 	f, err := os.OpenFile(s.path,
-		unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW, 0666)
+		os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
 	if err != nil {
 		return _CANTOPEN
 	}

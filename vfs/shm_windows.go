@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/tetratelabs/wazero/api"
@@ -46,7 +47,8 @@ func (s *vfsShm) Close() error {
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		f, err := osutil.OpenFile(s.path, os.O_RDWR|os.O_CREATE, 0666)
+		f, err := osutil.OpenFile(s.path,
+			os.O_RDWR|os.O_CREATE|syscall.O_NONBLOCK, 0666)
 		if err != nil {
 			return _CANTOPEN
 		}
