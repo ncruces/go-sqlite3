@@ -698,20 +698,20 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 		// Always use the type of the value itself,
 		// unless the scan type is more specific
 		// and can scan the actual value.
-		row := scantype(r.Stmt.ColumnType(index))
-		useRowType := true
+		val := scantype(r.Stmt.ColumnType(index))
+		useValType := true
 		switch {
-		case scan == _TIME && row != _BLOB && row != _NULL:
+		case scan == _TIME && val != _BLOB && val != _NULL:
 			t := r.Stmt.ColumnTime(index, r.tmRead)
-			useRowType = t == time.Time{}
-		case scan == _BOOL && row == _INT:
+			useValType = t == time.Time{}
+		case scan == _BOOL && val == _INT:
 			i := r.Stmt.ColumnInt64(index)
-			useRowType = i != 0 && i != 1
-		case scan == _BLOB && row == _NULL:
-			useRowType = false
+			useValType = i != 0 && i != 1
+		case scan == _BLOB && val == _NULL:
+			useValType = false
 		}
-		if useRowType {
-			scan = row
+		if useValType {
+			scan = val
 		}
 	}
 
