@@ -20,6 +20,7 @@ type vfsShm struct {
 	path     string
 	regions  []*util.MappedRegion
 	readOnly bool
+	fileLock bool
 	blocking bool
 	sync.Mutex
 }
@@ -39,6 +40,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _CANTOPEN
 		}
 		s.File = f
+	}
+	if s.fileLock {
+		return _OK
 	}
 
 	// Dead man's switch.
@@ -64,7 +68,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _IOERR_SHMOPEN
 		}
 	}
-	return osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	s.fileLock = rc == _OK
+	return rc
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {

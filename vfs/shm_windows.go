@@ -28,6 +28,7 @@ type vfsShm struct {
 	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []uint32
 	stack    [1]uint64
+	fileLock bool
 	blocking bool
 	sync.Mutex
 }
@@ -54,6 +55,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 		}
 		s.File = f
 	}
+	if s.fileLock {
+		return _OK
+	}
 
 	// Dead man's switch.
 	if rc := osWriteLock(s.File, _SHM_DMS, 1, 0); rc == _OK {
@@ -63,7 +67,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _IOERR_SHMOPEN
 		}
 	}
-	return osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	s.fileLock = rc == _OK
+	return rc
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ uint32, rc _ErrorCode) {
