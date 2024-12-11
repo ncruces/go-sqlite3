@@ -67,7 +67,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _IOERR_SHMOPEN
 		}
 	}
-	rc := osReadLock(s.File, _SHM_DMS, 1, 0)
+	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
 	s.fileLock = rc == _OK
 	return rc
 }

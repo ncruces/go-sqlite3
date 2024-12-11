@@ -176,7 +176,8 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 		case
 			windows.ERROR_LOCK_VIOLATION,
 			windows.ERROR_IO_PENDING,
-			windows.ERROR_OPERATION_ABORTED:
+			windows.ERROR_OPERATION_ABORTED,
+			windows.WAIT_TIMEOUT:
 			return _BUSY
 		}
 	}
