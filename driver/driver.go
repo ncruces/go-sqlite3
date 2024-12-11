@@ -81,6 +81,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 	"unsafe"
@@ -579,7 +580,21 @@ type rows struct {
 	names []string
 	types []string
 	nulls []bool
+	scans []scantype
 }
+
+type scantype byte
+
+const (
+	_ANY  scantype = iota
+	_INT  scantype = scantype(sqlite3.INTEGER)
+	_REAL scantype = scantype(sqlite3.FLOAT)
+	_TEXT scantype = scantype(sqlite3.TEXT)
+	_BLOB scantype = scantype(sqlite3.BLOB)
+	_NULL scantype = scantype(sqlite3.NULL)
+	_BOOL scantype = iota
+	_TIME
+)
 
 var (
 	// Ensure these interfaces are implemented:
@@ -604,11 +619,12 @@ func (r *rows) Columns() []string {
 	return r.names
 }
 
-func (r *rows) loadTypes() {
+func (r *rows) loadColumnMetadata() {
 	if r.nulls == nil {
 		count := r.Stmt.ColumnCount()
 		nulls := make([]bool, count)
 		types := make([]string, count)
+		scans := make([]scantype, count)
 		for i := range nulls {
 			if col := r.Stmt.ColumnOriginName(i); col != "" {
 				types[i], _, nulls[i], _, _, _ = r.Stmt.Conn().TableColumnMetadata(
@@ -616,10 +632,29 @@ func (r *rows) loadTypes() {
 					r.Stmt.ColumnTableName(i),
 					col)
 				types[i] = strings.ToUpper(types[i])
+				// These types are only used before we have rows,
+				// and otherwise as type hints.
+				// The first few ensure STRICT tables are strictly typed.
+				// The other two are type hints for booleans and time.
+				switch types[i] {
+				case "INT", "INTEGER":
+					scans[i] = _INT
+				case "REAL":
+					scans[i] = _REAL
+				case "TEXT":
+					scans[i] = _TEXT
+				case "BLOB":
+					scans[i] = _BLOB
+				case "BOOLEAN":
+					scans[i] = _BOOL
+				case "DATE", "TIME", "DATETIME", "TIMESTAMP":
+					scans[i] = _TIME
+				}
 			}
 		}
 		r.nulls = nulls
 		r.types = types
+		r.scans = scans
 	}
 }
 
@@ -636,7 +671,7 @@ func (r *rows) declType(index int) string {
 }
 
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
-	r.loadTypes()
+	r.loadColumnMetadata()
 	decltype := r.types[index]
 	if len := len(decltype); len > 0 && decltype[len-1] == ')' {
 		if i := strings.LastIndexByte(decltype, '('); i >= 0 {
@@ -647,11 +682,55 @@ func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
 }
 
 func (r *rows) ColumnTypeNullable(index int) (nullable, ok bool) {
-	r.loadTypes()
+	r.loadColumnMetadata()
 	if r.nulls[index] {
 		return false, true
 	}
 	return true, false
+}
+
+func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
+	r.loadColumnMetadata()
+	scan := r.scans[index]
+
+	if r.Stmt.Busy() {
+		// SQLite is dynamically typed and we now have a row.
+		// Always use the type of the value itself,
+		// unless the scan type is more specific
+		// and can scan the actual value.
+		val := scantype(r.Stmt.ColumnType(index))
+		useValType := true
+		switch {
+		case scan == _TIME && val != _BLOB && val != _NULL:
+			t := r.Stmt.ColumnTime(index, r.tmRead)
+			useValType = t == time.Time{}
+		case scan == _BOOL && val == _INT:
+			i := r.Stmt.ColumnInt64(index)
+			useValType = i != 0 && i != 1
+		case scan == _BLOB && val == _NULL:
+			useValType = false
+		}
+		if useValType {
+			scan = val
+		}
+	}
+
+	switch scan {
+	case _INT:
+		return reflect.TypeOf(int64(0))
+	case _REAL:
+		return reflect.TypeOf(float64(0))
+	case _TEXT:
+		return reflect.TypeOf("")
+	case _BLOB:
+		return reflect.TypeOf([]byte{})
+	case _BOOL:
+		return reflect.TypeOf(false)
+	case _TIME:
+		return reflect.TypeOf(time.Time{})
+	default:
+		return reflect.TypeOf((*any)(nil)).Elem()
+	}
 }
 
 func (r *rows) Next(dest []driver.Value) error {
