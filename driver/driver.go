@@ -632,6 +632,10 @@ func (r *rows) loadColumnMetadata() {
 					r.Stmt.ColumnTableName(i),
 					col)
 				types[i] = strings.ToUpper(types[i])
+				// These types are only used before we have rows,
+				// and otherwise as type hints.
+				// The first few ensure STRICT tables are strictly typed.
+				// The other two are type hints for booleans and time.
 				switch types[i] {
 				case "INT", "INTEGER":
 					scans[i] = _INT
@@ -690,19 +694,23 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 	scan := r.scans[index]
 
 	if r.Stmt.Busy() {
+		// SQLite is dynamically typed and we now have a row.
+		// Always use the type of the value itself,
+		// unless the scan type is more specific
+		// and can scan the actual value.
 		row := scantype(r.Stmt.ColumnType(index))
+		useRowType := true
 		switch {
 		case scan == _TIME && row != _BLOB && row != _NULL:
-			if t := r.Stmt.ColumnTime(index, r.tmRead); t.IsZero() && r.Stmt.Err() != nil {
-				scan = row
-			}
+			t := r.Stmt.ColumnTime(index, r.tmRead)
+			useRowType = t == time.Time{}
 		case scan == _BOOL && row == _INT:
-			if i := r.Stmt.ColumnInt64(index); i != 0 && i != 1 {
-				scan = row
-			}
+			i := r.Stmt.ColumnInt64(index)
+			useRowType = i != 0 && i != 1
 		case scan == _BLOB && row == _NULL:
-			scan = _BLOB
-		default:
+			useRowType = false
+		}
+		if useRowType {
 			scan = row
 		}
 	}
