@@ -437,7 +437,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	for j, c := range cols {
 		got := c.ScanType()
 		if got != want[0][j] {
-			t.Errorf("want %v, got %v", want[0][j], got)
+			t.Errorf("want %v, got %v, at column %d", want[0][j], got, j)
 		}
 	}
 
@@ -451,9 +451,9 @@ func Test_ColumnType_ScanType(t *testing.T) {
 		for j, c := range cols {
 			got := c.ScanType()
 			if got != want[i][j] {
-				t.Errorf("%d,%d want %v, got %v", i, j, want[i][j], got)
+				t.Errorf("want %v, got %v, at row %d column %d", want[i][j], got, i, j)
 			}
-			dest[j] = reflect.New(c.ScanType()).Interface()
+			dest[j] = reflect.New(got).Interface()
 		}
 
 		err = rows.Scan(dest...)
