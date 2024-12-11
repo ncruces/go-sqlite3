@@ -1,5 +1,5 @@
-github.com/ncruces/go-sqlite3 v0.20.4-0.20241205130447-8252198dd21c h1:VDpb7CDIfkEUtPsHgYQwygxST9VocLk8y0fDMQYGPzI=
-github.com/ncruces/go-sqlite3 v0.20.4-0.20241205130447-8252198dd21c/go.mod h1:2+txOGfyB5f8fUNOjmos2TuHYA8Xf/oAzI++lHwbHno=
+github.com/ncruces/go-sqlite3 v0.21.0 h1:EwKFoy1hHEopN4sFZarmi+McXdbCcbTuLixhEayXVbQ=
+github.com/ncruces/go-sqlite3 v0.21.0/go.mod h1:zxMOaSG5kFYVFK4xQa0pdwIszqxqJ0W0BxBgwdrNjuA=
 github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt7M=
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
 github.com/tetratelabs/wazero v1.8.2 h1:yIgLR/b2bN31bjxwXHD8a3d+BogigR952csSDdLYEv4=
