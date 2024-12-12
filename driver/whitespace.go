@@ -3,11 +3,11 @@ package driver
 func notWhitespace(sql string) bool {
 	const (
 		code = iota
-		minus
 		slash
+		minus
 		ccomment
-		endcomment
 		sqlcomment
+		endcomment
 	)
 
 	state := code
@@ -19,28 +19,32 @@ func notWhitespace(sql string) bool {
 		switch state {
 		case code:
 			switch b {
-			case '-':
-				state = minus
 			case '/':
 				state = slash
+			case '-':
+				state = minus
 			case ' ', ';', '\t', '\n', '\v', '\f', '\r':
 				continue
 			default:
 				return true
 			}
-		case minus:
-			if b != '-' {
-				return true
-			}
-			state = sqlcomment
 		case slash:
 			if b != '*' {
 				return true
 			}
 			state = ccomment
+		case minus:
+			if b != '-' {
+				return true
+			}
+			state = sqlcomment
 		case ccomment:
 			if b == '*' {
 				state = endcomment
+			}
+		case sqlcomment:
+			if b == '\n' {
+				state = code
 			}
 		case endcomment:
 			switch b {
@@ -51,17 +55,7 @@ func notWhitespace(sql string) bool {
 			default:
 				state = ccomment
 			}
-		case sqlcomment:
-			if b == '\n' {
-				state = code
-			}
 		}
 	}
-
-	switch state {
-	case code, ccomment, endcomment, sqlcomment:
-		return false
-	default:
-		return true
-	}
+	return state == slash || state == minus
 }

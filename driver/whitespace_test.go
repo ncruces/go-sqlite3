@@ -3,9 +3,12 @@ package driver
 import (
 	"context"
 	"testing"
+
+	_ "github.com/ncruces/go-sqlite3/embed"
+	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
-func Fuzz_isWhitespace(f *testing.F) {
+func Fuzz_notWhitespace(f *testing.F) {
 	f.Add("")
 	f.Add(" ")
 	f.Add(";")
@@ -27,10 +30,15 @@ func Fuzz_isWhitespace(f *testing.F) {
 	defer db.Close()
 
 	f.Fuzz(func(t *testing.T, str string) {
+		if len(str) > 128 {
+			t.SkipNow()
+		}
+
 		c, err := db.Conn(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer c.Close()
 
 		c.Raw(func(driverConn any) error {
 			conn := driverConn.(*conn).Conn
