@@ -225,8 +225,8 @@ func Test_Prepare(t *testing.T) {
 	}
 
 	_, err = db.Prepare(`SELECT 1; `)
-	if err.Error() != string(util.TailErr) {
-		t.Error("want tailErr")
+	if err != nil {
+		t.Error(err)
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT`)

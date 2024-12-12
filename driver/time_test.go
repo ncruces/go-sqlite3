@@ -27,12 +27,12 @@ func Fuzz_stringOrTime_1(f *testing.F) {
 			// Make sure times round-trip to the same string:
 			// https://pkg.go.dev/database/sql#Rows.Scan
 			if v.Format(time.RFC3339Nano) != str {
-				t.Fatalf("did not round-trip: %q", str)
+				t.Errorf("did not round-trip: %q", str)
 			}
 		} else {
 			date, err := time.Parse(time.RFC3339Nano, str)
 			if err == nil && date.Format(time.RFC3339Nano) == str {
-				t.Fatalf("would round-trip: %q", str)
+				t.Errorf("would round-trip: %q", str)
 			}
 		}
 	})

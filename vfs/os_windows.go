@@ -45,6 +45,7 @@ func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
 	osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
 
 	// Acquire the EXCLUSIVE lock.
+	// Can't wait here, because the file is not OVERLAPPED.
 	rc := osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, 0)
 
 	if rc != _OK {
