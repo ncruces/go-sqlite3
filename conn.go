@@ -36,7 +36,8 @@ type Conn struct {
 	rollback   func()
 	arena      arena
 
-	kickoff time.Time
+	busy1st time.Time
+	busylst time.Time
 	handle  uint32
 }
 
@@ -394,12 +395,15 @@ func timeoutCallback(ctx context.Context, mod api.Module, count, tmout int32) (r
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.interrupt.Err() == nil {
 		switch {
 		case count == 0:
-			c.kickoff = time.Now()
-		case time.Since(c.kickoff) >= time.Duration(tmout)*time.Millisecond:
+			c.busy1st = time.Now()
+		case time.Since(c.busy1st) >= time.Duration(tmout)*time.Millisecond:
 			return 0
 		}
-		const sleepIncrement = 4*1024*1024 - 1 // power of two, ~4ms
-		time.Sleep(time.Duration(rand.Int63() & sleepIncrement))
+		if time.Since(c.busylst) < time.Millisecond {
+			const sleepIncrement = 2*1024*1024 - 1 // power of two, ~2ms
+			time.Sleep(time.Duration(rand.Int63() & sleepIncrement))
+		}
+		c.busylst = time.Now()
 		return 1
 	}
 	return 0
