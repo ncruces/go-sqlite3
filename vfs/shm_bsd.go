@@ -73,6 +73,11 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 		return _OK
 	}
 
+	var f *os.File
+	// Close file on error.
+	// Keep this here to avoid confusing checklocks.
+	defer func() { f.Close() }()
+
 	vfsShmListMtx.Lock()
 	defer vfsShmListMtx.Unlock()
 
@@ -93,13 +98,11 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	}
 
 	// Always open file read-write, as it will be shared.
-	f, err := os.OpenFile(s.path,
+	f, err = os.OpenFile(s.path,
 		os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
 	if err != nil {
 		return _CANTOPEN
 	}
-	// Closes file if it's not nil.
-	defer func() { f.Close() }()
 
 	// Dead man's switch.
 	if lock, rc := osTestLock(f, _SHM_DMS, 1); rc != _OK {
