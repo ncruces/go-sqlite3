@@ -4,7 +4,9 @@ package vfs
 
 import (
 	"context"
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"sync"
 
@@ -71,6 +73,25 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 		return _OK
 	}
 
+	vfsShmListMtx.Lock()
+	defer vfsShmListMtx.Unlock()
+
+	// Stat file without opening it.
+	// Closing it would release all POSIX locks on it.
+	fi, err := os.Stat(s.path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return _IOERR_FSTAT
+	}
+
+	// Find a shared file, increase the reference count.
+	for _, g := range vfsShmList {
+		if g != nil && os.SameFile(fi, g.info) {
+			s.vfsShmParent = g
+			g.refs++
+			return _OK
+		}
+	}
+
 	// Always open file read-write, as it will be shared.
 	f, err := os.OpenFile(s.path,
 		os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
@@ -80,21 +101,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	// Closes file if it's not nil.
 	defer func() { f.Close() }()
 
-	fi, err := f.Stat()
+	fi, err = f.Stat()
 	if err != nil {
 		return _IOERR_FSTAT
-	}
-
-	vfsShmListMtx.Lock()
-	defer vfsShmListMtx.Unlock()
-
-	// Find a shared file, increase the reference count.
-	for _, g := range vfsShmList {
-		if g != nil && os.SameFile(fi, g.info) {
-			s.vfsShmParent = g
-			g.refs++
-			return _OK
-		}
 	}
 
 	// Lock and truncate the file.
