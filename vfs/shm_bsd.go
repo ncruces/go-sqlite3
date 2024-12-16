@@ -101,18 +101,26 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	// Closes file if it's not nil.
 	defer func() { f.Close() }()
 
+	// Dead man's switch.
+	if lock, rc := osTestLock(f, _SHM_DMS, 1); rc != _OK {
+		return _IOERR_LOCK
+	} else if lock == unix.F_WRLCK {
+		return _BUSY
+	} else if lock == unix.F_UNLCK {
+		if rc := osWriteLock(f, _SHM_DMS, 1); rc != _OK {
+			return rc
+		}
+		if err := f.Truncate(0); err != nil {
+			return _IOERR_SHMOPEN
+		}
+	}
+	if rc := osReadLock(f, _SHM_DMS, 1); rc != _OK {
+		return rc
+	}
+
 	fi, err = f.Stat()
 	if err != nil {
 		return _IOERR_FSTAT
-	}
-
-	// Lock and truncate the file.
-	// The lock is only released by closing the file.
-	if rc := osLock(f, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK); rc != _OK {
-		return rc
-	}
-	if err := f.Truncate(0); err != nil {
-		return _IOERR_SHMOPEN
 	}
 
 	// Add the new shared file.
@@ -166,7 +174,30 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 	s.Lock()
 	defer s.Unlock()
-	return s.shmMemLock(offset, n, flags)
+
+	// Check if we could obtain/release the lock locally.
+	rc := s.shmMemLock(offset, n, flags)
+	if rc != _OK {
+		return rc
+	}
+
+	// Obtain/release the appropriate file lock.
+	switch {
+	case flags&_SHM_UNLOCK != 0:
+		return osUnlock(s.File, _SHM_BASE+int64(offset), int64(n))
+	case flags&_SHM_SHARED != 0:
+		rc = osReadLock(s.File, _SHM_BASE+int64(offset), int64(n))
+	case flags&_SHM_EXCLUSIVE != 0:
+		rc = osWriteLock(s.File, _SHM_BASE+int64(offset), int64(n))
+	default:
+		panic(util.AssertErr())
+	}
+
+	// Release the local lock.
+	if rc != _OK {
+		s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
+	}
+	return rc
 }
 
 func (s *vfsShm) shmUnmap(delete bool) {
