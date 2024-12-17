@@ -32,6 +32,11 @@ func Test_bcw2(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = tx.Exec(`DELETE FROM test LIMIT 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		t.Fatal(err)
