@@ -76,6 +76,7 @@ func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {
 }
 
 func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	_ = arg[1] // bounds check
 	re, err := load(ctx, 0, arg[0].Text())
 	if err != nil {
 		ctx.ResultError(err)
@@ -165,6 +166,8 @@ func regexInstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func regexReplace(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	_ = arg[2] // bounds check
+
 	re, err := load(ctx, 1, arg[1].Text())
 	if err != nil {
 		ctx.ResultError(err)

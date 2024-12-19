@@ -189,6 +189,7 @@ func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			return
 		}
 	}
+	_ = arg[1] // bounds check
 
 	type likeData struct {
 		*regexp.Regexp

@@ -44,6 +44,8 @@ func Register(db *sqlite3.Conn) error {
 type OpenCallback func(*sqlite3.Blob, ...sqlite3.Value) error
 
 func readblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	_ = arg[5] // bounds check
+
 	blob, err := getAuxBlob(ctx, arg, false)
 	if err != nil {
 		ctx.ResultError(err)
@@ -78,6 +80,8 @@ func readblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func writeblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	_ = arg[5] // bounds check
+
 	blob, err := getAuxBlob(ctx, arg, true)
 	if err != nil {
 		ctx.ResultError(err)
