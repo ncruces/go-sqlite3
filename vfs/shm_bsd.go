@@ -208,7 +208,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 		panic(util.AssertErr())
 	}
 
-	// Reacquire the local lock.
+	// Release the local lock we had acquired.
 	if rc != _OK {
 		s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
 	}
