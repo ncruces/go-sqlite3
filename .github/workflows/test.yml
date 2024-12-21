@@ -66,6 +66,10 @@ jobs:
       shell: bash
       run: gormlite/test.sh
 
+    - name: Test modules
+      shell: bash
+      run: go test -v ./embed/bcw2/...
+
     - name: Collect coverage
       run: go run github.com/dave/courtney@latest
       if: |

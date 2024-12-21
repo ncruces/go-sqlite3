@@ -140,7 +140,7 @@ func Test_xts(t *testing.T) {
 	testIntegrity(t, name)
 }
 
-func TestMultiProcess(t *testing.T) {
+func Test_MultiProcess_rollback(t *testing.T) {
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
 	}
@@ -149,7 +149,7 @@ func TestMultiProcess(t *testing.T) {
 	}
 
 	file := filepath.Join(t.TempDir(), "test.db")
-	t.Setenv("TestMultiProcess_dbfile", file)
+	t.Setenv("Test_MultiProcess_dbfile", file)
 
 	name := "file:" + filepath.ToSlash(file) +
 		"?_pragma=busy_timeout(10000)" +
@@ -161,7 +161,7 @@ func TestMultiProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=TestChildProcess")...)
+	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=Test_ChildProcess_rollback")...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -185,8 +185,8 @@ func TestMultiProcess(t *testing.T) {
 	testIntegrity(t, name)
 }
 
-func TestChildProcess(t *testing.T) {
-	file := os.Getenv("TestMultiProcess_dbfile")
+func Test_ChildProcess_rollback(t *testing.T) {
+	file := os.Getenv("Test_MultiProcess_dbfile")
 	if file == "" || testing.Short() {
 		t.SkipNow()
 	}
@@ -194,6 +194,65 @@ func TestChildProcess(t *testing.T) {
 	name := "file:" + filepath.ToSlash(file) +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
+		"&_pragma=synchronous(off)"
+
+	testParallel(t, name, 1000)
+}
+
+func Test_MultiProcess_wal(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	file := filepath.Join(t.TempDir(), "test.db")
+	t.Setenv("Test_MultiProcess_dbfile", file)
+
+	name := "file:" + filepath.ToSlash(file) +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(wal)" +
+		"&_pragma=synchronous(off)"
+
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=Test_ChildProcess_wal")...)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	var buf [3]byte
+	// Wait for child to start.
+	if _, err := io.ReadFull(out, buf[:]); err != nil {
+		t.Fatal(err)
+	} else if str := string(buf[:]); str != "===" {
+		t.Fatal(str)
+	}
+
+	testParallel(t, name, 1000)
+	if err := cmd.Wait(); err != nil {
+		t.Error(err)
+	}
+	testIntegrity(t, name)
+}
+
+func Test_ChildProcess_wal(t *testing.T) {
+	file := os.Getenv("Test_MultiProcess_dbfile")
+	if file == "" || testing.Short() {
+		t.SkipNow()
+	}
+
+	name := "file:" + filepath.ToSlash(file) +
+		"?_pragma=busy_timeout(10000)" +
+		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
 
 	testParallel(t, name, 1000)
