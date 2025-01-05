@@ -38,7 +38,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 	return errors.Join(
 		sqlite3.CreateModule(db, "lines", nil,
 			func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN, delim HIDDEN)`)
 				if err == nil {
 					err = db.VTabConfig(sqlite3.VTAB_INNOCUOUS)
 				}
@@ -46,7 +46,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			}),
 		sqlite3.CreateModule(db, "lines_read", nil,
 			func(db *sqlite3.Conn, _, _, _ string, _ ...string) (lines, error) {
-				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN)`)
+				err := db.DeclareVTab(`CREATE TABLE x(line TEXT, data HIDDEN, delim HIDDEN)`)
 				if err == nil {
 					err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
 				}
@@ -58,19 +58,29 @@ type lines struct {
 	fsys fs.FS
 }
 
-func (l lines) BestIndex(idx *sqlite3.IndexInfo) error {
+func (l lines) BestIndex(idx *sqlite3.IndexInfo) (err error) {
+	err = sqlite3.CONSTRAINT
 	for i, cst := range idx.Constraint {
-		if cst.Column == 1 && cst.Op == sqlite3.INDEX_CONSTRAINT_EQ && cst.Usable {
+		if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
+			continue
+		}
+		switch cst.Column {
+		case 1:
 			idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
 				Omit:      true,
 				ArgvIndex: 1,
 			}
 			idx.EstimatedCost = 1e6
 			idx.EstimatedRows = 100
-			return nil
+			err = nil
+		case 2:
+			idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
+				Omit:      true,
+				ArgvIndex: 2,
+			}
 		}
 	}
-	return sqlite3.CONSTRAINT
+	return err
 }
 
 func (l lines) Open() (sqlite3.VTabCursor, error) {
@@ -85,6 +95,7 @@ type cursor struct {
 	line  []byte
 	rowID int64
 	eof   bool
+	delim byte
 }
 
 func (c *cursor) EOF() bool {
@@ -140,6 +151,15 @@ func (c *reader) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
 	}
 
+	c.delim = '\n'
+	if len(arg) > 1 {
+		b := arg[1].RawText()
+		if len(b) != 1 {
+			return fmt.Errorf("lines: delimiter must be a single byte%.0w", sqlite3.MISMATCH)
+		}
+		c.delim = b[0]
+	}
+
 	c.reader = bufio.NewReader(r)
 	c.closer, _ = r.(io.Closer)
 	c.rowID = 0
@@ -150,7 +170,12 @@ func (c *reader) Next() (err error) {
 	c.line = c.line[:0]
 	for more := true; more; {
 		var line []byte
-		line, more, err = c.reader.ReadLine()
+		if c.delim == '\n' {
+			line, more, err = c.reader.ReadLine()
+		} else {
+			line, err = c.reader.ReadSlice(c.delim)
+			more = err == bufio.ErrBufferFull
+		}
 		c.line = append(c.line, line...)
 	}
 	if err == io.EOF {
@@ -177,18 +202,27 @@ func (c *buffer) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
 	}
 
+	c.delim = '\n'
+	if len(arg) > 1 {
+		b := arg[1].RawText()
+		if len(b) != 1 {
+			return fmt.Errorf("lines: delimiter must be a single byte%.0w", sqlite3.MISMATCH)
+		}
+		c.delim = b[0]
+	}
+
 	c.rowID = 0
 	return c.Next()
 }
 
 func (c *buffer) Next() error {
-	i := bytes.IndexByte(c.data, '\n')
+	i := bytes.IndexByte(c.data, c.delim)
 	j := i + 1
 	switch {
 	case i < 0:
 		i = len(c.data)
 		j = i
-	case i > 0 && c.data[i-1] == '\r':
+	case i > 0 && c.delim == '\n' && c.data[i-1] == '\r':
 		i--
 	}
 	c.eof = len(c.data) == 0

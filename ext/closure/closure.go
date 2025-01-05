@@ -84,10 +84,11 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 	cost := 1e7
 
 	for i, cst := range idx.Constraint {
-		if !cst.Usable {
+		switch {
+		case !cst.Usable:
 			continue
-		}
-		if plan&1 == 0 && cst.Column == _COL_ROOT {
+
+		case plan&1 == 0 && cst.Column == _COL_ROOT:
 			switch cst.Op {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= 1
@@ -97,9 +98,8 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 					Omit:      true,
 				}
 			}
-			continue
-		}
-		if plan&0xf0 == 0 && cst.Column == _COL_DEPTH {
+
+		case plan&0xf0 == 0 && cst.Column == _COL_DEPTH:
 			switch cst.Op {
 			case sqlite3.INDEX_CONSTRAINT_LT, sqlite3.INDEX_CONSTRAINT_LE, sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 4
@@ -110,9 +110,8 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 					plan |= 2
 				}
 			}
-			continue
-		}
-		if plan&0xf00 == 0 && cst.Column == _COL_TABLENAME {
+
+		case plan&0xf00 == 0 && cst.Column == _COL_TABLENAME:
 			switch cst.Op {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 8
@@ -123,9 +122,8 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 					Omit:      true,
 				}
 			}
-			continue
-		}
-		if plan&0xf000 == 0 && cst.Column == _COL_IDCOLUMN {
+
+		case plan&0xf000 == 0 && cst.Column == _COL_IDCOLUMN:
 			switch cst.Op {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 12
@@ -135,9 +133,8 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 					Omit:      true,
 				}
 			}
-			continue
-		}
-		if plan&0xf0000 == 0 && cst.Column == _COL_PARENTCOLUMN {
+
+		case plan&0xf0000 == 0 && cst.Column == _COL_PARENTCOLUMN:
 			switch cst.Op {
 			case sqlite3.INDEX_CONSTRAINT_EQ:
 				plan |= posi << 16
@@ -147,7 +144,6 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 					Omit:      true,
 				}
 			}
-			continue
 		}
 	}
 

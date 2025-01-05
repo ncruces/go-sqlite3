@@ -163,7 +163,7 @@ func Test_lines_test(t *testing.T) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`SELECT rowid, line FROM lines_read(?)`, "lines_test.go")
+	rows, err := db.Query(`SELECT rowid, line FROM lines_read(?, '}')`, "lines_test.go")
 	if errors.Is(err, os.ErrNotExist) {
 		t.Skip(err)
 	}
