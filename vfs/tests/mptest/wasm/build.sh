@@ -31,4 +31,3 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	--enable-bulk-memory --enable-reference-types \
 	--enable-nontrapping-float-to-int --enable-sign-ext
 mv mptest.tmp mptest.wasm
-bzip2 -9f mptest.wasm

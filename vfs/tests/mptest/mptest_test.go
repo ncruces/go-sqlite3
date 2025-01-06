@@ -2,7 +2,6 @@ package mptest
 
 import (
 	"bytes"
-	"compress/bzip2"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -29,10 +28,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
-//go:embed testdata/mptest.wasm.bz2
-var compressed string
-
-//go:embed testdata/*.*test
+//go:embed testdata/*
 var scripts embed.FS
 
 const qemuCI = runtime.GOARCH != "386" && runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64"
@@ -57,10 +53,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	if !strings.HasPrefix(compressed, "BZh") {
-		panic("Please use Git LFS to clone this repo: https://git-lfs.com/")
-	}
-	binary, err := io.ReadAll(bzip2.NewReader(strings.NewReader(compressed)))
+	binary, err := os.ReadFile("wasm/mptest.wasm")
 	if err != nil {
 		panic(err)
 	}

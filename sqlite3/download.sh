@@ -32,7 +32,6 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/ext/misc/uint.c"
 cd ~-
 
 cd ../vfs/tests/mptest/testdata/
-curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/mptest.c"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/config01.test"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/config02.test"
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/crash01.test"
@@ -40,6 +39,10 @@ curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/crash02.su
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/multiwrite01.test"
 cd ~-
 
-cd ../vfs/tests/speedtest1/testdata/
+cd ../vfs/tests/mptest/wasm/
+curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/mptest/mptest.c"
+cd ~-
+
+cd ../vfs/tests/speedtest1/wasm/
 curl -#OL "https://github.com/sqlite/sqlite/raw/version-3.47.2/test/speedtest1.c"
 cd ~-

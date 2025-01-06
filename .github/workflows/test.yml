@@ -29,9 +29,6 @@ jobs:
     - uses: actions/setup-go@v5
       with: { go-version: stable }
 
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
-
     - name: Format
       run: gofmt -s -w . && git diff --exit-code
       if: matrix.os != 'windows-latest'
@@ -104,9 +101,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
-
     - name: Build
       env:
         GOOS: ${{ matrix.os.name }}
@@ -142,9 +136,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
-
     - name: Build
       env:
         GOOS: ${{ matrix.os.name }}
@@ -170,9 +161,6 @@ jobs:
     - uses: actions/setup-go@v5
       with: { go-version: stable }
 
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
-
     - name: Test 386 (32-bit)
       run: GOARCH=386 go test -v -short ./...
 
@@ -196,9 +184,6 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with: { go-version: stable }
-
-    - name: Git LFS pull
-      uses: ./.github/actions/lfs
 
     - name: Test
       run: go test -v ./...
