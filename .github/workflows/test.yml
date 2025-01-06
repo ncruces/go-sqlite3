@@ -92,13 +92,17 @@ jobs:
           - name: netbsd
             version: '10.0'
             flags: '-test.v'
+          - name: freebsd
+            arch: arm64
+            version: '14.2'
+            flags: '-test.v -test.short'
+          - name: netbsd
+            arch: arm64
+            version: '10.0'
+            flags: '-test.v -test.short'
           - name: openbsd
             version: '7.6'
             flags: '-test.v -test.short'
-        arch:
-          - name: 'x86-64'
-          - name: 'arm64'
-            go: 'arm64'
     runs-on: ubuntu-latest
     needs: test
 
@@ -108,7 +112,7 @@ jobs:
     - name: Build
       env:
         GOOS: ${{ matrix.os.name }}
-        GOARCH: ${{ matrix.arch.go }}
+        GOARCH: ${{ matrix.os.arch }}
         TESTFLAGS: ${{ matrix.os.flags }}
       run: .github/workflows/build-test.sh
 
@@ -116,7 +120,7 @@ jobs:
       uses: cross-platform-actions/action@v0.26.0
       with:
         operating_system: ${{ matrix.os.name }}
-        architecture: ${{ matrix.arch.name }}
+        architecture: ${{ matrix.os.arch }}
         version: ${{ matrix.os.version }}
         shell: bash
         run: . ./test.sh
