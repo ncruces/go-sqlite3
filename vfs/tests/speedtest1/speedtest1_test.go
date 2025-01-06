@@ -2,7 +2,6 @@ package speedtest1
 
 import (
 	"bytes"
-	"compress/bzip2"
 	"context"
 	"crypto/rand"
 	_ "embed"
@@ -27,9 +26,6 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
-//go:embed testdata/speedtest1.wasm.bz2
-var compressed string
-
 var (
 	rt      wazero.Runtime
 	module  wazero.CompiledModule
@@ -52,10 +48,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	if !strings.HasPrefix(compressed, "BZh") {
-		panic("Please use Git LFS to clone this repo: https://git-lfs.com/")
-	}
-	binary, err := io.ReadAll(bzip2.NewReader(strings.NewReader(compressed)))
+	binary, err := os.ReadFile("wasm/speedtest1.wasm")
 	if err != nil {
 		panic(err)
 	}
