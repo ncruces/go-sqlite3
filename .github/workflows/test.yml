@@ -7,14 +7,12 @@ on:
       - '**.go'
       - '**.mod'
       - '**.wasm'
-      - '**.wasm.bz2'
   pull_request:
     branches: [ "main" ]
     paths:
       - '**.go'
       - '**.mod'
       - '**.wasm'
-      - '**.wasm.bz2'
   workflow_dispatch:
 
 jobs:
@@ -160,6 +158,19 @@ jobs:
         usesh: true
         copyback: false
         run: . ./test.sh
+
+  test-wasm:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: bytecodealliance/actions/wasmtime/setup@v1
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Test wasmtime
+      run: GOARCH=wasm GOOS=wasip1 go test -v -short -tags sqlite3_dotlk ./...
 
   test-qemu:
     runs-on: ubuntu-latest
