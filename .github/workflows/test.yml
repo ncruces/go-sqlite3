@@ -2,19 +2,17 @@ name: Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ 'main' ]
     paths:
       - '**.go'
       - '**.mod'
       - '**.wasm'
-      - '**.wasm.bz2'
   pull_request:
-    branches: [ "main" ]
+    branches: [ 'main' ]
     paths:
       - '**.go'
       - '**.mod'
       - '**.wasm'
-      - '**.wasm.bz2'
   workflow_dispatch:
 
 jobs:
@@ -160,6 +158,27 @@ jobs:
         usesh: true
         copyback: false
         run: . ./test.sh
+
+  test-wasip1:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: bytecodealliance/actions/wasmtime/setup@v1
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Set path
+      run: echo "$(go env GOROOT)/misc/wasm" >> "$GITHUB_PATH"
+
+    - name: Test wasmtime
+      env:
+        GOOS: wasip1
+        GOARCH: wasm
+        GOWASIRUNTIME: wasmtime
+        GOWASIRUNTIMEARGS: '--env CI=true'
+      run: go test -v -short -tags sqlite3_dotlk -skip Example ./...
 
   test-qemu:
     runs-on: ubuntu-latest

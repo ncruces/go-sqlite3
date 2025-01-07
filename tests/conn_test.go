@@ -130,8 +130,6 @@ func TestConn_SetInterrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db.SetInterrupt(context.Background())
-
 	stmt, _, err := db.Prepare(`
 		WITH RECURSIVE
 		  fibonacci (curr, next)
@@ -148,7 +146,6 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	db.SetInterrupt(ctx)
 	go func() {
 		time.Sleep(time.Millisecond)
 		cancel()

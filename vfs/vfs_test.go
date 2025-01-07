@@ -194,6 +194,11 @@ func Test_vfsAccess(t *testing.T) {
 		t.Error("can't access file")
 	}
 
+	if fi, err := os.Stat(file); err != nil {
+		t.Fatal(err)
+	} else if fi.Mode().Perm()&0700 != syscall.S_IRUSR {
+		t.Skip("skipping due to permissions")
+	}
 	if usr, err := user.Current(); err == nil && usr.Uid == "0" {
 		t.Skip("skipping as root")
 	}

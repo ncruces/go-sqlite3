@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"syscall"
 
 	"github.com/ncruces/go-sqlite3/util/osutil"
@@ -41,7 +40,7 @@ func (vfsOS) Delete(path string, syncDir bool) error {
 	if err != nil {
 		return err
 	}
-	if runtime.GOOS != "windows" && syncDir {
+	if canSyncDirs && syncDir {
 		f, err := os.Open(filepath.Dir(path))
 		if err != nil {
 			return _OK
@@ -120,9 +119,9 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 		File:     f,
 		psow:     true,
 		readOnly: flags&OPEN_READONLY != 0,
-		syncDir: runtime.GOOS != "windows" &&
-			flags&(OPEN_CREATE) != 0 &&
-			flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0,
+		syncDir: canSyncDirs &&
+			flags&(OPEN_MAIN_JOURNAL|OPEN_SUPER_JOURNAL|OPEN_WAL) != 0 &&
+			flags&(OPEN_CREATE) != 0,
 		shm: NewSharedMemory(name.String()+"-shm", flags),
 	}
 	return &file, flags, nil
@@ -163,7 +162,7 @@ func (f *vfsFile) Sync(flags SyncFlag) error {
 	if err != nil {
 		return err
 	}
-	if runtime.GOOS != "windows" && f.syncDir {
+	if canSyncDirs && f.syncDir {
 		f.syncDir = false
 		d, err := os.Open(filepath.Dir(f.File.Name()))
 		if err != nil {
