@@ -8,6 +8,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
+// Translate it will translate the error to native gorm errors.
 func (_Dialector) Translate(err error) error {
 	switch {
 	case

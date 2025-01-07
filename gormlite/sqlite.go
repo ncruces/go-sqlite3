@@ -14,6 +14,11 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 )
 
+type _Dialector struct {
+	DSN  string
+	Conn gorm.ConnPool
+}
+
 // Open opens a GORM dialector from a data source name.
 func Open(dsn string) gorm.Dialector {
 	return &_Dialector{DSN: dsn}
@@ -22,11 +27,6 @@ func Open(dsn string) gorm.Dialector {
 // Open opens a GORM dialector from a database handle.
 func OpenDB(db gorm.ConnPool) gorm.Dialector {
 	return &_Dialector{Conn: db}
-}
-
-type _Dialector struct {
-	DSN  string
-	Conn gorm.ConnPool
 }
 
 func (dialector _Dialector) Name() string {
