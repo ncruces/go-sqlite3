@@ -18,8 +18,6 @@
 #define HAVE_STDINT_H 1
 #define HAVE_INTTYPES_H 1
 
-#define LONGDOUBLE_TYPE double
-
 #define HAVE_LOG2 1
 #define HAVE_LOG10 1
 #define HAVE_ISNAN 1
@@ -34,10 +32,6 @@
 
 #define HAVE_MALLOC_H 1
 #define HAVE_MALLOC_USABLE_SIZE 1
-
-// Because Wasm does not support shared memory,
-// SQLite disables WAL for Wasm builds.
-#undef SQLITE_OMIT_WAL
 
 // Implemented in vfs.c.
 int localtime_s(struct tm *const pTm, time_t const *const pTime);
