@@ -3,7 +3,6 @@ package serdes
 
 import (
 	"io"
-	"sync"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -18,8 +17,7 @@ func init() {
 // https://sqlite.org/c3ref/serialize.html
 func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 	var file sliceFile
-	openMtx.Lock()
-	openFile = &file
+	fileToOpen <- &file
 	err := db.Backup(schema, "file:db?vfs="+vfsName)
 	return file.data, err
 }
@@ -39,15 +37,11 @@ func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 // ["memdb"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb
 // ["reader"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs
 func Deserialize(db *sqlite3.Conn, schema string, data []byte) error {
-	openMtx.Lock()
-	openFile = &sliceFile{data}
+	fileToOpen <- &sliceFile{data}
 	return db.Restore(schema, "file:db?vfs="+vfsName)
 }
 
-var (
-	openMtx  sync.Mutex
-	openFile *sliceFile
-)
+var fileToOpen = make(chan *sliceFile, 1)
 
 const vfsName = "github.com/ncruces/go-sqlite3/ext/deserialize.sliceVFS"
 
@@ -58,16 +52,7 @@ func (sliceVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, e
 		// notest // OPEN_MEMORY
 		return nil, flags, sqlite3.CANTOPEN
 	}
-
-	file := openFile
-	openFile = nil
-	openMtx.Unlock()
-
-	if file.data != nil {
-		flags |= vfs.OPEN_READONLY
-	}
-	flags |= vfs.OPEN_MEMORY
-	return file, flags, nil
+	return <-fileToOpen, flags | vfs.OPEN_MEMORY, nil
 }
 
 func (sliceVFS) Delete(name string, dirSync bool) error {
