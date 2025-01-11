@@ -18,9 +18,10 @@ curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=ec5d7025 | tar xz
 
 cd sqlite
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c OPTS=-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT
+	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c "OPTS=-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_ENABLE_ORDERED_SET_AGGREGATES"
 else
-	sh configure --enable-update-limit && make sqlite3.c
+	sh configure --enable-update-limit
+	OPTS=-DSQLITE_ENABLE_ORDERED_SET_AGGREGATES make sqlite3.c
 fi
 cd ~-
 

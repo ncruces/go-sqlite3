@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/ext/stats"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -15,7 +16,7 @@ func Test_bcw2(t *testing.T) {
 
 	tmp := filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))
 
-	db, err := driver.Open("file:" + tmp + "?_pragma=journal_mode(wal2)&_txlock=concurrent")
+	db, err := driver.Open("file:"+tmp+"?_pragma=journal_mode(wal2)&_txlock=concurrent", stats.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,6 +34,11 @@ func Test_bcw2(t *testing.T) {
 	}
 
 	_, err = tx.Exec(`DELETE FROM test LIMIT 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = tx.Exec(`SELECT median() WITHIN GROUP (ORDER BY col) FROM test`)
 	if err != nil {
 		t.Fatal(err)
 	}
