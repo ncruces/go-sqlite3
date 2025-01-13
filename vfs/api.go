@@ -191,3 +191,8 @@ type fileControl interface {
 	File
 	fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg uint32) _ErrorCode
 }
+
+type filePDB interface {
+	File
+	SetDB(any)
+}

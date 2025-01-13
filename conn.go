@@ -68,7 +68,7 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 	return newConn(context.Background(), filename, flags)
 }
 
-type connKey struct{}
+type connKey = util.ConnKey
 
 func newConn(ctx context.Context, filename string, flags OpenFlag) (res *Conn, _ error) {
 	err := ctx.Err()

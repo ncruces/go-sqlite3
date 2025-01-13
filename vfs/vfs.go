@@ -376,6 +376,12 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 				return _OK
 			}
 		}
+
+	case _FCNTL_PDB:
+		if file, ok := file.(filePDB); ok {
+			file.SetDB(ctx.Value(util.ConnKey{}))
+			return _OK
+		}
 	}
 
 	// Consider also implementing these opcodes (in use by SQLite):
