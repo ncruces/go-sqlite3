@@ -142,7 +142,7 @@ var (
 	_ FileLockState          = &vfsFile{}
 	_ FileHasMoved           = &vfsFile{}
 	_ FileSizeHint           = &vfsFile{}
-	_ FilePersistentWAL      = &vfsFile{}
+	_ FilePersistWAL         = &vfsFile{}
 	_ FilePowersafeOverwrite = &vfsFile{}
 )
 
@@ -217,6 +217,6 @@ func (f *vfsFile) HasMoved() (bool, error) {
 
 func (f *vfsFile) LockState() LockLevel            { return f.lock }
 func (f *vfsFile) PowersafeOverwrite() bool        { return f.psow }
-func (f *vfsFile) PersistentWAL() bool             { return f.keepWAL }
+func (f *vfsFile) PersistWAL() bool                { return f.keepWAL }
 func (f *vfsFile) SetPowersafeOverwrite(psow bool) { f.psow = psow }
-func (f *vfsFile) SetPersistentWAL(keepWAL bool)   { f.keepWAL = keepWAL }
+func (f *vfsFile) SetPersistWAL(keepWAL bool)      { f.keepWAL = keepWAL }

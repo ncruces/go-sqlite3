@@ -38,18 +38,18 @@ func WrapLockState(f vfs.File) vfs.LockLevel {
 	return vfs.LOCK_EXCLUSIVE + 1 // UNKNOWN_LOCK
 }
 
-// WrapPersistentWAL helps wrap [vfs.FilePersistentWAL].
-func WrapPersistentWAL(f vfs.File) bool {
-	if f, ok := f.(vfs.FilePersistentWAL); ok {
-		return f.PersistentWAL()
+// WrapPersistWAL helps wrap [vfs.FilePersistWAL].
+func WrapPersistWAL(f vfs.File) bool {
+	if f, ok := f.(vfs.FilePersistWAL); ok {
+		return f.PersistWAL()
 	}
 	return false
 }
 
-// WrapSetPersistentWAL helps wrap [vfs.FilePersistentWAL].
+// WrapSetPersistentWAL helps wrap [vfs.FilePersistWAL].
 func WrapSetPersistentWAL(f vfs.File, keepWAL bool) {
-	if f, ok := f.(vfs.FilePersistentWAL); ok {
-		f.SetPersistentWAL(keepWAL)
+	if f, ok := f.(vfs.FilePersistWAL); ok {
+		f.SetPersistWAL(keepWAL)
 	}
 }
 

@@ -65,14 +65,14 @@ type FileLockState interface {
 	LockState() LockLevel
 }
 
-// FilePersistentWAL extends File to implement the
+// FilePersistWAL extends File to implement the
 // SQLITE_FCNTL_PERSIST_WAL file control opcode.
 //
 // https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlpersistwal
-type FilePersistentWAL interface {
+type FilePersistWAL interface {
 	File
-	PersistentWAL() bool
-	SetPersistentWAL(bool)
+	PersistWAL() bool
+	SetPersistWAL(bool)
 }
 
 // FilePowersafeOverwrite extends File to implement the

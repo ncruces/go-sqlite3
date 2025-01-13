@@ -255,10 +255,10 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 		}
 
 	case _FCNTL_PERSIST_WAL:
-		if file, ok := file.(FilePersistentWAL); ok {
+		if file, ok := file.(FilePersistWAL); ok {
 			if i := util.ReadUint32(mod, pArg); int32(i) >= 0 {
-				file.SetPersistentWAL(i != 0)
-			} else if file.PersistentWAL() {
+				file.SetPersistWAL(i != 0)
+			} else if file.PersistWAL() {
 				util.WriteUint32(mod, pArg, 1)
 			} else {
 				util.WriteUint32(mod, pArg, 0)

@@ -238,7 +238,7 @@ func (h *hbshFile) LockState() vfs.LockLevel {
 }
 
 func (h *hbshFile) PersistentWAL() bool {
-	return vfsutil.WrapPersistentWAL(h.File) // notest
+	return vfsutil.WrapPersistWAL(h.File) // notest
 }
 
 func (h *hbshFile) SetPersistentWAL(keepWAL bool) {

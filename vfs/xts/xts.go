@@ -234,7 +234,7 @@ func (x *xtsFile) LockState() vfs.LockLevel {
 }
 
 func (x *xtsFile) PersistentWAL() bool {
-	return vfsutil.WrapPersistentWAL(x.File) // notest
+	return vfsutil.WrapPersistWAL(x.File) // notest
 }
 
 func (x *xtsFile) SetPersistentWAL(keepWAL bool) {
