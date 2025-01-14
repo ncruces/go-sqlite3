@@ -309,6 +309,16 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 			return vfsErrorCode(err, _IOERR)
 		}
 
+	case _FCNTL_SYNC:
+		if file, ok := file.(FileSync); ok {
+			var name string
+			if pArg != 0 {
+				name = util.ReadString(mod, pArg, _MAX_PATHNAME)
+			}
+			err := file.SyncSuper(name)
+			return vfsErrorCode(err, _IOERR)
+		}
+
 	case _FCNTL_COMMIT_PHASETWO:
 		if file, ok := file.(FileCommitPhaseTwo); ok {
 			err := file.CommitPhaseTwo()
@@ -384,10 +394,6 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 		}
 	}
 
-	// Consider also implementing these opcodes (in use by SQLite):
-	//  _FCNTL_BUSYHANDLER
-	//  _FCNTL_LAST_ERRNO
-	//  _FCNTL_SYNC
 	return _NOTFOUND
 }
 

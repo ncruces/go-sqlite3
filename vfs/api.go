@@ -121,6 +121,15 @@ type FileOverwrite interface {
 	Overwrite() error
 }
 
+// FileSync extends File to implement the
+// SQLITE_FCNTL_SYNC file control opcode.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlsync
+type FileSync interface {
+	File
+	SyncSuper(super string) error
+}
+
 // FileCommitPhaseTwo extends File to implement the
 // SQLITE_FCNTL_COMMIT_PHASETWO file control opcode.
 //
