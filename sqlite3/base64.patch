@@ -1,0 +1,11 @@
+--- ext/base64.c.orig
++++ ext/base64.c
+@@ -198,7 +198,7 @@
+       deliberate_fall_through; /* FALLTHRU */
+     case 1:
+       pOut[0] = (qv>>16) & 0xff;
+-      deliberate_fall_through; /* FALLTHRU */
++      break; /* FALLTHRU */
+     }
+     pOut += nbo;
+   }

@@ -13,8 +13,8 @@ mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
 
-# https://sqlite.org/src/info/ec5d7025cba9f4ac
-curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=ec5d7025 | tar xz
+# https://sqlite.org/src/info/fab341c829554573
+curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=fab341c8 | tar xz
 
 cd sqlite
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
@@ -38,7 +38,7 @@ mv sqlite/ext/misc/spellfix.c   build/ext/
 mv sqlite/ext/misc/uint.c       build/ext/
 
 cd build
-cat *.patch | patch --no-backup-if-mismatch
+cat *.patch | patch -p0 --no-backup-if-mismatch
 cd ~-
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \

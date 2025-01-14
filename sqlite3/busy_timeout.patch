@@ -2,7 +2,7 @@
 # handle, and interrupt, sqlite3_busy_timeout.
 --- sqlite3.c.orig
 +++ sqlite3.c
-@@ -182928,7 +182928,7 @@
+@@ -183054,7 +183054,7 @@
    if( !sqlite3SafetyCheckOk(db) ) return SQLITE_MISUSE_BKPT;
  #endif
    if( ms>0 ){
