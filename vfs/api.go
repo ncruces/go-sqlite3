@@ -171,6 +171,15 @@ type FilePragma interface {
 	Pragma(name, value string) (string, error)
 }
 
+// FileBusyHandler extends File to implement the
+// SQLITE_FCNTL_BUSYHANDLER file control opcode.
+//
+// https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlbusyhandler
+type FileBusyHandler interface {
+	File
+	BusyHandler(func() bool)
+}
+
 // FileSharedMemory extends File to possibly implement
 // shared-memory for the WAL-index.
 // The same shared-memory instance must be returned

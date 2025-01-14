@@ -379,6 +379,20 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 			return ret
 		}
 
+	case _FCNTL_BUSYHANDLER:
+		if file, ok := file.(FileBusyHandler); ok {
+			arg := util.ReadUint64(mod, pArg)
+			fn := mod.ExportedFunction("sqlite3_invoke_busy_handler_go")
+			file.BusyHandler(func() bool {
+				stack := [...]uint64{arg}
+				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
+					panic(err)
+				}
+				return uint32(stack[0]) != 0
+			})
+			return _OK
+		}
+
 	case _FCNTL_LOCK_TIMEOUT:
 		if file, ok := file.(FileSharedMemory); ok {
 			if shm, ok := file.SharedMemory().(blockingSharedMemory); ok {

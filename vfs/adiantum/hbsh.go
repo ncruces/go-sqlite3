@@ -242,7 +242,7 @@ func (h *hbshFile) PersistentWAL() bool {
 }
 
 func (h *hbshFile) SetPersistentWAL(keepWAL bool) {
-	vfsutil.WrapSetPersistentWAL(h.File, keepWAL) // notest
+	vfsutil.WrapSetPersistWAL(h.File, keepWAL) // notest
 }
 
 func (h *hbshFile) HasMoved() (bool, error) {
@@ -251,6 +251,10 @@ func (h *hbshFile) HasMoved() (bool, error) {
 
 func (h *hbshFile) Overwrite() error {
 	return vfsutil.WrapOverwrite(h.File) // notest
+}
+
+func (h *hbshFile) SyncSuper(super string) error {
+	return vfsutil.WrapSyncSuper(h.File, super) // notest
 }
 
 func (h *hbshFile) CommitPhaseTwo() error {
@@ -275,4 +279,8 @@ func (h *hbshFile) CheckpointStart() {
 
 func (h *hbshFile) CheckpointDone() {
 	vfsutil.WrapCheckpointDone(h.File) // notest
+}
+
+func (h *hbshFile) BusyHandler(handler func() bool) {
+	vfsutil.WrapBusyHandler(h.File, handler) // notest
 }

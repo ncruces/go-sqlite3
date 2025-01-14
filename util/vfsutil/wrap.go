@@ -46,8 +46,8 @@ func WrapPersistWAL(f vfs.File) bool {
 	return false
 }
 
-// WrapSetPersistentWAL helps wrap [vfs.FilePersistWAL].
-func WrapSetPersistentWAL(f vfs.File, keepWAL bool) {
+// WrapSetPersistWAL helps wrap [vfs.FilePersistWAL].
+func WrapSetPersistWAL(f vfs.File, keepWAL bool) {
 	if f, ok := f.(vfs.FilePersistWAL); ok {
 		f.SetPersistWAL(keepWAL)
 	}
@@ -95,6 +95,14 @@ func WrapHasMoved(f vfs.File) (bool, error) {
 func WrapOverwrite(f vfs.File) error {
 	if f, ok := f.(vfs.FileOverwrite); ok {
 		return f.Overwrite()
+	}
+	return sqlite3.NOTFOUND
+}
+
+// WrapSyncSuper helps wrap [vfs.FileSync].
+func WrapSyncSuper(f vfs.File, super string) error {
+	if f, ok := f.(vfs.FileSync); ok {
+		return f.SyncSuper(super)
 	}
 	return sqlite3.NOTFOUND
 }
@@ -151,6 +159,13 @@ func WrapPragma(f vfs.File, name, value string) (string, error) {
 		return f.Pragma(name, value)
 	}
 	return "", sqlite3.NOTFOUND
+}
+
+// WrapBusyHandler helps wrap [vfs.FilePragma].
+func WrapBusyHandler(f vfs.File, handler func() bool) {
+	if f, ok := f.(vfs.FileBusyHandler); ok {
+		f.BusyHandler(handler)
+	}
 }
 
 // WrapSharedMemory helps wrap [vfs.FileSharedMemory].

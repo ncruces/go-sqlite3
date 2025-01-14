@@ -238,7 +238,7 @@ func (x *xtsFile) PersistentWAL() bool {
 }
 
 func (x *xtsFile) SetPersistentWAL(keepWAL bool) {
-	vfsutil.WrapSetPersistentWAL(x.File, keepWAL) // notest
+	vfsutil.WrapSetPersistWAL(x.File, keepWAL) // notest
 }
 
 func (x *xtsFile) HasMoved() (bool, error) {
@@ -247,6 +247,10 @@ func (x *xtsFile) HasMoved() (bool, error) {
 
 func (x *xtsFile) Overwrite() error {
 	return vfsutil.WrapOverwrite(x.File) // notest
+}
+
+func (x *xtsFile) SyncSuper(super string) error {
+	return vfsutil.WrapSyncSuper(x.File, super) // notest
 }
 
 func (x *xtsFile) CommitPhaseTwo() error {
@@ -271,4 +275,8 @@ func (x *xtsFile) CheckpointStart() {
 
 func (x *xtsFile) CheckpointDone() {
 	vfsutil.WrapCheckpointDone(x.File) // notest
+}
+
+func (x *xtsFile) BusyHandler(handler func() bool) {
+	vfsutil.WrapBusyHandler(x.File, handler) // notest
 }
