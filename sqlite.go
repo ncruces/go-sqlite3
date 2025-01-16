@@ -58,8 +58,8 @@ func compileSQLite() {
 		} else {
 			cfg = cfg.WithMemoryLimitPages(4096) // 256MB
 		}
+		cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2)
 	}
-	cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2)
 
 	instance.runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
 
