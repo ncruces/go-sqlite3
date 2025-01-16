@@ -5,15 +5,17 @@
 //   - LIKE and REGEXP operators,
 //   - collation sequences.
 //
-// It also provides, from PostgreSQL:
-//   - unaccent(),
-//   - initcap().
-//
 // The implementation is not 100% compatible with the [ICU extension]:
 //   - upper() and lower() use [strings.ToUpper], [strings.ToLower] and [cases];
 //   - the LIKE operator follows [strings.EqualFold] rules;
 //   - the REGEXP operator uses Go [regexp/syntax];
 //   - collation sequences use [collate].
+//
+// It also provides (approximately) from PostgreSQL:
+//   - casefold(),
+//   - initcap(),
+//   - normalize(),
+//   - unaccent().
 //
 // Expect subtle differences (e.g.) in the handling of Turkish case folding.
 //
@@ -48,13 +50,13 @@ var RegisterLike = true
 // Register registers Unicode aware functions for a database connection.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	var errs util.ErrorJoiner
+	var lkfn sqlite3.ScalarFunction
 	if RegisterLike {
-		errs.Join(
-			db.CreateFunction("like", 2, flags, like),
-			db.CreateFunction("like", 3, flags, like))
+		lkfn = like
 	}
-	errs.Join(
+	return errors.Join(
+		db.CreateFunction("like", 2, flags, lkfn),
+		db.CreateFunction("like", 3, flags, lkfn),
 		db.CreateFunction("upper", 1, flags, upper),
 		db.CreateFunction("upper", 2, flags, upper),
 		db.CreateFunction("lower", 1, flags, lower),
@@ -62,7 +64,10 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("regexp", 2, flags, regex),
 		db.CreateFunction("initcap", 1, flags, initcap),
 		db.CreateFunction("initcap", 2, flags, initcap),
+		db.CreateFunction("casefold", 1, flags, casefold),
 		db.CreateFunction("unaccent", 1, flags, unaccent),
+		db.CreateFunction("normalize", 1, flags, normalize),
+		db.CreateFunction("normalize", 2, flags, normalize),
 		db.CreateFunction("icu_load_collation", 2, sqlite3.DIRECTONLY,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				name := arg[1].Text()
@@ -76,7 +81,6 @@ func Register(db *sqlite3.Conn) error {
 					return // notest
 				}
 			}))
-	return errors.Join(errs...)
 }
 
 // RegisterCollation registers a Unicode collation sequence for a database connection.
@@ -154,9 +158,38 @@ func initcap(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
 }
 
+func casefold(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	ctx.ResultRawText(cases.Fold().Bytes(arg[0].RawText()))
+}
+
 func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	unaccent := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 	res, _, err := transform.Bytes(unaccent, arg[0].RawText())
+	if err != nil {
+		ctx.ResultError(err) // notest
+	} else {
+		ctx.ResultRawText(res)
+	}
+}
+
+func normalize(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	form := norm.NFC
+	if len(arg) > 1 {
+		switch strings.ToUpper(arg[1].Text()) {
+		case "NFC":
+			//
+		case "NFD":
+			form = norm.NFD
+		case "NFKC":
+			form = norm.NFKC
+		case "NFKD":
+			form = norm.NFKD
+		default:
+			ctx.ResultError(util.ErrorString("unicode: invalid form"))
+			return
+		}
+	}
+	res, _, err := transform.Bytes(form, arg[0].RawText())
 	if err != nil {
 		ctx.ResultError(err) // notest
 	} else {

@@ -49,6 +49,12 @@ func TestRegister(t *testing.T) {
 		{`upper('Dünyanın İlk Borsası', 'tr-TR')`, "DÜNYANIN İLK BORSASI"},
 		{`initcap('Kad je hladno Marko nosi džemper')`, "Kad Je Hladno Marko Nosi Džemper"},
 		{`initcap('Kad je hladno Marko nosi džemper', 'hr-HR')`, "Kad Je Hladno Marko Nosi Džemper"},
+		{`normalize(X'61cc88')`, "ä"},
+		{`normalize(X'61cc88', 'NFC' )`, "ä"},
+		{`normalize(X'61cc88', 'NFKC')`, "ä"},
+		{`normalize('ä', 'NFD' )`, "\x61\xcc\x88"},
+		{`normalize('ä', 'NFKD')`, "\x61\xcc\x88"},
+		{`casefold('Maße')`, "masse"},
 		{`unaccent('Hôtel')`, "Hotel"},
 		{`'Hello' REGEXP 'ell'`, "1"},
 		{`'Hello' REGEXP 'el.'`, "1"},
@@ -201,6 +207,14 @@ func TestRegister_error(t *testing.T) {
 	}
 
 	err = db.Exec(`SELECT lower('hello', 'enUS')`)
+	if err == nil {
+		t.Error("want error")
+	}
+	if !errors.Is(err, sqlite3.ERROR) {
+		t.Errorf("got %v, want sqlite3.ERROR", err)
+	}
+
+	err = db.Exec(`SELECT normalize('', 'NF')`)
 	if err == nil {
 		t.Error("want error")
 	}
