@@ -1,5 +1,6 @@
 #include <unistd.h>
 
+// Use the default call back, not the Go one we patched in.
 #define sqliteBusyCallback sqliteDefaultBusyCallback
 
 // Amalgamation
@@ -9,8 +10,10 @@
 
 __attribute__((constructor)) void init() { sqlite3_initialize(); }
 
+// Ignore these.
 #define sqlite3_enable_load_extension(...)
 #define sqlite3_trace(...)
 #define unlink(...) (0)
 #undef UNUSED_PARAMETER
+
 #include "mptest.c"

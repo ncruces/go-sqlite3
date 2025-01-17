@@ -90,6 +90,7 @@ struct go_file {
 };
 
 sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
+  // The default VFS.
   if (!zVfsName || !strcmp(zVfsName, "os")) {
     static sqlite3_vfs os_vfs = {
         .iVersion = 2,
@@ -109,18 +110,21 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
     return &os_vfs;
   }
 
+  // Check if a Go VFS exists.
   if (!go_vfs_find(zVfsName)) {
     return NULL;
   }
 
   static sqlite3_vfs *go_vfs_list;
 
+  // Do we already have a C wrapper for the Go VFS?
   for (sqlite3_vfs *it = go_vfs_list; it; it = it->pNext) {
     if (!strcmp(zVfsName, it->zName)) {
       return it;
     }
   }
 
+  // Delete C wrappers that are no longer needed.
   for (sqlite3_vfs **ptr = &go_vfs_list; *ptr;) {
     sqlite3_vfs *it = *ptr;
     if (go_vfs_find(it->zName)) {
@@ -131,6 +135,7 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
     }
   }
 
+  // Create a new C wrapper.
   sqlite3_vfs *head = go_vfs_list;
   go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
   char *name = (char *)(go_vfs_list + 1);
@@ -158,13 +163,11 @@ int localtime_s(struct tm *const pTm, time_t const *const pTime) {
   return go_localtime(pTm, (sqlite3_int64)*pTime);
 }
 
-int sqlite3_os_init() {
-  return SQLITE_OK;
-}
+int sqlite3_os_init() { return SQLITE_OK; }
 
 int sqlite3_invoke_busy_handler_go(sqlite3_int64 token) {
   void **ap = (void **)&token;
-  return ((int(*)(void *))(ap[0]))(ap[1]);
+  return ((int (*)(void *))(ap[0]))(ap[1]);
 }
 
 static_assert(offsetof(sqlite3_vfs, zName) == 16, "Unexpected offset");

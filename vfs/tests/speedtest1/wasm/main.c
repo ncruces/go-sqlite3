@@ -1,3 +1,4 @@
+// Use the default call back, not the Go one we patched in.
 #define sqliteBusyCallback sqliteDefaultBusyCallback
 
 // Amalgamation
@@ -5,5 +6,7 @@
 // VFS
 #include "vfs.c"
 
-#define randomFunc randomFunc2
+// Can't have two functions with the same name.
+#define randomFunc randomFuncRepeatable
+
 #include "speedtest1.c"
