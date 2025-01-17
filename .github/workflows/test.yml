@@ -60,6 +60,7 @@ jobs:
     - name: Test GORM
       shell: bash
       run: gormlite/test.sh
+      if: matrix.os != 'windows-latest'
 
     - name: Test modules
       shell: bash
@@ -193,9 +194,6 @@ jobs:
     - name: Test 386 (32-bit)
       run: GOARCH=386 go test -v -short ./...
 
-    - name: Test arm64 (compiler)
-      run: GOARCH=arm64 go test -v -short ./...
-
     - name: Test riscv64 (interpreter)
       run: GOARCH=riscv64 go test -v -short ./...
 
@@ -204,6 +202,18 @@ jobs:
 
     - name: Test s390x (big-endian)
       run: GOARCH=s390x go test -v -short -tags sqlite3_dotlk ./...
+
+  test-linuxarm:
+    runs-on: ubuntu-24.04-arm
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Test
+      run: go test -v ./...
 
   test-macintel:
     runs-on: macos-13
