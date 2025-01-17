@@ -99,10 +99,11 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (res *table, err e
 }
 
 func (t *table) Close() error {
+	var errs []error
 	for _, c := range t.cols {
-		c.Close()
+		errs = append(errs, c.Close())
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (t *table) BestIndex(idx *sqlite3.IndexInfo) error {

@@ -172,7 +172,10 @@ func finalCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp uint32)
 	db := ctx.Value(connKey{}).(*Conn)
 	fn, handle := callbackAggregate(db, pAgg, pApp)
 	fn.Value(Context{db, pCtx})
-	util.DelHandle(ctx, handle)
+	if err := util.DelHandle(ctx, handle); err != nil {
+		Context{db, pCtx}.ResultError(err)
+		return // notest
+	}
 }
 
 func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg uint32) {

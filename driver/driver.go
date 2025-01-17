@@ -466,8 +466,9 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 	old := s.Stmt.Conn().SetInterrupt(ctx)
 	defer s.Stmt.Conn().SetInterrupt(old)
 
-	err = s.Stmt.Exec()
-	s.Stmt.ClearBindings()
+	err = errors.Join(
+		s.Stmt.Exec(),
+		s.Stmt.ClearBindings())
 	if err != nil {
 		return nil, err
 	}
@@ -604,8 +605,9 @@ var (
 )
 
 func (r *rows) Close() error {
-	r.Stmt.ClearBindings()
-	return r.Stmt.Reset()
+	return errors.Join(
+		r.Stmt.Reset(),
+		r.Stmt.ClearBindings())
 }
 
 func (r *rows) Columns() []string {

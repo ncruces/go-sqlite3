@@ -8,6 +8,7 @@ package statement
 
 import (
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -150,8 +151,9 @@ type cursor struct {
 func (c *cursor) Close() error {
 	if c.stmt == c.table.stmt {
 		c.table.inuse = false
-		c.stmt.ClearBindings()
-		return c.stmt.Reset()
+		return errors.Join(
+			c.stmt.Reset(),
+			c.stmt.ClearBindings())
 	}
 	return c.stmt.Close()
 }
@@ -159,8 +161,10 @@ func (c *cursor) Close() error {
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	c.arg = arg
 	c.rowID = 0
-	c.stmt.ClearBindings()
-	if err := c.stmt.Reset(); err != nil {
+	err := errors.Join(
+		c.stmt.Reset(),
+		c.stmt.ClearBindings())
+	if err != nil {
 		return err
 	}
 

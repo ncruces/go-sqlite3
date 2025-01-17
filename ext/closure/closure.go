@@ -215,7 +215,9 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		if curr.depth >= maxDepth {
 			continue
 		}
-		stmt.BindInt64(1, curr.id)
+		if err := stmt.BindInt64(1, curr.id); err != nil {
+			return err
+		}
 		for stmt.Step() {
 			if stmt.ColumnType(0) == sqlite3.INTEGER {
 				next := stmt.ColumnInt64(0)
@@ -225,7 +227,9 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 				}
 			}
 		}
-		stmt.Reset()
+		if err := stmt.Reset(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -214,7 +214,10 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return err
 	}
 	if c.table.header {
-		c.Next() // skip header
+		err = c.Next() // skip header
+		if err != nil {
+			return err
+		}
 	}
 	c.rowID = 0
 	return c.Next()

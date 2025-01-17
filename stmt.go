@@ -316,15 +316,14 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 	}
 	switch v := format.Encode(value).(type) {
 	case string:
-		s.BindText(param, v)
+		return s.BindText(param, v)
 	case int64:
-		s.BindInt64(param, v)
+		return s.BindInt64(param, v)
 	case float64:
-		s.BindFloat(param, v)
+		return s.BindFloat(param, v)
 	default:
 		panic(util.AssertErr())
 	}
-	return nil
 }
 
 func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
