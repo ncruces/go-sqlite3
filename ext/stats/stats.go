@@ -18,9 +18,11 @@
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
 //   - regr_json: all regr stats in a JSON object
-//   - percentile_disc: discrete percentile
-//   - percentile_cont: continuous percentile
-//   - median: median value
+//   - percentile_disc: discrete quantile
+//   - percentile_cont: continuous quantile
+//   - percentile: continuous percentile
+//   - median: middle value
+//   - mode: most frequent value
 //   - every: boolean and
 //   - some: boolean or
 //
@@ -77,7 +79,8 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("percentile_cont", 2, order, newPercentile(percentile_cont)),
 		db.CreateWindowFunction("percentile_disc", 2, order, newPercentile(percentile_disc)),
 		db.CreateWindowFunction("every", 1, flags, newBoolean(every)),
-		db.CreateWindowFunction("some", 1, flags, newBoolean(some)))
+		db.CreateWindowFunction("some", 1, flags, newBoolean(some)),
+		db.CreateWindowFunction("mode", 1, order, newMode))
 }
 
 const (
