@@ -453,10 +453,10 @@ func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module,
 		}
 
 		module := vtabGetHandle(ctx, mod, pMod)
-		res := reflect.ValueOf(module).Index(int(i)).Call(arg)
-		err, _ := res[1].Interface().(error)
+		val := reflect.ValueOf(module).Index(int(i)).Call(arg)
+		err, _ := val[1].Interface().(error)
 		if err == nil {
-			vtabPutHandle(ctx, mod, ppVTab, res[0].Interface())
+			vtabPutHandle(ctx, mod, ppVTab, val[0].Interface())
 		}
 
 		return vtabError(ctx, mod, pzErr, _PTR_ERROR, err)

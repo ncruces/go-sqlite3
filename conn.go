@@ -70,7 +70,7 @@ func OpenFlags(filename string, flags OpenFlag) (*Conn, error) {
 
 type connKey = util.ConnKey
 
-func newConn(ctx context.Context, filename string, flags OpenFlag) (res *Conn, _ error) {
+func newConn(ctx context.Context, filename string, flags OpenFlag) (ret *Conn, _ error) {
 	err := ctx.Err()
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func newConn(ctx context.Context, filename string, flags OpenFlag) (res *Conn, _
 		return nil, err
 	}
 	defer func() {
-		if res == nil {
+		if ret == nil {
 			c.Close()
 			c.sqlite.close()
 		} else {

@@ -201,7 +201,7 @@ func (n *connector) Driver() driver.Driver {
 	return &SQLite{}
 }
 
-func (n *connector) Connect(ctx context.Context) (res driver.Conn, err error) {
+func (n *connector) Connect(ctx context.Context) (ret driver.Conn, err error) {
 	c := &conn{
 		txLock:  n.txLock,
 		tmRead:  n.tmRead,
@@ -213,7 +213,7 @@ func (n *connector) Connect(ctx context.Context) (res driver.Conn, err error) {
 		return nil, err
 	}
 	defer func() {
-		if res == nil {
+		if ret == nil {
 			c.Close()
 		}
 	}()

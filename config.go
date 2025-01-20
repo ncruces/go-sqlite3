@@ -64,7 +64,7 @@ func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	return nil
 }
 
-func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg ptr_t) {
+func logCallback(ctx context.Context, mod api.Module, _, iCode res_t, zMsg ptr_t) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.log != nil {
 		msg := util.ReadString(mod, zMsg, _MAX_LENGTH)
 		c.log(xErrorCode(iCode), msg)
@@ -94,7 +94,7 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 	}
 
 	var rc res_t
-	var res any
+	var ret any
 	switch op {
 	default:
 		return nil, MISUSE
@@ -116,7 +116,7 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr)))
-		res = util.Read32[uint32](c.mod, ptr) != 0
+		ret = util.Read32[uint32](c.mod, ptr) != 0
 
 	case FCNTL_CHUNK_SIZE:
 		util.Write32(c.mod, ptr, int32(arg[0].(int)))
@@ -133,19 +133,19 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr)))
-		res = int(util.Read32[int32](c.mod, ptr))
+		ret = int(util.Read32[int32](c.mod, ptr))
 
 	case FCNTL_DATA_VERSION:
 		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr)))
-		res = util.Read32[uint32](c.mod, ptr)
+		ret = util.Read32[uint32](c.mod, ptr)
 
 	case FCNTL_LOCKSTATE:
 		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
 			uint64(op), uint64(ptr)))
-		res = util.Read32[vfs.LockLevel](c.mod, ptr)
+		ret = util.Read32[vfs.LockLevel](c.mod, ptr)
 
 	case FCNTL_VFS_POINTER:
 		rc = res_t(c.call("sqlite3_file_control",
@@ -156,7 +156,7 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			ptr = util.Read32[ptr_t](c.mod, ptr)
 			ptr = util.Read32[ptr_t](c.mod, ptr+zNameOffset)
 			name := util.ReadString(c.mod, ptr, _MAX_NAME)
-			res = vfs.Find(name)
+			ret = vfs.Find(name)
 		}
 
 	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:
@@ -167,14 +167,14 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			const fileHandleOffset = 4
 			ptr = util.Read32[ptr_t](c.mod, ptr)
 			ptr = util.Read32[ptr_t](c.mod, ptr+fileHandleOffset)
-			res = util.GetHandle(c.ctx, ptr)
+			ret = util.GetHandle(c.ctx, ptr)
 		}
 	}
 
 	if err := c.error(rc); err != nil {
 		return nil, err
 	}
-	return res, nil
+	return ret, nil
 }
 
 // Limit allows the size of various constructs to be
