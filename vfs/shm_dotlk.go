@@ -35,7 +35,7 @@ type vfsShm struct {
 	free   api.Function
 	path   string
 	shadow [][_WALINDEX_PGSZ]byte
-	ptrs   []uint32
+	ptrs   []ptr_t
 	stack  [1]uint64
 	lock   [_SHM_NLOCK]bool
 }
@@ -96,7 +96,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	return _OK
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (uint32, _ErrorCode) {
+func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, _ErrorCode) {
 	if size != _WALINDEX_PGSZ {
 		return 0, _IOERR_SHMMAP
 	}
@@ -135,8 +135,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		if s.stack[0] == 0 {
 			panic(util.OOMErr)
 		}
-		clear(util.View(s.mod, uint32(s.stack[0]), _WALINDEX_PGSZ))
-		s.ptrs = append(s.ptrs, uint32(s.stack[0]))
+		clear(util.View(s.mod, ptr_t(s.stack[0]), _WALINDEX_PGSZ))
+		s.ptrs = append(s.ptrs, ptr_t(s.stack[0]))
 	}
 
 	s.shadow[0][4] = 1

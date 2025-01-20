@@ -26,7 +26,7 @@ type vfsShm struct {
 	regions  []*util.MappedRegion
 	shared   [][]byte
 	shadow   [][_WALINDEX_PGSZ]byte
-	ptrs     []uint32
+	ptrs     []ptr_t
 	stack    [1]uint64
 	fileLock bool
 	blocking bool
@@ -72,7 +72,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	return rc
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ uint32, rc _ErrorCode) {
+func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ ptr_t, rc _ErrorCode) {
 	// Ensure size is a multiple of the OS page size.
 	if size != _WALINDEX_PGSZ || (windows.Getpagesize()-1)&_WALINDEX_PGSZ != 0 {
 		return 0, _IOERR_SHMMAP
@@ -126,8 +126,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		if s.stack[0] == 0 {
 			panic(util.OOMErr)
 		}
-		clear(util.View(s.mod, uint32(s.stack[0]), _WALINDEX_PGSZ))
-		s.ptrs = append(s.ptrs, uint32(s.stack[0]))
+		clear(util.View(s.mod, ptr_t(s.stack[0]), _WALINDEX_PGSZ))
+		s.ptrs = append(s.ptrs, ptr_t(s.stack[0]))
 	}
 
 	s.shadow[0][4] = 1
