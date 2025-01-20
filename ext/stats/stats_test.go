@@ -29,12 +29,23 @@ func TestRegister_variance(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	stmt, _, err := db.Prepare(`SELECT stddev_pop(x) FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.NULL {
+			t.Errorf("got %v, want NULL", got)
+		}
+	}
+	stmt.Close()
+
 	err = db.Exec(`INSERT INTO data (x) VALUES (4), (7.0), ('13'), (NULL), (16)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`
+	stmt, _, err = db.Prepare(`
 		SELECT
 			sum(x), avg(x),
 			var_samp(x), var_pop(x),
@@ -65,7 +76,11 @@ func TestRegister_variance(t *testing.T) {
 	}
 	stmt.Close()
 
-	stmt, _, err = db.Prepare(`SELECT var_samp(x) OVER (ROWS 1 PRECEDING) FROM data`)
+	stmt, _, err = db.Prepare(`
+		SELECT
+	 		var_samp(x) OVER (ROWS 1 PRECEDING),
+	 		var_pop(x)  OVER (ROWS 1 PRECEDING)
+		FROM data`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,12 +111,26 @@ func TestRegister_covariance(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	stmt, _, err := db.Prepare(`SELECT regr_count(y, x), regr_json(y, x) FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stmt.Step() {
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want 0", got)
+		}
+		if got := stmt.ColumnType(1); got != sqlite3.NULL {
+			t.Errorf("got %v, want NULL", got)
+		}
+	}
+	stmt.Close()
+
 	err = db.Exec(`INSERT INTO data (y, x) VALUES (3, 70), (5, 80), (2, 60), (7, 90), (4, 75)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stmt, _, err := db.Prepare(`SELECT
+	stmt, _, err = db.Prepare(`SELECT
 		corr(y, x), covar_samp(y, x), covar_pop(y, x),
 		regr_avgy(y, x), regr_avgx(y, x),
 		regr_syy(y, x), regr_sxx(y, x), regr_sxy(y, x),
@@ -157,7 +186,12 @@ func TestRegister_covariance(t *testing.T) {
 	}
 	stmt.Close()
 
-	stmt, _, err = db.Prepare(`SELECT covar_samp(y, x) OVER (ROWS 1 PRECEDING) FROM data`)
+	stmt, _, err = db.Prepare(`
+		SELECT
+	 		covar_samp(y, x) OVER (ROWS 1 PRECEDING),
+	 		covar_pop(y, x)  OVER (ROWS 1 PRECEDING),
+			regr_avgx(y, x)  OVER (ROWS 1 PRECEDING)
+		FROM data`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,6 +204,9 @@ func TestRegister_covariance(t *testing.T) {
 		if got := stmt.ColumnType(0); (got == sqlite3.FLOAT) != (want[i] != 0) {
 			t.Errorf("got %v, want %v", got, want[i])
 		}
+	}
+	if stmt.Err() != nil {
+		t.Fatal(stmt.Err())
 	}
 	stmt.Close()
 }

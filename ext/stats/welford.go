@@ -3,15 +3,14 @@ package stats
 import (
 	"math"
 	"strconv"
-	"strings"
+
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // Welford's algorithm with Kahan summation:
+// The effect of truncation in statistical computation [van Reeken, AJ 1970]
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
 // https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-
-// See also:
-// https://duckdb.org/docs/sql/aggregates.html#statistical-aggregates
 
 type welford struct {
 	m1, m2 kahan
@@ -39,17 +38,23 @@ func (w welford) stddev_samp() float64 {
 }
 
 func (w *welford) enqueue(x float64) {
-	w.n++
+	n := w.n + 1
+	w.n = n
 	d1 := x - w.m1.hi - w.m1.lo
-	w.m1.add(d1 / float64(w.n))
+	w.m1.add(d1 / float64(n))
 	d2 := x - w.m1.hi - w.m1.lo
 	w.m2.add(d1 * d2)
 }
 
 func (w *welford) dequeue(x float64) {
-	w.n--
+	n := w.n - 1
+	if n <= 0 {
+		*w = welford{}
+		return
+	}
+	w.n = n
 	d1 := x - w.m1.hi - w.m1.lo
-	w.m1.sub(d1 / float64(w.n))
+	w.m1.sub(d1 / float64(n))
 	d2 := x - w.m1.hi - w.m1.lo
 	w.m2.sub(d1 * d2)
 }
@@ -112,38 +117,35 @@ func (w welford2) regr_r2() float64 {
 	return w.cov.hi * w.cov.hi / (w.m2y.hi * w.m2x.hi)
 }
 
-func (w welford2) regr_json() string {
-	var json strings.Builder
-	var num [32]byte
-	json.Grow(128)
-	json.WriteString(`{"count":`)
-	json.Write(strconv.AppendInt(num[:0], w.regr_count(), 10))
-	json.WriteString(`,"avgy":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_avgy(), 'g', -1, 64))
-	json.WriteString(`,"avgx":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_avgx(), 'g', -1, 64))
-	json.WriteString(`,"syy":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_syy(), 'g', -1, 64))
-	json.WriteString(`,"sxx":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_sxx(), 'g', -1, 64))
-	json.WriteString(`,"sxy":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_sxy(), 'g', -1, 64))
-	json.WriteString(`,"slope":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_slope(), 'g', -1, 64))
-	json.WriteString(`,"intercept":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_intercept(), 'g', -1, 64))
-	json.WriteString(`,"r2":`)
-	json.Write(strconv.AppendFloat(num[:0], w.regr_r2(), 'g', -1, 64))
-	json.WriteByte('}')
-	return json.String()
+func (w welford2) regr_json(dst []byte) []byte {
+	dst = append(dst, `{"count":`...)
+	dst = strconv.AppendInt(dst, w.regr_count(), 10)
+	dst = append(dst, `,"avgy":`...)
+	dst = util.AppendNumber(dst, w.regr_avgy())
+	dst = append(dst, `,"avgx":`...)
+	dst = util.AppendNumber(dst, w.regr_avgx())
+	dst = append(dst, `,"syy":`...)
+	dst = util.AppendNumber(dst, w.regr_syy())
+	dst = append(dst, `,"sxx":`...)
+	dst = util.AppendNumber(dst, w.regr_sxx())
+	dst = append(dst, `,"sxy":`...)
+	dst = util.AppendNumber(dst, w.regr_sxy())
+	dst = append(dst, `,"slope":`...)
+	dst = util.AppendNumber(dst, w.regr_slope())
+	dst = append(dst, `,"intercept":`...)
+	dst = util.AppendNumber(dst, w.regr_intercept())
+	dst = append(dst, `,"r2":`...)
+	dst = util.AppendNumber(dst, w.regr_r2())
+	return append(dst, '}')
 }
 
 func (w *welford2) enqueue(y, x float64) {
-	w.n++
+	n := w.n + 1
+	w.n = n
 	d1y := y - w.m1y.hi - w.m1y.lo
 	d1x := x - w.m1x.hi - w.m1x.lo
-	w.m1y.add(d1y / float64(w.n))
-	w.m1x.add(d1x / float64(w.n))
+	w.m1y.add(d1y / float64(n))
+	w.m1x.add(d1x / float64(n))
 	d2y := y - w.m1y.hi - w.m1y.lo
 	d2x := x - w.m1x.hi - w.m1x.lo
 	w.m2y.add(d1y * d2y)
@@ -152,11 +154,16 @@ func (w *welford2) enqueue(y, x float64) {
 }
 
 func (w *welford2) dequeue(y, x float64) {
-	w.n--
+	n := w.n - 1
+	if n <= 0 {
+		*w = welford2{}
+		return
+	}
+	w.n = n
 	d1y := y - w.m1y.hi - w.m1y.lo
 	d1x := x - w.m1x.hi - w.m1x.lo
-	w.m1y.sub(d1y / float64(w.n))
-	w.m1x.sub(d1x / float64(w.n))
+	w.m1y.sub(d1y / float64(n))
+	w.m1x.sub(d1x / float64(n))
 	d2y := y - w.m1y.hi - w.m1y.lo
 	d2x := x - w.m1x.hi - w.m1x.lo
 	w.m2y.sub(d1y * d2y)

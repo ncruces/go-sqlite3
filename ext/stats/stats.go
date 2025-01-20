@@ -17,7 +17,7 @@
 //   - regr_count: count non-null pairs of variables
 //   - regr_slope: slope of the least-squares-fit linear equation
 //   - regr_intercept: y-intercept of the least-squares-fit linear equation
-//   - regr_json: all regr stats in a JSON object
+//   - regr_json: all regr stats as a JSON object
 //   - percentile_disc: discrete quantile
 //   - percentile_cont: continuous quantile
 //   - percentile: continuous percentile
@@ -111,6 +111,17 @@ type variance struct {
 }
 
 func (fn *variance) Value(ctx sqlite3.Context) {
+	switch fn.n {
+	case 1:
+		switch fn.kind {
+		case var_pop, stddev_pop:
+			ctx.ResultFloat(0)
+		}
+		return
+	case 0:
+		return
+	}
+
 	var r float64
 	switch fn.kind {
 	case var_pop:
@@ -151,6 +162,25 @@ type covariance struct {
 }
 
 func (fn *covariance) Value(ctx sqlite3.Context) {
+	if fn.kind == regr_count {
+		ctx.ResultInt64(fn.regr_count())
+		return
+	}
+	switch fn.n {
+	case 1:
+		switch fn.kind {
+		case var_pop, stddev_pop, regr_sxx, regr_syy, regr_sxy:
+			ctx.ResultFloat(0)
+			return
+		case regr_avgx, regr_avgy:
+			break
+		default:
+			return
+		}
+	case 0:
+		return
+	}
+
 	var r float64
 	switch fn.kind {
 	case var_pop:
@@ -175,11 +205,9 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 		r = fn.regr_slope()
 	case regr_intercept:
 		r = fn.regr_intercept()
-	case regr_count:
-		ctx.ResultInt64(fn.regr_count())
-		return
 	case regr_json:
-		ctx.ResultText(fn.regr_json())
+		var buf [128]byte
+		ctx.ResultRawText(fn.regr_json(buf[:0]))
 		return
 	}
 	ctx.ResultFloat(r)

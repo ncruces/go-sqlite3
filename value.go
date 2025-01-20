@@ -185,7 +185,7 @@ func (v Value) JSON(ptr any) error {
 	case INTEGER:
 		data = strconv.AppendInt(nil, v.Int64(), 10)
 	case FLOAT:
-		data = strconv.AppendFloat(nil, v.Float(), 'g', -1, 64)
+		data = util.AppendNumber(nil, v.Float())
 	default:
 		panic(util.AssertErr())
 	}

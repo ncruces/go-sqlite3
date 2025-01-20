@@ -11,6 +11,9 @@ import (
 	"github.com/ncruces/sort/quick"
 )
 
+// Compatible with:
+// https://sqlite.org/src/file/ext/misc/percentile.c
+
 const (
 	median = iota
 	percentile_100

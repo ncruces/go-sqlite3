@@ -609,7 +609,7 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 	case INTEGER:
 		data = strconv.AppendInt(nil, s.ColumnInt64(col), 10)
 	case FLOAT:
-		data = strconv.AppendFloat(nil, s.ColumnFloat(col), 'g', -1, 64)
+		data = util.AppendNumber(nil, s.ColumnFloat(col))
 	default:
 		panic(util.AssertErr())
 	}
