@@ -22,7 +22,7 @@ func Test_sqlite_error_OOM(t *testing.T) {
 	defer sqlite.close()
 
 	defer func() { _ = recover() }()
-	sqlite.error(uint64(NOMEM), 0)
+	sqlite.error(res_t(NOMEM), 0)
 	t.Error("want panic")
 }
 

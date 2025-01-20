@@ -229,13 +229,12 @@ func (c *Conn) txnExecInterrupted(sql string) error {
 //
 // https://sqlite.org/c3ref/txn_state.html
 func (c *Conn) TxnState(schema string) TxnState {
-	var ptr uint32
+	var ptr ptr_t
 	if schema != "" {
 		defer c.arena.mark()()
 		ptr = c.arena.string(schema)
 	}
-	r := c.call("sqlite3_txn_state", uint64(c.handle), uint64(ptr))
-	return TxnState(r)
+	return TxnState(c.call("sqlite3_txn_state", uint64(c.handle), uint64(ptr)))
 }
 
 // CommitHook registers a callback function to be invoked
@@ -278,7 +277,7 @@ func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table str
 	c.update = cb
 }
 
-func commitCallback(ctx context.Context, mod api.Module, pDB uint32) (rollback uint32) {
+func commitCallback(ctx context.Context, mod api.Module, pDB ptr_t) (rollback uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
 		if !c.commit() {
 			rollback = 1
@@ -287,13 +286,13 @@ func commitCallback(ctx context.Context, mod api.Module, pDB uint32) (rollback u
 	return rollback
 }
 
-func rollbackCallback(ctx context.Context, mod api.Module, pDB uint32) {
+func rollbackCallback(ctx context.Context, mod api.Module, pDB ptr_t) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.rollback != nil {
 		c.rollback()
 	}
 }
 
-func updateCallback(ctx context.Context, mod api.Module, pDB uint32, action AuthorizerActionCode, zSchema, zTabName uint32, rowid uint64) {
+func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zSchema, zTabName ptr_t, rowid uint64) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.update != nil {
 		schema := util.ReadString(mod, zSchema, _MAX_NAME)
 		table := util.ReadString(mod, zTabName, _MAX_NAME)
@@ -305,6 +304,6 @@ func updateCallback(ctx context.Context, mod api.Module, pDB uint32, action Auth
 //
 // https://sqlite.org/c3ref/db_cacheflush.html
 func (c *Conn) CacheFlush() error {
-	r := c.call("sqlite3_db_cacheflush", uint64(c.handle))
-	return c.error(r)
+	rc := res_t(c.call("sqlite3_db_cacheflush", uint64(c.handle)))
+	return c.error(rc)
 }

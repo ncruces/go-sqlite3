@@ -37,7 +37,7 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *Mapped
 	}
 
 	// Save the newly allocated region.
-	ptr := uint32(stack[0])
+	ptr := Ptr_t(stack[0])
 	buf := View(mod, ptr, uint64(size))
 	res := &MappedRegion{
 		Ptr:  ptr,
@@ -50,7 +50,7 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *Mapped
 
 type MappedRegion struct {
 	addr unsafe.Pointer
-	Ptr  uint32
+	Ptr  Ptr_t
 	size int32
 	used bool
 }

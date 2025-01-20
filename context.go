@@ -15,7 +15,7 @@ import (
 // https://sqlite.org/c3ref/context.html
 type Context struct {
 	c      *Conn
-	handle uint32
+	handle ptr_t
 }
 
 // Conn returns the database connection of the
@@ -39,7 +39,7 @@ func (ctx Context) SetAuxData(n int, data any) {
 //
 // https://sqlite.org/c3ref/get_auxdata.html
 func (ctx Context) GetAuxData(n int) any {
-	ptr := uint32(ctx.c.call("sqlite3_get_auxdata", uint64(ctx.handle), uint64(n)))
+	ptr := ptr_t(ctx.c.call("sqlite3_get_auxdata", uint64(ctx.handle), uint64(n)))
 	return util.GetHandle(ctx.c.ctx, ptr)
 }
 
@@ -223,6 +223,6 @@ func (ctx Context) ResultError(err error) {
 //
 // https://sqlite.org/c3ref/vtab_nochange.html
 func (ctx Context) VTabNoChange() bool {
-	r := ctx.c.call("sqlite3_vtab_nochange", uint64(ctx.handle))
-	return r != 0
+	b := int32(ctx.c.call("sqlite3_vtab_nochange", uint64(ctx.handle)))
+	return b != 0
 }

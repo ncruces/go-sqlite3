@@ -109,7 +109,7 @@ func (c cksmFile) DeviceCharacteristics() DeviceCharacteristic {
 	return res
 }
 
-func (c cksmFile) fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg uint32) _ErrorCode {
+func (c cksmFile) fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
 	switch op {
 	case _FCNTL_CKPT_START:
 		c.inCkpt = true

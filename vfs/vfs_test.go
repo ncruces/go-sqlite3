@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"math"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -29,28 +28,28 @@ func Test_vfsLocaltime(t *testing.T) {
 		t.Fatal("returned", rc)
 	}
 
-	if s := util.ReadUint32(mod, 4+0*4); int(s) != tm.Second() {
+	if s := util.Read32[int32](mod, 4+0*4); int(s) != tm.Second() {
 		t.Error("wrong second")
 	}
-	if m := util.ReadUint32(mod, 4+1*4); int(m) != tm.Minute() {
+	if m := util.Read32[int32](mod, 4+1*4); int(m) != tm.Minute() {
 		t.Error("wrong minute")
 	}
-	if h := util.ReadUint32(mod, 4+2*4); int(h) != tm.Hour() {
+	if h := util.Read32[int32](mod, 4+2*4); int(h) != tm.Hour() {
 		t.Error("wrong hour")
 	}
-	if d := util.ReadUint32(mod, 4+3*4); int(d) != tm.Day() {
+	if d := util.Read32[int32](mod, 4+3*4); int(d) != tm.Day() {
 		t.Error("wrong day")
 	}
-	if m := util.ReadUint32(mod, 4+4*4); time.Month(1+m) != tm.Month() {
+	if m := util.Read32[int32](mod, 4+4*4); time.Month(1+m) != tm.Month() {
 		t.Error("wrong month")
 	}
-	if y := util.ReadUint32(mod, 4+5*4); 1900+int(y) != tm.Year() {
+	if y := util.Read32[int32](mod, 4+5*4); 1900+int(y) != tm.Year() {
 		t.Error("wrong year")
 	}
-	if w := util.ReadUint32(mod, 4+6*4); time.Weekday(w) != tm.Weekday() {
+	if w := util.Read32[int32](mod, 4+6*4); time.Weekday(w) != tm.Weekday() {
 		t.Error("wrong weekday")
 	}
-	if d := util.ReadUint32(mod, 4+7*4); int(d) != tm.YearDay()-1 {
+	if d := util.Read32[int32](mod, 4+7*4); int(d) != tm.YearDay()-1 {
 		t.Error("wrong yearday")
 	}
 }
@@ -99,7 +98,7 @@ func Test_vfsCurrentTime64(t *testing.T) {
 
 	day, nsec := julianday.Date(now)
 	want := day*86_400_000 + nsec/1_000_000
-	if got := util.ReadUint64(mod, 4); float32(got) != float32(want) {
+	if got := util.Read64[int64](mod, 4); float32(got) != float32(want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
@@ -173,7 +172,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 4); got != 1 {
+	if got := util.Read32[int32](mod, 4); got != 1 {
 		t.Error("directory did not exist")
 	}
 
@@ -181,7 +180,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 4); got != 1 {
+	if got := util.Read32[int32](mod, 4); got != 1 {
 		t.Error("can't access directory")
 	}
 
@@ -190,7 +189,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 4); got != 1 {
+	if got := util.Read32[int32](mod, 4); got != 1 {
 		t.Error("can't access file")
 	}
 
@@ -208,7 +207,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 4); got != 0 {
+	if got := util.Read32[int32](mod, 4); got != 0 {
 		t.Error("can access file")
 	}
 }
@@ -241,7 +240,7 @@ func Test_vfsFile(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 16); got != uint32(len(text)) {
+	if got := util.Read64[int64](mod, 16); got != int64(len(text)) {
 		t.Errorf("got %d", got)
 	}
 
@@ -265,7 +264,7 @@ func Test_vfsFile(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 16); got != 4 {
+	if got := util.Read64[int64](mod, 16); got != 4 {
 		t.Errorf("got %d", got)
 	}
 
@@ -296,46 +295,46 @@ func Test_vfsFile_psow(t *testing.T) {
 	}
 
 	// Read powersafe overwrite.
-	util.WriteUint32(mod, 16, math.MaxUint32)
+	util.Write32(mod, 16, int32(-1))
 	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 16); got == 0 {
+	if got := util.Read32[int32](mod, 16); got == 0 {
 		t.Error("psow disabled")
 	}
 
 	// Unset powersafe overwrite.
-	util.WriteUint32(mod, 16, 0)
+	util.Write32(mod, 16, int32(0))
 	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
 	// Read powersafe overwrite.
-	util.WriteUint32(mod, 16, math.MaxUint32)
+	util.Write32(mod, 16, int32(-1))
 	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 16); got != 0 {
+	if got := util.Read32[int32](mod, 16); got != 0 {
 		t.Error("psow enabled")
 	}
 
 	// Set powersafe overwrite.
-	util.WriteUint32(mod, 16, 1)
+	util.Write32(mod, 16, int32(1))
 	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
 
 	// Read powersafe overwrite.
-	util.WriteUint32(mod, 16, math.MaxUint32)
+	util.Write32(mod, 16, int32(-1))
 	rc = vfsFileControl(ctx, mod, 4, _FCNTL_POWERSAFE_OVERWRITE, 16)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.ReadUint32(mod, 16); got == 0 {
+	if got := util.Read32[int32](mod, 16); got == 0 {
 		t.Error("psow disabled")
 	}
 

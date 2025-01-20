@@ -15,7 +15,7 @@ type Error struct {
 	str  string
 	msg  string
 	sql  string
-	code uint64
+	code res_t
 }
 
 // Code returns the primary error code for this error.

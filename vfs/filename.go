@@ -16,13 +16,13 @@ import (
 type Filename struct {
 	ctx   context.Context
 	mod   api.Module
-	zPath uint32
+	zPath ptr_t
 	flags OpenFlag
 	stack [2]uint64
 }
 
 // GetFilename is an internal API users should not call directly.
-func GetFilename(ctx context.Context, mod api.Module, id uint32, flags OpenFlag) *Filename {
+func GetFilename(ctx context.Context, mod api.Module, id ptr_t, flags OpenFlag) *Filename {
 	if id == 0 {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (n *Filename) path(method string) string {
 	if err := fn.CallWithStack(n.ctx, n.stack[:]); err != nil {
 		panic(err)
 	}
-	return util.ReadString(n.mod, uint32(n.stack[0]), _MAX_PATHNAME)
+	return util.ReadString(n.mod, ptr_t(n.stack[0]), _MAX_PATHNAME)
 }
 
 // DatabaseFile returns the main database [File] corresponding to a journal.
@@ -95,7 +95,7 @@ func (n *Filename) DatabaseFile() File {
 	if err := fn.CallWithStack(n.ctx, n.stack[:]); err != nil {
 		panic(err)
 	}
-	file, _ := vfsFileGet(n.ctx, n.mod, uint32(n.stack[0])).(File)
+	file, _ := vfsFileGet(n.ctx, n.mod, ptr_t(n.stack[0])).(File)
 	return file
 }
 
@@ -114,7 +114,7 @@ func (n *Filename) URIParameter(key string) string {
 		panic(err)
 	}
 
-	ptr := uint32(n.stack[0])
+	ptr := ptr_t(n.stack[0])
 	if ptr == 0 {
 		return ""
 	}
@@ -127,13 +127,13 @@ func (n *Filename) URIParameter(key string) string {
 		if k == "" {
 			return ""
 		}
-		ptr += uint32(len(k)) + 1
+		ptr += ptr_t(len(k)) + 1
 
 		v := util.ReadString(n.mod, ptr, _MAX_NAME)
 		if k == key {
 			return v
 		}
-		ptr += uint32(len(v)) + 1
+		ptr += ptr_t(len(v)) + 1
 	}
 }
 
@@ -152,7 +152,7 @@ func (n *Filename) URIParameters() url.Values {
 		panic(err)
 	}
 
-	ptr := uint32(n.stack[0])
+	ptr := ptr_t(n.stack[0])
 	if ptr == 0 {
 		return nil
 	}
@@ -167,13 +167,13 @@ func (n *Filename) URIParameters() url.Values {
 		if k == "" {
 			return params
 		}
-		ptr += uint32(len(k)) + 1
+		ptr += ptr_t(len(k)) + 1
 
 		v := util.ReadString(n.mod, ptr, _MAX_NAME)
 		if params == nil {
 			params = url.Values{}
 		}
 		params.Add(k, v)
-		ptr += uint32(len(v)) + 1
+		ptr += ptr_t(len(v)) + 1
 	}
 }

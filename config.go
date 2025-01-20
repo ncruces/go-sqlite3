@@ -32,7 +32,7 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 	defer c.arena.mark()()
 	argsPtr := c.arena.new(intlen + ptrlen)
 
-	var flag int
+	var flag int32
 	switch {
 	case len(arg) == 0:
 		flag = -1
@@ -40,12 +40,12 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 		flag = 1
 	}
 
-	util.WriteUint32(c.mod, argsPtr+0*ptrlen, uint32(flag))
-	util.WriteUint32(c.mod, argsPtr+1*ptrlen, argsPtr)
+	util.Write32(c.mod, argsPtr+0*ptrlen, flag)
+	util.Write32(c.mod, argsPtr+1*ptrlen, argsPtr)
 
-	r := c.call("sqlite3_db_config", uint64(c.handle),
-		uint64(op), uint64(argsPtr))
-	return util.ReadUint32(c.mod, argsPtr) != 0, c.error(r)
+	rc := res_t(c.call("sqlite3_db_config", uint64(c.handle),
+		uint64(op), uint64(argsPtr)))
+	return util.Read32[uint32](c.mod, argsPtr) != 0, c.error(rc)
 }
 
 // ConfigLog sets up the error logging callback for the connection.
@@ -56,15 +56,15 @@ func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	if cb != nil {
 		enable = 1
 	}
-	r := c.call("sqlite3_config_log_go", enable)
-	if err := c.error(r); err != nil {
+	rc := res_t(c.call("sqlite3_config_log_go", enable))
+	if err := c.error(rc); err != nil {
 		return err
 	}
 	c.log = cb
 	return nil
 }
 
-func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg uint32) {
+func logCallback(ctx context.Context, mod api.Module, _, iCode, zMsg ptr_t) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.log != nil {
 		msg := util.ReadString(mod, zMsg, _MAX_LENGTH)
 		c.log(xErrorCode(iCode), msg)
@@ -88,85 +88,85 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 	defer c.arena.mark()()
 	ptr := c.arena.new(max(ptrlen, intlen))
 
-	var schemaPtr uint32
+	var schemaPtr ptr_t
 	if schema != "" {
 		schemaPtr = c.arena.string(schema)
 	}
 
-	var rc uint64
+	var rc res_t
 	var res any
 	switch op {
 	default:
 		return nil, MISUSE
 
 	case FCNTL_RESET_CACHE:
-		rc = c.call("sqlite3_file_control",
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), 0)
+			uint64(op), 0))
 
 	case FCNTL_PERSIST_WAL, FCNTL_POWERSAFE_OVERWRITE:
-		var flag int
+		var flag int32
 		switch {
 		case len(arg) == 0:
 			flag = -1
 		case arg[0]:
 			flag = 1
 		}
-		util.WriteUint32(c.mod, ptr, uint32(flag))
-		rc = c.call("sqlite3_file_control",
+		util.Write32(c.mod, ptr, flag)
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
-		res = util.ReadUint32(c.mod, ptr) != 0
+			uint64(op), uint64(ptr)))
+		res = util.Read32[uint32](c.mod, ptr) != 0
 
 	case FCNTL_CHUNK_SIZE:
-		util.WriteUint32(c.mod, ptr, uint32(arg[0].(int)))
-		rc = c.call("sqlite3_file_control",
+		util.Write32(c.mod, ptr, int32(arg[0].(int)))
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
+			uint64(op), uint64(ptr)))
 
 	case FCNTL_RESERVE_BYTES:
 		bytes := -1
 		if len(arg) > 0 {
 			bytes = arg[0].(int)
 		}
-		util.WriteUint32(c.mod, ptr, uint32(bytes))
-		rc = c.call("sqlite3_file_control",
+		util.Write32(c.mod, ptr, int32(bytes))
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
-		res = int(util.ReadUint32(c.mod, ptr))
+			uint64(op), uint64(ptr)))
+		res = int(util.Read32[int32](c.mod, ptr))
 
 	case FCNTL_DATA_VERSION:
-		rc = c.call("sqlite3_file_control",
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
-		res = util.ReadUint32(c.mod, ptr)
+			uint64(op), uint64(ptr)))
+		res = util.Read32[uint32](c.mod, ptr)
 
 	case FCNTL_LOCKSTATE:
-		rc = c.call("sqlite3_file_control",
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
-		res = vfs.LockLevel(util.ReadUint32(c.mod, ptr))
+			uint64(op), uint64(ptr)))
+		res = util.Read32[vfs.LockLevel](c.mod, ptr)
 
 	case FCNTL_VFS_POINTER:
-		rc = c.call("sqlite3_file_control",
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
+			uint64(op), uint64(ptr)))
 		if rc == _OK {
 			const zNameOffset = 16
-			ptr = util.ReadUint32(c.mod, ptr)
-			ptr = util.ReadUint32(c.mod, ptr+zNameOffset)
+			ptr = util.Read32[ptr_t](c.mod, ptr)
+			ptr = util.Read32[ptr_t](c.mod, ptr+zNameOffset)
 			name := util.ReadString(c.mod, ptr, _MAX_NAME)
 			res = vfs.Find(name)
 		}
 
 	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:
-		rc = c.call("sqlite3_file_control",
+		rc = res_t(c.call("sqlite3_file_control",
 			uint64(c.handle), uint64(schemaPtr),
-			uint64(op), uint64(ptr))
+			uint64(op), uint64(ptr)))
 		if rc == _OK {
 			const fileHandleOffset = 4
-			ptr = util.ReadUint32(c.mod, ptr)
-			ptr = util.ReadUint32(c.mod, ptr+fileHandleOffset)
+			ptr = util.Read32[ptr_t](c.mod, ptr)
+			ptr = util.Read32[ptr_t](c.mod, ptr+fileHandleOffset)
 			res = util.GetHandle(c.ctx, ptr)
 		}
 	}
@@ -182,8 +182,8 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 //
 // https://sqlite.org/c3ref/limit.html
 func (c *Conn) Limit(id LimitCategory, value int) int {
-	r := c.call("sqlite3_limit", uint64(c.handle), uint64(id), uint64(value))
-	return int(int32(r))
+	v := int32(c.call("sqlite3_limit", uint64(c.handle), uint64(id), uint64(value)))
+	return int(v)
 }
 
 // SetAuthorizer registers an authorizer callback with the database connection.
@@ -194,8 +194,8 @@ func (c *Conn) SetAuthorizer(cb func(action AuthorizerActionCode, name3rd, name4
 	if cb != nil {
 		enable = 1
 	}
-	r := c.call("sqlite3_set_authorizer_go", uint64(c.handle), enable)
-	if err := c.error(r); err != nil {
+	rc := res_t(c.call("sqlite3_set_authorizer_go", uint64(c.handle), enable))
+	if err := c.error(rc); err != nil {
 		return err
 	}
 	c.authorizer = cb
@@ -203,7 +203,7 @@ func (c *Conn) SetAuthorizer(cb func(action AuthorizerActionCode, name3rd, name4
 
 }
 
-func authorizerCallback(ctx context.Context, mod api.Module, pDB uint32, action AuthorizerActionCode, zName3rd, zName4th, zSchema, zInner uint32) (rc AuthorizerReturnCode) {
+func authorizerCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zName3rd, zName4th, zSchema, zInner ptr_t) (rc AuthorizerReturnCode) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.authorizer != nil {
 		var name3rd, name4th, schema, inner string
 		if zName3rd != 0 {
@@ -227,15 +227,15 @@ func authorizerCallback(ctx context.Context, mod api.Module, pDB uint32, action 
 //
 // https://sqlite.org/c3ref/trace_v2.html
 func (c *Conn) Trace(mask TraceEvent, cb func(evt TraceEvent, arg1 any, arg2 any) error) error {
-	r := c.call("sqlite3_trace_go", uint64(c.handle), uint64(mask))
-	if err := c.error(r); err != nil {
+	rc := res_t(c.call("sqlite3_trace_go", uint64(c.handle), uint64(mask)))
+	if err := c.error(rc); err != nil {
 		return err
 	}
 	c.trace = cb
 	return nil
 }
 
-func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pArg1, pArg2 uint32) (rc uint32) {
+func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pArg1, pArg2 ptr_t) (rc uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.trace != nil {
 		var arg1, arg2 any
 		if evt == TRACE_CLOSE {
@@ -248,7 +248,7 @@ func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pAr
 					case TRACE_STMT:
 						arg2 = s.SQL()
 					case TRACE_PROFILE:
-						arg2 = int64(util.ReadUint64(mod, pArg2))
+						arg2 = util.Read64[int64](mod, pArg2)
 					}
 					break
 				}
@@ -269,20 +269,20 @@ func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt in
 	nLogPtr := c.arena.new(ptrlen)
 	nCkptPtr := c.arena.new(ptrlen)
 	schemaPtr := c.arena.string(schema)
-	r := c.call("sqlite3_wal_checkpoint_v2",
+	rc := res_t(c.call("sqlite3_wal_checkpoint_v2",
 		uint64(c.handle), uint64(schemaPtr), uint64(mode),
-		uint64(nLogPtr), uint64(nCkptPtr))
-	nLog = int(int32(util.ReadUint32(c.mod, nLogPtr)))
-	nCkpt = int(int32(util.ReadUint32(c.mod, nCkptPtr)))
-	return nLog, nCkpt, c.error(r)
+		uint64(nLogPtr), uint64(nCkptPtr)))
+	nLog = int(util.Read32[int32](c.mod, nLogPtr))
+	nCkpt = int(util.Read32[int32](c.mod, nCkptPtr))
+	return nLog, nCkpt, c.error(rc)
 }
 
 // WALAutoCheckpoint configures WAL auto-checkpoints.
 //
 // https://sqlite.org/c3ref/wal_autocheckpoint.html
 func (c *Conn) WALAutoCheckpoint(pages int) error {
-	r := c.call("sqlite3_wal_autocheckpoint", uint64(c.handle), uint64(pages))
-	return c.error(r)
+	rc := res_t(c.call("sqlite3_wal_autocheckpoint", uint64(c.handle), uint64(pages)))
+	return c.error(rc)
 }
 
 // WALHook registers a callback function to be invoked
@@ -298,7 +298,7 @@ func (c *Conn) WALHook(cb func(db *Conn, schema string, pages int) error) {
 	c.wal = cb
 }
 
-func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema uint32, pages int32) (rc uint32) {
+func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema ptr_t, pages int32) (rc uint32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.wal != nil {
 		schema := util.ReadString(mod, zSchema, _MAX_NAME)
 		err := c.wal(c, schema, int(pages))
@@ -311,15 +311,15 @@ func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema uint32, pa
 //
 // https://sqlite.org/c3ref/autovacuum_pages.html
 func (c *Conn) AutoVacuumPages(cb func(schema string, dbPages, freePages, bytesPerPage uint) uint) error {
-	var funcPtr uint32
+	var funcPtr ptr_t
 	if cb != nil {
 		funcPtr = util.AddHandle(c.ctx, cb)
 	}
-	r := c.call("sqlite3_autovacuum_pages_go", uint64(c.handle), uint64(funcPtr))
-	return c.error(r)
+	rc := res_t(c.call("sqlite3_autovacuum_pages_go", uint64(c.handle), uint64(funcPtr)))
+	return c.error(rc)
 }
 
-func autoVacuumCallback(ctx context.Context, mod api.Module, pApp, zSchema, nDbPage, nFreePage, nBytePerPage uint32) uint32 {
+func autoVacuumCallback(ctx context.Context, mod api.Module, pApp, zSchema ptr_t, nDbPage, nFreePage, nBytePerPage uint32) uint32 {
 	fn := util.GetHandle(ctx, pApp).(func(schema string, dbPages, freePages, bytesPerPage uint) uint)
 	schema := util.ReadString(mod, zSchema, _MAX_NAME)
 	return uint32(fn(schema, uint(nDbPage), uint(nFreePage), uint(nBytePerPage)))

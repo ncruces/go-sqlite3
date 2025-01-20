@@ -7,6 +7,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
+type i8 interface{ ~int8 | ~uint8 }
 type i32 interface{ ~int32 | ~uint32 }
 type i64 interface{ ~int64 | ~uint64 }
 
