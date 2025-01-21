@@ -35,10 +35,10 @@ type Conn struct {
 	update     func(AuthorizerActionCode, string, string, int64)
 	commit     func() bool
 	rollback   func()
-	arena      arena
 
 	busy1st time.Time
 	busylst time.Time
+	arena   arena
 	handle  ptr_t
 }
 
@@ -91,7 +91,7 @@ func newConn(ctx context.Context, filename string, flags OpenFlag) (ret *Conn, _
 	}()
 
 	c.ctx = context.WithValue(c.ctx, connKey{}, c)
-	c.arena = c.newArena(1024)
+	c.arena = c.newArena()
 	c.handle, err = c.openDB(filename, flags)
 	if err == nil {
 		err = initExtensions(c)

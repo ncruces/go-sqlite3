@@ -234,13 +234,12 @@ func (sqlt *sqlite) newString(s string) ptr_t {
 	return ptr
 }
 
-func (sqlt *sqlite) newArena(size int64) arena {
-	// Ensure the arena's size is a multiple of 8.
-	size = (size + 7) &^ 7
+const arenaSize = 4096
+
+func (sqlt *sqlite) newArena() arena {
 	return arena{
 		sqlt: sqlt,
-		size: uint32(size),
-		base: sqlt.new(size),
+		base: sqlt.new(arenaSize),
 	}
 }
 
@@ -248,8 +247,7 @@ type arena struct {
 	sqlt *sqlite
 	ptrs []ptr_t
 	base ptr_t
-	next uint32
-	size uint32
+	next int32
 }
 
 func (a *arena) free() {
@@ -283,9 +281,9 @@ func (a *arena) new(size int64) ptr_t {
 	} else {
 		a.next = (a.next + 7) &^ 7
 	}
-	if size <= int64(a.size-a.next) {
+	if size <= arenaSize-int64(a.next) {
 		ptr := a.base + ptr_t(a.next)
-		a.next += uint32(size)
+		a.next += int32(size)
 		return ptr_t(ptr)
 	}
 	ptr := a.sqlt.new(size)

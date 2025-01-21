@@ -123,11 +123,11 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, flags Acc
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
 	ok, err := vfs.Access(path, flags)
-	var val int32
+	var res int32
 	if ok {
-		val = 1
+		res = 1
 	}
-	util.Write32(mod, pResOut, val)
+	util.Write32(mod, pResOut, res)
 	return vfsErrorCode(err, _IOERR_ACCESS)
 }
 
@@ -226,11 +226,11 @@ func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut pt
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	locked, err := file.CheckReservedLock()
 
-	var val int32
+	var res int32
 	if locked {
-		val = 1
+		res = 1
 	}
-	util.Write32(mod, pResOut, val)
+	util.Write32(mod, pResOut, res)
 	return vfsErrorCode(err, _IOERR_CHECKRESERVEDLOCK)
 }
 

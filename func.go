@@ -213,7 +213,7 @@ func callbackArgs(db *Conn, arg []Value, pArg ptr_t) {
 	for i := range arg {
 		arg[i] = Value{
 			c:      db,
-			handle: util.Read32[ptr_t](db.mod, pArg+ptrlen*ptr_t(i)),
+			handle: util.Read32[ptr_t](db.mod, pArg+ptr_t(i)*ptrlen),
 		}
 	}
 }

@@ -26,11 +26,11 @@ func View(mod api.Module, ptr Ptr_t, size int64) []byte {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	if uint64(size) > math.MaxUint32 {
-		panic(RangeErr)
-	}
 	if size == 0 {
 		return nil
+	}
+	if uint64(size) > math.MaxUint32 {
+		panic(RangeErr)
 	}
 	buf, ok := mod.Memory().Read(uint32(ptr), uint32(size))
 	if !ok {
@@ -139,7 +139,7 @@ func WriteBytes(mod api.Module, ptr Ptr_t, b []byte) {
 }
 
 func WriteString(mod api.Module, ptr Ptr_t, s string) {
-	buf := View(mod, ptr, int64(len(s)+1))
+	buf := View(mod, ptr, int64(len(s))+1)
 	buf[len(s)] = 0
 	copy(buf, s)
 }

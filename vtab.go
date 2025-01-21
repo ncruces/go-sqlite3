@@ -448,7 +448,7 @@ func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module,
 		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
 
 		for i := int32(0); i < nArg; i++ {
-			ptr := util.Read32[ptr_t](mod, pArg+ptr_t(i*ptrlen))
+			ptr := util.Read32[ptr_t](mod, pArg+ptr_t(i)*ptrlen)
 			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_SQL_LENGTH))
 		}
 

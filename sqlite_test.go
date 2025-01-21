@@ -65,7 +65,7 @@ func Test_sqlite_newArena(t *testing.T) {
 	}
 	defer sqlite.close()
 
-	arena := sqlite.newArena(16)
+	arena := sqlite.newArena()
 	defer arena.free()
 
 	const title = "Lorem ipsum"
@@ -192,7 +192,7 @@ func Test_sqlite_getString(t *testing.T) {
 
 	func() {
 		defer func() { _ = recover() }()
-		util.ReadString(sqlite.mod, ptr, int64(len(want)/2))
+		util.ReadString(sqlite.mod, ptr, int64(len(want))/2)
 		t.Error("want panic")
 	}()
 
