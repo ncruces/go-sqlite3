@@ -30,7 +30,7 @@ func Register(db *sqlite3.Conn) error {
 // RegisterFS registers the CSV virtual table.
 // If a filename is specified, fsys is used to open the file.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
-	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (res *table, err error) {
+	declare := func(db *sqlite3.Conn, _, _, _ string, arg ...string) (_ *table, err error) {
 		var (
 			filename string
 			data     string

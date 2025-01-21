@@ -59,14 +59,14 @@ func TestError_Temporary(t *testing.T) {
 
 	tests := []struct {
 		name string
-		code uint64
+		code res_t
 		want bool
 	}{
-		{"ERROR", uint64(ERROR), false},
-		{"BUSY", uint64(BUSY), true},
-		{"BUSY_RECOVERY", uint64(BUSY_RECOVERY), true},
-		{"BUSY_SNAPSHOT", uint64(BUSY_SNAPSHOT), true},
-		{"BUSY_TIMEOUT", uint64(BUSY_TIMEOUT), true},
+		{"ERROR", res_t(ERROR), false},
+		{"BUSY", res_t(BUSY), true},
+		{"BUSY_RECOVERY", res_t(BUSY_RECOVERY), true},
+		{"BUSY_SNAPSHOT", res_t(BUSY_SNAPSHOT), true},
+		{"BUSY_TIMEOUT", res_t(BUSY_TIMEOUT), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,14 +97,14 @@ func TestError_Timeout(t *testing.T) {
 
 	tests := []struct {
 		name string
-		code uint64
+		code res_t
 		want bool
 	}{
-		{"ERROR", uint64(ERROR), false},
-		{"BUSY", uint64(BUSY), false},
-		{"BUSY_RECOVERY", uint64(BUSY_RECOVERY), false},
-		{"BUSY_SNAPSHOT", uint64(BUSY_SNAPSHOT), false},
-		{"BUSY_TIMEOUT", uint64(BUSY_TIMEOUT), true},
+		{"ERROR", res_t(ERROR), false},
+		{"BUSY", res_t(BUSY), false},
+		{"BUSY_RECOVERY", res_t(BUSY_RECOVERY), false},
+		{"BUSY_SNAPSHOT", res_t(BUSY_SNAPSHOT), false},
+		{"BUSY_TIMEOUT", res_t(BUSY_TIMEOUT), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,8 +136,8 @@ func Test_ErrorCode_Error(t *testing.T) {
 	// Test all error codes.
 	for i := 0; i == int(ErrorCode(i)); i++ {
 		want := "sqlite3: "
-		r := db.call("sqlite3_errstr", uint64(i))
-		want += util.ReadString(db.mod, uint32(r), _MAX_NAME)
+		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
+		want += util.ReadString(db.mod, ptr, _MAX_NAME)
 
 		got := ErrorCode(i).Error()
 		if got != want {
@@ -158,8 +158,8 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	// Test all extended error codes.
 	for i := 0; i == int(ExtendedErrorCode(i)); i++ {
 		want := "sqlite3: "
-		r := db.call("sqlite3_errstr", uint64(i))
-		want += util.ReadString(db.mod, uint32(r), _MAX_NAME)
+		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
+		want += util.ReadString(db.mod, ptr, _MAX_NAME)
 
 		got := ExtendedErrorCode(i).Error()
 		if got != want {
@@ -172,7 +172,7 @@ func Test_errorCode(t *testing.T) {
 	tests := []struct {
 		arg      error
 		wantMsg  string
-		wantCode uint32
+		wantCode res_t
 	}{
 		{nil, "", _OK},
 		{ERROR, "", util.ERROR},
@@ -190,7 +190,7 @@ func Test_errorCode(t *testing.T) {
 			if gotMsg != tt.wantMsg {
 				t.Errorf("errorCode() gotMsg = %q, want %q", gotMsg, tt.wantMsg)
 			}
-			if gotCode != uint32(tt.wantCode) {
+			if gotCode != tt.wantCode {
 				t.Errorf("errorCode() gotCode = %d, want %d", gotCode, tt.wantCode)
 			}
 		})

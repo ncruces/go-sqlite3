@@ -25,14 +25,14 @@ type table struct {
 	cols []*sqlite3.Value
 }
 
-func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (res *table, err error) {
+func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err error) {
 	if len(arg) != 3 {
 		return nil, fmt.Errorf("pivot: wrong number of arguments")
 	}
 
 	t := &table{db: db}
 	defer func() {
-		if res == nil {
+		if ret == nil {
 			t.Close()
 		}
 	}()

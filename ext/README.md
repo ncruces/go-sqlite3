@@ -25,6 +25,8 @@ you can load into your database connections.
   creates [pivot tables](https://github.com/jakethaw/pivot_vtab).
 - [`github.com/ncruces/go-sqlite3/ext/regexp`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/regexp)
   provides regular expression functions.
+- [`github.com/ncruces/go-sqlite3/ext/serdes`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/serdes)
+  (de)serializes databases.
 - [`github.com/ncruces/go-sqlite3/ext/statement`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/statement)
   creates [parameterized views](https://github.com/0x09/sqlite-statement-vtab).
 - [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
