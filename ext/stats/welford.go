@@ -10,14 +10,13 @@ import (
 // Welford's algorithm with Kahan summation:
 // The effect of truncation in statistical computation [van Reeken, AJ 1970]
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
-// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 
 type welford struct {
 	m1, m2 kahan
 	n      int64
 }
 
-func (w welford) average() float64 {
+func (w welford) mean() float64 {
 	return w.m1.hi
 }
 
@@ -169,20 +168,4 @@ func (w *welford2) dequeue(y, x float64) {
 	w.m2y.sub(d1y * d2y)
 	w.m2x.sub(d1x * d2x)
 	w.cov.sub(d1y * d2x)
-}
-
-type kahan struct{ hi, lo float64 }
-
-func (k *kahan) add(x float64) {
-	y := k.lo + x
-	t := k.hi + y
-	k.lo = y - (t - k.hi)
-	k.hi = t
-}
-
-func (k *kahan) sub(x float64) {
-	y := k.lo - x
-	t := k.hi + y
-	k.lo = y - (t - k.hi)
-	k.hi = t
 }

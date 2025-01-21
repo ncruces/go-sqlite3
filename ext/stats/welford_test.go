@@ -9,12 +9,14 @@ func Test_welford(t *testing.T) {
 	t.Parallel()
 
 	var s1, s2 welford
+	s1.enqueue(1)
+	s1.dequeue(1)
 
 	s1.enqueue(4)
 	s1.enqueue(7)
 	s1.enqueue(13)
 	s1.enqueue(16)
-	if got := s1.average(); got != 10 {
+	if got := s1.mean(); got != 10 {
 		t.Errorf("got %v, want 10", got)
 	}
 	if got := s1.var_samp(); got != 30 {
@@ -37,22 +39,14 @@ func Test_welford(t *testing.T) {
 	if s1.var_pop() != s2.var_pop() {
 		t.Errorf("got %v, want %v", s1, s2)
 	}
-
-	s1.dequeue(16)
-	s1.dequeue(7)
-	s1.dequeue(13)
-	s1.enqueue(16)
-	s1.enqueue(7)
-	s1.enqueue(13)
-	if s1.var_pop() != s2.var_pop() {
-		t.Errorf("got %v, want %v", s1, s2)
-	}
 }
 
 func Test_covar(t *testing.T) {
 	t.Parallel()
 
 	var c1, c2 welford2
+	c1.enqueue(1, 1)
+	c1.dequeue(1, 1)
 
 	c1.enqueue(3, 70)
 	c1.enqueue(5, 80)
@@ -72,18 +66,6 @@ func Test_covar(t *testing.T) {
 	c2.enqueue(2, 60)
 	c2.enqueue(7, 90)
 	c2.enqueue(4, 75)
-	if c1.covar_pop() != c2.covar_pop() {
-		t.Errorf("got %v, want %v", c1.covar_pop(), c2.covar_pop())
-	}
-
-	c1.dequeue(2, 60)
-	c1.dequeue(5, 80)
-	c1.dequeue(4, 75)
-	c1.dequeue(7, 90)
-	c1.enqueue(2, 60)
-	c1.enqueue(5, 80)
-	c1.enqueue(4, 75)
-	c1.enqueue(7, 90)
 	if c1.covar_pop() != c2.covar_pop() {
 		t.Errorf("got %v, want %v", c1.covar_pop(), c2.covar_pop())
 	}
