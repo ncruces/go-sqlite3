@@ -115,6 +115,6 @@ func TestWriteUint64_range(t *testing.T) {
 func TestReadString_range(t *testing.T) {
 	defer func() { _ = recover() }()
 	mock := wazerotest.NewModule(wazerotest.NewFixedMemory(wazerotest.PageSize))
-	ReadString(mock, wazerotest.PageSize+2, math.MaxUint32)
+	ReadString(mock, wazerotest.PageSize+2, math.MaxInt)
 	t.Error("want panic")
 }

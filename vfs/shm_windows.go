@@ -27,7 +27,7 @@ type vfsShm struct {
 	shared   [][]byte
 	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []ptr_t
-	stack    [1]uint64
+	stack    [1]stk_t
 	fileLock bool
 	blocking bool
 	sync.Mutex
@@ -119,7 +119,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 
 	// Allocate local memory.
 	for int(id) >= len(s.ptrs) {
-		s.stack[0] = uint64(size)
+		s.stack[0] = stk_t(size)
 		if err := s.alloc.CallWithStack(ctx, s.stack[:]); err != nil {
 			panic(err)
 		}
@@ -168,7 +168,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 
 	// Free local memory.
 	for _, p := range s.ptrs {
-		s.stack[0] = uint64(p)
+		s.stack[0] = stk_t(p)
 		if err := s.free.CallWithStack(context.Background(), s.stack[:]); err != nil {
 			panic(err)
 		}

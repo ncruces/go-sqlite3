@@ -136,7 +136,7 @@ func Test_ErrorCode_Error(t *testing.T) {
 	// Test all error codes.
 	for i := 0; i == int(ErrorCode(i)); i++ {
 		want := "sqlite3: "
-		ptr := ptr_t(db.call("sqlite3_errstr", uint64(i)))
+		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
 		want += util.ReadString(db.mod, ptr, _MAX_NAME)
 
 		got := ErrorCode(i).Error()
@@ -158,7 +158,7 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	// Test all extended error codes.
 	for i := 0; i == int(ExtendedErrorCode(i)); i++ {
 		want := "sqlite3: "
-		ptr := ptr_t(db.call("sqlite3_errstr", uint64(i)))
+		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
 		want += util.ReadString(db.mod, ptr, _MAX_NAME)
 
 		got := ExtendedErrorCode(i).Error()
@@ -172,7 +172,7 @@ func Test_errorCode(t *testing.T) {
 	tests := []struct {
 		arg      error
 		wantMsg  string
-		wantCode uint32
+		wantCode res_t
 	}{
 		{nil, "", _OK},
 		{ERROR, "", util.ERROR},
@@ -190,7 +190,7 @@ func Test_errorCode(t *testing.T) {
 			if gotMsg != tt.wantMsg {
 				t.Errorf("errorCode() gotMsg = %q, want %q", gotMsg, tt.wantMsg)
 			}
-			if gotCode != uint32(tt.wantCode) {
+			if gotCode != tt.wantCode {
 				t.Errorf("errorCode() gotCode = %d, want %d", gotCode, tt.wantCode)
 			}
 		})

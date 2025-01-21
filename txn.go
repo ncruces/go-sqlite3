@@ -234,7 +234,7 @@ func (c *Conn) TxnState(schema string) TxnState {
 		defer c.arena.mark()()
 		ptr = c.arena.string(schema)
 	}
-	return TxnState(c.call("sqlite3_txn_state", uint64(c.handle), uint64(ptr)))
+	return TxnState(c.call("sqlite3_txn_state", stk_t(c.handle), stk_t(ptr)))
 }
 
 // CommitHook registers a callback function to be invoked
@@ -243,11 +243,11 @@ func (c *Conn) TxnState(schema string) TxnState {
 //
 // https://sqlite.org/c3ref/commit_hook.html
 func (c *Conn) CommitHook(cb func() (ok bool)) {
-	var enable uint64
+	var enable int32
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_commit_hook_go", uint64(c.handle), enable)
+	c.call("sqlite3_commit_hook_go", stk_t(c.handle), stk_t(enable))
 	c.commit = cb
 }
 
@@ -256,11 +256,11 @@ func (c *Conn) CommitHook(cb func() (ok bool)) {
 //
 // https://sqlite.org/c3ref/commit_hook.html
 func (c *Conn) RollbackHook(cb func()) {
-	var enable uint64
+	var enable int32
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_rollback_hook_go", uint64(c.handle), enable)
+	c.call("sqlite3_rollback_hook_go", stk_t(c.handle), stk_t(enable))
 	c.rollback = cb
 }
 
@@ -269,15 +269,15 @@ func (c *Conn) RollbackHook(cb func()) {
 //
 // https://sqlite.org/c3ref/update_hook.html
 func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table string, rowid int64)) {
-	var enable uint64
+	var enable int32
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_update_hook_go", uint64(c.handle), enable)
+	c.call("sqlite3_update_hook_go", stk_t(c.handle), stk_t(enable))
 	c.update = cb
 }
 
-func commitCallback(ctx context.Context, mod api.Module, pDB ptr_t) (rollback uint32) {
+func commitCallback(ctx context.Context, mod api.Module, pDB ptr_t) (rollback int32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
 		if !c.commit() {
 			rollback = 1
@@ -292,11 +292,11 @@ func rollbackCallback(ctx context.Context, mod api.Module, pDB ptr_t) {
 	}
 }
 
-func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zSchema, zTabName ptr_t, rowid uint64) {
+func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zSchema, zTabName ptr_t, rowid int64) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.update != nil {
 		schema := util.ReadString(mod, zSchema, _MAX_NAME)
 		table := util.ReadString(mod, zTabName, _MAX_NAME)
-		c.update(action, schema, table, int64(rowid))
+		c.update(action, schema, table, rowid)
 	}
 }
 
@@ -304,6 +304,6 @@ func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action Autho
 //
 // https://sqlite.org/c3ref/db_cacheflush.html
 func (c *Conn) CacheFlush() error {
-	rc := res_t(c.call("sqlite3_db_cacheflush", uint64(c.handle)))
+	rc := res_t(c.call("sqlite3_db_cacheflush", stk_t(c.handle)))
 	return c.error(rc)
 }

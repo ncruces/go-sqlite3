@@ -14,11 +14,11 @@ import (
 //
 // https://sqlite.org/c3ref/collation_needed.html
 func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
-	var enable uint64
+	var enable int32
 	if cb != nil {
 		enable = 1
 	}
-	rc := res_t(c.call("sqlite3_collation_needed_go", uint64(c.handle), enable))
+	rc := res_t(c.call("sqlite3_collation_needed_go", stk_t(c.handle), stk_t(enable)))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 // This can be used to load schemas that contain
 // one or more unknown collating sequences.
 func (c Conn) AnyCollationNeeded() error {
-	rc := res_t(c.call("sqlite3_anycollseq_init", uint64(c.handle), 0, 0))
+	rc := res_t(c.call("sqlite3_anycollseq_init", stk_t(c.handle), 0, 0))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 		funcPtr = util.AddHandle(c.ctx, fn)
 	}
 	rc := res_t(c.call("sqlite3_create_collation_go",
-		uint64(c.handle), uint64(namePtr), uint64(funcPtr)))
+		stk_t(c.handle), stk_t(namePtr), stk_t(funcPtr)))
 	return c.error(rc)
 }
 
@@ -67,8 +67,8 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn Scala
 		funcPtr = util.AddHandle(c.ctx, fn)
 	}
 	rc := res_t(c.call("sqlite3_create_function_go",
-		uint64(c.handle), uint64(namePtr), uint64(nArg),
-		uint64(flag), uint64(funcPtr)))
+		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
+		stk_t(flag), stk_t(funcPtr)))
 	return c.error(rc)
 }
 
@@ -93,8 +93,8 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 		call = "sqlite3_create_window_function_go"
 	}
 	rc := res_t(c.call(call,
-		uint64(c.handle), uint64(namePtr), uint64(nArg),
-		uint64(flag), uint64(funcPtr)))
+		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
+		stk_t(flag), stk_t(funcPtr)))
 	return c.error(rc)
 }
 
@@ -130,7 +130,7 @@ func (c *Conn) OverloadFunction(name string, nArg int) error {
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	rc := res_t(c.call("sqlite3_overload_function",
-		uint64(c.handle), uint64(namePtr), uint64(nArg)))
+		stk_t(c.handle), stk_t(namePtr), stk_t(nArg)))
 	return c.error(rc)
 }
 
@@ -145,12 +145,12 @@ func collationCallback(ctx context.Context, mod api.Module, pArg, pDB ptr_t, eTe
 	}
 }
 
-func compareCallback(ctx context.Context, mod api.Module, pApp ptr_t, nKey1 uint32, pKey1 ptr_t, nKey2 uint32, pKey2 ptr_t) uint32 {
+func compareCallback(ctx context.Context, mod api.Module, pApp ptr_t, nKey1 int32, pKey1 ptr_t, nKey2 int32, pKey2 ptr_t) uint32 {
 	fn := util.GetHandle(ctx, pApp).(func(a, b []byte) int)
-	return uint32(fn(util.View(mod, pKey1, uint64(nKey1)), util.View(mod, pKey2, uint64(nKey2))))
+	return uint32(fn(util.View(mod, pKey1, int64(nKey1)), util.View(mod, pKey2, int64(nKey2))))
 }
 
-func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp ptr_t, nArg uint32, pArg ptr_t) {
+func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp ptr_t, nArg int32, pArg ptr_t) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
@@ -159,7 +159,7 @@ func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp ptr_t, nArg ui
 	fn(Context{db, pCtx}, args[:nArg]...)
 }
 
-func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, nArg uint32, pArg ptr_t) {
+func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, nArg int32, pArg ptr_t) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
@@ -184,7 +184,7 @@ func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t) {
 	fn.Value(Context{db, pCtx})
 }
 
-func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t, nArg uint32, pArg ptr_t) {
+func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t, nArg int32, pArg ptr_t) {
 	args := getFuncArgs()
 	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)

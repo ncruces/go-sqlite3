@@ -50,7 +50,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 		copy(buf, sql)
 	}
 
-	stack := [...]uint64{sqlp, uint64(len(sql)), errp}
+	stack := [...]util.Stk_t{sqlp, util.Stk_t(len(sql)), errp}
 	err = mod.ExportedFunction("sql3parse_table").CallWithStack(ctx, stack[:])
 	if err != nil {
 		return nil, err

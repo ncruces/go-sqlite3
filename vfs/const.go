@@ -11,7 +11,10 @@ const (
 	ptrlen = util.PtrLen
 )
 
-type ptr_t = util.Ptr_t
+type (
+	stk_t = util.Stk_t
+	ptr_t = util.Ptr_t
+)
 
 // https://sqlite.org/rescode.html
 type _ErrorCode uint32

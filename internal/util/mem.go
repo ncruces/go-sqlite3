@@ -13,15 +13,20 @@ const (
 )
 
 type (
+	i8  interface{ ~int8 | ~uint8 }
+	i32 interface{ ~int32 | ~uint32 }
+	i64 interface{ ~int64 | ~uint64 }
+
+	Stk_t = uint64
 	Ptr_t uint32
 	Res_t int32
 )
 
-func View(mod api.Module, ptr Ptr_t, size uint64) []byte {
+func View(mod api.Module, ptr Ptr_t, size int64) []byte {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	if size > math.MaxUint32 {
+	if uint64(size) > math.MaxUint32 {
 		panic(RangeErr)
 	}
 	if size == 0 {
@@ -105,20 +110,16 @@ func WriteFloat64(mod api.Module, ptr Ptr_t, v float64) {
 	Write64(mod, ptr, math.Float64bits(v))
 }
 
-func ReadString(mod api.Module, ptr Ptr_t, maxlen uint32) string {
+func ReadString(mod api.Module, ptr Ptr_t, maxlen int64) string {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	switch maxlen {
-	case 0:
+	if maxlen <= 0 {
 		return ""
-	case math.MaxUint32:
-		// avoid overflow
-	default:
-		maxlen = maxlen + 1
 	}
 	mem := mod.Memory()
-	buf, ok := mem.Read(uint32(ptr), maxlen)
+	maxlen = min(maxlen, math.MaxInt32-1) + 1
+	buf, ok := mem.Read(uint32(ptr), uint32(maxlen))
 	if !ok {
 		buf, ok = mem.Read(uint32(ptr), mem.Size()-uint32(ptr))
 		if !ok {
@@ -133,12 +134,12 @@ func ReadString(mod api.Module, ptr Ptr_t, maxlen uint32) string {
 }
 
 func WriteBytes(mod api.Module, ptr Ptr_t, b []byte) {
-	buf := View(mod, ptr, uint64(len(b)))
+	buf := View(mod, ptr, int64(len(b)))
 	copy(buf, b)
 }
 
 func WriteString(mod api.Module, ptr Ptr_t, s string) {
-	buf := View(mod, ptr, uint64(len(s)+1))
+	buf := View(mod, ptr, int64(len(s)+1))
 	buf[len(s)] = 0
 	copy(buf, s)
 }

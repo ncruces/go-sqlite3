@@ -79,7 +79,7 @@ func vfsLocaltime(ctx context.Context, mod api.Module, pTm ptr_t, t int64) _Erro
 }
 
 func vfsRandomness(ctx context.Context, mod api.Module, pVfs ptr_t, nByte int32, zByte ptr_t) uint32 {
-	mem := util.View(mod, zByte, uint64(nByte))
+	mem := util.View(mod, zByte, int64(nByte))
 	n, _ := rand.Reader.Read(mem)
 	return uint32(n)
 }
@@ -110,7 +110,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative ptr_t,
 	return vfsErrorCode(err, _CANTOPEN_FULLPATH)
 }
 
-func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, syncDir uint32) _ErrorCode {
+func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, syncDir int32) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
@@ -170,7 +170,7 @@ func vfsClose(ctx context.Context, mod api.Module, pFile ptr_t) _ErrorCode {
 
 func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
-	buf := util.View(mod, zBuf, uint64(iAmt))
+	buf := util.View(mod, zBuf, int64(iAmt))
 
 	n, err := file.ReadAt(buf, iOfst)
 	if n == int(iAmt) {
@@ -185,7 +185,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32,
 
 func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
-	buf := util.View(mod, zBuf, uint64(iAmt))
+	buf := util.View(mod, zBuf, int64(iAmt))
 
 	_, err := file.WriteAt(buf, iOfst)
 	return vfsErrorCode(err, _IOERR_WRITE)
@@ -367,7 +367,7 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 			}
 			if out != "" {
 				fn := mod.ExportedFunction("sqlite3_malloc64")
-				stack := [...]uint64{uint64(len(out) + 1)}
+				stack := [...]stk_t{stk_t(len(out) + 1)}
 				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
 					panic(err)
 				}
@@ -379,10 +379,10 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 
 	case _FCNTL_BUSYHANDLER:
 		if file, ok := file.(FileBusyHandler); ok {
-			arg := util.Read64[uint64](mod, pArg)
+			arg := util.Read64[stk_t](mod, pArg)
 			fn := mod.ExportedFunction("sqlite3_invoke_busy_handler_go")
 			file.BusyHandler(func() bool {
-				stack := [...]uint64{arg}
+				stack := [...]stk_t{arg}
 				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
 					panic(err)
 				}
@@ -436,7 +436,7 @@ func vfsShmLock(ctx context.Context, mod api.Module, pFile ptr_t, offset, n int3
 	return shm.shmLock(offset, n, flags)
 }
 
-func vfsShmUnmap(ctx context.Context, mod api.Module, pFile ptr_t, bDelete uint32) _ErrorCode {
+func vfsShmUnmap(ctx context.Context, mod api.Module, pFile ptr_t, bDelete int32) _ErrorCode {
 	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	shm.shmUnmap(bDelete != 0)
 	return _OK

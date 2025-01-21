@@ -19,18 +19,18 @@ type Value struct {
 	copied bool
 }
 
-func (v Value) protected() uint64 {
+func (v Value) protected() stk_t {
 	if v.unprot {
 		panic(util.ValueErr)
 	}
-	return uint64(v.handle)
+	return stk_t(v.handle)
 }
 
 // Dup makes a copy of the SQL value and returns a pointer to that copy.
 //
 // https://sqlite.org/c3ref/value_dup.html
 func (v Value) Dup() *Value {
-	ptr := ptr_t(v.c.call("sqlite3_value_dup", uint64(v.handle)))
+	ptr := ptr_t(v.c.call("sqlite3_value_dup", stk_t(v.handle)))
 	return &Value{
 		c:      v.c,
 		copied: true,
@@ -45,7 +45,7 @@ func (dup *Value) Close() error {
 	if !dup.copied {
 		panic(util.ValueErr)
 	}
-	dup.c.call("sqlite3_value_free", uint64(dup.handle))
+	dup.c.call("sqlite3_value_free", stk_t(dup.handle))
 	dup.handle = 0
 	return nil
 }
@@ -158,7 +158,7 @@ func (v Value) rawBytes(ptr ptr_t) []byte {
 	}
 
 	n := int32(v.c.call("sqlite3_value_bytes", v.protected()))
-	return util.View(v.c.mod, ptr, uint64(n))
+	return util.View(v.c.mod, ptr, int64(n))
 }
 
 // Pointer gets the pointer associated with this value,
@@ -213,7 +213,7 @@ func (v Value) FromBind() bool {
 func (v Value) InFirst() (Value, error) {
 	defer v.c.arena.mark()()
 	valPtr := v.c.arena.new(ptrlen)
-	rc := res_t(v.c.call("sqlite3_vtab_in_first", uint64(v.handle), uint64(valPtr)))
+	rc := res_t(v.c.call("sqlite3_vtab_in_first", stk_t(v.handle), stk_t(valPtr)))
 	if err := v.c.error(rc); err != nil {
 		return Value{}, err
 	}
@@ -230,7 +230,7 @@ func (v Value) InFirst() (Value, error) {
 func (v Value) InNext() (Value, error) {
 	defer v.c.arena.mark()()
 	valPtr := v.c.arena.new(ptrlen)
-	rc := res_t(v.c.call("sqlite3_vtab_in_next", uint64(v.handle), uint64(valPtr)))
+	rc := res_t(v.c.call("sqlite3_vtab_in_next", stk_t(v.handle), stk_t(valPtr)))
 	if err := v.c.error(rc); err != nil {
 		return Value{}, err
 	}
