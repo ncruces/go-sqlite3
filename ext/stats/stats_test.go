@@ -49,7 +49,9 @@ func TestRegister_variance(t *testing.T) {
 		SELECT
 			sum(x), avg(x),
 			var_samp(x), var_pop(x),
-			stddev_samp(x), stddev_pop(x)
+			stddev_samp(x), stddev_pop(x),
+			skewness_samp(x), skewness_pop(x),
+			kurtosis_samp(x), kurtosis_pop(x)
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)
@@ -73,13 +75,26 @@ func TestRegister_variance(t *testing.T) {
 		if got := stmt.ColumnFloat(5); got != math.Sqrt(22.5) {
 			t.Errorf("got %v, want √22.5", got)
 		}
+		if got := stmt.ColumnFloat(6); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(7); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(8); float32(got) != -3.3 {
+			t.Errorf("got %v, want -3.3", got)
+		}
+		if got := stmt.ColumnFloat(9); got != -1.64 {
+			t.Errorf("got %v, want -1.64", got)
+		}
 	}
 	stmt.Close()
 
 	stmt, _, err = db.Prepare(`
 		SELECT
 	 		var_samp(x) OVER (ROWS 1 PRECEDING),
-	 		var_pop(x)  OVER (ROWS 1 PRECEDING)
+			var_pop(x)  OVER (ROWS 1 PRECEDING),
+	 		skewness_pop(x) OVER (ROWS 1 PRECEDING)
 		FROM data`)
 	if err != nil {
 		t.Fatal(err)

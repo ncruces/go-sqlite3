@@ -14,7 +14,7 @@ func Test_moments(t *testing.T) {
 	if !math.IsNaN(s1.skewness_pop()) {
 		t.Errorf("want NaN")
 	}
-	if !math.IsNaN(s1.kurtosis_pop()) {
+	if !math.IsNaN(s1.raw_kurtosis_pop()) {
 		t.Errorf("want NaN")
 	}
 
@@ -29,16 +29,16 @@ func Test_moments(t *testing.T) {
 	s1.enqueue(+3.5784)
 	s1.enqueue(+2.7694)
 
-	if got := float32(s1.skewness_pop()); got != 0.106098293 {
+	if got := s1.skewness_pop(); float32(got) != 0.106098293 {
 		t.Errorf("got %v, want 0.1061", got)
 	}
-	if got := float32(s1.skewness_samp()); got != 0.1258171 {
+	if got := s1.skewness_samp(); float32(got) != 0.1258171 {
 		t.Errorf("got %v, want 0.1258", got)
 	}
-	if got := float32(s1.kurtosis_pop()); got != 2.3121266 {
+	if got := s1.raw_kurtosis_pop(); float32(got) != 2.3121266 {
 		t.Errorf("got %v, want 2.3121", got)
 	}
-	if got := float32(s1.kurtosis_samp()); got != 2.7482237 {
+	if got := s1.raw_kurtosis_samp(); float32(got) != 2.7482237 {
 		t.Errorf("got %v, want 2.7483", got)
 	}
 
@@ -72,16 +72,16 @@ func Test_moments(t *testing.T) {
 	s1.dequeue(math.E)
 	s1.dequeue(math.Sqrt2)
 
-	if got := float32(s1.skewness_pop()); got != 0.106098293 {
+	if got := s1.skewness_pop(); float32(got) != 0.106098293 {
 		t.Errorf("got %v, want 0.1061", got)
 	}
-	if got := float32(s1.skewness_samp()); got != 0.1258171 {
+	if got := s1.skewness_samp(); float32(got) != 0.1258171 {
 		t.Errorf("got %v, want 0.1258", got)
 	}
-	if got := float32(s1.kurtosis_pop()); got != 2.3121266 {
+	if got := s1.raw_kurtosis_pop(); float32(got) != 2.3121266 {
 		t.Errorf("got %v, want 2.3121", got)
 	}
-	if got := float32(s1.kurtosis_samp()); got != 2.7482237 {
+	if got := s1.raw_kurtosis_samp(); float32(got) != 2.7482237 {
 		t.Errorf("got %v, want 2.7483", got)
 	}
 }

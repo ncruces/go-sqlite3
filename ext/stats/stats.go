@@ -1,13 +1,17 @@
 // Package stats provides aggregate functions for statistics.
 //
 // Provided functions:
-//   - stddev_pop: population standard deviation
-//   - stddev_samp: sample standard deviation
 //   - var_pop: population variance
 //   - var_samp: sample variance
+//   - stddev_pop: population standard deviation
+//   - stddev_samp: sample standard deviation
+//   - skewness_pop: Pearson population skewness
+//   - skewness_samp: Pearson sample skewness
+//   - kurtosis_pop: Fisher population excess kurtosis
+//   - kurtosis_samp: Fisher sample excess kurtosis
 //   - covar_pop: population covariance
 //   - covar_samp: sample covariance
-//   - corr: correlation coefficient
+//   - corr: Pearson correlation coefficient
 //   - regr_r2: correlation coefficient squared
 //   - regr_avgx: average of the independent variable
 //   - regr_avgy: average of the dependent variable
@@ -61,6 +65,10 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp)),
 		db.CreateWindowFunction("stddev_pop", 1, flags, newVariance(stddev_pop)),
 		db.CreateWindowFunction("stddev_samp", 1, flags, newVariance(stddev_samp)),
+		db.CreateWindowFunction("skewness_pop", 1, flags, newMoments(skewness_pop)),
+		db.CreateWindowFunction("skewness_samp", 1, flags, newMoments(skewness_samp)),
+		db.CreateWindowFunction("kurtosis_pop", 1, flags, newMoments(kurtosis_pop)),
+		db.CreateWindowFunction("kurtosis_samp", 1, flags, newMoments(kurtosis_samp)),
 		db.CreateWindowFunction("covar_pop", 2, flags, newCovariance(var_pop)),
 		db.CreateWindowFunction("covar_samp", 2, flags, newCovariance(var_samp)),
 		db.CreateWindowFunction("corr", 2, flags, newCovariance(corr)),
@@ -88,6 +96,10 @@ const (
 	var_samp
 	stddev_pop
 	stddev_samp
+	skewness_pop
+	skewness_samp
+	kurtosis_pop
+	kurtosis_samp
 	corr
 	regr_r2
 	regr_sxx
@@ -101,6 +113,23 @@ const (
 	regr_json
 )
 
+func special(kind int, n int64) (null, zero bool) {
+	switch kind {
+	case var_pop, stddev_pop, regr_sxx, regr_syy, regr_sxy:
+		return n <= 0, n == 1
+	case regr_avgx, regr_avgy:
+		return n <= 0, false
+	case kurtosis_samp:
+		return n <= 3, false
+	case skewness_samp:
+		return n <= 2, false
+	case skewness_pop:
+		return n <= 1, n == 2
+	default:
+		return n <= 1, false
+	}
+}
+
 func newVariance(kind int) func() sqlite3.AggregateFunction {
 	return func() sqlite3.AggregateFunction { return &variance{kind: kind} }
 }
@@ -111,14 +140,11 @@ type variance struct {
 }
 
 func (fn *variance) Value(ctx sqlite3.Context) {
-	switch fn.n {
-	case 1:
-		switch fn.kind {
-		case var_pop, stddev_pop:
-			ctx.ResultFloat(0)
-		}
+	switch null, zero := special(fn.kind, fn.n); {
+	case zero:
+		ctx.ResultFloat(0)
 		return
-	case 0:
+	case null:
 		return
 	}
 
@@ -166,18 +192,11 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 		ctx.ResultInt64(fn.regr_count())
 		return
 	}
-	switch fn.n {
-	case 1:
-		switch fn.kind {
-		case var_pop, stddev_pop, regr_sxx, regr_syy, regr_sxy:
-			ctx.ResultFloat(0)
-			return
-		case regr_avgx, regr_avgy:
-			break
-		default:
-			return
-		}
-	case 0:
+	switch null, zero := special(fn.kind, fn.n); {
+	case zero:
+		ctx.ResultFloat(0)
+		return
+	case null:
 		return
 	}
 
@@ -232,5 +251,53 @@ func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		(fa != 0.0 || a.NumericType() != sqlite3.NULL) &&
 		(fb != 0.0 || b.NumericType() != sqlite3.NULL) {
 		fn.dequeue(fa, fb)
+	}
+}
+
+func newMoments(kind int) func() sqlite3.AggregateFunction {
+	return func() sqlite3.AggregateFunction { return &momentfn{kind: kind} }
+}
+
+type momentfn struct {
+	kind int
+	moments
+}
+
+func (fn *momentfn) Value(ctx sqlite3.Context) {
+	switch null, zero := special(fn.kind, fn.n); {
+	case zero:
+		ctx.ResultFloat(0)
+		return
+	case null:
+		return
+	}
+
+	var r float64
+	switch fn.kind {
+	case skewness_pop:
+		r = fn.skewness_pop()
+	case skewness_samp:
+		r = fn.skewness_samp()
+	case kurtosis_pop:
+		r = fn.kurtosis_pop()
+	case kurtosis_samp:
+		r = fn.kurtosis_samp()
+	}
+	ctx.ResultFloat(r)
+}
+
+func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	a := arg[0]
+	f := a.Float()
+	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+		fn.enqueue(f)
+	}
+}
+
+func (fn *momentfn) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	a := arg[0]
+	f := a.Float()
+	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+		fn.dequeue(f)
 	}
 }

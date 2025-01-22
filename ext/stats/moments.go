@@ -2,6 +2,7 @@ package stats
 
 import "math"
 
+// Fisher–Pearson skewness and kurtosis using
 // Terriberry's algorithm with Kahan summation:
 // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Higher-order_statistics
 
@@ -45,6 +46,10 @@ func (m moments) skewness_samp() float64 {
 }
 
 func (m moments) kurtosis_pop() float64 {
+	return m.raw_kurtosis_pop() - 3
+}
+
+func (m moments) raw_kurtosis_pop() float64 {
 	m2 := m.m2.hi
 	if div := m2 * m2; div != 0 {
 		return m.m4.hi * float64(m.n) / div
@@ -54,8 +59,14 @@ func (m moments) kurtosis_pop() float64 {
 
 func (m moments) kurtosis_samp() float64 {
 	n := m.n
+	k := math.FMA(m.raw_kurtosis_pop(), float64(n+1), float64(3-3*n))
+	return k * float64(n-1) / float64((n-2)*(n-3))
+}
+
+func (m moments) raw_kurtosis_samp() float64 {
+	n := m.n
 	// https://mathworks.com/help/stats/kurtosis.html#f4975293
-	k := math.FMA(m.kurtosis_pop(), float64(n+1), float64(3-3*n))
+	k := math.FMA(m.raw_kurtosis_pop(), float64(n+1), float64(3-3*n))
 	return math.FMA(k, float64(n-1)/float64((n-2)*(n-3)), 3)
 }
 
