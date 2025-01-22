@@ -89,7 +89,7 @@ jobs:
             version: '14.2'
             flags: '-test.v'
           - name: netbsd
-            version: '10.0'
+            version: '10.1'
             flags: '-test.v'
           - name: freebsd
             arch: arm64
@@ -97,7 +97,7 @@ jobs:
             flags: '-test.v -test.short'
           - name: netbsd
             arch: arm64
-            version: '10.0'
+            version: '10.1'
             flags: '-test.v -test.short'
           - name: openbsd
             version: '7.6'
@@ -116,7 +116,7 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.26.0
+      uses: cross-platform-actions/action@v0.27.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.arch }}
