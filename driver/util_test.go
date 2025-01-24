@@ -3,7 +3,7 @@ package driver
 import (
 	"context"
 	"database/sql/driver"
-	"reflect"
+	"slices"
 	"testing"
 
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -16,7 +16,7 @@ func Test_namedValues(t *testing.T) {
 		{Ordinal: 2, Value: false},
 	}
 	got := namedValues([]driver.Value{true, false})
-	if !reflect.DeepEqual(got, want) {
+	if !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }

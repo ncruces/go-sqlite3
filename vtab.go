@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"context"
+	"errors"
 	"reflect"
 
 	"github.com/tetratelabs/wazero/api"
@@ -447,7 +448,7 @@ func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module,
 		arg := make([]reflect.Value, 1+nArg)
 		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
 
-		for i := int32(0); i < nArg; i++ {
+		for i := range nArg {
 			ptr := util.Read32[ptr_t](mod, pArg+ptr_t(i)*ptrlen)
 			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_SQL_LENGTH))
 		}
@@ -470,10 +471,7 @@ func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab ptr_t) re
 
 func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
 	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
-	err := vtab.Destroy()
-	if cerr := vtabDelHandle(ctx, mod, pVTab); err == nil {
-		err = cerr
-	}
+	err := errors.Join(vtab.Destroy(), vtabDelHandle(ctx, mod, pVTab))
 	return vtabError(ctx, mod, 0, _PTR_ERROR, err)
 }
 

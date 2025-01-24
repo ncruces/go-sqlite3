@@ -56,7 +56,7 @@ func Benchmark_nokey(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1")
 		if err != nil {
 			b.Fatal(err)
@@ -70,7 +70,7 @@ func Benchmark_hexkey(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
 			"&vfs=xts&hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 		if err != nil {
@@ -85,7 +85,7 @@ func Benchmark_textkey(b *testing.B) {
 	sqlite3.Initialize()
 	b.ResetTimer()
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
 			"&vfs=xts&textkey=correct+horse+battery+staple")
 		if err != nil {

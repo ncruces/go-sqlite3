@@ -232,7 +232,7 @@ func (b *bloom) Update(arg ...sqlite3.Value) (rowid int64, err error) {
 	}
 	defer f.Close()
 
-	for n := 0; n < b.hashes; n++ {
+	for n := range b.hashes {
 		hash := calcHash(n, blob)
 		hash %= uint64(b.bytes * 8)
 		bitpos := byte(hash % 8)

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"math"
-	"reflect"
 	"testing"
 	"time"
 
@@ -52,8 +51,7 @@ func TestQuote(t *testing.T) {
 				}
 			}()
 
-			got := sqlite3.Quote(tt.val)
-			if !reflect.DeepEqual(got, tt.want) {
+			if got := sqlite3.Quote(tt.val); got != tt.want {
 				t.Errorf("Quote(%v) = %q, want %q", tt.val, got, tt.want)
 			}
 		})
@@ -81,8 +79,7 @@ func TestQuoteIdentifier(t *testing.T) {
 				}
 			}()
 
-			got := sqlite3.QuoteIdentifier(tt.id)
-			if !reflect.DeepEqual(got, tt.want) {
+			if got := sqlite3.QuoteIdentifier(tt.id); got != tt.want {
 				t.Errorf("QuoteIdentifier(%v) = %q, want %q", tt.id, got, tt.want)
 			}
 		})

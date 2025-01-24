@@ -44,7 +44,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	var str strings.Builder
 	str.WriteString("CREATE TABLE x(")
 	outputs := stmt.ColumnCount()
-	for i := 0; i < outputs; i++ {
+	for i := range outputs {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnName(i))
 		str.WriteString(sep)
 		str.WriteString(name)

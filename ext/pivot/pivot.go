@@ -207,7 +207,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 func (c *cursor) Next() error {
 	if c.scan.Step() {
 		count := c.scan.ColumnCount()
-		for i := 0; i < count; i++ {
+		for i := range count {
 			err := c.cell.BindValue(i+1, c.scan.ColumnValue(i))
 			if err != nil {
 				return err

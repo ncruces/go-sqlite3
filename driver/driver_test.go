@@ -369,13 +369,13 @@ func Test_time(t *testing.T) {
 
 func Test_ColumnType_ScanType(t *testing.T) {
 	var (
-		INT  = reflect.TypeOf(int64(0))
-		REAL = reflect.TypeOf(float64(0))
-		TEXT = reflect.TypeOf("")
-		BLOB = reflect.TypeOf([]byte{})
-		BOOL = reflect.TypeOf(false)
-		TIME = reflect.TypeOf(time.Time{})
-		ANY  = reflect.TypeOf((*any)(nil)).Elem()
+		INT  = reflect.TypeFor[int64]()
+		REAL = reflect.TypeFor[float64]()
+		TEXT = reflect.TypeFor[string]()
+		BLOB = reflect.TypeFor[[]byte]()
+		BOOL = reflect.TypeFor[bool]()
+		TIME = reflect.TypeFor[time.Time]()
+		ANY  = reflect.TypeFor[any]()
 	)
 
 	t.Parallel()

@@ -2,7 +2,7 @@ package unicode
 
 import (
 	"errors"
-	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -121,7 +121,7 @@ func TestRegister_collation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(got, want) {
+	if !slices.Equal(got, want) {
 		t.Error("not equal")
 	}
 
@@ -172,7 +172,7 @@ func TestRegisterCollationsNeeded(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(got, want) {
+	if !slices.Equal(got, want) {
 		t.Error("not equal")
 	}
 

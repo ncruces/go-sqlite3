@@ -720,19 +720,19 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 
 	switch scan {
 	case _INT:
-		return reflect.TypeOf(int64(0))
+		return reflect.TypeFor[int64]()
 	case _REAL:
-		return reflect.TypeOf(float64(0))
+		return reflect.TypeFor[float64]()
 	case _TEXT:
-		return reflect.TypeOf("")
+		return reflect.TypeFor[string]()
 	case _BLOB:
-		return reflect.TypeOf([]byte{})
+		return reflect.TypeFor[[]byte]()
 	case _BOOL:
-		return reflect.TypeOf(false)
+		return reflect.TypeFor[bool]()
 	case _TIME:
-		return reflect.TypeOf(time.Time{})
+		return reflect.TypeFor[time.Time]()
 	default:
-		return reflect.TypeOf((*any)(nil)).Elem()
+		return reflect.TypeFor[any]()
 	}
 }
 

@@ -372,7 +372,7 @@ func testParallel(t testing.TB, name string, n int) {
 
 	var group errgroup.Group
 	group.SetLimit(6)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i&7 != 7 {
 			group.Go(reader)
 		} else {

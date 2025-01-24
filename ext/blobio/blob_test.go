@@ -4,7 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -278,7 +278,7 @@ func Test_openblob(t *testing.T) {
 	}
 
 	want := []string{"\xca\xfe", "\xba\xbe"}
-	if !reflect.DeepEqual(got, want) {
+	if !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }

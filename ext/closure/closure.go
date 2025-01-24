@@ -210,7 +210,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	c.nodes = []node{{root, 0}}
 	set := util.Set[int64]{}
 	set.Add(root)
-	for i := 0; i < len(c.nodes); i++ {
+	for i := range c.nodes {
 		curr := c.nodes[i]
 		if curr.depth >= maxDepth {
 			continue
