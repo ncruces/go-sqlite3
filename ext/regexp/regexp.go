@@ -16,7 +16,9 @@ package regexp
 import (
 	"errors"
 	"regexp"
+	"regexp/syntax"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ncruces/go-sqlite3"
 )
@@ -50,16 +52,63 @@ func Register(db *sqlite3.Conn) error {
 //	SELECT column WHERE column GLOB :glob_prefix AND column REGEXP :regexp
 //
 // [LIKE optimization]: https://sqlite.org/optoverview.html#the_like_optimization
-func GlobPrefix(re *regexp.Regexp) string {
-	prefix, complete := re.LiteralPrefix()
-	i := strings.IndexAny(prefix, "*?[")
-	if i < 0 {
-		if complete {
-			return prefix
-		}
-		i = len(prefix)
+func GlobPrefix(expr string) string {
+	re, err := syntax.Parse(expr, syntax.Perl)
+	if err != nil {
+		return "" // no match possible
 	}
-	return prefix[:i] + "*"
+	prog, err := syntax.Compile(re.Simplify())
+	if err != nil {
+		return "" // no match possible
+	}
+
+	i := &prog.Inst[prog.Start]
+
+	var empty syntax.EmptyOp
+loop1:
+	for {
+		switch i.Op {
+		case syntax.InstFail:
+			return "" // no match possible
+		case syntax.InstCapture, syntax.InstNop:
+			// skip
+		case syntax.InstEmptyWidth:
+			empty |= syntax.EmptyOp(i.Arg)
+		default:
+			break loop1
+		}
+		i = &prog.Inst[i.Out]
+	}
+	if empty&syntax.EmptyBeginText == 0 {
+		return "*" // not anchored
+	}
+
+	var glob strings.Builder
+loop2:
+	for {
+		switch i.Op {
+		case syntax.InstFail:
+			return "" // no match possible
+		case syntax.InstCapture, syntax.InstEmptyWidth, syntax.InstNop:
+			// skip
+		case syntax.InstRune, syntax.InstRune1:
+			if len(i.Rune) != 1 || syntax.Flags(i.Arg)&syntax.FoldCase != 0 {
+				break loop2
+			}
+			switch r := i.Rune[0]; r {
+			case '*', '?', '[', utf8.RuneError:
+				break loop2
+			default:
+				glob.WriteRune(r)
+			}
+		default:
+			break loop2
+		}
+		i = &prog.Inst[i.Out]
+	}
+
+	glob.WriteByte('*')
+	return glob.String()
 }
 
 func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {
