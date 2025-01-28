@@ -3,6 +3,7 @@ package regexp
 import (
 	"database/sql"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
@@ -108,19 +109,55 @@ func TestGlobPrefix(t *testing.T) {
 		re   string
 		want string
 	}{
-		{``, ""},
-		{`a`, "a"},
-		{`a*`, "*"},
-		{`a+`, "a*"},
-		{`ab*`, "a*"},
-		{`ab+`, "ab*"},
-		{`a\?b`, "a*"},
+		{`[`, ""},
+		{``, "*"},
+		{`^`, "*"},
+		{`a`, "*"},
+		{`ab`, "*"},
+		{`^a`, "a*"},
+		{`^a*`, "*"},
+		{`^a+`, "a*"},
+		{`^ab*`, "a*"},
+		{`^ab+`, "ab*"},
+		{`^a\?b`, "a*"},
+		{`^[a-z]`, "*"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.re, func(t *testing.T) {
-			if got := GlobPrefix(regexp.MustCompile(tt.re)); got != tt.want {
-				t.Errorf("GlobPrefix() = %v, want %v", got, tt.want)
+			if got := GlobPrefix(tt.re); got != tt.want {
+				t.Errorf("GlobPrefix(%v) = %v, want %v", tt.re, got, tt.want)
 			}
 		})
 	}
+}
+
+func FuzzGlobPrefix(f *testing.F) {
+	f.Add(``, ``)
+	f.Add(`[`, ``)
+	f.Add(`^`, ``)
+	f.Add(`a`, `a`)
+	f.Add(`ab`, `b`)
+	f.Add(`^a`, `a`)
+	f.Add(`^a*`, `ab`)
+	f.Add(`^a+`, `ab`)
+	f.Add(`^ab*`, `ab`)
+	f.Add(`^ab+`, `ab`)
+	f.Add(`^a\?b`, `ab`)
+	f.Add(`^[a-z]`, `ab`)
+
+	f.Fuzz(func(t *testing.T, lit, str string) {
+		re, err := regexp.Compile(lit)
+		if err != nil {
+			t.SkipNow()
+		}
+		if re.MatchString(str) {
+			prefix, ok := strings.CutSuffix(GlobPrefix(lit), "*")
+			if !ok {
+				t.Fatalf("missing * after %q for %q with %q", prefix, lit, str)
+			}
+			if !strings.HasPrefix(str, prefix) {
+				t.Fatalf("missing prefix %q for %q with %q", prefix, lit, str)
+			}
+		}
+	})
 }
