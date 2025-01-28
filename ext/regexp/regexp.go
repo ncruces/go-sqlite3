@@ -59,7 +59,7 @@ func GlobPrefix(expr string) string {
 	}
 	prog, err := syntax.Compile(re.Simplify())
 	if err != nil {
-		return "" // no match possible
+		return "" // notest
 	}
 
 	i := &prog.Inst[prog.Start]
@@ -69,7 +69,7 @@ loop1:
 	for {
 		switch i.Op {
 		case syntax.InstFail:
-			return "" // no match possible
+			return "" // notest
 		case syntax.InstCapture, syntax.InstNop:
 			// skip
 		case syntax.InstEmptyWidth:
@@ -88,7 +88,7 @@ loop2:
 	for {
 		switch i.Op {
 		case syntax.InstFail:
-			return "" // no match possible
+			return "" // notest
 		case syntax.InstCapture, syntax.InstEmptyWidth, syntax.InstNop:
 			// skip
 		case syntax.InstRune, syntax.InstRune1:
