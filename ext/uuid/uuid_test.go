@@ -2,6 +2,7 @@ package uuid
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -106,7 +107,26 @@ func Test_generate(t *testing.T) {
 		t.Error("want error")
 	}
 
-	hash := []struct {
+	var tstamp time.Time
+	var version uuid.Version
+	err = db.QueryRow(`
+		SELECT
+			column1,
+			uuid_extract_version(column1),
+			uuid_extract_timestamp(column1)
+		FROM (VALUES (uuid(7)))
+	`).Scan(&u, &version, &tstamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := u.Version(); got != version {
+		t.Errorf("got %d, want %d", got, version)
+	}
+	if got := time.Unix(u.Time().UnixTime()); !got.Equal(tstamp) {
+		t.Errorf("got %v, want %v", got, tstamp)
+	}
+
+	tests := []struct {
 		ver  uuid.Version
 		ns   any
 		data string
@@ -120,7 +140,7 @@ func Test_generate(t *testing.T) {
 		{3, "url", "https://www.php.net", uuid.MustParse("3f703955-aaba-3e70-a3cb-baff6aa3b28f")},
 		{5, "url", "https://www.php.net", uuid.MustParse("a8f6ae40-d8a7-58f0-be05-a22f94eca9ec")},
 	}
-	for _, tt := range hash {
+	for _, tt := range tests {
 		err = db.QueryRow(`SELECT uuid(?, ?, ?)`, tt.ver, tt.ns, tt.data).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
@@ -142,14 +162,14 @@ func Test_convert(t *testing.T) {
 	defer db.Close()
 
 	var u uuid.UUID
-	lits := []string{
+	tests := []string{
 		"'6ba7b8119dad11d180b400c04fd430c8'",
 		"'6ba7b811-9dad-11d1-80b4-00c04fd430c8'",
 		"'{6ba7b811-9dad-11d1-80b4-00c04fd430c8}'",
 		"X'6ba7b8119dad11d180b400c04fd430c8'",
 	}
 
-	for _, tt := range lits {
+	for _, tt := range tests {
 		err = db.QueryRow(`SELECT uuid_str(` + tt + `)`).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
@@ -159,7 +179,7 @@ func Test_convert(t *testing.T) {
 		}
 	}
 
-	for _, tt := range lits {
+	for _, tt := range tests {
 		err = db.QueryRow(`SELECT uuid_blob(` + tt + `)`).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
@@ -175,6 +195,16 @@ func Test_convert(t *testing.T) {
 	}
 
 	err = db.QueryRow(`SELECT uuid_blob(X'cafe')`).Scan(&u)
+	if err == nil {
+		t.Fatal("want error")
+	}
+
+	err = db.QueryRow(`SELECT uuid_extract_version(X'cafe')`).Scan(&u)
+	if err == nil {
+		t.Fatal("want error")
+	}
+
+	err = db.QueryRow(`SELECT uuid_extract_timestamp(X'cafe')`).Scan(&u)
 	if err == nil {
 		t.Fatal("want error")
 	}

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -35,7 +36,9 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("uuid", 2, sqlite3.INNOCUOUS, generate),
 		db.CreateFunction("uuid", 3, sqlite3.INNOCUOUS, generate),
 		db.CreateFunction("uuid_str", 1, flags, toString),
-		db.CreateFunction("uuid_blob", 1, flags, toBlob))
+		db.CreateFunction("uuid_blob", 1, flags, toBlob),
+		db.CreateFunction("uuid_extract_version", 1, flags, version),
+		db.CreateFunction("uuid_extract_timestamp", 1, flags, timestamp))
 }
 
 func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -165,5 +168,32 @@ func toString(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		ctx.ResultError(err) // notest
 	} else {
 		ctx.ResultText(u.String())
+	}
+}
+
+func version(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	u, err := fromValue(arg[0])
+	if err != nil {
+		ctx.ResultError(err)
+		return // notest
+	}
+	if u.Variant() == uuid.RFC4122 {
+		ctx.ResultInt64(int64(u.Version()))
+	}
+}
+
+func timestamp(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	u, err := fromValue(arg[0])
+	if err != nil {
+		ctx.ResultError(err)
+		return // notest
+	}
+	if u.Variant() == uuid.RFC4122 {
+		switch u.Version() {
+		case 1, 2, 6, 7:
+			ctx.ResultTime(
+				time.Unix(u.Time().UnixTime()),
+				sqlite3.TimeFormatDefault)
+		}
 	}
 }
