@@ -16,7 +16,7 @@ require (
 	github.com/dchest/siphash v1.2.3 // ext/bloom
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
-	golang.org/x/sync v0.10.0 // test
+	golang.org/x/sync v0.11.0 // test
 	golang.org/x/text v0.21.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
