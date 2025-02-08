@@ -8,7 +8,7 @@ require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.3
 	github.com/tetratelabs/wazero v1.8.2
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.33.0
 	golang.org/x/sys v0.30.0
 )
 
