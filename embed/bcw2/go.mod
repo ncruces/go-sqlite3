@@ -10,5 +10,5 @@ require (
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/ncruces/sort v0.1.2 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 )
