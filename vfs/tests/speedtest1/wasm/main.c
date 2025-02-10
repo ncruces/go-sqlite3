@@ -1,4 +1,4 @@
-// Use the default call back, not the Go one we patched in.
+// Use the default callback, not the Go one we patched in.
 #define sqliteBusyCallback sqliteDefaultBusyCallback
 
 // Amalgamation

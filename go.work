@@ -1,7 +1,0 @@
-go 1.22
-
-use (
-	.
-	./gormlite
-	./embed/bcw2
-)
