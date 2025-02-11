@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.23.0
 
 require (
-	github.com/ncruces/go-sqlite3 v0.22.0
+	github.com/ncruces/go-sqlite3 v0.23.0
 	gorm.io/gorm v1.25.12
 )
 

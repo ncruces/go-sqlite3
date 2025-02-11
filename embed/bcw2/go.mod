@@ -4,11 +4,11 @@ go 1.22
 
 toolchain go1.23.0
 
-require github.com/ncruces/go-sqlite3 v0.22.0
+require github.com/ncruces/go-sqlite3 v0.23.0
 
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect
-	github.com/ncruces/sort v0.1.2 // indirect
+	github.com/ncruces/sort v0.1.5 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 )
