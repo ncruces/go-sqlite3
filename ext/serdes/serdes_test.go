@@ -1,6 +1,7 @@
 package serdes_test
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -65,4 +66,22 @@ func httpGet() ([]byte, error) {
 	}
 	defer res.Body.Close()
 	return io.ReadAll(res.Body)
+}
+
+func TestOpen_errors(t *testing.T) {
+	_, err := sqlite3.Open("file:test.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
+	if err == nil {
+		t.Error("want error")
+	}
+	if !errors.Is(err, sqlite3.CANTOPEN) {
+		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+	}
+
+	_, err = sqlite3.Open("file:serdes.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
+	if err == nil {
+		t.Error("want error")
+	}
+	if !errors.Is(err, sqlite3.MISUSE) {
+		t.Errorf("got %v, want sqlite3.MISUSE", err)
+	}
 }

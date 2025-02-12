@@ -8,9 +8,13 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
+const vfsName = "github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS"
+
 func init() {
 	vfs.Register(vfsName, sliceVFS{})
 }
+
+var fileToOpen = make(chan *sliceFile, 1)
 
 // Serialize backs up a database into a byte slice.
 //
@@ -18,7 +22,7 @@ func init() {
 func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 	var file sliceFile
 	fileToOpen <- &file
-	err := db.Backup(schema, "file:db?vfs="+vfsName)
+	err := db.Backup(schema, "file:serdes.db?vfs="+vfsName)
 	return file.data, err
 }
 
@@ -38,21 +42,21 @@ func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 // ["reader"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs
 func Deserialize(db *sqlite3.Conn, schema string, data []byte) error {
 	fileToOpen <- &sliceFile{data}
-	return db.Restore(schema, "file:db?vfs="+vfsName)
+	return db.Restore(schema, "file:serdes.db?vfs="+vfsName)
 }
-
-var fileToOpen = make(chan *sliceFile, 1)
-
-const vfsName = "github.com/ncruces/go-sqlite3/ext/deserialize.sliceVFS"
 
 type sliceVFS struct{}
 
 func (sliceVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	if flags&vfs.OPEN_MAIN_DB == 0 {
-		// notest // OPEN_MEMORY
+	if flags&vfs.OPEN_MAIN_DB == 0 || name != "serdes.db" {
 		return nil, flags, sqlite3.CANTOPEN
 	}
-	return <-fileToOpen, flags | vfs.OPEN_MEMORY, nil
+	select {
+	case file := <-fileToOpen:
+		return file, flags | vfs.OPEN_MEMORY, nil
+	default:
+		return nil, flags, sqlite3.MISUSE
+	}
 }
 
 func (sliceVFS) Delete(name string, dirSync bool) error {
@@ -61,7 +65,7 @@ func (sliceVFS) Delete(name string, dirSync bool) error {
 }
 
 func (sliceVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
-	return name == "db", nil
+	return name == "serdes.db", nil
 }
 
 func (sliceVFS) FullPathname(name string) (string, error) {
