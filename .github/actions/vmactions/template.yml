@@ -1,11 +1,6 @@
 name: VM Actions matrix
 description: VM Actions matrix template
 
-inputs:
-  run:
-    description: The CI command to run
-    required: true
-
 runs:
   using: composite
   steps:
@@ -13,4 +8,4 @@ runs:
       with:
         usesh: true
         copyback: false
-        run: ${{inputs.run}}
+        run: . ./test.sh

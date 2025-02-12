@@ -158,10 +158,6 @@ jobs:
 
     - name: Test
       uses: ./.github/actions/vmactions
-      with:
-        usesh: true
-        copyback: false
-        run: . ./test.sh
 
   test-wasip1:
     runs-on: ubuntu-latest
