@@ -37,3 +37,12 @@ you can load into your database connections.
   generates [UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier).
 - [`github.com/ncruces/go-sqlite3/ext/zorder`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/zorder)
   maps multidimensional data to one dimension.
+
+### Pakages
+
+These packages may also be useful to work with SQLite:
+
+- [`github.com/ncruces/decimal`](https://pkg.go.dev/github.com/ncruces/decimal)
+  decimal arithmetic.
+- [`github.com/ncruces/julianday`](https://pkg.go.dev/github.com/ncruces/julianday)
+  Julian day math.

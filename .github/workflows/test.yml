@@ -170,7 +170,7 @@ jobs:
       with: { go-version: stable }
 
     - name: Set path
-      run: echo "$(go env GOROOT)/misc/wasm" >> "$GITHUB_PATH"
+      run: echo "$(go env GOROOT)/lib/wasm" >> "$GITHUB_PATH"
 
     - name: Test wasmtime
       env:
