@@ -492,9 +492,9 @@ func (c *Conn) TableColumnMetadata(schema, table, column string) (declType, coll
 		if ptr := util.Read32[ptr_t](c.mod, collSeqPtr); ptr != 0 {
 			collSeq = util.ReadString(c.mod, ptr, _MAX_NAME)
 		}
-		notNull = util.Read32[uint32](c.mod, notNullPtr) != 0
-		autoInc = util.Read32[uint32](c.mod, autoIncPtr) != 0
-		primaryKey = util.Read32[uint32](c.mod, primaryKeyPtr) != 0
+		notNull = util.ReadBool(c.mod, notNullPtr)
+		autoInc = util.ReadBool(c.mod, autoIncPtr)
+		primaryKey = util.ReadBool(c.mod, primaryKeyPtr)
 	}
 	return
 }

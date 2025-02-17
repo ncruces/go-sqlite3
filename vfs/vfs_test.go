@@ -172,7 +172,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[int32](mod, 4); got != 1 {
+	if got := util.ReadBool(mod, 4); !got {
 		t.Error("directory did not exist")
 	}
 
@@ -180,7 +180,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[int32](mod, 4); got != 1 {
+	if got := util.ReadBool(mod, 4); !got {
 		t.Error("can't access directory")
 	}
 
@@ -189,7 +189,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[int32](mod, 4); got != 1 {
+	if got := util.ReadBool(mod, 4); !got {
 		t.Error("can't access file")
 	}
 
@@ -207,7 +207,7 @@ func Test_vfsAccess(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[int32](mod, 4); got != 0 {
+	if got := util.ReadBool(mod, 4); got {
 		t.Error("can access file")
 	}
 }

@@ -47,14 +47,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
@@ -74,14 +74,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
@@ -105,14 +105,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Log("file wasn't locked, locking is incompatible with SQLite")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Error("file wasn't locked")
 	}
 	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
@@ -132,14 +132,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Log("file wasn't locked, locking is incompatible with SQLite")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Error("file wasn't locked")
 	}
 	rc = vfsFileControl(ctx, mod, pFile2, _FCNTL_LOCKSTATE, pOutput)
@@ -159,14 +159,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Log("file wasn't locked, locking is incompatible with SQLite")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got == LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); !got {
 		t.Error("file wasn't locked")
 	}
 	rc = vfsFileControl(ctx, mod, pFile1, _FCNTL_LOCKSTATE, pOutput)
@@ -186,14 +186,14 @@ func Test_vfsLock(t *testing.T) {
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 	rc = vfsCheckReservedLock(ctx, mod, pFile2, pOutput)
 	if rc != _OK {
 		t.Fatal("returned", rc)
 	}
-	if got := util.Read32[LockLevel](mod, pOutput); got != LOCK_NONE {
+	if got := util.ReadBool(mod, pOutput); got {
 		t.Error("file was locked")
 	}
 
