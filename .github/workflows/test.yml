@@ -70,7 +70,11 @@ jobs:
       if: matrix.os != 'windows-latest'
 
     - name: Collect coverage
-      run: go run github.com/dave/courtney@latest
+      run: |
+        go get -tool github.com/dave/courtney@v0.4.3
+        go get -u golang.org/x/tools@v0.30.0
+        go mod tidy
+        go tool courtney
       if: |
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
