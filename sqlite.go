@@ -47,11 +47,7 @@ func compileSQLite() {
 	ctx := context.Background()
 	cfg := RuntimeConfig
 	if cfg == nil {
-		if util.CompilerSupported() {
-			cfg = wazero.NewRuntimeConfigCompiler()
-		} else {
-			cfg = wazero.NewRuntimeConfigInterpreter()
-		}
+		cfg = wazero.NewRuntimeConfig()
 		if bits.UintSize < 64 {
 			cfg = cfg.WithMemoryLimitPages(512) // 32MB
 		} else {

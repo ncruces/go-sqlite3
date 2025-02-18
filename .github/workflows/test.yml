@@ -7,12 +7,14 @@ on:
       - '**.go'
       - '**.mod'
       - '**.wasm'
+      - '**.yml'
   pull_request:
     branches: [ 'main' ]
     paths:
       - '**.go'
       - '**.mod'
       - '**.wasm'
+      - '**.yml'
   workflow_dispatch:
 
 jobs:
