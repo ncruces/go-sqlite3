@@ -73,9 +73,7 @@ jobs:
 
     - name: Collect coverage
       run: |
-        go get -tool github.com/dave/courtney@v0.4.3
-        go get -u golang.org/x/tools@v0.30.0
-        go mod tidy
+        go get -tool github.com/dave/courtney@v0.4.4
         go tool courtney
       if: |
         github.event_name == 'push' &&
