@@ -1,6 +1,6 @@
 module github.com/ncruces/go-sqlite3/embed/bcw2
 
-go 1.22.0
+go 1.23.0
 
 toolchain go1.24.0
 
