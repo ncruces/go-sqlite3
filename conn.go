@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"fmt"
+	"iter"
 	"math"
 	"math/rand"
 	"net/url"
@@ -503,10 +504,16 @@ func (c *Conn) error(rc res_t, sql ...string) error {
 	return c.sqlite.error(rc, c.handle, sql...)
 }
 
-func (c *Conn) stmtsIter(yield func(*Stmt) bool) {
-	for _, s := range c.stmts {
-		if !yield(s) {
-			break
+// Stmts returns an iterator for the prepared statements
+// associated with the database connection.
+//
+// https://sqlite.org/c3ref/next_stmt.html
+func (c *Conn) Stmts() iter.Seq[*Stmt] {
+	return func(yield func(*Stmt) bool) {
+		for _, s := range c.stmts {
+			if !yield(s) {
+				break
+			}
 		}
 	}
 }
