@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.24.0
 
 require (
+	github.com/ncruces/decimal v0.1.0
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.5
 	github.com/tetratelabs/wazero v1.9.0
