@@ -2,6 +2,7 @@ package fileio
 
 import (
 	"io/fs"
+	"iter"
 	"os"
 	"path"
 	"path/filepath"
@@ -63,7 +64,7 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 type cursor struct {
 	fsdir
 	base   string
-	resume resume
+	resume func() (entry, bool)
 	cancel func()
 	curr   entry
 	eof    bool
@@ -101,14 +102,26 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		c.base = base
 	}
 
-	c.resume, c.cancel = pull(c, root)
+	c.resume, c.cancel = iter.Pull(func(yield func(entry) bool) {
+		walkDir := func(path string, d fs.DirEntry, err error) error {
+			if yield(entry{d, err, path}) {
+				return nil
+			}
+			return fs.SkipAll
+		}
+		if c.fsys != nil {
+			fs.WalkDir(c.fsys, root, walkDir)
+		} else {
+			filepath.WalkDir(root, walkDir)
+		}
+	})
 	c.eof = false
 	c.rowID = 0
 	return c.Next()
 }
 
 func (c *cursor) Next() error {
-	curr, ok := next(c)
+	curr, ok := c.resume()
 	c.curr = curr
 	c.eof = !ok
 	c.rowID++
