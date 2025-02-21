@@ -2,8 +2,11 @@ package sqlite3
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"iter"
 	"sync"
+	"time"
 
 	"github.com/tetratelabs/wazero/api"
 
@@ -240,5 +243,83 @@ func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
 		return new([_MAX_FUNCTION_ARG]Value)
 	} else {
 		return p.(*[_MAX_FUNCTION_ARG]Value)
+	}
+}
+
+func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag, fn func(iter.Seq[[]Value]) any) error {
+	var funcPtr ptr_t
+	defer c.arena.mark()()
+	namePtr := c.arena.string(name)
+	if fn != nil {
+		funcPtr = util.AddHandle(c.ctx, func() AggregateFunction {
+			// Can we do this without channels and goroutines?
+			agg := &seqAggregate{make(chan []Value), make(chan any)}
+			go func() {
+				defer close(agg.res)
+				agg.res <- fn(func(yield func([]Value) bool) {
+					for arg := range agg.arg {
+						if !yield(arg) {
+							break
+						}
+					}
+					for range agg.arg {
+					}
+				})
+			}()
+			return agg
+		})
+	}
+	rc := res_t(c.call("sqlite3_create_aggregate_function_go",
+		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
+		stk_t(flag), stk_t(funcPtr)))
+	return c.error(rc)
+}
+
+type seqAggregate struct {
+	arg chan []Value
+	res chan any
+}
+
+func (f *seqAggregate) Step(ctx Context, arg ...Value) {
+	f.arg <- arg
+}
+
+func (f *seqAggregate) Value(ctx Context) {
+	close(f.arg)
+	re, ok := <-f.res
+	if !ok {
+		ctx.ResultError(fmt.Errorf("panic%.0w", MISUSE))
+		return
+	}
+	switch res := re.(type) {
+	case bool:
+		ctx.ResultBool(res)
+	case int:
+		ctx.ResultInt(res)
+	case int64:
+		ctx.ResultInt64(res)
+	case float64:
+		ctx.ResultFloat(res)
+	case string:
+		ctx.ResultText(res)
+	case []byte:
+		ctx.ResultBlob(res)
+	case time.Time:
+		ctx.ResultTime(res, TimeFormatDefault)
+	case ZeroBlob:
+		ctx.ResultZeroBlob(int64(res))
+	case Value:
+		ctx.ResultValue(res)
+	case util.JSON:
+		ctx.ResultJSON(res.Value)
+	case util.PointerUnwrap:
+		ctx.ResultPointer(util.UnwrapPointer(res))
+	case error:
+		ctx.ResultError(res)
+	case nil:
+		ctx.ResultNull()
+	default:
+		ctx.ResultError(fmt.Errorf("aggregate returned:%.0w %T",
+			MISMATCH, res))
 	}
 }
