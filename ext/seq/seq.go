@@ -21,6 +21,7 @@ func Aggregate(processor func(iter.Seq[[]sqlite3.Value]) any) func() sqlite3.Agg
 				agg.done = true
 				close(agg.wait)
 			}()
+			agg.wait <- struct{}{} // avoid any parallelism
 			agg.value = processor(func(yield func([]sqlite3.Value) bool) {
 				for arg := range agg.next {
 					if !yield(arg) {
@@ -30,6 +31,7 @@ func Aggregate(processor func(iter.Seq[[]sqlite3.Value]) any) func() sqlite3.Agg
 				}
 			})
 		}()
+		<-agg.wait
 		return agg
 	}
 }
@@ -47,15 +49,24 @@ func (a *aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		a.next <- arg
 		<-a.wait
 	}
-}
-
-func (a *aggregate) Value(ctx sqlite3.Context) {
-	close(a.next)
-	<-a.wait
-
 	if a.panic != nil {
 		panic(a.panic)
 	}
+}
+
+func (a *aggregate) Close() error {
+	if !a.done {
+		close(a.next)
+		<-a.wait
+	}
+	if a.panic != nil {
+		panic(a.panic)
+	}
+	return nil
+}
+
+func (a *aggregate) Value(ctx sqlite3.Context) {
+	a.Close() // wait for goroutine to exit
 
 	switch res := a.value.(type) {
 	case bool:
