@@ -1,4 +1,4 @@
-//go:build !linkname
+//go:build linkname
 
 package seq
 
@@ -6,41 +6,44 @@ import (
 	"fmt"
 	"iter"
 	"time"
+	_ "unsafe"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
+type coro struct{}
+
+//go:linkname newcoro runtime.newcoro
+func newcoro(func(*coro)) *coro
+
+//go:linkname coroswitch runtime.coroswitch
+func coroswitch(*coro)
+
 func Aggregate(processor func(iter.Seq[[]sqlite3.Value]) any) func() sqlite3.AggregateFunction {
 	return func() sqlite3.AggregateFunction {
-		agg := &aggregate{
-			next: make(chan []sqlite3.Value),
-			wait: make(chan struct{}),
-		}
-		go func() {
+		agg := &aggregate{}
+		agg.coro = newcoro(func(c *coro) {
 			defer func() {
 				agg.panic = recover()
 				agg.done = true
-				close(agg.wait)
 			}()
-			agg.wait <- struct{}{} // avoid any parallelism
 			agg.value = processor(func(yield func([]sqlite3.Value) bool) {
-				for arg := range agg.next {
-					if !yield(arg) {
+				for !agg.done {
+					if !yield(agg.next) {
 						break
 					}
-					agg.wait <- struct{}{}
+					coroswitch(c)
 				}
 			})
-		}()
-		<-agg.wait
+		})
 		return agg
 	}
 }
 
 type aggregate struct {
-	next  chan []sqlite3.Value
-	wait  chan struct{}
+	*coro
+	next  []sqlite3.Value
 	done  bool
 	panic any
 	value any
@@ -48,8 +51,8 @@ type aggregate struct {
 
 func (a *aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if !a.done {
-		a.next <- arg
-		<-a.wait
+		a.next = arg
+		coroswitch(a.coro)
 	}
 	if a.panic != nil {
 		panic(a.panic)
@@ -58,8 +61,8 @@ func (a *aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 
 func (a *aggregate) Close() error {
 	if !a.done {
-		close(a.next)
-		<-a.wait
+		a.done = true
+		coroswitch(a.coro)
 	}
 	if a.panic != nil {
 		panic(a.panic)
@@ -68,7 +71,7 @@ func (a *aggregate) Close() error {
 }
 
 func (a *aggregate) Value(ctx sqlite3.Context) {
-	a.Close() // wait for goroutine to exit
+	a.Close() // wait for coroutine to exit
 
 	switch res := a.value.(type) {
 	case bool:
