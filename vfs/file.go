@@ -94,7 +94,7 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 	var err error
 	var f *os.File
 	if name == nil {
-		f, err = os.CreateTemp("", "*.db")
+		f, err = os.CreateTemp(os.Getenv("SQLITE_TMPDIR"), "*.db")
 	} else {
 		f, err = osutil.OpenFile(name.String(), oflags, 0666)
 	}
