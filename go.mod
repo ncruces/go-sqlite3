@@ -21,4 +21,7 @@ require (
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
-retract v0.4.0 // tagged from the wrong branch
+retract (
+	v0.23.2 // tagged from the wrong branch
+	v0.4.0 // tagged from the wrong branch
+)
