@@ -1,5 +1,3 @@
-//go:build !linkname
-
 package seq
 
 import (
@@ -13,64 +11,27 @@ import (
 
 func Aggregate(processor func(iter.Seq[[]sqlite3.Value]) any) func() sqlite3.AggregateFunction {
 	return func() sqlite3.AggregateFunction {
-		agg := &aggregate{
-			next: make(chan []sqlite3.Value),
-			wait: make(chan struct{}),
-		}
-		go func() {
-			defer func() {
-				agg.panic = recover()
-				agg.done = true
-				close(agg.wait)
-			}()
-			agg.wait <- struct{}{} // avoid any parallelism
-			agg.value = processor(func(yield func([]sqlite3.Value) bool) {
-				for arg := range agg.next {
-					if !yield(arg) {
-						break
-					}
-					agg.wait <- struct{}{}
-				}
-			})
-		}()
-		<-agg.wait
-		return agg
+		yield, stop := iter_Push(processor)
+		return aggregate{yield, stop}
 	}
 }
 
 type aggregate struct {
-	next  chan []sqlite3.Value
-	wait  chan struct{}
-	done  bool
-	panic any
-	value any
+	yield func([]sqlite3.Value) bool
+	stop  func() any
 }
 
-func (a *aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	if !a.done {
-		a.next <- arg
-		<-a.wait
-	}
-	if a.panic != nil {
-		panic(a.panic)
-	}
+func (a aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	a.yield(arg)
 }
 
-func (a *aggregate) Close() error {
-	if !a.done {
-		close(a.next)
-		<-a.wait
-	}
-	if a.panic != nil {
-		panic(a.panic)
-	}
+func (a aggregate) Close() error {
+	a.stop()
 	return nil
 }
 
-func (a *aggregate) Value(ctx sqlite3.Context) {
-	a.Close() // wait for goroutine to exit
-
-	switch res := a.value.(type) {
+func (a aggregate) Value(ctx sqlite3.Context) {
+	switch res := a.stop().(type) {
 	case bool:
 		ctx.ResultBool(res)
 	case int:
