@@ -15,14 +15,13 @@ func newcoro(func(*coro)) *coro
 //go:linkname coroswitch runtime.coroswitch
 func coroswitch(*coro)
 
-func iter_Push[V, R any](processor func(seq iter.Seq[V]) R) (
-	yield func(V) bool, stop func() R) {
+func iter_Push[V any](consumer func(seq iter.Seq[V])) (
+	yield func(V) bool, stop func()) {
 
 	var (
 		next V
 		done bool
 		rcvr any
-		rslt R
 	)
 
 	c := newcoro(func(c *coro) {
@@ -31,7 +30,8 @@ func iter_Push[V, R any](processor func(seq iter.Seq[V]) R) (
 			rcvr = recover()
 			done = true
 		}()
-		rslt = processor(func(yield func(V) bool) {
+
+		consumer(func(yield func(V) bool) {
 			for !done {
 				if !yield(next) {
 					break
@@ -43,8 +43,7 @@ func iter_Push[V, R any](processor func(seq iter.Seq[V]) R) (
 
 	yield = func(v V) bool {
 		if done {
-			// maybe panic instead?
-			return true
+			panic("yield called after stop")
 		}
 
 		// yield the next value
@@ -58,10 +57,9 @@ func iter_Push[V, R any](processor func(seq iter.Seq[V]) R) (
 		return !done
 	}
 
-	stop = func() R {
+	stop = func() {
 		if done {
-			// maybe panic instead?
-			return rslt
+			panic("stop called again")
 		}
 
 		// finish the iteration
@@ -72,7 +70,6 @@ func iter_Push[V, R any](processor func(seq iter.Seq[V]) R) (
 		if rcvr != nil {
 			panic(rcvr)
 		}
-		return rslt
 	}
 
 	return yield, stop

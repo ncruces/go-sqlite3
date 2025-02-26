@@ -11,27 +11,41 @@ import (
 
 func Aggregate(processor func(iter.Seq[[]sqlite3.Value]) any) func() sqlite3.AggregateFunction {
 	return func() sqlite3.AggregateFunction {
-		yield, stop := iter_Push(processor)
-		return aggregate{yield, stop}
+		a := &aggregate{}
+		a.yield, a.stop = iter_Push(func(seq iter.Seq[[]sqlite3.Value]) {
+			a.value = processor(seq)
+		})
+		return a
 	}
 }
 
 type aggregate struct {
 	yield func([]sqlite3.Value) bool
-	stop  func() any
+	stop  func()
+	done  bool
+	value any
 }
 
-func (a aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a.yield(arg)
+func (a *aggregate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	if !a.done {
+		a.done = !a.yield(arg)
+	}
 }
 
-func (a aggregate) Close() error {
-	a.stop()
+func (a *aggregate) Close() error {
+	if !a.done {
+		a.stop()
+		a.done = true
+	}
 	return nil
 }
 
-func (a aggregate) Value(ctx sqlite3.Context) {
-	switch res := a.stop().(type) {
+func (a *aggregate) Value(ctx sqlite3.Context) {
+	if !a.done {
+		a.stop()
+		a.done = true
+	}
+	switch res := a.value.(type) {
 	case bool:
 		ctx.ResultBool(res)
 	case int:
