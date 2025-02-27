@@ -175,26 +175,24 @@ func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, n
 	fn.Step(Context{db, pCtx}, args[:nArg]...)
 }
 
-func finalCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t) {
+func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, final int32) {
 	db := ctx.Value(connKey{}).(*Conn)
 	fn, handle := callbackAggregate(db, pAgg, pApp)
 	fn.Value(Context{db, pCtx})
-	var err error
-	if handle != 0 {
-		err = util.DelHandle(ctx, handle)
-	} else if c, ok := fn.(io.Closer); ok {
-		err = c.Close()
-	}
-	if err != nil {
-		Context{db, pCtx}.ResultError(err)
-		return // notest
-	}
-}
 
-func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t) {
-	db := ctx.Value(connKey{}).(*Conn)
-	fn := util.GetHandle(db.ctx, pAgg).(AggregateFunction)
-	fn.Value(Context{db, pCtx})
+	// Cleanup.
+	if final != 0 {
+		var err error
+		if handle != 0 {
+			err = util.DelHandle(ctx, handle)
+		} else if c, ok := fn.(io.Closer); ok {
+			err = c.Close()
+		}
+		if err != nil {
+			Context{db, pCtx}.ResultError(err)
+			return // notest
+		}
+	}
 }
 
 func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t, nArg int32, pArg ptr_t) {

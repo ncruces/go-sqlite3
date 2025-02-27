@@ -11,9 +11,8 @@ int go_compare(go_handle, int, const void *, int, const void *);
 void go_func(sqlite3_context *, go_handle, int, sqlite3_value **);
 
 void go_step(sqlite3_context *, go_handle *, go_handle, int, sqlite3_value **);
-void go_final(sqlite3_context *, go_handle, go_handle);
-void go_value(sqlite3_context *, go_handle);
-void go_inverse(sqlite3_context *, go_handle *, int, sqlite3_value **);
+void go_value(sqlite3_context *, go_handle *, go_handle, bool);
+void go_inverse(sqlite3_context *, go_handle, int, sqlite3_value **);
 
 void go_func_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
   go_func(ctx, sqlite3_user_data(ctx), nArg, pArg);
@@ -28,22 +27,26 @@ void go_step_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
   go_step(ctx, agg, data, nArg, pArg);
 }
 
+void go_value_wrapper(sqlite3_context *ctx) {
+  go_handle *agg = sqlite3_aggregate_context(ctx, 4);
+  go_handle data = NULL;
+  if (agg == NULL || *agg == NULL) {
+    data = sqlite3_user_data(ctx);
+  }
+  go_value(ctx, agg, data, /*final=*/false);
+}
+
 void go_final_wrapper(sqlite3_context *ctx) {
   go_handle *agg = sqlite3_aggregate_context(ctx, 0);
   go_handle data = NULL;
   if (agg == NULL || *agg == NULL) {
     data = sqlite3_user_data(ctx);
   }
-  go_final(ctx, agg, data);
-}
-
-void go_value_wrapper(sqlite3_context *ctx) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 4);
-  go_value(ctx, *agg);
+  go_value(ctx, agg, data, /*final=*/true);
 }
 
 void go_inverse_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 4);
+  go_handle *agg = sqlite3_aggregate_context(ctx, 0);
   go_inverse(ctx, *agg, nArg, pArg);
 }
 
