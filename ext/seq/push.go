@@ -12,8 +12,8 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 	yield func(V) bool, stop func()) {
 
 	var (
-		next = make(chan V)
 		wait = make(chan struct{})
+		next V
 		done bool
 		rcvr any
 	)
@@ -23,24 +23,25 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 		defer func() {
 			rcvr = recover()
 			done = true
-			wait <- struct{}{}
+			close(wait)
 		}()
 
-		wait <- struct{}{}
+		<-wait
 		consumer(func(yield func(V) bool) {
-			for in := range next {
-				if !yield(in) {
+			for !done {
+				if !yield(next) {
 					break
 				}
 				wait <- struct{}{}
+				<-wait
 			}
 		})
 	}()
-	<-wait
 
 	yield = func(v V) bool {
 		// yield the next value, panics if stop has been called
-		next <- v
+		next = v
+		wait <- struct{}{}
 		<-wait
 
 		// propapage panics (todo: goexit)
@@ -52,7 +53,8 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 
 	stop = func() {
 		// finish the iteration, panics if stop has been called
-		close(next)
+		done = true
+		wait <- struct{}{}
 		<-wait
 
 		// propapage panics (todo: goexit)
