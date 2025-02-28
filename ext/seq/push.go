@@ -23,11 +23,11 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 		defer func() {
 			rcvr = recover()
 			done = true
-			close(wait)
+			wait <- struct{}{}
 		}()
 
+		wait <- struct{}{}
 		consumer(func(yield func(V) bool) {
-			wait <- struct{}{}
 			for in := range next {
 				if !yield(in) {
 					break
