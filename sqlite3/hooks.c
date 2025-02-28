@@ -19,6 +19,10 @@ void go_log(void *, int, const char *);
 unsigned int go_autovacuum_pages(void *, const char *, unsigned int,
                                  unsigned int, unsigned int);
 
+void sqlite3_log_go(int iErrCode, const char *zMsg) {
+  sqlite3_log(iErrCode, "%s", zMsg);
+}
+
 void sqlite3_progress_handler_go(sqlite3 *db, int n) {
   sqlite3_progress_handler(db, n, go_progress_handler, /*arg=*/NULL);
 }
