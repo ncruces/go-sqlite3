@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.24.0
 
-require github.com/ncruces/go-sqlite3 v0.23.1
+require github.com/ncruces/go-sqlite3 v0.24.0
 
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect
