@@ -4,6 +4,7 @@ package seq
 
 import (
 	"iter"
+	"runtime"
 	_ "unsafe"
 )
 
@@ -19,40 +20,51 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 	yield func(V) bool, stop func()) {
 
 	var (
-		next V
-		done bool
-		rcvr any
+		v          V
+		done       bool
+		panicValue any
+		seqDone    bool // to detect Goexit
 	)
 
 	c := newcoro(func(c *coro) {
-		// recover and propagate panics
+		// Recover and propagate panics from consumer.
 		defer func() {
-			rcvr = recover()
+			if p := recover(); p != nil {
+				panicValue = p
+			} else if !seqDone {
+				panicValue = goexitPanicValue
+			}
 			done = true
 		}()
 
 		consumer(func(yield func(V) bool) {
 			for !done {
-				if !yield(next) {
+				if !yield(v) {
 					break
 				}
 				coroswitch(c)
 			}
 		})
+		seqDone = true
 	})
 
-	yield = func(v V) bool {
+	yield = func(v1 V) bool {
 		if done {
 			panic("yield called after stop")
 		}
 
-		// yield the next value
-		next = v
+		v = v1
+		// Yield the next value.
 		coroswitch(c)
 
-		// propapage panics (goexits?)
-		if rcvr != nil {
-			panic(rcvr)
+		// Propagate panics and goexits from consumer.
+		if panicValue != nil {
+			if panicValue == goexitPanicValue {
+				// Propagate runtime.Goexit from consumer.
+				runtime.Goexit()
+			} else {
+				panic(panicValue)
+			}
 		}
 		return !done
 	}
@@ -62,15 +74,24 @@ func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 			panic("stop called again")
 		}
 
-		// finish the iteration
 		done = true
+		// Finish the iteration.
 		coroswitch(c)
 
-		// propapage panics (goexits?)
-		if rcvr != nil {
-			panic(rcvr)
+		// Propagate panics and goexits from consumer.
+		if panicValue != nil {
+			if panicValue == goexitPanicValue {
+				// Propagate runtime.Goexit from consumer.
+				runtime.Goexit()
+			} else {
+				panic(panicValue)
+			}
 		}
 	}
 
 	return yield, stop
 }
+
+// goexitPanicValue is a sentinel value indicating that an iterator
+// exited via runtime.Goexit.
+var goexitPanicValue any = new(int)
