@@ -1,4 +1,4 @@
-package seq
+package sqlite3_test
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
-func ExampleAggregate() {
+func ExampleConn_CreateAggregateFunction() {
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		log.Fatal(err)
@@ -26,16 +26,18 @@ func ExampleAggregate() {
 		log.Fatal(err)
 	}
 
-	err = db.CreateWindowFunction("seq_avg", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS, Aggregate(
-		func(seq iter.Seq[[]sqlite3.Value]) any {
+	err = db.CreateAggregateFunction("seq_avg", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS,
+		func(seq iter.Seq[[]sqlite3.Value]) func(sqlite3.Context) {
 			count := 0
 			total := 0.0
 			for arg := range seq {
 				total += arg[0].Float()
 				count++
 			}
-			return total / float64(count)
-		}))
+			return func(ctx sqlite3.Context) {
+				ctx.ResultFloat(total / float64(count))
+			}
+		})
 	if err != nil {
 		log.Fatal(err)
 	}

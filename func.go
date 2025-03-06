@@ -3,6 +3,7 @@ package sqlite3
 import (
 	"context"
 	"io"
+	"iter"
 	"sync"
 
 	"github.com/tetratelabs/wazero/api"
@@ -76,6 +77,36 @@ func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn Scala
 // ScalarFunction is the type of a scalar SQL function.
 // Implementations must not retain arg.
 type ScalarFunction func(ctx Context, arg ...Value)
+
+// CreateAggregateFunction defines a new aggregate SQL function.
+//
+// https://sqlite.org/c3ref/create_function.html
+func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag, fn func(iter.Seq[[]Value]) func(Context)) error {
+	var funcPtr ptr_t
+	defer c.arena.mark()()
+	namePtr := c.arena.string(name)
+	if fn != nil {
+		funcPtr = util.AddHandle(c.ctx, func() AggregateFunction {
+			var a aggregate
+			coro := func(yieldCoro func(struct{}) bool) {
+				seq := func(yieldSeq func([]Value) bool) {
+					for yieldSeq(a.arg) {
+						if !yieldCoro(struct{}{}) {
+							break
+						}
+					}
+				}
+				a.value = fn(seq)
+			}
+			a.next, a.stop = iter.Pull(coro)
+			return &a
+		})
+	}
+	rc := res_t(c.call("sqlite3_create_aggregate_function_go",
+		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
+		stk_t(flag), stk_t(funcPtr)))
+	return c.error(rc)
+}
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
 // If fn returns a [WindowFunction], then an aggregate window function is created.
@@ -241,4 +272,28 @@ func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
 	} else {
 		return p.(*[_MAX_FUNCTION_ARG]Value)
 	}
+}
+
+type aggregate struct {
+	arg   []Value
+	value func(Context)
+	next  func() (struct{}, bool)
+	stop  func()
+}
+
+func (a *aggregate) Step(ctx Context, arg ...Value) {
+	a.arg = arg
+	if _, more := a.next(); !more {
+		a.stop()
+	}
+}
+
+func (a *aggregate) Value(ctx Context) {
+	a.stop()
+	a.value(ctx)
+}
+
+func (a *aggregate) Close() error {
+	a.stop()
+	return nil
 }
