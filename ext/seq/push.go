@@ -1,11 +1,6 @@
-//go:build !coro
-
 package seq
 
-import (
-	"iter"
-	"runtime"
-)
+import "iter"
 
 // Push takes a consumer function, and returns a yield and a stop function.
 // It arranges for the consumer to be called with a Seq iterator.
@@ -14,79 +9,29 @@ import (
 func iter_Push[V any](consumer func(seq iter.Seq[V])) (
 	yield func(V) bool, stop func()) {
 
-	var (
-		v          V
-		done       bool
-		panicValue any
-		seqDone    bool // to detect Goexit
-		swtch      = make(chan struct{})
-	)
+	var in V
 
-	go func() {
-		// Recover and propagate panics from consumer.
-		defer func() {
-			if p := recover(); p != nil {
-				panicValue = p
-			} else if !seqDone {
-				panicValue = goexitPanicValue
-			}
-			done = true
-			close(swtch)
-		}()
-
-		<-swtch
-		consumer(func(yield func(V) bool) {
-			for !done {
-				if !yield(v) {
+	coro := func(yieldCoro func(struct{}) bool) {
+		seq := func(yieldSeq func(V) bool) {
+			for yieldSeq(in) {
+				if !yieldCoro(struct{}{}) {
 					break
 				}
-				swtch <- struct{}{}
-				<-swtch
-			}
-		})
-		seqDone = true
-	}()
-
-	yield = func(v1 V) bool {
-		v = v1
-		// Yield the next value.
-		// Panics if stop has been called.
-		swtch <- struct{}{}
-		<-swtch
-
-		// Propagate panics and goexits from consumer.
-		if panicValue != nil {
-			if panicValue == goexitPanicValue {
-				// Propagate runtime.Goexit from consumer.
-				runtime.Goexit()
-			} else {
-				panic(panicValue)
 			}
 		}
-		return !done
+		consumer(seq)
 	}
 
-	stop = func() {
-		done = true
-		// Finish the iteration.
-		// Panics if stop has been called.
-		swtch <- struct{}{}
-		<-swtch
+	next, stop := iter.Pull(coro)
 
-		// Propagate panics and goexits from consumer.
-		if panicValue != nil {
-			if panicValue == goexitPanicValue {
-				// Propagate runtime.Goexit from consumer.
-				runtime.Goexit()
-			} else {
-				panic(panicValue)
-			}
+	yield = func(v V) bool {
+		in = v
+		_, more := next()
+		if !more {
+			stop()
 		}
+		return more
 	}
 
 	return yield, stop
 }
-
-// goexitPanicValue is a sentinel value indicating that an iterator
-// exited via runtime.Goexit.
-var goexitPanicValue any = new(int)
