@@ -86,8 +86,8 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
 	if fn != nil {
-		funcPtr = util.AddHandle(c.ctx, func() AggregateFunction {
-			var a aggregate
+		funcPtr = util.AddHandle(c.ctx, AggregateConstructor(func() AggregateFunction {
+			var a aggregateFunc
 			coro := func(yieldCoro func(struct{}) bool) {
 				seq := func(yieldSeq func([]Value) bool) {
 					for yieldSeq(a.arg) {
@@ -100,7 +100,7 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 			}
 			a.next, a.stop = iter.Pull(coro)
 			return &a
-		})
+		}))
 	}
 	rc := res_t(c.call("sqlite3_create_aggregate_function_go",
 		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
@@ -109,32 +109,31 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 }
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
-// If fn returns a [WindowFunction], then an aggregate window function is created.
+// If fn returns a [WindowFunction], an aggregate window function is created.
 // If fn returns an [io.Closer], it will be called to free resources.
 //
 // https://sqlite.org/c3ref/create_function.html
-func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn func() AggregateFunction) error {
+func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn AggregateConstructor) error {
 	var funcPtr ptr_t
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
-	call := "sqlite3_create_aggregate_function_go"
 	if fn != nil {
-		agg := fn()
-		if c, ok := agg.(io.Closer); ok {
-			if err := c.Close(); err != nil {
-				return err
+		funcPtr = util.AddHandle(c.ctx, AggregateConstructor(func() AggregateFunction {
+			agg := fn()
+			if win, ok := agg.(WindowFunction); ok {
+				return win
 			}
-		}
-		if _, ok := agg.(WindowFunction); ok {
-			call = "sqlite3_create_window_function_go"
-		}
-		funcPtr = util.AddHandle(c.ctx, fn)
+			return windowFunc{agg}
+		}))
 	}
-	rc := res_t(c.call(call,
+	rc := res_t(c.call("sqlite3_create_window_function_go",
 		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
 		stk_t(flag), stk_t(funcPtr)))
 	return c.error(rc)
 }
+
+// AggregateConstructor is a an [AggregateFunction] constructor.
+type AggregateConstructor func() AggregateFunction
 
 // AggregateFunction is the interface an aggregate function should implement.
 //
@@ -242,7 +241,7 @@ func callbackAggregate(db *Conn, pAgg, pApp ptr_t) (AggregateFunction, ptr_t) {
 	}
 
 	// We need to create the aggregate.
-	fn := util.GetHandle(db.ctx, pApp).(func() AggregateFunction)()
+	fn := util.GetHandle(db.ctx, pApp).(AggregateConstructor)()
 	if pAgg != 0 {
 		handle := util.AddHandle(db.ctx, fn)
 		util.Write32(db.mod, pAgg, handle)
@@ -263,6 +262,7 @@ func callbackArgs(db *Conn, arg []Value, pArg ptr_t) {
 var funcArgsPool sync.Pool
 
 func putFuncArgs(p *[_MAX_FUNCTION_ARG]Value) {
+	clear(p[:])
 	funcArgsPool.Put(p)
 }
 
@@ -274,26 +274,35 @@ func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
 	}
 }
 
-type aggregate struct {
+type aggregateFunc struct {
 	arg   []Value
 	value func(Context)
 	next  func() (struct{}, bool)
 	stop  func()
 }
 
-func (a *aggregate) Step(ctx Context, arg ...Value) {
+func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
 	a.arg = arg
 	if _, more := a.next(); !more {
 		a.stop()
 	}
 }
 
-func (a *aggregate) Value(ctx Context) {
+func (a *aggregateFunc) Value(ctx Context) {
 	a.stop()
 	a.value(ctx)
 }
 
-func (a *aggregate) Close() error {
+func (a *aggregateFunc) Close() error {
 	a.stop()
 	return nil
+}
+
+type windowFunc struct {
+	AggregateFunction
+}
+
+func (windowFunc) Inverse(ctx Context, arg ...Value) {
+	// Implementing inverse allows certain queries that don't really need it to succeed.
+	ctx.ResultError(util.ErrorString("may not be used as a window function"))
 }
