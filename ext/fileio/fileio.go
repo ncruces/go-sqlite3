@@ -42,7 +42,7 @@ func lsmode(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultText(fs.FileMode(arg[0].Int()).String())
 }
 
-func readfile(fsys fs.FS) func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+func readfile(fsys fs.FS) sqlite3.ScalarFunction {
 	return func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		var err error
 		var data []byte

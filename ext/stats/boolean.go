@@ -7,7 +7,7 @@ const (
 	some
 )
 
-func newBoolean(kind int) func() sqlite3.AggregateFunction {
+func newBoolean(kind int) sqlite3.AggregateConstructor {
 	return func() sqlite3.AggregateFunction { return &boolean{kind: kind} }
 }
 

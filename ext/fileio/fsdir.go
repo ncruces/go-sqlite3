@@ -63,12 +63,12 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	fsdir
-	base   string
-	resume func() (entry, bool)
-	cancel func()
-	curr   entry
-	eof    bool
-	rowID  int64
+	base  string
+	next  func() (entry, bool)
+	stop  func()
+	curr  entry
+	eof   bool
+	rowID int64
 }
 
 type entry struct {
@@ -78,8 +78,8 @@ type entry struct {
 }
 
 func (c *cursor) Close() error {
-	if c.cancel != nil {
-		c.cancel()
+	if c.stop != nil {
+		c.stop()
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		c.base = base
 	}
 
-	c.resume, c.cancel = iter.Pull(func(yield func(entry) bool) {
+	c.next, c.stop = iter.Pull(func(yield func(entry) bool) {
 		walkDir := func(path string, d fs.DirEntry, err error) error {
 			if yield(entry{d, err, path}) {
 				return nil
@@ -121,7 +121,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 }
 
 func (c *cursor) Next() error {
-	curr, ok := c.resume()
+	curr, ok := c.next()
 	c.curr = curr
 	c.eof = !ok
 	c.rowID++

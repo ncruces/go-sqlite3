@@ -130,7 +130,7 @@ func special(kind int, n int64) (null, zero bool) {
 	}
 }
 
-func newVariance(kind int) func() sqlite3.AggregateFunction {
+func newVariance(kind int) sqlite3.AggregateConstructor {
 	return func() sqlite3.AggregateFunction { return &variance{kind: kind} }
 }
 
@@ -178,7 +178,7 @@ func (fn *variance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 }
 
-func newCovariance(kind int) func() sqlite3.AggregateFunction {
+func newCovariance(kind int) sqlite3.AggregateConstructor {
 	return func() sqlite3.AggregateFunction { return &covariance{kind: kind} }
 }
 
@@ -254,7 +254,7 @@ func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 }
 
-func newMoments(kind int) func() sqlite3.AggregateFunction {
+func newMoments(kind int) sqlite3.AggregateConstructor {
 	return func() sqlite3.AggregateFunction { return &momentfn{kind: kind} }
 }
 
