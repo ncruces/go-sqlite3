@@ -46,7 +46,7 @@ func (c Conn) AnyCollationNeeded() error {
 // CreateCollation defines a new collating sequence.
 //
 // https://sqlite.org/c3ref/create_collation.html
-func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
+func (c *Conn) CreateCollation(name string, fn CollatingFunction) error {
 	var funcPtr ptr_t
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
@@ -57,6 +57,10 @@ func (c *Conn) CreateCollation(name string, fn func(a, b []byte) int) error {
 		stk_t(c.handle), stk_t(namePtr), stk_t(funcPtr)))
 	return c.error(rc)
 }
+
+// Collating function is the type of a collation callback.
+// Implementations must not retain a or b.
+type CollatingFunction func(a, b []byte) int
 
 // CreateFunction defines a new scalar SQL function.
 //
@@ -81,7 +85,7 @@ type ScalarFunction func(ctx Context, arg ...Value)
 // CreateAggregateFunction defines a new aggregate SQL function.
 //
 // https://sqlite.org/c3ref/create_function.html
-func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag, fn func(iter.Seq[[]Value]) func(Context)) error {
+func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag, fn AggregateSeqFunction) error {
 	var funcPtr ptr_t
 	defer c.arena.mark()()
 	namePtr := c.arena.string(name)
@@ -96,7 +100,7 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 						}
 					}
 				}
-				a.value = fn(seq)
+				fn(&a.ctx, seq)
 			}
 			a.next, a.stop = iter.Pull(coro)
 			return &a
@@ -107,6 +111,10 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 		stk_t(flag), stk_t(funcPtr)))
 	return c.error(rc)
 }
+
+// AggregateSeqFunction is the type of an aggregate SQL function.
+// Implementations must not retain the slices produced by seq.
+type AggregateSeqFunction func(ctx *Context, seq iter.Seq[[]Value])
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.
 // If fn returns a [WindowFunction], an aggregate window function is created.
@@ -123,7 +131,7 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 			if win, ok := agg.(WindowFunction); ok {
 				return win
 			}
-			return windowFunc{agg}
+			return windowFunc{agg, name}
 		}))
 	}
 	rc := res_t(c.call("sqlite3_create_window_function_go",
@@ -183,7 +191,7 @@ func collationCallback(ctx context.Context, mod api.Module, pArg, pDB ptr_t, eTe
 }
 
 func compareCallback(ctx context.Context, mod api.Module, pApp ptr_t, nKey1 int32, pKey1 ptr_t, nKey2 int32, pKey2 ptr_t) uint32 {
-	fn := util.GetHandle(ctx, pApp).(func(a, b []byte) int)
+	fn := util.GetHandle(ctx, pApp).(CollatingFunction)
 	return uint32(fn(util.View(mod, pKey1, int64(nKey1)), util.View(mod, pKey2, int64(nKey2))))
 }
 
@@ -275,13 +283,14 @@ func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
 }
 
 type aggregateFunc struct {
-	arg   []Value
-	value func(Context)
-	next  func() (struct{}, bool)
-	stop  func()
+	ctx  Context
+	arg  []Value
+	next func() (struct{}, bool)
+	stop func()
 }
 
 func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
+	a.ctx = ctx
 	a.arg = arg
 	if _, more := a.next(); !more {
 		a.stop()
@@ -289,8 +298,8 @@ func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
 }
 
 func (a *aggregateFunc) Value(ctx Context) {
+	a.ctx = ctx
 	a.stop()
-	a.value(ctx)
 }
 
 func (a *aggregateFunc) Close() error {
@@ -300,9 +309,10 @@ func (a *aggregateFunc) Close() error {
 
 type windowFunc struct {
 	AggregateFunction
+	name string
 }
 
-func (windowFunc) Inverse(ctx Context, arg ...Value) {
+func (w windowFunc) Inverse(ctx Context, arg ...Value) {
 	// Implementing inverse allows certain queries that don't really need it to succeed.
-	ctx.ResultError(util.ErrorString("may not be used as a window function"))
+	ctx.ResultError(util.ErrorString(w.name + ": may not be used as a window function"))
 }

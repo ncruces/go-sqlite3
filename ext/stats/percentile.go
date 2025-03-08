@@ -21,7 +21,7 @@ const (
 	percentile_disc
 )
 
-func newPercentile(kind int) func() sqlite3.AggregateFunction {
+func newPercentile(kind int) sqlite3.AggregateConstructor {
 	return func() sqlite3.AggregateFunction { return &percentile{kind: kind} }
 }
 

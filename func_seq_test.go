@@ -27,16 +27,14 @@ func ExampleConn_CreateAggregateFunction() {
 	}
 
 	err = db.CreateAggregateFunction("seq_avg", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS,
-		func(seq iter.Seq[[]sqlite3.Value]) func(sqlite3.Context) {
+		func(ctx *sqlite3.Context, seq iter.Seq[[]sqlite3.Value]) {
 			count := 0
 			total := 0.0
 			for arg := range seq {
 				total += arg[0].Float()
 				count++
 			}
-			return func(ctx sqlite3.Context) {
-				ctx.ResultFloat(total / float64(count))
-			}
+			ctx.ResultFloat(total / float64(count))
 		})
 	if err != nil {
 		log.Fatal(err)
