@@ -159,8 +159,6 @@ func (c *cursor) Close() error {
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	c.arg = arg
-	c.rowID = 0
 	err := errors.Join(
 		c.stmt.Reset(),
 		c.stmt.ClearBindings())
@@ -187,6 +185,8 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 			return err
 		}
 	}
+	c.arg = append(c.arg[:0], arg...)
+	c.rowID = 0
 	return c.Next()
 }
 

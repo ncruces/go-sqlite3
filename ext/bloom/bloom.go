@@ -268,13 +268,13 @@ func (b *bloom) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	*bloom
-	arg *sqlite3.Value
+	arg sqlite3.Value
 	eof bool
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	c.eof = false
-	c.arg = &arg[0]
+	c.arg = arg[0]
 	blob := arg[0].RawBlob()
 
 	f, err := c.db.OpenBlob(c.schema, c.storage, "data", 1, false)
@@ -312,7 +312,7 @@ func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 	case 0:
 		ctx.ResultBool(true)
 	case 1:
-		ctx.ResultValue(*c.arg)
+		ctx.ResultValue(c.arg)
 	}
 	return nil
 }

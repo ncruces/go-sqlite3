@@ -5,6 +5,7 @@ import (
 	"io"
 	"iter"
 	"sync"
+	"sync/atomic"
 
 	"github.com/tetratelabs/wazero/api"
 
@@ -196,21 +197,19 @@ func compareCallback(ctx context.Context, mod api.Module, pApp ptr_t, nKey1 int3
 }
 
 func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp ptr_t, nArg int32, pArg ptr_t) {
-	args := getFuncArgs()
-	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
+	args := callbackArgs(db, nArg, pArg)
+	defer returnArgs(args)
 	fn := util.GetHandle(db.ctx, pApp).(ScalarFunction)
-	callbackArgs(db, args[:nArg], pArg)
-	fn(Context{db, pCtx}, args[:nArg]...)
+	fn(Context{db, pCtx}, *args...)
 }
 
 func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, nArg int32, pArg ptr_t) {
-	args := getFuncArgs()
-	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
-	callbackArgs(db, args[:nArg], pArg)
+	args := callbackArgs(db, nArg, pArg)
+	defer returnArgs(args)
 	fn, _ := callbackAggregate(db, pAgg, pApp)
-	fn.Step(Context{db, pCtx}, args[:nArg]...)
+	fn.Step(Context{db, pCtx}, *args...)
 }
 
 func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, final int32) {
@@ -234,12 +233,11 @@ func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, 
 }
 
 func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t, nArg int32, pArg ptr_t) {
-	args := getFuncArgs()
-	defer putFuncArgs(args)
 	db := ctx.Value(connKey{}).(*Conn)
-	callbackArgs(db, args[:nArg], pArg)
+	args := callbackArgs(db, nArg, pArg)
+	defer returnArgs(args)
 	fn := util.GetHandle(db.ctx, pAgg).(WindowFunction)
-	fn.Inverse(Context{db, pCtx}, args[:nArg]...)
+	fn.Inverse(Context{db, pCtx}, *args...)
 }
 
 func callbackAggregate(db *Conn, pAgg, pApp ptr_t) (AggregateFunction, ptr_t) {
@@ -258,28 +256,31 @@ func callbackAggregate(db *Conn, pAgg, pApp ptr_t) (AggregateFunction, ptr_t) {
 	return fn, 0
 }
 
-func callbackArgs(db *Conn, arg []Value, pArg ptr_t) {
-	for i := range arg {
-		arg[i] = Value{
+var (
+	valueArgsPool sync.Pool
+	valueArgsLen  atomic.Int32
+)
+
+func callbackArgs(db *Conn, nArg int32, pArg ptr_t) *[]Value {
+	arg, ok := valueArgsPool.Get().(*[]Value)
+	if !ok || cap(*arg) < int(nArg) {
+		max := valueArgsLen.Or(nArg) | nArg
+		lst := make([]Value, max)
+		arg = &lst
+	}
+	lst := (*arg)[:nArg]
+	for i := range lst {
+		lst[i] = Value{
 			c:      db,
 			handle: util.Read32[ptr_t](db.mod, pArg+ptr_t(i)*ptrlen),
 		}
 	}
+	*arg = lst
+	return arg
 }
 
-var funcArgsPool sync.Pool
-
-func putFuncArgs(p *[_MAX_FUNCTION_ARG]Value) {
-	clear(p[:])
-	funcArgsPool.Put(p)
-}
-
-func getFuncArgs() *[_MAX_FUNCTION_ARG]Value {
-	if p := funcArgsPool.Get(); p == nil {
-		return new([_MAX_FUNCTION_ARG]Value)
-	} else {
-		return p.(*[_MAX_FUNCTION_ARG]Value)
-	}
+func returnArgs(p *[]Value) {
+	valueArgsPool.Put(p)
 }
 
 type aggregateFunc struct {
@@ -291,7 +292,7 @@ type aggregateFunc struct {
 
 func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
 	a.ctx = ctx
-	a.arg = arg
+	a.arg = append(a.arg[:0], arg...)
 	if _, more := a.next(); !more {
 		a.stop()
 	}
