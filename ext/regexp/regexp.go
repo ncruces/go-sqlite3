@@ -111,22 +111,24 @@ loop2:
 	return glob.String()
 }
 
-func load(ctx sqlite3.Context, i int, expr string) (*regexp.Regexp, error) {
+func load(ctx sqlite3.Context, arg []sqlite3.Value, i int) (*regexp.Regexp, error) {
 	re, ok := ctx.GetAuxData(i).(*regexp.Regexp)
 	if !ok {
-		r, err := regexp.Compile(expr)
-		if err != nil {
-			return nil, err
+		re, ok = arg[i].Pointer().(*regexp.Regexp)
+		if !ok {
+			r, err := regexp.Compile(arg[i].Text())
+			if err != nil {
+				return nil, err
+			}
+			re = r
 		}
-		re = r
-		ctx.SetAuxData(0, r)
+		ctx.SetAuxData(i, re)
 	}
 	return re, nil
 }
 
 func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	_ = arg[1] // bounds check
-	re, err := load(ctx, 0, arg[0].Text())
+	re, err := load(ctx, arg, 0)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
@@ -136,18 +138,17 @@ func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func regexLike(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	re, err := load(ctx, 1, arg[1].Text())
+	re, err := load(ctx, arg, 1)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
 	}
-
 	text := arg[0].RawText()
 	ctx.ResultBool(re.Match(text))
 }
 
 func regexCount(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	re, err := load(ctx, 1, arg[1].Text())
+	re, err := load(ctx, arg, 1)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
@@ -162,7 +163,7 @@ func regexCount(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func regexSubstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	re, err := load(ctx, 1, arg[1].Text())
+	re, err := load(ctx, arg, 1)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
@@ -187,7 +188,7 @@ func regexSubstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func regexInstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	re, err := load(ctx, 1, arg[1].Text())
+	re, err := load(ctx, arg, 1)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
@@ -215,16 +216,14 @@ func regexInstr(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func regexReplace(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	_ = arg[2] // bounds check
-
-	re, err := load(ctx, 1, arg[1].Text())
+	re, err := load(ctx, arg, 1)
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
 	}
 
-	text := arg[0].RawText()
 	repl := arg[2].RawText()
+	text := arg[0].RawText()
 	var pos, n int
 	if len(arg) > 3 {
 		pos = arg[3].Int()

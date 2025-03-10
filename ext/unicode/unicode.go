@@ -113,9 +113,8 @@ func upper(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			ctx.ResultError(err)
 			return // notest
 		}
-		c := cases.Upper(t)
-		ctx.SetAuxData(1, c)
-		cs = c
+		cs = cases.Upper(t)
+		ctx.SetAuxData(1, cs)
 	}
 	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
 }
@@ -132,9 +131,8 @@ func lower(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			ctx.ResultError(err)
 			return // notest
 		}
-		c := cases.Lower(t)
-		ctx.SetAuxData(1, c)
-		cs = c
+		cs = cases.Lower(t)
+		ctx.SetAuxData(1, cs)
 	}
 	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
 }
@@ -151,9 +149,8 @@ func initcap(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			ctx.ResultError(err)
 			return // notest
 		}
-		c := cases.Title(t)
-		ctx.SetAuxData(1, c)
-		cs = c
+		cs = cases.Title(t)
+		ctx.SetAuxData(1, cs)
 	}
 	ctx.ResultRawText(cs.Bytes(arg[0].RawText()))
 }
@@ -200,13 +197,16 @@ func normalize(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func regex(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	re, ok := ctx.GetAuxData(0).(*regexp.Regexp)
 	if !ok {
-		r, err := regexp.Compile(arg[0].Text())
-		if err != nil {
-			ctx.ResultError(err)
-			return // notest
+		re, ok = arg[0].Pointer().(*regexp.Regexp)
+		if !ok {
+			r, err := regexp.Compile(arg[0].Text())
+			if err != nil {
+				ctx.ResultError(err)
+				return // notest
+			}
+			re = r
 		}
-		re = r
-		ctx.SetAuxData(0, r)
+		ctx.SetAuxData(0, re)
 	}
 	ctx.ResultBool(re.Match(arg[1].RawText()))
 }

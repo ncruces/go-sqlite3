@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
@@ -101,6 +102,27 @@ func TestRegister_errors(t *testing.T) {
 		if err == nil {
 			t.Fatal("want error")
 		}
+	}
+}
+
+func TestRegister_pointer(t *testing.T) {
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	db, err := driver.Open(tmp, Register)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var got int
+	err = db.QueryRow(`SELECT regexp_count('ABCABCAXYaxy', ?, 1)`,
+		sqlite3.Pointer(regexp.MustCompile(`(?i)A.`))).Scan(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != 4 {
+		t.Errorf("got %d, want %d", got, 4)
 	}
 }
 
