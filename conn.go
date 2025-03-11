@@ -92,6 +92,9 @@ func newConn(ctx context.Context, filename string, flags OpenFlag) (ret *Conn, _
 	}()
 
 	c.ctx = context.WithValue(c.ctx, connKey{}, c)
+	if logger := defaultLogger.Load(); logger != nil {
+		c.ConfigLog(*logger)
+	}
 	c.arena = c.newArena()
 	c.handle, err = c.openDB(filename, flags)
 	if err == nil {

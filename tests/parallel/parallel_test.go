@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,15 +23,17 @@ import (
 
 func TestMain(m *testing.M) {
 	sqlite3.Initialize()
-	sqlite3.AutoExtension(func(c *sqlite3.Conn) error {
-		return c.ConfigLog(func(code sqlite3.ExtendedErrorCode, msg string) {
-			// Having to do journal recovery is unexpected.
-			if errors.Is(code, sqlite3.NOTICE) {
-				log.Panicf("%v (%d): %s", code, code, msg)
-			} else {
-				log.Printf("%v (%d): %s", code, code, msg)
-			}
-		})
+	sqlite3.ConfigLog(func(code sqlite3.ExtendedErrorCode, msg string) {
+		switch code {
+		case sqlite3.NOTICE_RECOVER_WAL:
+			// Wal "recovery" is expected.
+			break
+		case sqlite3.NOTICE_RECOVER_ROLLBACK:
+			// Rollback journal recovery is an error.
+			log.Panicf("%v (%d): %s", code, code, msg)
+		default:
+			log.Printf("%v (%d): %s", code, code, msg)
+		}
 	})
 	m.Run()
 }
@@ -68,7 +69,7 @@ func Test_wal(t *testing.T) {
 	if testing.Short() {
 		iter = 1000
 	} else {
-		iter = 2500
+		iter = 5000
 	}
 
 	name := "file:" +
