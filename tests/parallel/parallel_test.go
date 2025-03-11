@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/url"
@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -24,6 +23,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	sqlite3.Initialize()
 	sqlite3.AutoExtension(func(c *sqlite3.Conn) error {
 		return c.ConfigLog(func(code sqlite3.ExtendedErrorCode, msg string) {
 			// Having to do journal recovery is unexpected.
@@ -54,6 +54,7 @@ func Test_parallel(t *testing.T) {
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -75,6 +76,7 @@ func Test_wal(t *testing.T) {
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -90,6 +92,7 @@ func Test_memdb(t *testing.T) {
 	name := memdb.TestDB(t, url.Values{
 		"_pragma": {"busy_timeout(10000)"},
 	})
+	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -113,6 +116,7 @@ func Test_adiantum(t *testing.T) {
 		"&_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -136,6 +140,7 @@ func Test_xts(t *testing.T) {
 		"&_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
 }
@@ -155,14 +160,17 @@ func Test_MultiProcess_rollback(t *testing.T) {
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=Test_ChildProcess_rollback")...)
+	cmd := exec.Command(exe, append(os.Args[1:],
+		"-test.v", "-test.count=1", "-test.run=Test_ChildProcess_rollback")...)
 	out, err := cmd.StdoutPipe()
+	cmd.Stderr = os.Stderr
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,14 +222,17 @@ func Test_MultiProcess_wal(t *testing.T) {
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
+	createDB(t, name)
 
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.Command(exe, append(os.Args[1:], "-test.v", "-test.run=Test_ChildProcess_wal")...)
+	cmd := exec.Command(exe, append(os.Args[1:],
+		"-test.v", "-test.count=1", "-test.run=Test_ChildProcess_wal")...)
 	out, err := cmd.StdoutPipe()
+	cmd.Stderr = os.Stderr
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,14 +274,14 @@ func Benchmark_parallel(b *testing.B) {
 		b.Skip("skipping without shared memory")
 	}
 
-	sqlite3.Initialize()
-	b.ResetTimer()
-
 	name := "file:" +
 		filepath.Join(b.TempDir(), "test.db") +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(truncate)" +
 		"&_pragma=synchronous(off)"
+	createDB(b, name)
+
+	b.ResetTimer()
 	testParallel(b, name, b.N)
 }
 
@@ -279,55 +290,51 @@ func Benchmark_wal(b *testing.B) {
 		b.Skip("skipping without shared memory")
 	}
 
-	sqlite3.Initialize()
-	b.ResetTimer()
-
 	name := "file:" +
 		filepath.Join(b.TempDir(), "test.db") +
 		"?_pragma=busy_timeout(10000)" +
 		"&_pragma=journal_mode(wal)" +
 		"&_pragma=synchronous(off)"
+	createDB(b, name)
+
+	b.ResetTimer()
 	testParallel(b, name, b.N)
 }
 
 func Benchmark_memdb(b *testing.B) {
-	sqlite3.Initialize()
-	b.ResetTimer()
-
 	name := memdb.TestDB(b, url.Values{
 		"_pragma": {"busy_timeout(10000)"},
 	})
+	createDB(b, name)
+
+	b.ResetTimer()
 	testParallel(b, name, b.N)
+}
+
+func createDB(t testing.TB, name string) {
+	db, err := sqlite3.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testParallel(t testing.TB, name string, n int) {
 	writer := func() error {
 		db, err := sqlite3.Open(name)
 		if err != nil {
-			return err
+			return fmt.Errorf("writer: open: %w", err)
 		}
 		defer db.Close()
 
-		err = db.BusyHandler(func(ctx context.Context, count int) (retry bool) {
-			select {
-			case <-time.After(time.Millisecond):
-				return true
-			case <-ctx.Done():
-				return false
-			}
-		})
-		if err != nil {
-			return err
-		}
-
-		err = db.Exec(`CREATE TABLE IF NOT EXISTS users (id INT, name VARCHAR(10))`)
-		if err != nil {
-			return err
-		}
-
 		err = db.Exec(`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 		if err != nil {
-			return err
+			return fmt.Errorf("writer: insert: %w", err)
 		}
 
 		return db.Close()
@@ -336,13 +343,13 @@ func testParallel(t testing.TB, name string, n int) {
 	reader := func() error {
 		db, err := sqlite3.Open(name)
 		if err != nil {
-			return err
+			return fmt.Errorf("reader: open: %w", err)
 		}
 		defer db.Close()
 
 		stmt, _, err := db.Prepare(`SELECT id, name FROM users`)
 		if err != nil {
-			return err
+			return fmt.Errorf("reader: select: %w", err)
 		}
 		defer stmt.Close()
 
@@ -351,15 +358,15 @@ func testParallel(t testing.TB, name string, n int) {
 			row++
 		}
 		if err := stmt.Err(); err != nil {
-			return err
+			return fmt.Errorf("reader: step: %w", err)
 		}
 		if row%3 != 0 {
-			t.Errorf("got %d rows, want multiple of 3", row)
+			return fmt.Errorf("reader: got %d rows, want multiple of 3", row)
 		}
 
 		err = stmt.Close()
 		if err != nil {
-			return err
+			return fmt.Errorf("reader: close: %w", err)
 		}
 
 		return db.Close()
