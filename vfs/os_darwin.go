@@ -27,7 +27,12 @@ func osSync(file *os.File, fullsync, _ /*dataonly*/ bool) error {
 	if fullsync {
 		return file.Sync()
 	}
-	return unix.Fsync(int(file.Fd()))
+	for {
+		err := unix.Fsync(int(file.Fd()))
+		if err != unix.EINTR {
+			return err
+		}
+	}
 }
 
 func osAllocate(file *os.File, size int64) error {

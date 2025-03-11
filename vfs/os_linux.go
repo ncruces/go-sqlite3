@@ -3,6 +3,7 @@
 package vfs
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -11,14 +12,36 @@ import (
 
 func osSync(file *os.File, _ /*fullsync*/, _ /*dataonly*/ bool) error {
 	// SQLite trusts Linux's fdatasync for all fsync's.
-	return unix.Fdatasync(int(file.Fd()))
+	for {
+		err := unix.Fdatasync(int(file.Fd()))
+		if err != unix.EINTR {
+			return err
+		}
+	}
 }
 
 func osAllocate(file *os.File, size int64) error {
 	if size == 0 {
 		return nil
 	}
-	return unix.Fallocate(int(file.Fd()), 0, 0, size)
+	for {
+		err := unix.Fallocate(int(file.Fd()), 0, 0, size)
+		if err == unix.EOPNOTSUPP {
+			break
+		}
+		if err != unix.EINTR {
+			return err
+		}
+	}
+	off, err := file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+	if size <= off {
+		return nil
+	}
+	return file.Truncate(size)
+
 }
 
 func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
