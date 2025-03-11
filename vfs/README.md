@@ -107,7 +107,9 @@ The VFS can be customized with a few build tags:
 > [`unix-flock` VFS](https://sqlite.org/compile.html#enable_locking_style);
 > `sqlite3_dotlk` builds are compatible with the
 > [`unix-dotfile` VFS](https://sqlite.org/compile.html#enable_locking_style).
-> Accessing databases concurrently using incompatible implementations
+
+> [!CAUTION]
+> Concurrently accessing databases using incompatible VFSes
 > will eventually corrupt data.
 
 ### Custom VFSes

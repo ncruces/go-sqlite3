@@ -49,7 +49,7 @@ func Open(filename string) (*Conn, error) {
 }
 
 // OpenContext is like [Open] but includes a context,
-// which is used to interrupt the process of opening the connectiton.
+// which is used to interrupt the process of opening the connection.
 func OpenContext(ctx context.Context, filename string) (*Conn, error) {
 	return newConn(ctx, filename, OPEN_READWRITE|OPEN_CREATE|OPEN_URI)
 }
