@@ -114,7 +114,7 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 }
 
 // AggregateSeqFunction is the type of an aggregate SQL function.
-// Implementations must not retain the slices produced by seq.
+// Implementations must not retain the slices yielded by seq.
 type AggregateSeqFunction func(ctx *Context, seq iter.Seq[[]Value])
 
 // CreateWindowFunction defines a new aggregate or aggregate window SQL function.

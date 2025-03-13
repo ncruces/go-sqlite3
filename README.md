@@ -99,7 +99,7 @@ This module behaves similarly to SQLite in [multi-thread](https://sqlite.org/thr
 it is goroutine-safe, provided that no single database connection, or object derived from it,
 is used concurrently by multiple goroutines.
 
-The [`database/sql`](https://pkg.go.dev/database/sql) driver is safe to use concurrently,
+The [`database/sql`](https://pkg.go.dev/database/sql) API is safe to use concurrently,
 according to its documentation.
 
 ### FAQ, issues, new features

@@ -69,13 +69,18 @@ func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, d
 }
 
 func osUnlock(file *os.File, start, len int64) _ErrorCode {
-	err := unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &unix.Flock_t{
+	lock := unix.Flock_t{
 		Type:  unix.F_UNLCK,
 		Start: start,
 		Len:   len,
-	})
-	if err != nil {
-		return _IOERR_UNLOCK
 	}
-	return _OK
+	for {
+		err := unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+		if err == nil {
+			return _OK
+		}
+		if err != unix.EINTR {
+			return _IOERR_UNLOCK
+		}
+	}
 }
