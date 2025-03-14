@@ -17,17 +17,18 @@ import (
 
 // Register registers the SQL functions:
 //
-//	uuid([version], [domain/namespace], [id/data])
-//
-// Generates a UUID as a string.
-//
-//	uuid_str(u)
-//
-// Converts a UUID into a well-formed UUID string.
-//
-//	uuid_blob(u)
-//
-// Converts a UUID into a 16-byte blob.
+//   - uuid([ version [, domain/namespace, [ id/data ]]]):
+//     to generate a UUID as a string,
+//   - uuid_str(u):
+//     to convert a UUID into a well-formed UUID string,
+//   - uuid_blob(u):
+//     to convert a UUID into a 16-byte blob,
+//   - uuid_extract_version(u):
+//     to extract the version of a RFC 4122 UUID,
+//   - uuid_extract_timestamp(u):
+//     to extract the timestamp of a version 1/2/6/7 UUID,
+//   - gen_random_uuid(u):
+//     to generate a version 4 (random) UUID.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
@@ -38,7 +39,8 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateFunction("uuid_str", 1, flags, toString),
 		db.CreateFunction("uuid_blob", 1, flags, toBlob),
 		db.CreateFunction("uuid_extract_version", 1, flags, version),
-		db.CreateFunction("uuid_extract_timestamp", 1, flags, timestamp))
+		db.CreateFunction("uuid_extract_timestamp", 1, flags, timestamp),
+		db.CreateFunction("gen_random_uuid", 0, sqlite3.INNOCUOUS, generate))
 }
 
 func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {

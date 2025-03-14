@@ -5,17 +5,18 @@
 //   - LIKE and REGEXP operators,
 //   - collation sequences.
 //
-// The implementation is not 100% compatible with the [ICU extension]:
-//   - upper() and lower() use [strings.ToUpper], [strings.ToLower] and [cases];
+// Like PostgreSQL, it also provides:
+//   - initcap(),
+//   - casefold(),
+//   - normalize(),
+//   - unaccent().
+//
+// The implementations are not 100% compatible:
+//   - upper(), lower(), initcap() casefold() use [strings.ToUpper], [strings.ToLower], [strings.Title] and [cases];
+//   - normalize(), unaccent() use [transform] and [unicode.Mn];
 //   - the LIKE operator follows [strings.EqualFold] rules;
 //   - the REGEXP operator uses Go [regexp/syntax];
 //   - collation sequences use [collate].
-//
-// It also provides (approximately) from PostgreSQL:
-//   - casefold(),
-//   - initcap(),
-//   - normalize(),
-//   - unaccent().
 //
 // Expect subtle differences (e.g.) in the handling of Turkish case folding.
 //
@@ -27,6 +28,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -159,8 +161,16 @@ func casefold(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultRawText(cases.Fold().Bytes(arg[0].RawText()))
 }
 
+var unaccentPool = sync.Pool{
+	New: func() any {
+		return transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	},
+}
+
 func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	unaccent := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	unaccent := unaccentPool.Get().(transform.Transformer)
+	defer unaccentPool.Put(unaccent)
+
 	res, _, err := transform.Bytes(unaccent, arg[0].RawText())
 	if err != nil {
 		ctx.ResultError(err) // notest
