@@ -15,27 +15,28 @@ func OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
 	if name == "" {
 		return nil, &os.PathError{Op: "open", Path: name, Err: ENOENT}
 	}
-	r, e := syscallOpen(name, flag|O_CLOEXEC, uint32(perm.Perm()))
-	if e != nil {
-		return nil, &os.PathError{Op: "open", Path: name, Err: e}
+	r, err := syscallOpen(name, flag|O_CLOEXEC, uint32(perm.Perm()))
+	if err != nil {
+		return nil, &os.PathError{Op: "open", Path: name, Err: err}
 	}
 	return os.NewFile(uintptr(r), name), nil
 }
 
 // syscallOpen is a copy of [syscall.Open]
-// that uses [syscall.FILE_SHARE_DELETE].
+// that uses [syscall.FILE_SHARE_DELETE],
+// and supports [syscall.FILE_FLAG_OVERLAPPED].
 //
 // https://go.dev/src/syscall/syscall_windows.go
-func syscallOpen(path string, mode int, perm uint32) (fd Handle, err error) {
-	if len(path) == 0 {
+func syscallOpen(name string, flag int, perm uint32) (fd Handle, err error) {
+	if len(name) == 0 {
 		return InvalidHandle, ERROR_FILE_NOT_FOUND
 	}
-	pathp, err := UTF16PtrFromString(path)
+	namep, err := UTF16PtrFromString(name)
 	if err != nil {
 		return InvalidHandle, err
 	}
 	var access uint32
-	switch mode & (O_RDONLY | O_WRONLY | O_RDWR) {
+	switch flag & (O_RDONLY | O_WRONLY | O_RDWR) {
 	case O_RDONLY:
 		access = GENERIC_READ
 	case O_WRONLY:
@@ -43,68 +44,76 @@ func syscallOpen(path string, mode int, perm uint32) (fd Handle, err error) {
 	case O_RDWR:
 		access = GENERIC_READ | GENERIC_WRITE
 	}
-	if mode&O_CREAT != 0 {
+	if flag&O_CREAT != 0 {
 		access |= GENERIC_WRITE
 	}
-	if mode&O_APPEND != 0 {
-		access &^= GENERIC_WRITE
-		access |= FILE_APPEND_DATA
+	if flag&O_APPEND != 0 {
+		// Remove GENERIC_WRITE unless O_TRUNC is set, in which case we need it to truncate the file.
+		// We can't just remove FILE_WRITE_DATA because GENERIC_WRITE without FILE_WRITE_DATA
+		// starts appending at the beginning of the file rather than at the end.
+		if flag&O_TRUNC == 0 {
+			access &^= GENERIC_WRITE
+		}
+		// Set all access rights granted by GENERIC_WRITE except for FILE_WRITE_DATA.
+		access |= FILE_APPEND_DATA | FILE_WRITE_ATTRIBUTES | _FILE_WRITE_EA | STANDARD_RIGHTS_WRITE | SYNCHRONIZE
 	}
 	sharemode := uint32(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 	var sa *SecurityAttributes
-	if mode&O_CLOEXEC == 0 {
+	if flag&O_CLOEXEC == 0 {
 		sa = makeInheritSa()
 	}
+	// We don't use CREATE_ALWAYS, because when opening a file with
+	// FILE_ATTRIBUTE_READONLY these will replace an existing file
+	// with a new, read-only one. See https://go.dev/issue/38225.
+	//
+	// Instead, we ftruncate the file after opening when O_TRUNC is set.
 	var createmode uint32
 	switch {
-	case mode&(O_CREAT|O_EXCL) == (O_CREAT | O_EXCL):
+	case flag&(O_CREAT|O_EXCL) == (O_CREAT | O_EXCL):
 		createmode = CREATE_NEW
-	case mode&(O_CREAT|O_TRUNC) == (O_CREAT | O_TRUNC):
-		createmode = CREATE_ALWAYS
-	case mode&O_CREAT == O_CREAT:
+	case flag&O_CREAT == O_CREAT:
 		createmode = OPEN_ALWAYS
-	case mode&O_TRUNC == O_TRUNC:
-		createmode = TRUNCATE_EXISTING
 	default:
 		createmode = OPEN_EXISTING
 	}
 	var attrs uint32 = FILE_ATTRIBUTE_NORMAL
 	if perm&S_IWRITE == 0 {
 		attrs = FILE_ATTRIBUTE_READONLY
-		if createmode == CREATE_ALWAYS {
-			const _ERROR_BAD_NETPATH = Errno(53)
-			// We have been asked to create a read-only file.
-			// If the file already exists, the semantics of
-			// the Unix open system call is to preserve the
-			// existing permissions. If we pass CREATE_ALWAYS
-			// and FILE_ATTRIBUTE_READONLY to CreateFile,
-			// and the file already exists, CreateFile will
-			// change the file permissions.
-			// Avoid that to preserve the Unix semantics.
-			h, e := CreateFile(pathp, access, sharemode, sa, TRUNCATE_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)
-			switch e {
-			case ERROR_FILE_NOT_FOUND, _ERROR_BAD_NETPATH, ERROR_PATH_NOT_FOUND:
-				// File does not exist. These are the same
-				// errors as Errno.Is checks for ErrNotExist.
-				// Carry on to create the file.
-			default:
-				// Success or some different error.
-				return h, e
-			}
-		}
 	}
-	if createmode == OPEN_EXISTING && access == GENERIC_READ {
-		// Necessary for opening directory handles.
+	if flag&O_WRONLY == 0 && flag&O_RDWR == 0 {
+		// We might be opening or creating a directory.
+		// CreateFile requires FILE_FLAG_BACKUP_SEMANTICS
+		// to work with directories.
 		attrs |= FILE_FLAG_BACKUP_SEMANTICS
 	}
-	if mode&O_SYNC != 0 {
+	if flag&O_SYNC != 0 {
 		const _FILE_FLAG_WRITE_THROUGH = 0x80000000
 		attrs |= _FILE_FLAG_WRITE_THROUGH
 	}
-	if mode&O_NONBLOCK != 0 {
+	if flag&O_NONBLOCK != 0 {
 		attrs |= FILE_FLAG_OVERLAPPED
 	}
-	return CreateFile(pathp, access, sharemode, sa, createmode, attrs, 0)
+	h, err := CreateFile(namep, access, sharemode, sa, createmode, attrs, 0)
+	if h == InvalidHandle {
+		if err == ERROR_ACCESS_DENIED && (flag&O_WRONLY != 0 || flag&O_RDWR != 0) {
+			// We should return EISDIR when we are trying to open a directory with write access.
+			fa, e1 := GetFileAttributes(namep)
+			if e1 == nil && fa&FILE_ATTRIBUTE_DIRECTORY != 0 {
+				err = EISDIR
+			}
+		}
+		return h, err
+	}
+	// Ignore O_TRUNC if the file has just been created.
+	if flag&O_TRUNC == O_TRUNC &&
+		(createmode == OPEN_EXISTING || (createmode == OPEN_ALWAYS /*&& err == ERROR_ALREADY_EXISTS*/)) {
+		err = Ftruncate(h, 0)
+		if err != nil {
+			CloseHandle(h)
+			return InvalidHandle, err
+		}
+	}
+	return h, nil
 }
 
 func makeInheritSa() *SecurityAttributes {
@@ -113,3 +122,5 @@ func makeInheritSa() *SecurityAttributes {
 	sa.InheritHandle = 1
 	return &sa
 }
+
+const _FILE_WRITE_EA = 0x00000010
