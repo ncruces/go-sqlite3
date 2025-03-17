@@ -663,17 +663,21 @@ func (s *Stmt) Columns(dest ...any) error {
 		case byte(NULL):
 			dest[i] = nil
 		default:
-			ptr := util.Read32[ptr_t](s.c.mod, dataPtr+0)
-			if ptr == 0 {
-				dest[i] = []byte{}
-				continue
-			}
 			len := util.Read32[int32](s.c.mod, dataPtr+4)
-			buf := util.View(s.c.mod, ptr, int64(len))
-			if types[i] == byte(TEXT) {
-				dest[i] = string(buf)
+			if len != 0 {
+				ptr := util.Read32[ptr_t](s.c.mod, dataPtr)
+				buf := util.View(s.c.mod, ptr, int64(len))
+				if types[i] == byte(TEXT) {
+					dest[i] = string(buf)
+				} else {
+					dest[i] = buf
+				}
 			} else {
-				dest[i] = buf
+				if types[i] == byte(TEXT) {
+					dest[i] = ""
+				} else {
+					dest[i] = []byte{}
+				}
 			}
 		}
 		dataPtr += 8
