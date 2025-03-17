@@ -22,15 +22,15 @@ func TestRegister(t *testing.T) {
 
 	var got string
 
-	err = db.QueryRow(`SELECT ipcontains('192.168.1.0/24', '192.168.1.5')`).Scan(&got)
+	err = db.QueryRow(`SELECT ipfamily('::1')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "1" {
+	if got != "6" {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipfamily('::1')`).Scan(&got)
+	err = db.QueryRow(`SELECT ipfamily('[::1]:80')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,6 +67,22 @@ func TestRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got != "192.168.1.0/24" {
+		t.Fatalf("got %s", got)
+	}
+
+	err = db.QueryRow(`SELECT ipcontains('192.168.1.0/24', '192.168.1.5')`).Scan(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "1" {
+		t.Fatalf("got %s", got)
+	}
+
+	err = db.QueryRow(`SELECT ipoverlaps('192.168.1.0/24', '192.168.1.5/32')`).Scan(&got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "1" {
 		t.Fatalf("got %s", got)
 	}
 }

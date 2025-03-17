@@ -11,6 +11,7 @@ func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
 		db.CreateFunction("ipcontains", 2, flags, contains),
+		db.CreateFunction("ipoverlaps", 2, flags, overlaps),
 		db.CreateFunction("ipfamily", 1, flags, family),
 		db.CreateFunction("iphost", 1, flags, host),
 		db.CreateFunction("ipmasklen", 1, flags, masklen),
@@ -31,16 +32,25 @@ func contains(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	ctx.ResultBool(prefix.Contains(addr))
 }
 
-func family(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	text := arg[0].Text()
-	addr, err := netip.ParseAddr(text)
+func overlaps(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	prefix1, err := netip.ParsePrefix(arg[0].Text())
 	if err != nil {
-		if prefix, err := netip.ParsePrefix(text); err == nil {
-			addr = prefix.Addr()
-		} else {
-			ctx.ResultError(err)
-			return // notest
-		}
+		ctx.ResultError(err)
+		return // notest
+	}
+	prefix2, err := netip.ParsePrefix(arg[0].Text())
+	if err != nil {
+		ctx.ResultError(err)
+		return // notest
+	}
+	ctx.ResultBool(prefix1.Overlaps(prefix2))
+}
+
+func family(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	addr, err := addr(arg[0].Text())
+	if err != nil {
+		ctx.ResultError(err)
+		return // notest
 	}
 	switch {
 	case addr.Is4():
@@ -51,12 +61,12 @@ func family(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func host(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	prefix, err := netip.ParsePrefix(arg[0].Text())
+	addr, err := addr(arg[0].Text())
 	if err != nil {
 		ctx.ResultError(err)
 		return // notest
 	}
-	buf, _ := prefix.Addr().MarshalText()
+	buf, _ := addr.MarshalText()
 	ctx.ResultRawText(buf)
 }
 
@@ -77,4 +87,17 @@ func network(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 	buf, _ := prefix.Masked().MarshalText()
 	ctx.ResultRawText(buf)
+}
+
+func addr(text string) (netip.Addr, error) {
+	addr, err := netip.ParseAddr(text)
+	if err != nil {
+		if prefix, err := netip.ParsePrefix(text); err == nil {
+			return prefix.Addr(), nil
+		}
+		if addrpt, err := netip.ParseAddrPort(text); err == nil {
+			return addrpt.Addr(), nil
+		}
+	}
+	return addr, err
 }
