@@ -467,3 +467,29 @@ func Test_ColumnType_ScanType(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func Benchmark_loop(b *testing.B) {
+	db, err := Open(":memory:")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer db.Close()
+
+	var version string
+	err = db.QueryRow(`SELECT sqlite_version();`).Scan(&version)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	b.Cleanup(cancel)
+
+	b.ResetTimer()
+	for range b.N {
+		_, err := db.ExecContext(ctx,
+			`WITH RECURSIVE c(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM c WHERE x < 1000000) SELECT x FROM c;`)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
