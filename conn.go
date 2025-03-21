@@ -41,6 +41,7 @@ type Conn struct {
 	busylst time.Time
 	arena   arena
 	handle  ptr_t
+	nprogr  uint8
 }
 
 // Open calls [OpenFlags] with [OPEN_READWRITE], [OPEN_CREATE] and [OPEN_URI].
@@ -120,7 +121,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (ptr_t, error) {
 		return 0, err
 	}
 
-	c.call("sqlite3_progress_handler_go", stk_t(handle), 100)
+	c.call("sqlite3_progress_handler_go", stk_t(handle), 1000)
 	if flags|OPEN_URI != 0 && strings.HasPrefix(filename, "file:") {
 		var pragmas strings.Builder
 		if _, after, ok := strings.Cut(filename, "?"); ok {
@@ -376,7 +377,7 @@ func (c *Conn) checkInterrupt(handle ptr_t) {
 
 func progressCallback(ctx context.Context, mod api.Module, _ ptr_t) (interrupt int32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok {
-		if c.interrupt.Done() != nil {
+		if c.nprogr++; c.nprogr%16 == 0 {
 			runtime.Gosched()
 		}
 		if c.interrupt.Err() != nil {
