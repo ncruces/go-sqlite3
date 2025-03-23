@@ -284,10 +284,10 @@ func returnArgs(p *[]Value) {
 }
 
 type aggregateFunc struct {
-	ctx  Context
-	arg  []Value
 	next func() (struct{}, bool)
 	stop func()
+	ctx  Context
+	arg  []Value
 }
 
 func (a *aggregateFunc) Step(ctx Context, arg ...Value) {

@@ -106,7 +106,7 @@ func (s *Stmt) Busy() bool {
 //
 // https://sqlite.org/c3ref/step.html
 func (s *Stmt) Step() bool {
-	s.c.checkInterrupt(s.c.handle)
+	s.c.checkInterrupt()
 	rc := res_t(s.c.call("sqlite3_step", stk_t(s.handle)))
 	switch rc {
 	case _ROW:
