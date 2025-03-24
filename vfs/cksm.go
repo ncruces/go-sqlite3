@@ -68,7 +68,7 @@ func (c cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 
 func (c cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
 	// SQLite is writing the first page of a database file.
-	if c.isDB && off == 0 && len(p) >= 100 &&
+	if (!c.isDB || off == 0) && sql3util.ValidPageSize(len(p)) &&
 		bytes.HasPrefix(p, []byte("SQLite format 3\000")) {
 		c.init((*[100]byte)(p))
 	}

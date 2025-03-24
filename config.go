@@ -350,6 +350,8 @@ func (c *Conn) HardHeapLimit(n int64) int64 {
 }
 
 // EnableChecksums enables checksums on a database.
+// If the database is in WAL mode,
+// you should shutdown and reopen all database connections before continuing.
 //
 // https://sqlite.org/cksumvfs.html
 func (c *Conn) EnableChecksums(schema string) error {
