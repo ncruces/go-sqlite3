@@ -18,17 +18,17 @@ import (
 // Register registers the SQL functions:
 //
 //   - uuid([ version [, domain/namespace, [ id/data ]]]):
-//     to generate a UUID as a string,
+//     to generate a UUID as a string
 //   - uuid_str(u):
-//     to convert a UUID into a well-formed UUID string,
+//     to convert a UUID into a well-formed UUID string
 //   - uuid_blob(u):
-//     to convert a UUID into a 16-byte blob,
+//     to convert a UUID into a 16-byte blob
 //   - uuid_extract_version(u):
-//     to extract the version of a RFC 4122 UUID,
+//     to extract the version of a RFC 4122 UUID
 //   - uuid_extract_timestamp(u):
-//     to extract the timestamp of a version 1/2/6/7 UUID,
+//     to extract the timestamp of a version 1/2/6/7 UUID
 //   - gen_random_uuid(u):
-//     to generate a version 4 (random) UUID.
+//     to generate a version 4 (random) UUID
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(

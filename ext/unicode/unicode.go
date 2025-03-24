@@ -1,22 +1,22 @@
 // Package unicode provides an alternative to the SQLite ICU extension.
 //
 // Like the [ICU extension], it provides Unicode aware:
-//   - upper() and lower() functions,
-//   - LIKE and REGEXP operators,
-//   - collation sequences.
+//   - upper() and lower() functions
+//   - LIKE and REGEXP operators
+//   - collation sequences
 //
 // Like PostgreSQL, it also provides:
-//   - initcap(),
-//   - casefold(),
-//   - normalize(),
-//   - unaccent().
+//   - initcap()
+//   - casefold()
+//   - normalize()
+//   - unaccent()
 //
 // The implementations are not 100% compatible:
-//   - upper(), lower(), initcap() casefold() use [strings.ToUpper], [strings.ToLower], [strings.Title] and [cases];
-//   - normalize(), unaccent() use [transform] and [unicode.Mn];
-//   - the LIKE operator follows [strings.EqualFold] rules;
-//   - the REGEXP operator uses Go [regexp/syntax];
-//   - collation sequences use [collate].
+//   - upper(), lower(), initcap() casefold() use [strings.ToUpper], [strings.ToLower], [strings.Title] and [cases]
+//   - normalize(), unaccent() use [transform] and [unicode.Mn]
+//   - the LIKE operator follows [strings.EqualFold] rules
+//   - the REGEXP operator uses Go [regexp/syntax]
+//   - collation sequences use [collate]
 //
 // Expect subtle differences (e.g.) in the handling of Turkish case folding.
 //

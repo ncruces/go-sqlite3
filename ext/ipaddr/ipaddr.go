@@ -1,3 +1,12 @@
+// Package ipaddr provides functions to manipulate IPs and CIDRs.
+//
+// It provides the following functions:
+//   - ipcontains(prefix, ip)
+//   - ipoverlaps(prefix1, prefix2)
+//   - ipfamily(ip/prefix)
+//   - iphost(ip/prefix)
+//   - ipmasklen(prefix)
+//   - ipnetwork(prefix)
 package ipaddr
 
 import (
@@ -7,6 +16,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
+// Register IP/CIDR functions for a database connection.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 	return errors.Join(
