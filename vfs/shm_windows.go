@@ -33,7 +33,7 @@ type vfsShm struct {
 	sync.Mutex
 }
 
-var _ blockingSharedMemory = &vfsShm{}
+// var _ blockingSharedMemory = &vfsShm{}
 
 func (s *vfsShm) Close() error {
 	// Unmap regions.
@@ -185,6 +185,6 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 }
 
-func (s *vfsShm) shmEnableBlocking(block bool) {
-	s.blocking = block
-}
+// func (s *vfsShm) shmEnableBlocking(block bool) {
+// 	s.blocking = block
+// }
