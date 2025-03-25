@@ -279,6 +279,8 @@ func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt in
 	nLogPtr := c.arena.new(ptrlen)
 	nCkptPtr := c.arena.new(ptrlen)
 	schemaPtr := c.arena.string(schema)
+
+	c.checkInterrupt()
 	rc := res_t(c.call("sqlite3_wal_checkpoint_v2",
 		stk_t(c.handle), stk_t(schemaPtr), stk_t(mode),
 		stk_t(nLogPtr), stk_t(nCkptPtr)))
@@ -350,8 +352,6 @@ func (c *Conn) HardHeapLimit(n int64) int64 {
 }
 
 // EnableChecksums enables checksums on a database.
-// If the database is in WAL mode,
-// you should shutdown and reopen all database connections before continuing.
 //
 // https://sqlite.org/cksumvfs.html
 func (c *Conn) EnableChecksums(schema string) error {
@@ -390,6 +390,6 @@ func (c *Conn) EnableChecksums(schema string) error {
 	}
 
 	// Checkpoint the WAL.
-	_, _, err = c.WALCheckpoint(schema, CHECKPOINT_RESTART)
+	_, _, err = c.WALCheckpoint(schema, CHECKPOINT_FULL)
 	return err
 }

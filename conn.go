@@ -185,10 +185,10 @@ func (c *Conn) Close() error {
 // https://sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
 	defer c.arena.mark()()
-	sqlPtr := c.arena.string(sql)
+	textPtr := c.arena.string(sql)
 
 	c.checkInterrupt()
-	rc := res_t(c.call("sqlite3_exec", stk_t(c.handle), stk_t(sqlPtr), 0, 0, 0))
+	rc := res_t(c.call("sqlite3_exec", stk_t(c.handle), stk_t(textPtr), 0, 0, 0))
 	return c.error(rc, sql)
 }
 

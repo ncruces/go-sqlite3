@@ -80,8 +80,10 @@ func implements[T any](typ reflect.Type) bool {
 // https://sqlite.org/c3ref/declare_vtab.html
 func (c *Conn) DeclareVTab(sql string) error {
 	defer c.arena.mark()()
-	sqlPtr := c.arena.string(sql)
-	rc := res_t(c.call("sqlite3_declare_vtab", stk_t(c.handle), stk_t(sqlPtr)))
+	textPtr := c.arena.string(sql)
+
+	c.checkInterrupt()
+	rc := res_t(c.call("sqlite3_declare_vtab", stk_t(c.handle), stk_t(textPtr)))
 	return c.error(rc)
 }
 
