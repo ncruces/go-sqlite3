@@ -182,6 +182,10 @@ func (c *Conn) Exec(sql string) error {
 	if c.interrupt.Err() != nil {
 		return INTERRUPT
 	}
+	return c.exec(sql)
+}
+
+func (c *Conn) exec(sql string) error {
 	defer c.arena.mark()()
 	textPtr := c.arena.string(sql)
 	rc := res_t(c.call("sqlite3_exec", stk_t(c.handle), stk_t(textPtr), 0, 0, 0))
