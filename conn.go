@@ -40,8 +40,6 @@ type Conn struct {
 	busylst time.Time
 	arena   arena
 	handle  ptr_t
-	pending ptr_t
-	stepped bool
 	gosched uint8
 }
 
@@ -167,9 +165,6 @@ func (c *Conn) Close() error {
 		return nil
 	}
 
-	c.call("sqlite3_finalize", stk_t(c.pending))
-	c.pending = 0
-
 	rc := res_t(c.call("sqlite3_close", stk_t(c.handle)))
 	if err := c.error(rc); err != nil {
 		return err
@@ -184,10 +179,11 @@ func (c *Conn) Close() error {
 //
 // https://sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string) error {
+	if c.interrupt.Err() != nil {
+		return INTERRUPT
+	}
 	defer c.arena.mark()()
 	textPtr := c.arena.string(sql)
-
-	c.checkInterrupt()
 	rc := res_t(c.call("sqlite3_exec", stk_t(c.handle), stk_t(textPtr), 0, 0, 0))
 	return c.error(rc, sql)
 }
@@ -207,13 +203,15 @@ func (c *Conn) PrepareFlags(sql string, flags PrepareFlag) (stmt *Stmt, tail str
 	if len(sql) > _MAX_SQL_LENGTH {
 		return nil, "", TOOBIG
 	}
+	if c.interrupt.Err() != nil {
+		return nil, "", INTERRUPT
+	}
 
 	defer c.arena.mark()()
 	stmtPtr := c.arena.new(ptrlen)
 	tailPtr := c.arena.new(ptrlen)
 	textPtr := c.arena.string(sql)
 
-	c.checkInterrupt()
 	rc := res_t(c.call("sqlite3_prepare_v3", stk_t(c.handle),
 		stk_t(textPtr), stk_t(len(sql)+1), stk_t(flags),
 		stk_t(stmtPtr), stk_t(tailPtr)))
@@ -343,40 +341,7 @@ func (c *Conn) GetInterrupt() context.Context {
 func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	old = c.interrupt
 	c.interrupt = ctx
-
-	if ctx == old {
-		return old
-	}
-
-	// An active SQL statement prevents SQLite from ignoring an interrupt
-	// that comes before any other statements are started.
-	if c.pending == 0 {
-		defer c.arena.mark()()
-		stmtPtr := c.arena.new(ptrlen)
-		textPtr := c.arena.string(`SELECT 0 UNION ALL SELECT 0`)
-		c.call("sqlite3_prepare_v3", stk_t(c.handle), stk_t(textPtr), math.MaxUint64,
-			stk_t(PREPARE_PERSISTENT), stk_t(stmtPtr), 0)
-		c.pending = util.Read32[ptr_t](c.mod, stmtPtr)
-	}
-
-	if c.stepped && ctx.Err() == nil {
-		c.call("sqlite3_reset", stk_t(c.pending))
-		c.stepped = false
-	} else {
-		c.checkInterrupt()
-	}
 	return old
-}
-
-func (c *Conn) checkInterrupt() {
-	if c.interrupt.Err() == nil {
-		return
-	}
-	if !c.stepped {
-		c.call("sqlite3_step", stk_t(c.pending))
-		c.stepped = true
-	}
-	c.call("sqlite3_interrupt", stk_t(c.handle))
 }
 
 func progressCallback(ctx context.Context, mod api.Module, _ ptr_t) (interrupt int32) {

@@ -199,6 +199,62 @@ func Test_BeginTx(t *testing.T) {
 	}
 }
 
+func Test_nested_context(t *testing.T) {
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	db, err := sql.Open("sqlite3", tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	outer, err := tx.Query(`SELECT value FROM generate_series(0)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer outer.Close()
+
+	want := func(rows *sql.Rows, want int) {
+		t.Helper()
+
+		var got int
+		rows.Next()
+		if err := rows.Scan(&got); err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	}
+
+	want(outer, 0)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	inner, err := tx.QueryContext(ctx, `SELECT value FROM generate_series(0)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inner.Close()
+
+	want(inner, 0)
+	cancel()
+
+	if inner.Next() || !errors.Is(inner.Err(), sqlite3.INTERRUPT) {
+		t.Fatal(inner.Err())
+	}
+
+	want(outer, 1)
+}
+
 func Test_Prepare(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
