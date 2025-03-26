@@ -110,7 +110,10 @@ func (s *Stmt) Step() bool {
 		s.err = INTERRUPT
 		return false
 	}
+	return s.step()
+}
 
+func (s *Stmt) step() bool {
 	rc := res_t(s.c.call("sqlite3_step", stk_t(s.handle)))
 	switch rc {
 	case _ROW:
@@ -135,7 +138,11 @@ func (s *Stmt) Err() error {
 // Exec is a convenience function that repeatedly calls [Stmt.Step] until it returns false,
 // then calls [Stmt.Reset] to reset the statement and get any error that occurred.
 func (s *Stmt) Exec() error {
-	for s.Step() {
+	if s.c.interrupt.Err() != nil {
+		return INTERRUPT
+	}
+	// TODO: implement this in C.
+	for s.step() {
 	}
 	return s.Reset()
 }
