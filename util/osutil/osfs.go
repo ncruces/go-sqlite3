@@ -1,3 +1,4 @@
+// Package osutil implements operating system utilities.
 package osutil
 
 import (
@@ -19,7 +20,7 @@ type FS struct{}
 
 // Open implements [fs.FS].
 func (FS) Open(name string) (fs.File, error) {
-	return OpenFile(name, os.O_RDONLY, 0)
+	return os.OpenFile(name, os.O_RDONLY, 0)
 }
 
 // ReadFileFS implements [fs.StatFS].
@@ -30,4 +31,11 @@ func (FS) Stat(name string) (fs.FileInfo, error) {
 // ReadFile implements [fs.ReadFileFS].
 func (FS) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
+}
+
+// OpenFile behaves the same as [os.OpenFile].
+//
+// Deprecated: use os.OpenFile instead.
+func OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
+	return os.OpenFile(name, flag, perm)
 }

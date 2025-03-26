@@ -14,7 +14,6 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/osutil"
 )
 
 type vfsShm struct {
@@ -48,7 +47,7 @@ func (s *vfsShm) Close() error {
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		f, err := osutil.OpenFile(s.path,
+		f, err := os.OpenFile(s.path,
 			os.O_RDWR|os.O_CREATE|syscall.O_NONBLOCK, 0666)
 		if err != nil {
 			return _CANTOPEN
