@@ -79,10 +79,11 @@ func implements[T any](typ reflect.Type) bool {
 //
 // https://sqlite.org/c3ref/declare_vtab.html
 func (c *Conn) DeclareVTab(sql string) error {
+	if c.interrupt.Err() != nil {
+		return INTERRUPT
+	}
 	defer c.arena.mark()()
 	textPtr := c.arena.string(sql)
-
-	c.checkInterrupt()
 	rc := res_t(c.call("sqlite3_declare_vtab", stk_t(c.handle), stk_t(textPtr)))
 	return c.error(rc)
 }

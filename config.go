@@ -275,12 +275,14 @@ func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pAr
 //
 // https://sqlite.org/c3ref/wal_checkpoint_v2.html
 func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt int, err error) {
+	if c.interrupt.Err() != nil {
+		return 0, 0, INTERRUPT
+	}
+
 	defer c.arena.mark()()
 	nLogPtr := c.arena.new(ptrlen)
 	nCkptPtr := c.arena.new(ptrlen)
 	schemaPtr := c.arena.string(schema)
-
-	c.checkInterrupt()
 	rc := res_t(c.call("sqlite3_wal_checkpoint_v2",
 		stk_t(c.handle), stk_t(schemaPtr), stk_t(mode),
 		stk_t(nLogPtr), stk_t(nCkptPtr)))
