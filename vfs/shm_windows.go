@@ -65,7 +65,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	}
 
 	// Dead man's switch.
-	if rc := osWriteLock(s.File, _SHM_DMS, 1, 0); rc == _OK {
+	if rc := osWriteLock(s.File, _SHM_DMS, 1, time.Nanosecond); rc == _OK {
 		err := s.Truncate(0)
 		osUnlock(s.File, _SHM_DMS, 1)
 		if err != nil {
@@ -140,7 +140,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
-	var timeout time.Duration
+	timeout := time.Nanosecond
 	if s.blocking {
 		timeout = time.Millisecond
 	}
