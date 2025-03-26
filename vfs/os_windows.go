@@ -179,14 +179,13 @@ func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Durat
 	if err != windows.ERROR_IO_PENDING {
 		return err
 	}
+	defer windows.CancelIoEx(fd, overlapped)
 
 	ms := (timeout + time.Millisecond - 1) / time.Millisecond
 	rc, err := windows.WaitForSingleObject(event, uint32(ms))
 	if rc == windows.WAIT_OBJECT_0 {
 		return nil
 	}
-	defer windows.CancelIoEx(fd, overlapped)
-
 	if err != nil {
 		return err
 	}
