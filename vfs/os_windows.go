@@ -179,8 +179,8 @@ func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Durat
 		HEvent: event,
 	}
 
-	wait := uint32((timeout + time.Millisecond) / time.Millisecond)
-	if timeout < time.Millisecond {
+	wait := uint32((timeout + time.Millisecond - 1) / time.Millisecond)
+	if timeout < time.Microsecond {
 		flags |= windows.LOCKFILE_FAIL_IMMEDIATELY
 		wait = windows.INFINITE
 	}
@@ -194,7 +194,7 @@ func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Durat
 	if rc == windows.WAIT_OBJECT_0 {
 		return nil
 	}
-	windows.CancelIoEx(fd, overlapped)
+	defer windows.CancelIoEx(fd, overlapped)
 
 	if err != nil {
 		return err
