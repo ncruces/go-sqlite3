@@ -65,6 +65,8 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	}
 
 	// Dead man's switch.
+	// The nanosecond timeout ensures we use the version that
+	// correctly handles overlapped files.
 	if rc := osWriteLock(s.File, _SHM_DMS, 1, time.Nanosecond); rc == _OK {
 		err := s.Truncate(0)
 		osUnlock(s.File, _SHM_DMS, 1)
@@ -140,6 +142,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
+	// The nanosecond timeout ensures we use the version that
+	// correctly handles overlapped files.
 	timeout := time.Nanosecond
 	if s.blocking {
 		timeout = time.Millisecond
