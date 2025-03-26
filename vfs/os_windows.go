@@ -4,6 +4,7 @@ package vfs
 
 import (
 	"os"
+	"runtime"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -163,6 +164,9 @@ func osLockEx(file *os.File, flags, start, len uint32) error {
 }
 
 func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Duration) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	event, err := windows.CreateEvent(nil, 1, 0, nil)
 	if err != nil {
 		return err
@@ -175,8 +179,8 @@ func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Durat
 		HEvent: event,
 	}
 
-	wait := uint32((timeout + time.Millisecond - 1) / time.Millisecond)
-	if timeout <= time.Nanosecond {
+	wait := uint32((timeout + time.Millisecond) / time.Millisecond)
+	if timeout < time.Millisecond {
 		flags |= windows.LOCKFILE_FAIL_IMMEDIATELY
 		wait = windows.INFINITE
 	}
