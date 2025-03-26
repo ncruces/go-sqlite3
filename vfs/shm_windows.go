@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/windows"
@@ -31,8 +30,6 @@ type vfsShm struct {
 	sync.Mutex
 }
 
-var _ blockingSharedMemory = &vfsShm{}
-
 func (s *vfsShm) Close() error {
 	// Unmap regions.
 	for _, r := range s.regions {
@@ -46,35 +43,25 @@ func (s *vfsShm) Close() error {
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		path, err := windows.UTF16PtrFromString(s.path)
+		f, err := os.OpenFile(s.path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			return _CANTOPEN
 		}
-		h, err := windows.CreateFile(path,
-			windows.GENERIC_READ|windows.GENERIC_WRITE,
-			windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE,
-			nil, windows.OPEN_ALWAYS,
-			windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OVERLAPPED, 0)
-		if err != nil {
-			return _CANTOPEN
-		}
-		s.File = os.NewFile(uintptr(h), s.path)
+		s.File = f
 	}
 	if s.fileLock {
 		return _OK
 	}
 
 	// Dead man's switch.
-	// The nanosecond timeout ensures we use the version that
-	// correctly handles overlapped files.
-	if rc := osWriteLock(s.File, _SHM_DMS, 1, time.Nanosecond); rc == _OK {
+	if rc := osWriteLock(s.File, _SHM_DMS, 1, 0); rc == _OK {
 		err := s.Truncate(0)
 		osUnlock(s.File, _SHM_DMS, 1)
 		if err != nil {
 			return _IOERR_SHMOPEN
 		}
 	}
-	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	rc := osReadLock(s.File, _SHM_DMS, 1, 0)
 	s.fileLock = rc == _OK
 	return rc
 }
@@ -142,13 +129,6 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
-	// The nanosecond timeout ensures we use the version that
-	// correctly handles overlapped files.
-	timeout := time.Nanosecond
-	if s.blocking {
-		timeout = time.Millisecond
-	}
-
 	switch {
 	case flags&_SHM_LOCK != 0:
 		defer s.shmAcquire(&rc)
@@ -160,9 +140,9 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
 	case flags&_SHM_UNLOCK != 0:
 		return osUnlock(s.File, _SHM_BASE+uint32(offset), uint32(n))
 	case flags&_SHM_SHARED != 0:
-		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
+		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
 	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
+		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
 	default:
 		panic(util.AssertErr())
 	}
@@ -192,8 +172,4 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	if delete {
 		os.Remove(s.path)
 	}
-}
-
-func (s *vfsShm) shmEnableBlocking(block bool) {
-	s.blocking = block
 }

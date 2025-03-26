@@ -4,7 +4,6 @@ package vfs
 
 import (
 	"os"
-	"runtime"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -136,12 +135,10 @@ func osWriteLock(file *os.File, start, len uint32, timeout time.Duration) _Error
 func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def _ErrorCode) _ErrorCode {
 	var err error
 	switch {
-	case timeout == 0:
+	default:
 		err = osLockEx(file, flags|windows.LOCKFILE_FAIL_IMMEDIATELY, start, len)
 	case timeout < 0:
 		err = osLockEx(file, flags, start, len)
-	default:
-		err = osLockExTimeout(file, flags, start, len, timeout)
 	}
 	return osLockErrorCode(err, def)
 }
@@ -161,45 +158,6 @@ func osUnlock(file *os.File, start, len uint32) _ErrorCode {
 func osLockEx(file *os.File, flags, start, len uint32) error {
 	return windows.LockFileEx(windows.Handle(file.Fd()), flags,
 		0, len, 0, &windows.Overlapped{Offset: start})
-}
-
-func osLockExTimeout(file *os.File, flags, start, len uint32, timeout time.Duration) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	event, err := windows.CreateEvent(nil, 1, 0, nil)
-	if err != nil {
-		return err
-	}
-	defer windows.CloseHandle(event)
-
-	fd := windows.Handle(file.Fd())
-	overlapped := &windows.Overlapped{
-		Offset: start,
-		HEvent: event,
-	}
-
-	wait := uint32((timeout + time.Millisecond - 1) / time.Millisecond)
-	if timeout < time.Microsecond {
-		flags |= windows.LOCKFILE_FAIL_IMMEDIATELY
-		wait = windows.INFINITE
-	}
-
-	err = windows.LockFileEx(fd, flags, 0, len, 0, overlapped)
-	if err != windows.ERROR_IO_PENDING {
-		return err
-	}
-
-	rc, err := windows.WaitForSingleObject(event, wait)
-	if rc == windows.WAIT_OBJECT_0 {
-		return nil
-	}
-	defer windows.CancelIoEx(fd, overlapped)
-
-	if err != nil {
-		return err
-	}
-	return windows.Errno(rc)
 }
 
 func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
