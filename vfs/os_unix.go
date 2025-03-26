@@ -10,8 +10,8 @@ import (
 )
 
 const (
+	isUnix      = true
 	_O_NOFOLLOW = unix.O_NOFOLLOW
-	canSyncDirs = true
 )
 
 func osAccess(path string, flags AccessFlag) error {

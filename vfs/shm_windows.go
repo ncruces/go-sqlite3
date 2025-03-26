@@ -7,14 +7,12 @@ import (
 	"io"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/windows"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/osutil"
 )
 
 type vfsShm struct {
@@ -33,7 +31,7 @@ type vfsShm struct {
 	sync.Mutex
 }
 
-// var _ blockingSharedMemory = &vfsShm{}
+var _ blockingSharedMemory = &vfsShm{}
 
 func (s *vfsShm) Close() error {
 	// Unmap regions.
@@ -48,12 +46,19 @@ func (s *vfsShm) Close() error {
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		f, err := osutil.OpenFile(s.path,
-			os.O_RDWR|os.O_CREATE|syscall.O_NONBLOCK, 0666)
+		path, err := windows.UTF16PtrFromString(s.path)
 		if err != nil {
 			return _CANTOPEN
 		}
-		s.File = f
+		h, err := windows.CreateFile(path,
+			windows.GENERIC_READ|windows.GENERIC_WRITE,
+			windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE,
+			nil, windows.OPEN_ALWAYS,
+			windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OVERLAPPED, 0)
+		if err != nil {
+			return _CANTOPEN
+		}
+		s.File = os.NewFile(uintptr(h), s.path)
 	}
 	if s.fileLock {
 		return _OK
@@ -185,6 +190,6 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 }
 
-// func (s *vfsShm) shmEnableBlocking(block bool) {
-// 	s.blocking = block
-// }
+func (s *vfsShm) shmEnableBlocking(block bool) {
+	s.blocking = block
+}
