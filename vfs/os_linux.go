@@ -60,10 +60,10 @@ func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, d
 	}
 	var err error
 	switch {
-	case timeout < 0:
-		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLKW, &lock)
 	default:
 		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLK, &lock)
+	case timeout < 0:
+		err = unix.FcntlFlock(file.Fd(), unix.F_OFD_SETLKW, &lock)
 	}
 	return osLockErrorCode(err, def)
 }
