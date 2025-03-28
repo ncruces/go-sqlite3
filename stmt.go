@@ -571,7 +571,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 func (s *Stmt) ColumnRawText(col int) []byte {
 	ptr := ptr_t(s.c.call("sqlite3_column_text",
 		stk_t(s.handle), stk_t(col)))
-	return s.columnRawBytes(col, ptr)
+	return s.columnRawBytes(col, ptr, 1)
 }
 
 // ColumnRawBlob returns the value of the result column as a []byte.
@@ -583,10 +583,10 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 func (s *Stmt) ColumnRawBlob(col int) []byte {
 	ptr := ptr_t(s.c.call("sqlite3_column_blob",
 		stk_t(s.handle), stk_t(col)))
-	return s.columnRawBytes(col, ptr)
+	return s.columnRawBytes(col, ptr, 0)
 }
 
-func (s *Stmt) columnRawBytes(col int, ptr ptr_t) []byte {
+func (s *Stmt) columnRawBytes(col int, ptr ptr_t, nul int32) []byte {
 	if ptr == 0 {
 		rc := res_t(s.c.call("sqlite3_errcode", stk_t(s.c.handle)))
 		if rc != _ROW && rc != _DONE {
@@ -597,7 +597,7 @@ func (s *Stmt) columnRawBytes(col int, ptr ptr_t) []byte {
 
 	n := int32(s.c.call("sqlite3_column_bytes",
 		stk_t(s.handle), stk_t(col)))
-	return util.View(s.c.mod, ptr, int64(n))
+	return util.View(s.c.mod, ptr, int64(n+nul))[:n]
 }
 
 // ColumnJSON parses the JSON-encoded value of the result column
@@ -644,9 +644,31 @@ func (s *Stmt) ColumnValue(col int) Value {
 // [INTEGER] columns will be retrieved as int64 values,
 // [FLOAT] as float64, [NULL] as nil,
 // [TEXT] as string, and [BLOB] as []byte.
+func (s *Stmt) Columns(dest ...any) error {
+	if err := s.ColumnsRaw(dest...); err != nil {
+		return err
+	}
+	for i, v := range dest {
+		if v, ok := v.([]byte); !ok {
+			continue
+		} else if len(v) != cap(v) {
+			dest[i] = string(v)
+		} else if len(v) != 0 {
+			dest[i] = append([]byte{}, v...)
+		}
+	}
+	return nil
+}
+
+// ColumnsRaw populates result columns into the provided slice.
+// The slice must have [Stmt.ColumnCount] length.
+//
+// [INTEGER] columns will be retrieved as int64 values,
+// [FLOAT] as float64, [NULL] as nil,
+// [TEXT] and [BLOB] as []byte.
 // Any []byte are owned by SQLite and may be invalidated by
 // subsequent calls to [Stmt] methods.
-func (s *Stmt) Columns(dest ...any) error {
+func (s *Stmt) ColumnsRaw(dest ...any) error {
 	defer s.c.arena.mark()()
 	count := int64(len(dest))
 	typePtr := s.c.arena.new(count)
@@ -675,20 +697,16 @@ func (s *Stmt) Columns(dest ...any) error {
 			dest[i] = nil
 		default:
 			len := util.Read32[int32](s.c.mod, dataPtr+4)
-			if len != 0 {
-				ptr := util.Read32[ptr_t](s.c.mod, dataPtr)
-				buf := util.View(s.c.mod, ptr, int64(len))
-				if types[i] == byte(TEXT) {
-					dest[i] = string(buf)
-				} else {
-					dest[i] = buf
-				}
+			if len == 0 && types[i] == byte(BLOB) {
+				dest[i] = []byte{}
 			} else {
+				cap := len
 				if types[i] == byte(TEXT) {
-					dest[i] = ""
-				} else {
-					dest[i] = []byte{}
+					cap++
 				}
+				ptr := util.Read32[ptr_t](s.c.mod, dataPtr)
+				buf := util.View(s.c.mod, ptr, int64(cap))[:len]
+				dest[i] = buf
 			}
 		}
 		dataPtr += 8
