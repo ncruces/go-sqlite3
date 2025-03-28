@@ -343,6 +343,9 @@ func (c *Conn) GetInterrupt() context.Context {
 //
 // https://sqlite.org/c3ref/interrupt.html
 func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
+	if ctx == nil {
+		panic("nil Context")
+	}
 	old = c.interrupt
 	c.interrupt = ctx
 	return old
@@ -406,11 +409,8 @@ func (c *Conn) BusyHandler(cb func(ctx context.Context, count int) (retry bool))
 
 func busyCallback(ctx context.Context, mod api.Module, pDB ptr_t, count int32) (retry int32) {
 	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.busy != nil {
-		interrupt := c.interrupt
-		if interrupt == nil {
-			interrupt = context.Background()
-		}
-		if interrupt.Err() == nil && c.busy(interrupt, int(count)) {
+		if interrupt := c.interrupt; interrupt.Err() == nil &&
+			c.busy(interrupt, int(count)) {
 			retry = 1
 		}
 	}

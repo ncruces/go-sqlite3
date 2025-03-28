@@ -146,10 +146,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	go func() {
-		time.Sleep(time.Millisecond)
-		cancel()
-	}()
+	time.AfterFunc(time.Millisecond, cancel)
 
 	// Interrupting works.
 	err = stmt.Exec()

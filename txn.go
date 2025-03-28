@@ -20,6 +20,8 @@ type Txn struct {
 }
 
 // Begin starts a deferred transaction.
+// Panics if a transaction is already in-progress.
+// For nested transactions, use [Conn.Savepoint].
 //
 // https://sqlite.org/lang_transaction.html
 func (c *Conn) Begin() Txn {
@@ -119,6 +121,7 @@ func (tx Txn) Commit() error {
 //
 // https://sqlite.org/lang_transaction.html
 func (tx Txn) Rollback() error {
+	// ROLLBACK even if interrupted.
 	return tx.c.exec(`ROLLBACK`)
 }
 

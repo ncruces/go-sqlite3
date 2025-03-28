@@ -358,13 +358,10 @@ func (c *conn) Commit() error {
 }
 
 func (c *conn) Rollback() error {
-	err := c.Conn.Exec(`ROLLBACK` + c.txReset)
-	if errors.Is(err, sqlite3.INTERRUPT) {
-		old := c.Conn.SetInterrupt(context.Background())
-		defer c.Conn.SetInterrupt(old)
-		err = c.Conn.Exec(`ROLLBACK` + c.txReset)
-	}
-	return err
+	// ROLLBACK even if interrupted.
+	old := c.Conn.SetInterrupt(context.Background())
+	defer c.Conn.SetInterrupt(old)
+	return c.Conn.Exec(`ROLLBACK` + c.txReset)
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
