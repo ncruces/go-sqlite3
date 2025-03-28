@@ -120,33 +120,33 @@ func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
 		return nil
 	}
 
-	err := Error{code: rc}
-
-	if err.Code() == NOMEM || err.ExtendedCode() == IOERR_NOMEM {
+	if ErrorCode(rc) == NOMEM || xErrorCode(rc) == IOERR_NOMEM {
 		panic(util.OOMErr)
 	}
 
-	if ptr := ptr_t(sqlt.call("sqlite3_errstr", stk_t(rc))); ptr != 0 {
-		err.str = util.ReadString(sqlt.mod, ptr, _MAX_NAME)
-	}
-
 	if handle != 0 {
+		var msg, query string
 		if ptr := ptr_t(sqlt.call("sqlite3_errmsg", stk_t(handle))); ptr != 0 {
-			err.msg = util.ReadString(sqlt.mod, ptr, _MAX_LENGTH)
+			msg = util.ReadString(sqlt.mod, ptr, _MAX_LENGTH)
+			switch {
+			case msg == "not an error":
+				msg = ""
+			case msg == util.ErrorCodeString(uint32(rc))[len("sqlite3: "):]:
+				msg = ""
+			}
 		}
 
 		if len(sql) != 0 {
 			if i := int32(sqlt.call("sqlite3_error_offset", stk_t(handle))); i != -1 {
-				err.sql = sql[0][i:]
+				query = sql[0][i:]
 			}
 		}
-	}
 
-	switch err.msg {
-	case err.str, "not an error":
-		err.msg = ""
+		if msg != "" || query != "" {
+			return &Error{code: rc, msg: msg, sql: query}
+		}
 	}
-	return &err
+	return xErrorCode(rc)
 }
 
 func (sqlt *sqlite) getfn(name string) api.Function {

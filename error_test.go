@@ -43,7 +43,7 @@ func TestError(t *testing.T) {
 	if !errors.Is(err, xErrorCode(0x8080)) {
 		t.Errorf("want true")
 	}
-	if s := err.Error(); s != "sqlite3: 32896" {
+	if s := err.Error(); s != "sqlite3: unknown error" {
 		t.Errorf("got %q", s)
 	}
 	if ok := errors.As(err.ExtendedCode(), &ecode); !ok || ecode != ErrorCode(0x80) {
@@ -83,7 +83,7 @@ func TestError_Temporary(t *testing.T) {
 				}
 			}
 			{
-				err := ExtendedErrorCode(tt.code)
+				err := xErrorCode(tt.code)
 				if got := err.Temporary(); got != tt.want {
 					t.Errorf("ExtendedErrorCode.Temporary(%d) = %v, want %v", tt.code, got, tt.want)
 				}
@@ -115,7 +115,7 @@ func TestError_Timeout(t *testing.T) {
 				}
 			}
 			{
-				err := ExtendedErrorCode(tt.code)
+				err := xErrorCode(tt.code)
 				if got := err.Timeout(); got != tt.want {
 					t.Errorf("Error.Timeout(%d) = %v, want %v", tt.code, got, tt.want)
 				}
@@ -156,12 +156,12 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	defer db.Close()
 
 	// Test all extended error codes.
-	for i := 0; i == int(ExtendedErrorCode(i)); i++ {
+	for i := 0; i == int(xErrorCode(i)); i++ {
 		want := "sqlite3: "
 		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
 		want += util.ReadString(db.mod, ptr, _MAX_NAME)
 
-		got := ExtendedErrorCode(i).Error()
+		got := xErrorCode(i).Error()
 		if got != want {
 			t.Fatalf("got %q, want %q, with %d", got, want, i)
 		}
