@@ -745,36 +745,39 @@ func (r *rows) Next(dest []driver.Value) error {
 	}
 
 	data := unsafe.Slice((*any)(unsafe.SliceData(dest)), len(dest))
-	err := r.Stmt.Columns(data...)
+	if err := r.Stmt.ColumnsRaw(data...); err != nil {
+		return err
+	}
 	for i := range dest {
-		if t, ok := r.decodeTime(i, dest[i]); ok {
+		switch x := dest[i].(type) {
+		case int64, float64:
+			// could be a time value
+		case []byte:
+			if len(x) == cap(x) {
+				continue // a BLOB
+			}
+			switch r.tmWrite {
+			case "", time.RFC3339, time.RFC3339Nano:
+				t, ok := maybeTime(x)
+				if ok {
+					dest[i] = t
+					continue
+				}
+			}
+			dest[i] = string(x)
+		default:
+			continue
+		}
+		switch r.declType(i) {
+		case "DATE", "TIME", "DATETIME", "TIMESTAMP":
+			// could be a time value
+		default:
+			continue
+		}
+		t, err := r.tmRead.Decode(dest[i])
+		if err == nil {
 			dest[i] = t
 		}
 	}
-	return err
-}
-
-func (r *rows) decodeTime(i int, v any) (_ time.Time, ok bool) {
-	switch v := v.(type) {
-	case int64, float64:
-		// could be a time value
-	case string:
-		if r.tmWrite != "" && r.tmWrite != time.RFC3339 && r.tmWrite != time.RFC3339Nano {
-			break
-		}
-		t, ok := maybeTime(v)
-		if ok {
-			return t, true
-		}
-	default:
-		return
-	}
-	switch r.declType(i) {
-	case "DATE", "TIME", "DATETIME", "TIMESTAMP":
-		// could be a time value
-	default:
-		return
-	}
-	t, err := r.tmRead.Decode(v)
-	return t, err == nil
+	return nil
 }
