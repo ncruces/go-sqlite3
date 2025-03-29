@@ -645,17 +645,45 @@ func (s *Stmt) ColumnValue(col int) Value {
 // [FLOAT] as float64, [NULL] as nil,
 // [TEXT] as string, and [BLOB] as []byte.
 func (s *Stmt) Columns(dest ...any) error {
-	if err := s.ColumnsRaw(dest...); err != nil {
+	types, ptr, err := s.columns(int64(len(dest)))
+	if err != nil {
 		return err
 	}
-	for i, v := range dest {
-		if v, ok := v.([]byte); !ok {
-			continue
-		} else if len(v) != cap(v) {
-			dest[i] = string(v)
-		} else if len(v) != 0 {
-			dest[i] = append([]byte{}, v...)
+
+	// Avoid bounds checks on types below.
+	if len(types) != len(dest) {
+		panic(util.AssertErr())
+	}
+
+	for i := range dest {
+		switch types[i] {
+		case byte(INTEGER):
+			dest[i] = util.Read64[int64](s.c.mod, ptr)
+		case byte(FLOAT):
+			dest[i] = util.ReadFloat64(s.c.mod, ptr)
+		case byte(NULL):
+			dest[i] = nil
+		case byte(TEXT):
+			len := util.Read32[int32](s.c.mod, ptr+4)
+			if len == 0 {
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
+				buf := util.View(s.c.mod, ptr, int64(len))
+				dest[i] = string(buf)
+			} else {
+				dest[i] = ""
+			}
+		case byte(BLOB):
+			len := util.Read32[int32](s.c.mod, ptr+4)
+			if len != 0 {
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
+				buf := util.View(s.c.mod, ptr, int64(len))
+				tmp, _ := dest[i].([]byte)
+				dest[i] = append(tmp[:0], buf...)
+			} else {
+				dest[i], _ = dest[i].([]byte)
+			}
 		}
+		ptr += 8
 	}
 	return nil
 }
@@ -669,18 +697,10 @@ func (s *Stmt) Columns(dest ...any) error {
 // Any []byte are owned by SQLite and may be invalidated by
 // subsequent calls to [Stmt] methods.
 func (s *Stmt) ColumnsRaw(dest ...any) error {
-	defer s.c.arena.mark()()
-	count := int64(len(dest))
-	typePtr := s.c.arena.new(count)
-	dataPtr := s.c.arena.new(count * 8)
-
-	rc := res_t(s.c.call("sqlite3_columns_go",
-		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
-	if err := s.c.error(rc); err != nil {
+	types, ptr, err := s.columns(int64(len(dest)))
+	if err != nil {
 		return err
 	}
-
-	types := util.View(s.c.mod, typePtr, count)
 
 	// Avoid bounds checks on types below.
 	if len(types) != len(dest) {
@@ -690,13 +710,13 @@ func (s *Stmt) ColumnsRaw(dest ...any) error {
 	for i := range dest {
 		switch types[i] {
 		case byte(INTEGER):
-			dest[i] = util.Read64[int64](s.c.mod, dataPtr)
+			dest[i] = util.Read64[int64](s.c.mod, ptr)
 		case byte(FLOAT):
-			dest[i] = util.ReadFloat64(s.c.mod, dataPtr)
+			dest[i] = util.ReadFloat64(s.c.mod, ptr)
 		case byte(NULL):
 			dest[i] = nil
 		default:
-			len := util.Read32[int32](s.c.mod, dataPtr+4)
+			len := util.Read32[int32](s.c.mod, ptr+4)
 			if len == 0 && types[i] == byte(BLOB) {
 				dest[i] = []byte{}
 			} else {
@@ -704,12 +724,26 @@ func (s *Stmt) ColumnsRaw(dest ...any) error {
 				if types[i] == byte(TEXT) {
 					cap++
 				}
-				ptr := util.Read32[ptr_t](s.c.mod, dataPtr)
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
 				buf := util.View(s.c.mod, ptr, int64(cap))[:len]
 				dest[i] = buf
 			}
 		}
-		dataPtr += 8
+		ptr += 8
 	}
 	return nil
+}
+
+func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
+	defer s.c.arena.mark()()
+	typePtr := s.c.arena.new(count)
+	dataPtr := s.c.arena.new(count * 8)
+
+	rc := res_t(s.c.call("sqlite3_columns_go",
+		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
+	if err := s.c.error(rc); err != nil {
+		return nil, 0, err
+	}
+
+	return util.View(s.c.mod, typePtr, count), dataPtr, nil
 }
