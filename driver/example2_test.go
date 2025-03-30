@@ -1,8 +1,4 @@
-//go:build linux || darwin || windows || freebsd || openbsd || netbsd || dragonfly || illumos || sqlite3_flock || sqlite3_dotlk
-
 package driver_test
-
-// Adapted from: https://go.dev/doc/tutorial/database-access
 
 import (
 	"database/sql"
@@ -27,7 +23,7 @@ func Example_customTime() {
 	_, err = db.Exec(`
 		CREATE TABLE data (
 			id INTEGER PRIMARY KEY,
-			date_time TEXT
+			date_time ANY
 		) STRICT;
 	`)
 	if err != nil {
