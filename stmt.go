@@ -665,7 +665,7 @@ func (s *Stmt) Columns(dest ...any) error {
 			dest[i] = nil
 		case byte(TEXT):
 			len := util.Read32[int32](s.c.mod, ptr+4)
-			if len == 0 {
+			if len != 0 {
 				ptr := util.Read32[ptr_t](s.c.mod, ptr)
 				buf := util.View(s.c.mod, ptr, int64(len))
 				dest[i] = string(buf)
@@ -741,6 +741,9 @@ func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
 
 	rc := res_t(s.c.call("sqlite3_columns_go",
 		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
+	if rc == res_t(MISUSE) {
+		return nil, 0, MISUSE
+	}
 	if err := s.c.error(rc); err != nil {
 		return nil, 0, err
 	}
