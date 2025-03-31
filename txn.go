@@ -20,7 +20,7 @@ type Txn struct {
 }
 
 // Begin starts a deferred transaction.
-// Panics if a transaction is already in-progress.
+// It panics if a transaction is in-progress.
 // For nested transactions, use [Conn.Savepoint].
 //
 // https://sqlite.org/lang_transaction.html

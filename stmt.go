@@ -571,7 +571,7 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 func (s *Stmt) ColumnRawText(col int) []byte {
 	ptr := ptr_t(s.c.call("sqlite3_column_text",
 		stk_t(s.handle), stk_t(col)))
-	return s.columnRawBytes(col, ptr)
+	return s.columnRawBytes(col, ptr, 1)
 }
 
 // ColumnRawBlob returns the value of the result column as a []byte.
@@ -583,10 +583,10 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 func (s *Stmt) ColumnRawBlob(col int) []byte {
 	ptr := ptr_t(s.c.call("sqlite3_column_blob",
 		stk_t(s.handle), stk_t(col)))
-	return s.columnRawBytes(col, ptr)
+	return s.columnRawBytes(col, ptr, 0)
 }
 
-func (s *Stmt) columnRawBytes(col int, ptr ptr_t) []byte {
+func (s *Stmt) columnRawBytes(col int, ptr ptr_t, nul int32) []byte {
 	if ptr == 0 {
 		rc := res_t(s.c.call("sqlite3_errcode", stk_t(s.c.handle)))
 		if rc != _ROW && rc != _DONE {
@@ -597,7 +597,7 @@ func (s *Stmt) columnRawBytes(col int, ptr ptr_t) []byte {
 
 	n := int32(s.c.call("sqlite3_column_bytes",
 		stk_t(s.handle), stk_t(col)))
-	return util.View(s.c.mod, ptr, int64(n))
+	return util.View(s.c.mod, ptr, int64(n+nul))[:n]
 }
 
 // ColumnJSON parses the JSON-encoded value of the result column
@@ -644,21 +644,11 @@ func (s *Stmt) ColumnValue(col int) Value {
 // [INTEGER] columns will be retrieved as int64 values,
 // [FLOAT] as float64, [NULL] as nil,
 // [TEXT] as string, and [BLOB] as []byte.
-// Any []byte are owned by SQLite and may be invalidated by
-// subsequent calls to [Stmt] methods.
 func (s *Stmt) Columns(dest ...any) error {
-	defer s.c.arena.mark()()
-	count := int64(len(dest))
-	typePtr := s.c.arena.new(count)
-	dataPtr := s.c.arena.new(count * 8)
-
-	rc := res_t(s.c.call("sqlite3_columns_go",
-		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
-	if err := s.c.error(rc); err != nil {
+	types, ptr, err := s.columns(int64(len(dest)))
+	if err != nil {
 		return err
 	}
-
-	types := util.View(s.c.mod, typePtr, count)
 
 	// Avoid bounds checks on types below.
 	if len(types) != len(dest) {
@@ -668,30 +658,95 @@ func (s *Stmt) Columns(dest ...any) error {
 	for i := range dest {
 		switch types[i] {
 		case byte(INTEGER):
-			dest[i] = util.Read64[int64](s.c.mod, dataPtr)
+			dest[i] = util.Read64[int64](s.c.mod, ptr)
 		case byte(FLOAT):
-			dest[i] = util.ReadFloat64(s.c.mod, dataPtr)
+			dest[i] = util.ReadFloat64(s.c.mod, ptr)
+		case byte(NULL):
+			dest[i] = nil
+		case byte(TEXT):
+			len := util.Read32[int32](s.c.mod, ptr+4)
+			if len != 0 {
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
+				buf := util.View(s.c.mod, ptr, int64(len))
+				dest[i] = string(buf)
+			} else {
+				dest[i] = ""
+			}
+		case byte(BLOB):
+			len := util.Read32[int32](s.c.mod, ptr+4)
+			if len != 0 {
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
+				buf := util.View(s.c.mod, ptr, int64(len))
+				tmp, _ := dest[i].([]byte)
+				dest[i] = append(tmp[:0], buf...)
+			} else {
+				dest[i], _ = dest[i].([]byte)
+			}
+		}
+		ptr += 8
+	}
+	return nil
+}
+
+// ColumnsRaw populates result columns into the provided slice.
+// The slice must have [Stmt.ColumnCount] length.
+//
+// [INTEGER] columns will be retrieved as int64 values,
+// [FLOAT] as float64, [NULL] as nil,
+// [TEXT] and [BLOB] as []byte.
+// Any []byte are owned by SQLite and may be invalidated by
+// subsequent calls to [Stmt] methods.
+func (s *Stmt) ColumnsRaw(dest ...any) error {
+	types, ptr, err := s.columns(int64(len(dest)))
+	if err != nil {
+		return err
+	}
+
+	// Avoid bounds checks on types below.
+	if len(types) != len(dest) {
+		panic(util.AssertErr())
+	}
+
+	for i := range dest {
+		switch types[i] {
+		case byte(INTEGER):
+			dest[i] = util.Read64[int64](s.c.mod, ptr)
+		case byte(FLOAT):
+			dest[i] = util.ReadFloat64(s.c.mod, ptr)
 		case byte(NULL):
 			dest[i] = nil
 		default:
-			len := util.Read32[int32](s.c.mod, dataPtr+4)
-			if len != 0 {
-				ptr := util.Read32[ptr_t](s.c.mod, dataPtr)
-				buf := util.View(s.c.mod, ptr, int64(len))
-				if types[i] == byte(TEXT) {
-					dest[i] = string(buf)
-				} else {
-					dest[i] = buf
-				}
+			len := util.Read32[int32](s.c.mod, ptr+4)
+			if len == 0 && types[i] == byte(BLOB) {
+				dest[i] = []byte{}
 			} else {
+				cap := len
 				if types[i] == byte(TEXT) {
-					dest[i] = ""
-				} else {
-					dest[i] = []byte{}
+					cap++
 				}
+				ptr := util.Read32[ptr_t](s.c.mod, ptr)
+				buf := util.View(s.c.mod, ptr, int64(cap))[:len]
+				dest[i] = buf
 			}
 		}
-		dataPtr += 8
+		ptr += 8
 	}
 	return nil
+}
+
+func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
+	defer s.c.arena.mark()()
+	typePtr := s.c.arena.new(count)
+	dataPtr := s.c.arena.new(count * 8)
+
+	rc := res_t(s.c.call("sqlite3_columns_go",
+		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
+	if rc == res_t(MISUSE) {
+		return nil, 0, MISUSE
+	}
+	if err := s.c.error(rc); err != nil {
+		return nil, 0, err
+	}
+
+	return util.View(s.c.mod, typePtr, count), dataPtr, nil
 }

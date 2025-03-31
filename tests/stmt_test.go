@@ -664,6 +664,42 @@ func TestStmt_ColumnValue(t *testing.T) {
 	}
 }
 
+func TestStmt_Columns(t *testing.T) {
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	stmt, _, err := db.Prepare(`SELECT 0, 0.5, 'abc', x'cafe', NULL`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt.Step() {
+		var dest [5]any
+		if err := stmt.Columns(dest[:]...); err != nil {
+			t.Fatal(err)
+		}
+		if got := dest[0]; got != int64(0) {
+			t.Errorf("got %d, want 0", got)
+		}
+		if got := dest[1]; got != float64(0.5) {
+			t.Errorf("got %f, want 0.5", got)
+		}
+		if got := dest[2]; got != "abc" {
+			t.Errorf("got %q, want 'abc'", got)
+		}
+		if got := dest[3]; string(got.([]byte)) != "\xCA\xFE" {
+			t.Errorf("got %q, want x'cafe'", got)
+		}
+		if got := dest[4]; got != nil {
+			t.Errorf("got %q, want nil", got)
+		}
+	}
+}
+
 func TestStmt_Error(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
