@@ -89,6 +89,13 @@ func TestStmt(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := stmt.BindRawText(1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := stmt.BindBlob(1, []byte("")); err != nil {
 		t.Fatal(err)
 	}
@@ -97,13 +104,6 @@ func TestStmt(t *testing.T) {
 	}
 
 	if err := stmt.BindBlob(1, []byte("blob")); err != nil {
-		t.Fatal(err)
-	}
-	if err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := stmt.BindBlob(1, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := stmt.Exec(); err != nil {
@@ -354,6 +354,31 @@ func TestStmt(t *testing.T) {
 	}
 
 	if stmt.Step() {
+		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
+			t.Errorf("got %v, want TEXT", got)
+		}
+		if got := stmt.ColumnBool(0); got != false {
+			t.Errorf("got %v, want false", got)
+		}
+		if got := stmt.ColumnInt(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnFloat(0); got != 0 {
+			t.Errorf("got %v, want zero", got)
+		}
+		if got := stmt.ColumnText(0); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+		if got := stmt.ColumnBlob(0, nil); got != nil {
+			t.Errorf("got %q, want nil", got)
+		}
+		var got any
+		if err := stmt.ColumnJSON(0, &got); err == nil {
+			t.Errorf("got %v, want error", got)
+		}
+	}
+
+	if stmt.Step() {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -400,33 +425,6 @@ func TestStmt(t *testing.T) {
 		var got any
 		if err := stmt.ColumnJSON(0, &got); err == nil {
 			t.Errorf("got %v, want error", got)
-		}
-	}
-
-	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != sqlite3.NULL {
-			t.Errorf("got %v, want NULL", got)
-		}
-		if got := stmt.ColumnBool(0); got != false {
-			t.Errorf("got %v, want false", got)
-		}
-		if got := stmt.ColumnInt(0); got != 0 {
-			t.Errorf("got %v, want zero", got)
-		}
-		if got := stmt.ColumnFloat(0); got != 0 {
-			t.Errorf("got %v, want zero", got)
-		}
-		if got := stmt.ColumnText(0); got != "" {
-			t.Errorf("got %q, want empty", got)
-		}
-		if got := stmt.ColumnBlob(0, nil); got != nil {
-			t.Errorf("got %q, want nil", got)
-		}
-		var got any = 1
-		if err := stmt.ColumnJSON(0, &got); err != nil {
-			t.Error(err)
-		} else if got != nil {
-			t.Errorf("got %v, want NULL", got)
 		}
 	}
 

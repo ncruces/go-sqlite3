@@ -125,11 +125,6 @@ func Test_sqlite_newBytes(t *testing.T) {
 	if got := util.View(sqlite.mod, ptr, int64(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
-
-	ptr = sqlite.newBytes(buf[:0])
-	if ptr == 0 {
-		t.Fatal("got nullptr, want a pointer")
-	}
 }
 
 func Test_sqlite_newString(t *testing.T) {

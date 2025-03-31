@@ -16,6 +16,9 @@
 // #define SQLITE_OMIT_DECLTYPE
 // #define SQLITE_OMIT_PROGRESS_CALLBACK
 
+// TODO add this:
+// #define SQLITE_ENABLE_API_ARMOR
+
 // Other Options
 
 #define SQLITE_ALLOW_URI_AUTHORITY

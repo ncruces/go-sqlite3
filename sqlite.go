@@ -212,14 +212,10 @@ func (sqlt *sqlite) realloc(ptr ptr_t, size int64) ptr_t {
 }
 
 func (sqlt *sqlite) newBytes(b []byte) ptr_t {
-	if (*[0]byte)(b) == nil {
+	if len(b) == 0 {
 		return 0
 	}
-	size := len(b)
-	if size == 0 {
-		size = 1
-	}
-	ptr := sqlt.new(int64(size))
+	ptr := sqlt.new(int64(len(b)))
 	util.WriteBytes(sqlt.mod, ptr, b)
 	return ptr
 }
@@ -288,7 +284,7 @@ func (a *arena) new(size int64) ptr_t {
 }
 
 func (a *arena) bytes(b []byte) ptr_t {
-	if (*[0]byte)(b) == nil {
+	if len(b) == 0 {
 		return 0
 	}
 	ptr := a.new(int64(len(b)))
