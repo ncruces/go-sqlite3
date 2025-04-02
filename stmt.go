@@ -649,6 +649,7 @@ func (s *Stmt) ColumnValue(col int) Value {
 // [FLOAT] as float64, [NULL] as nil,
 // [TEXT] as string, and [BLOB] as []byte.
 func (s *Stmt) Columns(dest ...any) error {
+	defer s.c.arena.mark()()
 	types, ptr, err := s.columns(int64(len(dest)))
 	if err != nil {
 		return err
@@ -701,6 +702,7 @@ func (s *Stmt) Columns(dest ...any) error {
 // Any []byte are owned by SQLite and may be invalidated by
 // subsequent calls to [Stmt] methods.
 func (s *Stmt) ColumnsRaw(dest ...any) error {
+	defer s.c.arena.mark()()
 	types, ptr, err := s.columns(int64(len(dest)))
 	if err != nil {
 		return err
@@ -739,7 +741,6 @@ func (s *Stmt) ColumnsRaw(dest ...any) error {
 }
 
 func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
-	defer s.c.arena.mark()()
 	typePtr := s.c.arena.new(count)
 	dataPtr := s.c.arena.new(count * 8)
 
