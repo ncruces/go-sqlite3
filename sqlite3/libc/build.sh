@@ -19,7 +19,8 @@ trap 'rm -f libc.tmp' EXIT
 	-Wl,--initial-memory=16777216 \
 	-Wl,--export=memset \
 	-Wl,--export=memcpy \
-	-Wl,--export=memcmp
+	-Wl,--export=memcmp \
+	-Wl,--export=strncmp
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
