@@ -3,6 +3,7 @@ package csv_test
 import (
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -56,7 +57,7 @@ func Example() {
 
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(csv.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestRegister(t *testing.T) {

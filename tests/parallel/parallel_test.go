@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 			log.Printf("%v (%d): %s", code, code, msg)
 		}
 	})
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func Test_parallel(t *testing.T) {

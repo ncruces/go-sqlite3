@@ -14,7 +14,7 @@ import (
 
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(bloom.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestRegister(t *testing.T) {

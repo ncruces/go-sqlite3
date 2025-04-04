@@ -3,9 +3,19 @@
 #include <stdint.h>
 
 #if defined(__wasm_bulk_memory__)
-#define memset __builtin_memset
-#define memcpy __builtin_memcpy
-#define memmove __builtin_memmove
+
+void *memset(void *dest, int c, size_t n) {
+  return __builtin_memset(dest, c, n);
+}
+
+void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
+  return __builtin_memcpy(dest, src, n);
+}
+
+void *memmove(void *dest, const void *src, size_t n) {
+  return __builtin_memmove(dest, src, n);
+}
+
 #endif
 
 #define ONES (~(uintmax_t)(0) / UCHAR_MAX)

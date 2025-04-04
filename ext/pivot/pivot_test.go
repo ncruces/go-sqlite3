@@ -3,6 +3,7 @@ package pivot_test
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
@@ -85,7 +86,7 @@ func Example() {
 
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(pivot.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestRegister(t *testing.T) {

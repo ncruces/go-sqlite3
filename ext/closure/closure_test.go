@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -14,7 +15,7 @@ import (
 
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(closure.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func Example() {

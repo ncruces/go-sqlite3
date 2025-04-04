@@ -64,7 +64,7 @@ func Example() {
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(blobio.Register)
 	sqlite3.AutoExtension(array.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func Test_readblob(t *testing.T) {

@@ -2,6 +2,7 @@ package stats_test
 
 import (
 	"math"
+	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -12,7 +13,7 @@ import (
 
 func TestMain(m *testing.M) {
 	sqlite3.AutoExtension(stats.Register)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestRegister_variance(t *testing.T) {
