@@ -25,6 +25,7 @@ var (
 	memset  api.Function
 	memcpy  api.Function
 	memcmp  api.Function
+	strlen  api.Function
 	strcmp  api.Function
 	strncmp api.Function
 	stack   [8]uint64
@@ -49,6 +50,7 @@ func TestMain(m *testing.M) {
 	memset = mod.ExportedFunction("memset")
 	memcpy = mod.ExportedFunction("memcpy")
 	memcmp = mod.ExportedFunction("memcmp")
+	strlen = mod.ExportedFunction("strlen")
 	strcmp = mod.ExportedFunction("strcmp")
 	strncmp = mod.ExportedFunction("strncmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
@@ -110,6 +112,22 @@ func Benchmark_memcmp(b *testing.B) {
 	}
 	// ptr1[:size/2] == ptr2[:size/2]
 	if got := int32(call(memcmp, ptr1, ptr2, size/2)); got != 0 {
+		b.Fatal(got)
+	}
+}
+
+func Benchmark_strlen(b *testing.B) {
+	clear(memory)
+	call(memset, ptr1, 5, size-1)
+
+	b.SetBytes(size)
+	b.ResetTimer()
+	for range b.N {
+		call(strlen, ptr1)
+	}
+	b.StopTimer()
+
+	if got := int32(call(strlen, ptr1)); got != size-1 {
 		b.Fatal(got)
 	}
 }

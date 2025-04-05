@@ -20,6 +20,7 @@ trap 'rm -f libc.tmp' EXIT
 	-Wl,--export=memset \
 	-Wl,--export=memcpy \
 	-Wl,--export=memcmp \
+	-Wl,--export=strlen \
 	-Wl,--export=strcmp \
 	-Wl,--export=strncmp
 
