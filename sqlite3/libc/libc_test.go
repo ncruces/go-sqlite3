@@ -25,12 +25,15 @@ var (
 	memset  api.Function
 	memcpy  api.Function
 	memcmp  api.Function
+	strcmp  api.Function
 	strncmp api.Function
+	stack   [8]uint64
 )
 
 func call(fn api.Function, arg ...uint64) uint32 {
-	fn.CallWithStack(context.Background(), arg)
-	return uint32(arg[0])
+	copy(stack[:], arg)
+	fn.CallWithStack(context.Background(), stack[:])
+	return uint32(stack[0])
 }
 
 func TestMain(m *testing.M) {
@@ -46,6 +49,7 @@ func TestMain(m *testing.M) {
 	memset = mod.ExportedFunction("memset")
 	memcpy = mod.ExportedFunction("memcpy")
 	memcmp = mod.ExportedFunction("memcmp")
+	strcmp = mod.ExportedFunction("strcmp")
 	strncmp = mod.ExportedFunction("strncmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
 
@@ -55,6 +59,7 @@ func TestMain(m *testing.M) {
 func Benchmark_memset(b *testing.B) {
 	clear(memory)
 
+	b.SetBytes(size)
 	b.ResetTimer()
 	for range b.N {
 		call(memset, ptr1, 3, size)
@@ -72,6 +77,7 @@ func Benchmark_memcpy(b *testing.B) {
 	clear(memory)
 	call(memset, ptr2, 5, size)
 
+	b.SetBytes(size)
 	b.ResetTimer()
 	for range b.N {
 		call(memcpy, ptr1, ptr2, size)
@@ -91,6 +97,7 @@ func Benchmark_memcmp(b *testing.B) {
 	call(memset, ptr2, 7, size)
 	call(memset, ptr2+size/2, 5, size)
 
+	b.SetBytes(size / 2)
 	b.ResetTimer()
 	for range b.N {
 		call(memcmp, ptr1, ptr2, size)
@@ -107,12 +114,42 @@ func Benchmark_memcmp(b *testing.B) {
 	}
 }
 
+func Benchmark_strcmp(b *testing.B) {
+	clear(memory)
+	call(memset, ptr1, 7, size-1)
+	call(memset, ptr2, 7, size-1)
+	call(memset, ptr2+size/2, 5, size)
+
+	b.SetBytes(size / 2)
+	b.ResetTimer()
+	for range b.N {
+		call(strcmp, ptr1, ptr2, size)
+	}
+	b.StopTimer()
+
+	// ptr1 > ptr2
+	if got := int32(call(strcmp, ptr1, ptr2)); got <= 0 {
+		b.Fatal(got)
+	}
+	// make ptr1 < ptr2
+	memory[ptr1+size/2] = 0
+	if got := int32(call(strcmp, ptr1, ptr2)); got >= 0 {
+		b.Fatal(got)
+	}
+	memory[ptr2+size/2] = 0
+	// make ptr1 == ptr2
+	if got := int32(call(strcmp, ptr1, ptr2)); got != 0 {
+		b.Fatal(got)
+	}
+}
+
 func Benchmark_strncmp(b *testing.B) {
 	clear(memory)
 	call(memset, ptr1, 7, size)
 	call(memset, ptr2, 7, size)
 	call(memset, ptr2+size/2, 5, size)
 
+	b.SetBytes(size / 2)
 	b.ResetTimer()
 	for range b.N {
 		call(strncmp, ptr1, ptr2, size)
@@ -120,16 +157,16 @@ func Benchmark_strncmp(b *testing.B) {
 	b.StopTimer()
 
 	// ptr1 > ptr2
-	if got := int32(call(memcmp, ptr1, ptr2, size)); got <= 0 {
+	if got := int32(call(strncmp, ptr1, ptr2, size)); got <= 0 {
 		b.Fatal(got)
 	}
 	// make ptr1 < ptr2
 	memory[ptr1+size/2] = 0
-	if got := int32(call(memcmp, ptr1, ptr2, size)); got >= 0 {
+	if got := int32(call(strncmp, ptr1, ptr2, size)); got >= 0 {
 		b.Fatal(got)
 	}
 	// ptr1[:size/2] == ptr2[:size/2]
-	if got := int32(call(memcmp, ptr1, ptr2, size/2)); got != 0 {
+	if got := int32(call(strncmp, ptr1, ptr2, size/2)); got != 0 {
 		b.Fatal(got)
 	}
 }

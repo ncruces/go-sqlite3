@@ -20,6 +20,7 @@ trap 'rm -f libc.tmp' EXIT
 	-Wl,--export=memset \
 	-Wl,--export=memcpy \
 	-Wl,--export=memcmp \
+	-Wl,--export=strcmp \
 	-Wl,--export=strncmp
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
