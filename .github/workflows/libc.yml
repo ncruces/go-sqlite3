@@ -1,0 +1,20 @@
+name: Benchmark libc
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with: { go-version: stable }
+
+    - name: Benchmark
+      shell: bash
+      run: sqlite3/libc/benchmark.sh
