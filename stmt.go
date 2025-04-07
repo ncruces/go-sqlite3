@@ -110,10 +110,7 @@ func (s *Stmt) Step() bool {
 		s.err = INTERRUPT
 		return false
 	}
-	return s.step()
-}
 
-func (s *Stmt) step() bool {
 	rc := res_t(s.c.call("sqlite3_step", stk_t(s.handle)))
 	switch rc {
 	case _ROW:
@@ -141,10 +138,9 @@ func (s *Stmt) Exec() error {
 	if s.c.interrupt.Err() != nil {
 		return INTERRUPT
 	}
-	// TODO: implement this in C.
-	for s.step() {
-	}
-	return s.Reset()
+	rc := res_t(s.c.call("sqlite3_exec_go", stk_t(s.handle)))
+	s.err = nil
+	return s.c.error(rc)
 }
 
 // Status monitors the performance characteristics of prepared statements.

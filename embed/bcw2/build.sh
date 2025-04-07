@@ -13,11 +13,10 @@ mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
 
-# https://sqlite.org/src/info/c09656c62155a6e8
-curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=c09656c6 | tar xz
+# https://sqlite.org/src/info/4196efe83c2fa850
+curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=4196efe8 | tar xz
 
 cd sqlite
-cat ../repro.patch | patch -p0 --no-backup-if-mismatch
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
 	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c "OPTS=-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_ENABLE_ORDERED_SET_AGGREGATES"
 else

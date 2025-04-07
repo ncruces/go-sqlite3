@@ -1,6 +1,7 @@
 // Use the default callback, not the Go one we patched in.
 #define sqliteBusyCallback sqliteDefaultBusyCallback
 
+#include "strings.c"
 // Amalgamation
 #include "sqlite3.c"
 // VFS

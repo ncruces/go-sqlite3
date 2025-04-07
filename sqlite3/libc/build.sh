@@ -19,15 +19,17 @@ trap 'rm -f libc.tmp' EXIT
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--initial-memory=16777216 \
-	-Wl,--export=memset \
-	-Wl,--export=memcpy \
 	-Wl,--export=memchr \
 	-Wl,--export=memcmp \
-	-Wl,--export=strlen \
+	-Wl,--export=memcpy \
+	-Wl,--export=memset \
 	-Wl,--export=strchr \
+	-Wl,--export=strchrnul \
 	-Wl,--export=strcmp \
+	-Wl,--export=strcspn \
+	-Wl,--export=strlen \
 	-Wl,--export=strncmp \
-	-Wl,--export=strchrnul
+	-Wl,--export=strspn
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \

@@ -1,3 +1,4 @@
+#include "strings.c"
 // Amalgamation
 #include "sqlite3.c"
 // Extensions
@@ -10,12 +11,11 @@
 #include "ext/spellfix.c"
 #include "ext/uint.c"
 // Bindings
-#include "bind.c"
-#include "column.c"
 #include "func.c"
 #include "hooks.c"
 #include "pointer.c"
-#include "result.c"
+#include "stmt.c"
+#include "text.c"
 #include "time.c"
 #include "vfs.c"
 #include "vtab.c"

@@ -2,6 +2,11 @@
 
 #include "sqlite3.h"
 
+int sqlite3_exec_go(sqlite3_stmt *stmt) {
+  while (sqlite3_step(stmt) == SQLITE_ROW);
+  return sqlite3_reset(stmt);
+}
+
 union sqlite3_data {
   sqlite3_int64 i;
   double d;
@@ -16,7 +21,7 @@ int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
   if (nCol != sqlite3_column_count(stmt)) {
     return SQLITE_MISUSE;
   }
-  int rc = SQLITE_OK;
+  bool check = false;
   for (int i = 0; i < nCol; ++i) {
     const void *ptr = NULL;
     switch (aType[i] = sqlite3_column_type(stmt, i)) {
@@ -36,16 +41,14 @@ int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
         ptr = sqlite3_column_blob(stmt, i);
         break;
     }
-    if (ptr == NULL && rc == SQLITE_OK) {
-      rc = sqlite3_errcode(sqlite3_db_handle(stmt));
-      if (rc == SQLITE_ROW || rc == SQLITE_DONE) {
-        rc = SQLITE_OK;
-      }
-    }
     aData[i].ptr = ptr;
     aData[i].len = sqlite3_column_bytes(stmt, i);
+    if (ptr == NULL) check = true;
   }
-  return rc;
+  if (check && SQLITE_NOMEM == sqlite3_errcode(sqlite3_db_handle(stmt))) {
+    return SQLITE_NOMEM;
+  }
+  return SQLITE_OK;
 }
 
 static_assert(offsetof(union sqlite3_data, i) == 0, "Unexpected offset");
