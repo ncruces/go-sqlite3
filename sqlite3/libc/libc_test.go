@@ -25,8 +25,10 @@ var (
 	memset  api.Function
 	memcpy  api.Function
 	memcmp  api.Function
+	memchr  api.Function
 	strlen  api.Function
 	strcmp  api.Function
+	strchr  api.Function
 	strncmp api.Function
 	stack   [8]uint64
 )
@@ -49,8 +51,10 @@ func TestMain(m *testing.M) {
 	module = mod
 	memset = mod.ExportedFunction("memset")
 	memcpy = mod.ExportedFunction("memcpy")
+	memchr = mod.ExportedFunction("memchr")
 	memcmp = mod.ExportedFunction("memcmp")
 	strlen = mod.ExportedFunction("strlen")
+	strchr = mod.ExportedFunction("strchr")
 	strcmp = mod.ExportedFunction("strcmp")
 	strncmp = mod.ExportedFunction("strncmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
@@ -93,6 +97,23 @@ func Benchmark_memcpy(b *testing.B) {
 	}
 }
 
+func Benchmark_memchr(b *testing.B) {
+	clear(memory)
+	call(memset, ptr1, 7, size)
+	call(memset, ptr1+size/2, 5, size)
+
+	b.SetBytes(size / 2)
+	b.ResetTimer()
+	for range b.N {
+		call(memchr, ptr1, 5, size)
+	}
+	b.StopTimer()
+
+	if got := call(memchr, ptr1, 5, size); got != ptr1+size/2 {
+		b.Fatal(got)
+	}
+}
+
 func Benchmark_memcmp(b *testing.B) {
 	clear(memory)
 	call(memset, ptr1, 7, size)
@@ -128,6 +149,23 @@ func Benchmark_strlen(b *testing.B) {
 	b.StopTimer()
 
 	if got := int32(call(strlen, ptr1)); got != size-1 {
+		b.Fatal(got)
+	}
+}
+
+func Benchmark_strchr(b *testing.B) {
+	clear(memory)
+	call(memset, ptr1, 7, size)
+	call(memset, ptr1+size/2, 5, size)
+
+	b.SetBytes(size / 2)
+	b.ResetTimer()
+	for range b.N {
+		call(strchr, ptr1, 5)
+	}
+	b.StopTimer()
+
+	if got := call(strchr, ptr1, 5); got != ptr1+size/2 {
 		b.Fatal(got)
 	}
 }

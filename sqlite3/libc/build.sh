@@ -21,10 +21,13 @@ trap 'rm -f libc.tmp' EXIT
 	-Wl,--initial-memory=16777216 \
 	-Wl,--export=memset \
 	-Wl,--export=memcpy \
+	-Wl,--export=memchr \
 	-Wl,--export=memcmp \
 	-Wl,--export=strlen \
+	-Wl,--export=strchr \
 	-Wl,--export=strcmp \
-	-Wl,--export=strncmp
+	-Wl,--export=strncmp \
+	-Wl,--export=strchrnul
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \

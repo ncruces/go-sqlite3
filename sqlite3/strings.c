@@ -43,6 +43,26 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   return 0;
 }
 
+void *memchr(const void *v, int c, size_t n) {
+  c = (uint8_t)c;
+
+  const v128_t wc = wasm_i8x16_splat(c);
+  const v128_t *w = (void *)v;
+  for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
+    if (wasm_v128_any_true(wasm_i8x16_eq(wasm_v128_load(w), wc))) {
+      break;  // *w has a c
+    }
+    w++;
+  }
+
+  const uint8_t *u = (void *)w;
+  while (n--) {
+    if (*u == c) return (void *)u;
+    u++;
+  }
+  return 0;
+}
+
 size_t strlen(const char *s) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
@@ -114,6 +134,37 @@ int strncmp(const char *s1, const char *s2, size_t n) {
     u2++;
   }
   return 0;
+}
+
+char *strchrnul(const char *s, int c) {
+  c = (char)c;
+
+  const v128_t *const limit =
+      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+
+  const v128_t wc = wasm_i8x16_splat(c);
+  const v128_t *w = (void *)s;
+  while (w <= limit) {
+    if (!wasm_i8x16_all_true(wasm_v128_load(w))) {
+      break;  // *w has a NUL
+    }
+    if (wasm_v128_any_true(wasm_i8x16_eq(wasm_v128_load(w), wc))) {
+      break;  // *w has a c
+    }
+    w++;
+  }
+
+  s = (void *)w;
+  while (true) {
+    if (*s == 0 || *s == c) break;
+    s++;
+  }
+  return (void *)s;
+}
+
+char *strchr(const char *s, int c) {
+  char *r = strchrnul(s, c);
+  return *(char *)r == (char)c ? r : 0;
 }
 
 #endif
