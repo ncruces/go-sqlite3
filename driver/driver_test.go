@@ -248,8 +248,9 @@ func Test_nested_context(t *testing.T) {
 	want(inner, 0)
 	cancel()
 
-	if inner.Next() || !errors.Is(inner.Err(), sqlite3.INTERRUPT) {
-		t.Fatal(inner.Err())
+	var terr interface{ Temporary() bool }
+	if inner.Next() || !errors.As(inner.Err(), &terr) || !terr.Temporary() {
+		t.Fatalf("got %v, want temporary", inner.Err())
 	}
 
 	want(outer, 1)

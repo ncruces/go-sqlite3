@@ -287,8 +287,9 @@ func TestConn_Transaction_busy(t *testing.T) {
 	go cancel()
 
 	_, err = db2.BeginExclusive()
-	if !errors.Is(err, sqlite3.BUSY) && !errors.Is(err, sqlite3.INTERRUPT) {
-		t.Errorf("got %v, want sqlite3.BUSY or sqlite3.INTERRUPT", err)
+	var terr interface{ Temporary() bool }
+	if !errors.As(err, &terr) || !terr.Temporary() {
+		t.Errorf("got %v, want temporary", err)
 	}
 
 	err = nil
