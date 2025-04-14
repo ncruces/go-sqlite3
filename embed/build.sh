@@ -27,7 +27,7 @@ trap 'rm -f sqlite3.tmp' EXIT
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize sqlite3.wasm -o sqlite3.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
-	sqlite3.tmp -o sqlite3.wasm \
+	sqlite3.tmp -o sqlite3.wasm --low-memory-unused \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \
 	--enable-nontrapping-float-to-int --enable-sign-ext

@@ -18,6 +18,8 @@ trap 'rm -f libc.tmp' EXIT
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
+	-Wl,--stack-first \
+	-Wl,--import-undefined \
 	-Wl,--initial-memory=16777216 \
 	-Wl,--export=memchr \
 	-Wl,--export=memcmp \

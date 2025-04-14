@@ -24,7 +24,7 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 
 "$BINARYEN/wasm-ctor-eval" -c _initialize sql3parse_table.wasm -o sql3parse_table.tmp
 "$BINARYEN/wasm-opt" --strip --strip-debug --strip-producers -c -Oz \
-	sql3parse_table.tmp -o sql3parse_table.wasm \
+	sql3parse_table.tmp -o sql3parse_table.wasm --low-memory-unused \
 	--enable-simd --enable-mutable-globals --enable-multivalue \
 	--enable-bulk-memory --enable-reference-types \
 	--enable-nontrapping-float-to-int --enable-sign-ext
