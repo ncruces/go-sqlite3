@@ -66,10 +66,12 @@ size_t strlen(const char *s) {
   const v128_t *w = (void *)(s - align);
 
   while (true) {
-    int mask =
-        wasm_i8x16_bitmask(wasm_i8x16_eq(*w, (v128_t){})) >> align << align;
-    if (mask) {
-      return (char *)w - s + __builtin_ctz(mask);
+    if (!wasm_i8x16_all_true(*w)) {
+      int mask =
+          wasm_i8x16_bitmask(wasm_i8x16_eq(*w, (v128_t){})) >> align << align;
+      if (mask) {
+        return (char *)w - s + __builtin_ctz(mask);
+      }
     }
     align = 0;
     w++;
