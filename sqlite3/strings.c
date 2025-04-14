@@ -69,7 +69,10 @@ size_t strlen(const char *s) {
     if (!wasm_i8x16_all_true(*w)) {
       const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){});
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      return (char *)w - s + __builtin_ctz(mask);
+      __builtin_assume(mask || align);
+      if (mask) {
+        return (char *)w - s + __builtin_ctz(mask);
+      }
     }
     align = 0;
     w++;
@@ -139,7 +142,10 @@ char *strchrnul(const char *s, int c) {
     const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){}) | wasm_i8x16_eq(*w, wc);
     if (wasm_v128_any_true(cmp)) {
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      return (char *)w + __builtin_ctz(mask);
+      __builtin_assume(mask || align);
+      if (mask) {
+        return (char *)w + __builtin_ctz(mask);
+      }
     }
     align = 0;
     w++;
@@ -158,7 +164,7 @@ char *strchr(const char *s, int c) {
    << ((b) % (8 * sizeof(size_t))))
 
 size_t strspn(const char *s, const char *c) {
-	if (!c[0]) return 0;
+  if (!c[0]) return 0;
 
   const char *const a = s;
   size_t byteset[32 / sizeof(size_t)] = {0};
