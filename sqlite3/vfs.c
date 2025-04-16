@@ -137,9 +137,10 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
 
   // Create a new C wrapper.
   sqlite3_vfs *head = go_vfs_list;
-  go_vfs_list = malloc(sizeof(sqlite3_vfs) + strlen(zVfsName) + 1);
+  size_t vfsNameLen = strlen(zVfsName);
+  go_vfs_list = malloc(sizeof(sqlite3_vfs) + vfsNameLen + 1);
   char *name = (char *)(go_vfs_list + 1);
-  strcpy(name, zVfsName);
+  memcpy(name, zVfsName, vfsNameLen + 1);
   *go_vfs_list = (sqlite3_vfs){
       .iVersion = 2,
       .szOsFile = sizeof(struct go_file),
