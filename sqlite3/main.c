@@ -1,4 +1,3 @@
-#include "strings.c"
 // Amalgamation
 #include "sqlite3.c"
 // Extensions

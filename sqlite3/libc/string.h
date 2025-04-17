@@ -1,9 +1,22 @@
+#ifndef _WASM_SIMD128_STRING_H
+#define _WASM_SIMD128_STRING_H
+
 #include <stddef.h>
 #include <stdint.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
 
+#include_next <string.h> // the system string.h
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef __wasm_bulk_memory__
+
+// Use the builtins if compiled with bulk memory operations.
+// Clang will intrinsify using SIMD for small, constant N.
+// For everything else, this helps inlining.
 
 void *memset(void *dest, int c, size_t n) {
   return __builtin_memset(dest, c, n);
@@ -17,9 +30,18 @@ void *memmove(void *dest, const void *src, size_t n) {
   return __builtin_memmove(dest, src, n);
 }
 
-#endif
+#endif  // __wasm_bulk_memory__
 
 #ifdef __wasm_simd128__
+
+// SIMD versions of some string.h functions.
+//
+// These assume aligned v128_t reads can't fail,
+// and so can't unaligned reads up to the last
+// aligned address less than memory size.
+//
+// These also assume unaligned access is not painfully slow,
+// but that bitmask extraction is slow on AArch64.
 
 int memcmp(const void *v1, const void *v2, size_t n) {
   const v128_t *w1 = v1;
@@ -166,16 +188,34 @@ char *strchr(const char *s, int c) {
   return *(char *)r == (char)c ? r : NULL;
 }
 
-#endif
+#pragma push_macro("BITOP")
 
 #define BITOP(a, b, op)                          \
   ((a)[(b) / (8 * sizeof(size_t))] op((size_t)1) \
    << ((b) % (8 * sizeof(size_t))))
 
 size_t strspn(const char *s, const char *c) {
-  if (!c[0]) return 0;
-
   const char *const a = s;
+
+  if (!c[0]) return 0;
+  if (!c[1]) {
+    const v128_t *const limit =
+        (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+
+    const v128_t *w = (void *)s;
+    const v128_t wc = wasm_i8x16_splat(*c);
+    while (w <= limit) {
+      if (!wasm_i8x16_all_true(wasm_i8x16_eq(wasm_v128_load(w), wc))) {
+        break;
+      }
+      w++;
+    }
+
+    s = (void *)w;
+    while (*s == *c) s++;
+    return s - a;
+  }
+
   size_t byteset[32 / sizeof(size_t)] = {0};
 
   for (; *c && BITOP(byteset, *(uint8_t *)c, |=); c++);
@@ -194,4 +234,12 @@ size_t strcspn(const char *s, const char *c) {
   return s - a;
 }
 
-#undef BITOP
+#pragma pop_macro("BITOP")
+
+#endif  // __wasm_simd128__
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
+#endif  // _WASM_SIMD128_STRING_H

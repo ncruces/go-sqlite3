@@ -1,6 +1,5 @@
 #include <stddef.h>
 
-#include "strings.c"
 #include "sql3parse_table.c"
 
 static_assert(offsetof(sql3table, name) == 0, "Unexpected offset");

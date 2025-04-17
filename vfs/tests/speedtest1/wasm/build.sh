@@ -9,7 +9,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-o speedtest1.wasm main.c \
-	-I"$ROOT/sqlite3" \
+	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
 	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \

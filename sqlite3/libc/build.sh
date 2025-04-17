@@ -6,13 +6,14 @@ cd -P -- "$(dirname -- "$0")"
 ROOT=../../
 BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
-SRCS="${1:-../strings.c}"
+SRCS="${1:-libc.c}"
 "../tools.sh"
 
-trap 'rm -f libc.tmp' EXIT
+trap 'rm -f libc.c libc.tmp' EXIT
+echo '#include <string.h>' > libc.c
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
-	-o libc.wasm "$SRCS" \
+	-o libc.wasm -I. "$SRCS" \
 	-mexec-model=reactor \
 	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \

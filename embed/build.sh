@@ -12,7 +12,7 @@ trap 'rm -f sqlite3.tmp' EXIT
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o sqlite3.wasm "$ROOT/sqlite3/main.c" \
-	-I"$ROOT/sqlite3" \
+	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
 	-mexec-model=reactor \
 	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \
