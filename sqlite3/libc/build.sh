@@ -11,6 +11,7 @@ SRCS="${1:-libc.c}"
 
 trap 'rm -f libc.c libc.tmp' EXIT
 echo '#include <string.h>' > libc.c
+echo '#include <stdlib.h>' >> libc.c
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-o libc.wasm -I. "$SRCS" \
@@ -32,7 +33,8 @@ echo '#include <string.h>' > libc.c
 	-Wl,--export=strcspn \
 	-Wl,--export=strlen \
 	-Wl,--export=strncmp \
-	-Wl,--export=strspn
+	-Wl,--export=strspn \
+	-Wl,--export=qsort
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
