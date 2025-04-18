@@ -12,8 +12,9 @@ extern "C" {
 
 // Shellsort with Gonnet & Baeza-Yates gap sequence.
 // Simple, no recursion, doesn't use the C stack.
-// Clang auto-vectorizes the inner loop. 
+// Clang auto-vectorizes the inner loop.
 
+__attribute__((weak))
 void qsort(void *base, size_t nel, size_t width,
            int (*comp)(const void *, const void *)) {
   if (width == 0) return;
