@@ -1,6 +1,7 @@
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <wasm_simd128.h>
@@ -112,6 +113,10 @@ size_t strlen(const char *s) {
 
 __attribute__((weak))
 int strcmp(const char *s1, const char *s2) {
+  if (__builtin_constant_p(__builtin_strlen(s2))) {
+    return strncmp(s1, s2, __builtin_strlen(s2));
+  }
+
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
@@ -203,23 +208,12 @@ char *strchr(const char *s, int c) {
   return *(char *)r == (char)c ? r : NULL;
 }
 
-#pragma push_macro("STATIC")
-#pragma push_macro("BITOP")
-
-// Avoid using the C stack.
-#ifndef _REENTRANT
-#define STATIC static
-#else
-#define STATIC
-#endif
-
-#define BITOP(a, b, op)                          \
-  ((a)[(b) / (8 * sizeof(size_t))] op((size_t)1) \
-   << ((b) % (8 * sizeof(size_t))))
-
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
-  STATIC size_t byteset[32 / sizeof(size_t)];
+#ifndef _REENTRANT
+  static
+#endif
+  char byteset[UCHAR_MAX + 1];
   const char *const a = s;
 
   if (!c[0]) return 0;
@@ -241,27 +235,33 @@ size_t strspn(const char *s, const char *c) {
     return s - a;
   }
 
-  memset(byteset, 0, sizeof(byteset));
-  for (; *c && BITOP(byteset, *(uint8_t *)c, |=); c++);
-  for (; *s && BITOP(byteset, *(uint8_t *)s, &); s++);
+  volatile v128_t *w = (void *)byteset;
+#pragma unroll
+  for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
+  while (*c && (byteset[*(uint8_t *)c] = 1)) c++;
+#pragma unroll 4
+  while (byteset[*(uint8_t *)s]) s++;
   return s - a;
 }
 
 __attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
-  STATIC size_t byteset[32 / sizeof(size_t)];
+#ifndef _REENTRANT
+  static
+#endif
+  char byteset[UCHAR_MAX + 1];
   const char *const a = s;
 
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-  memset(byteset, 0, sizeof(byteset));
-  for (; *c && BITOP(byteset, *(uint8_t *)c, |=); c++);
-  for (; *s && !BITOP(byteset, *(uint8_t *)s, &); s++);
+  volatile v128_t *w = (void *)byteset;
+#pragma unroll
+  for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
+  while ((byteset[*(uint8_t *)c] = 1) && *c) c++;
+#pragma unroll 4
+  while (!byteset[*(uint8_t *)s]) s++;
   return s - a;
 }
-
-#pragma pop_macro("BITOP")
-#pragma pop_macro("STATIC")
 
 #endif  // __wasm_simd128__
 
