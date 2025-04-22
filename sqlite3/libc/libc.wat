@@ -142,42 +142,53 @@
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
-  (local $6 v128)
+  (local $6 i32)
   (local $7 v128)
-  (local.set $4
-   (i32.and
-    (local.get $0)
-    (i32.const 15)
+  (local $8 v128)
+  (local $scratch i32)
+  (block $block
+   (br_if $block
+    (i32.eqz
+     (local.get $2)
+    )
    )
-  )
-  (block $block1
-   (block $block
-    (if
-     (v128.any_true
-      (local.tee $6
-       (i8x16.eq
-        (v128.load
-         (local.tee $3
-          (i32.and
-           (local.get $0)
-           (i32.const -16)
-          )
-         )
-        )
+   (local.set $4
+    (i32.and
+     (local.get $0)
+     (i32.const 15)
+    )
+   )
+   (block $block2
+    (block $block1
+     (br_if $block1
+      (i32.eqz
+       (v128.any_true
         (local.tee $7
-         (i8x16.splat
-          (local.get $1)
+         (i8x16.eq
+          (v128.load
+           (local.tee $3
+            (i32.and
+             (local.get $0)
+             (i32.const -16)
+            )
+           )
+          )
+          (local.tee $8
+           (i8x16.splat
+            (local.get $1)
+           )
+          )
          )
         )
        )
       )
      )
-     (then
-      (br_if $block
-       (local.tee $1
+     (br_if $block1
+      (i32.eqz
+       (local.tee $5
         (i32.and
          (i8x16.bitmask
-          (local.get $6)
+          (local.get $7)
          )
          (i32.shl
           (i32.const -1)
@@ -187,42 +198,61 @@
        )
       )
      )
+     (local.set $1
+      (local.get $2)
+     )
+     (br $block2)
     )
-    (br_if $block1
-     (i32.gt_u
+    (br_if $block
+     (i32.lt_u
+      (local.get $2)
       (local.tee $1
        (i32.sub
-        (i32.add
-         (local.get $2)
-         (local.get $4)
+        (local.get $2)
+        (local.tee $3
+         (i32.sub
+          (i32.const 16)
+          (local.get $4)
+         )
         )
-        (i32.const 16)
        )
       )
-      (local.get $2)
+     )
+    )
+    (br_if $block
+     (i32.eqz
+      (local.get $1)
      )
     )
     (local.set $3
      (i32.add
-      (i32.sub
-       (local.get $0)
-       (local.get $4)
-      )
-      (i32.const 16)
+      (local.get $0)
+      (local.get $3)
      )
     )
-    (block $block2
+    (block $block3
      (loop $label
-      (br_if $block2
+      (br_if $block3
        (v128.any_true
-        (local.tee $6
+        (local.tee $7
          (i8x16.eq
           (v128.load
            (local.get $3)
           )
-          (local.get $7)
+          (local.get $8)
          )
         )
+       )
+      )
+      (br_if $block
+       (i32.gt_u
+        (local.tee $0
+         (i32.sub
+          (local.get $1)
+          (i32.const 16)
+         )
+        )
+        (local.get $1)
        )
       )
       (local.set $3
@@ -232,35 +262,49 @@
        )
       )
       (br_if $label
-       (i32.ge_u
-        (local.get $1)
-        (local.tee $1
-         (i32.sub
-          (local.get $1)
-          (i32.const 16)
+       (i32.eqz
+        (block (result i32)
+         (local.set $scratch
+          (i32.eq
+           (local.get $1)
+           (i32.const 16)
+          )
          )
+         (local.set $1
+          (local.get $0)
+         )
+         (local.get $scratch)
         )
        )
       )
      )
-     (br $block1)
+     (br $block)
     )
-    (local.set $1
+    (local.set $5
      (i8x16.bitmask
-      (local.get $6)
+      (local.get $7)
      )
     )
    )
-   (local.set $5
-    (i32.add
-     (local.get $3)
-     (i32.ctz
+   (local.set $6
+    (select
+     (i32.add
+      (local.get $3)
+      (local.tee $0
+       (i32.ctz
+        (local.get $5)
+       )
+      )
+     )
+     (i32.const 0)
+     (i32.lt_u
+      (local.get $0)
       (local.get $1)
      )
     )
    )
   )
-  (local.get $5)
+  (local.get $6)
  )
  (func $strlen (param $0 i32) (result i32)
   (local $1 i32)

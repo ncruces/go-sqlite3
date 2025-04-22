@@ -10,10 +10,13 @@ SRCS="${1:-libc.c}"
 "../tools.sh"
 
 trap 'rm -f libc.c libc.tmp' EXIT
-echo '#include <string.h>' > libc.c
-echo '#include <stdlib.h>' >> libc.c
+cat << EOF > libc.c
+#include <string.h>
+#include <stdlib.h>
+EOF
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
+	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o libc.wasm -I. "$SRCS" \
 	-mexec-model=reactor \
 	-msimd128 -mmutable-globals -mmultivalue \

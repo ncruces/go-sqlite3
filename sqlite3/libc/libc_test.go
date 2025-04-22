@@ -116,6 +116,9 @@ func Benchmark_memchr(b *testing.B) {
 	if got := call(memchr, ptr1, 5, size); got != ptr1+size/2 {
 		b.Fatal(got)
 	}
+	if got := call(memchr, ptr1, 5, size/2); got != 0 {
+		b.Fatal(got, ptr1+size/2)
+	}
 }
 
 func Benchmark_memcmp(b *testing.B) {

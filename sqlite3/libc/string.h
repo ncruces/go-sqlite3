@@ -45,7 +45,7 @@ void *memmove(void *dest, const void *src, size_t n) {
 // aligned address less than memory size.
 //
 // These also assume unaligned access is not painfully slow,
-// but that bitmask extraction is slow on AArch64.
+// but that bitmask extraction is really slow on AArch64.
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
@@ -75,13 +75,14 @@ void *memchr(const void *v, int c, size_t n) {
   const v128_t *w = (void *)(v - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
-  while (true) {
+  while (n) {
     const v128_t cmp = wasm_i8x16_eq(*w, wc);
     if (wasm_v128_any_true(cmp)) {
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       __builtin_assume(mask || align);
       if (mask) {
-        return (void *)w + __builtin_ctz(mask);
+        size_t ctz = __builtin_ctz(mask);
+        return ctz < n ? (void *)w + ctz : NULL;
       }
     }
     if (__builtin_sub_overflow(n, sizeof(v128_t) - align, &n)) {
@@ -90,6 +91,7 @@ void *memchr(const void *v, int c, size_t n) {
     align = 0;
     w++;
   }
+  return NULL;
 }
 
 __attribute__((weak))
@@ -111,12 +113,7 @@ size_t strlen(const char *s) {
   }
 }
 
-__attribute__((weak))
-int strcmp(const char *s1, const char *s2) {
-  if (__builtin_constant_p(__builtin_strlen(s2))) {
-    return strncmp(s1, s2, __builtin_strlen(s2));
-  }
-
+static int __strcmp(const char *s1, const char *s2) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
@@ -142,6 +139,14 @@ int strcmp(const char *s1, const char *s2) {
     u2++;
   }
   return 0;
+}
+
+__attribute__((weak, always_inline))
+int strcmp(const char *s1, const char *s2) {
+  if (__builtin_constant_p(strlen(s2))) {
+    return strncmp(s1, s2, strlen(s2));
+  }
+  return __strcmp(s1, s2);
 }
 
 __attribute__((weak))
@@ -173,12 +178,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   return 0;
 }
 
-__attribute__((always_inline))
 static char *__strchrnul(const char *s, int c) {
-  if (__builtin_constant_p(c) && (char)c == 0) {
-    return (char *)s + strlen(s);
-  }
-
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (void *)(s - align);
   const v128_t wc = wasm_i8x16_splat(c);
@@ -197,13 +197,19 @@ static char *__strchrnul(const char *s, int c) {
   }
 }
 
-__attribute__((weak))
+__attribute__((weak, always_inline))
 char *strchrnul(const char *s, int c) {
+  if (__builtin_constant_p(c) && (char)c == 0) {
+    return (char *)s + strlen(s);
+  }
   return __strchrnul(s, c);
 }
 
-__attribute__((weak))
+__attribute__((weak, always_inline))
 char *strchr(const char *s, int c) {
+  if (__builtin_constant_p(c) && (char)c == 0) {
+    return (char *)s + strlen(s);
+  }
   char *r = __strchrnul(s, c);
   return *(char *)r == (char)c ? r : NULL;
 }
