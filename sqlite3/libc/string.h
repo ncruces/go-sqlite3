@@ -71,18 +71,22 @@ int memcmp(const void *v1, const void *v2, size_t n) {
 
 __attribute__((weak))
 void *memchr(const void *v, int c, size_t n) {
+  if (n-- == 0) {
+    return NULL;
+  }
+
   uintptr_t align = (uintptr_t)v % sizeof(v128_t);
   const v128_t *w = (void *)(v - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
-  while (n) {
+  while (true) {
     const v128_t cmp = wasm_i8x16_eq(*w, wc);
     if (wasm_v128_any_true(cmp)) {
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       __builtin_assume(mask || align);
       if (mask) {
         size_t ctz = __builtin_ctz(mask);
-        return ctz < n ? (void *)w + ctz : NULL;
+        return ctz <= n + align ? (void *)w + ctz : NULL;
       }
     }
     if (__builtin_sub_overflow(n, sizeof(v128_t) - align, &n)) {
@@ -91,7 +95,6 @@ void *memchr(const void *v, int c, size_t n) {
     align = 0;
     w++;
   }
-  return NULL;
 }
 
 __attribute__((weak))
@@ -244,6 +247,7 @@ size_t strspn(const char *s, const char *c) {
   volatile v128_t *w = (void *)byteset;
 #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
+
   while (*c && (byteset[*(uint8_t *)c] = 1)) c++;
 #pragma unroll 4
   while (byteset[*(uint8_t *)s]) s++;
@@ -263,6 +267,7 @@ size_t strcspn(const char *s, const char *c) {
   volatile v128_t *w = (void *)byteset;
 #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
+
   while ((byteset[*(uint8_t *)c] = 1) && *c) c++;
 #pragma unroll 4
   while (!byteset[*(uint8_t *)s]) s++;
