@@ -14,6 +14,7 @@ import (
 var binary []byte
 
 const (
+	page = 64 * 1024
 	size = 1024 * 1024 * 4
 	ptr1 = 1024 * 1024
 	ptr2 = ptr1 + size
@@ -35,10 +36,13 @@ var (
 	stack   [8]uint64
 )
 
-func call(fn api.Function, arg ...uint64) uint32 {
+func call(fn api.Function, arg ...uint64) uint64 {
 	copy(stack[:], arg)
-	fn.CallWithStack(context.Background(), stack[:])
-	return uint32(stack[0])
+	err := fn.CallWithStack(context.Background(), stack[:])
+	if err != nil {
+		panic(err)
+	}
+	return stack[0]
 }
 
 func TestMain(m *testing.M) {
@@ -74,170 +78,97 @@ func Benchmark_memset(b *testing.B) {
 	for range b.N {
 		call(memset, ptr1, 3, size)
 	}
-	b.StopTimer()
-
-	for i, got := range memory[ptr1 : ptr1+size] {
-		if got != 3 {
-			b.Fatal(i, got)
-		}
-	}
 }
 
 func Benchmark_memcpy(b *testing.B) {
 	clear(memory)
-	call(memset, ptr2, 5, size)
+	fill(memory[ptr2:ptr2+size], 5)
 
 	b.SetBytes(size)
 	b.ResetTimer()
 	for range b.N {
 		call(memcpy, ptr1, ptr2, size)
 	}
-	b.StopTimer()
-
-	for i, got := range memory[ptr1 : ptr1+size] {
-		if got != 5 {
-			b.Fatal(i, got)
-		}
-	}
 }
 
 func Benchmark_memchr(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size)
-	call(memset, ptr1+size/2, 5, size/2)
+	fill(memory[ptr1:ptr1+size/2], 7)
+	fill(memory[ptr1+size/2:ptr1+size], 5)
 
 	b.SetBytes(size/2 + 1)
 	b.ResetTimer()
 	for range b.N {
 		call(memchr, ptr1, 5, size)
 	}
-	b.StopTimer()
-
-	if got := call(memchr, ptr1, 5, size); got != ptr1+size/2 {
-		b.Fatal(got)
-	}
-	if got := call(memchr, ptr1, 5, size/2); got != 0 {
-		b.Fatal(got, ptr1+size/2)
-	}
 }
 
 func Benchmark_memcmp(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size)
-	call(memset, ptr2, 7, size)
-	call(memset, ptr2+size/2, 5, size/2)
+	fill(memory[ptr1:ptr1+size], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size], 5)
 
 	b.SetBytes(size/2 + 1)
 	b.ResetTimer()
 	for range b.N {
 		call(memcmp, ptr1, ptr2, size)
 	}
-	b.StopTimer()
-
-	// ptr1 > ptr2
-	if got := int32(call(memcmp, ptr1, ptr2, size)); got <= 0 {
-		b.Fatal(got)
-	}
-	// ptr1[:size/2] == ptr2[:size/2]
-	if got := int32(call(memcmp, ptr1, ptr2, size/2)); got != 0 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strlen(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 5, size-1)
+	fill(memory[ptr1:ptr1+size-1], 5)
 
 	b.SetBytes(size)
 	b.ResetTimer()
 	for range b.N {
 		call(strlen, ptr1)
 	}
-	b.StopTimer()
-
-	if got := int32(call(strlen, ptr1)); got != size-1 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strchr(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size-1)
-	call(memset, ptr1+size/2, 5, size/2-1)
+	fill(memory[ptr1:ptr1+size/2], 7)
+	fill(memory[ptr1+size/2:ptr1+size-1], 5)
 
 	b.SetBytes(size/2 + 1)
 	b.ResetTimer()
 	for range b.N {
 		call(strchr, ptr1, 5)
 	}
-	b.StopTimer()
-
-	if got := call(strchr, ptr1, 5); got != ptr1+size/2 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strcmp(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size-1)
-	call(memset, ptr2, 7, size-1)
-	call(memset, ptr2+size/2, 5, size/2-1)
+	fill(memory[ptr1:ptr1+size-1], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size-1], 5)
 
 	b.SetBytes(size/2 + 1)
 	b.ResetTimer()
 	for range b.N {
 		call(strcmp, ptr1, ptr2, size)
 	}
-	b.StopTimer()
-
-	// ptr1 > ptr2
-	if got := int32(call(strcmp, ptr1, ptr2)); got <= 0 {
-		b.Fatal(got)
-	}
-	// make ptr1 < ptr2
-	memory[ptr1+size/2] = 0
-	if got := int32(call(strcmp, ptr1, ptr2)); got >= 0 {
-		b.Fatal(got)
-	}
-	memory[ptr2+size/2] = 0
-	// make ptr1 == ptr2
-	if got := int32(call(strcmp, ptr1, ptr2)); got != 0 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strncmp(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size-1)
-	call(memset, ptr2, 7, size-1)
-	call(memset, ptr2+size/2, 5, size/2-1)
+	fill(memory[ptr1:ptr1+size-1], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size-1], 5)
 
 	b.SetBytes(size/2 + 1)
 	b.ResetTimer()
 	for range b.N {
 		call(strncmp, ptr1, ptr2, size-1)
 	}
-	b.StopTimer()
-
-	// ptr1 > ptr2
-	if got := int32(call(strncmp, ptr1, ptr2, size-1)); got <= 0 {
-		b.Fatal(got)
-	}
-	// make ptr1 < ptr2
-	memory[ptr1+size/2] = 0
-	if got := int32(call(strncmp, ptr1, ptr2, size-1)); got >= 0 {
-		b.Fatal(got)
-	}
-	// ptr1[:size/2] == ptr2[:size/2]
-	if got := int32(call(strncmp, ptr1, ptr2, size/2-1)); got != 0 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strspn(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size-1)
-	call(memset, ptr1+size/2, 5, size/2-1)
+	fill(memory[ptr1:ptr1+size/2], 7)
+	fill(memory[ptr1+size/2:ptr1+size-1], 5)
 	memory[ptr2+0] = 3
 	memory[ptr2+1] = 5
 	memory[ptr2+2] = 7
@@ -248,21 +179,12 @@ func Benchmark_strspn(b *testing.B) {
 	for range b.N {
 		call(strspn, ptr1, ptr2)
 	}
-	b.StopTimer()
-
-	if got := int32(call(strspn, ptr1, ptr2)); got != size-1 {
-		b.Fatal(got)
-	}
-	memory[ptr1+size/2] = 11
-	if got := int32(call(strspn, ptr1, ptr2)); got != size/2 {
-		b.Fatal(got)
-	}
 }
 
 func Benchmark_strcspn(b *testing.B) {
 	clear(memory)
-	call(memset, ptr1, 7, size-1)
-	call(memset, ptr1+size/2, 5, size/2-1)
+	fill(memory[ptr1:ptr1+size/2], 7)
+	fill(memory[ptr1+size/2:ptr1+size-1], 5)
 	memory[ptr2+0] = 3
 	memory[ptr2+1] = 9
 
@@ -271,13 +193,237 @@ func Benchmark_strcspn(b *testing.B) {
 	for range b.N {
 		call(strcspn, ptr1, ptr2)
 	}
-	b.StopTimer()
+}
 
-	if got := int32(call(strcspn, ptr1, ptr2)); got != size-1 {
-		b.Fatal(got)
+func Test_memchr(t *testing.T) {
+	for length := range 64 {
+		for pos := range length + 2 {
+			for alignment := range 24 {
+				clear(memory[:2*page])
+
+				ptr := (page - 8) + alignment
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
+
+				want := 0
+				if pos < length {
+					want = ptr + pos
+				}
+
+				got := call(memchr, uint64(ptr), 7, uint64(length))
+				if uint32(got) != uint32(want) {
+					t.Errorf("memchr(%d, %d, %d) = %d, want %d",
+						ptr, 7, uint64(length), uint32(got), uint32(want))
+				}
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+
+		want := len(memory) - 1
+		if length == 0 {
+			want = 0
+		}
+
+		got := call(memchr, uint64(ptr), 7, uint64(length))
+		if uint32(got) != uint32(want) {
+			t.Errorf("memchr(%d, %d, %d) = %d, want %d",
+				ptr, 7, uint64(length), uint32(got), uint32(want))
+		}
 	}
-	memory[ptr1+size/2] = 3
-	if got := int32(call(strcspn, ptr1, ptr2)); got != size/2 {
-		b.Fatal(got)
+}
+
+func Test_strlen(t *testing.T) {
+	for length := range 64 {
+		for alignment := range 24 {
+			clear(memory[:2*page])
+
+			ptr := (page - 8) + alignment
+			fill(memory[ptr:ptr+length], 5)
+
+			got := call(strlen, uint64(ptr))
+			if uint32(got) != uint32(length) {
+				t.Errorf("strlen(%d) = %d, want %d",
+					ptr, uint32(got), uint32(length))
+			}
+
+			memory[ptr-1] = 5
+			got = call(strlen, uint64(ptr))
+			if uint32(got) != uint32(length) {
+				t.Errorf("strlen(%d) = %d, want %d",
+					ptr, uint32(got), uint32(length))
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length - 1
+		fill(memory[ptr:ptr+length], 5)
+
+		got := call(strlen, uint64(ptr))
+		if uint32(got) != uint32(length) {
+			t.Errorf("strlen(%d) = %d, want %d",
+				ptr, uint32(got), uint32(length))
+		}
+	}
+}
+
+func Test_strchr(t *testing.T) {
+	for length := range 64 {
+		for pos := range length + 2 {
+			for alignment := range 24 {
+				clear(memory[:2*page])
+
+				ptr := (page - 8) + alignment
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
+				memory[ptr+length] = 0
+
+				want := 0
+				if pos < length {
+					want = ptr + pos
+				}
+
+				got := call(strchr, uint64(ptr), 7)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strchr(%d, %d) = %d, want %d",
+						ptr, 7, uint32(got), uint32(want))
+				}
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+
+		want := len(memory) - 1
+		if length == 0 {
+			continue
+		}
+
+		got := call(strchr, uint64(ptr), 7)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strchr(%d, %d) = %d, want %d",
+				ptr, 7, uint32(got), uint32(want))
+		}
+	}
+}
+
+func Test_strspn(t *testing.T) {
+	for length := range 64 {
+		for pos := range length + 2 {
+			for alignment := range 24 {
+				clear(memory[:2*page])
+
+				ptr := (page - 8) + alignment
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
+				memory[ptr+length] = 0
+				memory[128] = 3
+				memory[129] = 5
+
+				want := min(pos, length)
+
+				got := call(strspn, uint64(ptr), 129)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strspn(%d, %d) = %d, want %d",
+						ptr, 129, uint32(got), uint32(want))
+				}
+
+				got = call(strspn, uint64(ptr), 128)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strspn(%d, %d) = %d, want %d",
+						ptr, 128, uint32(got), uint32(want))
+				}
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+		memory[128] = 3
+		memory[129] = 5
+
+		want := length - 1
+		if length == 0 {
+			continue
+		}
+
+		got := call(strspn, uint64(ptr), 129)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strspn(%d, %d) = %d, want %d",
+				ptr, 129, uint32(got), uint32(want))
+		}
+
+		got = call(strspn, uint64(ptr), 128)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strspn(%d, %d) = %d, want %d",
+				ptr, 128, uint32(got), uint32(want))
+		}
+	}
+}
+
+func Test_strcspn(t *testing.T) {
+	for length := range 64 {
+		for pos := range length + 2 {
+			for alignment := range 24 {
+				clear(memory[:2*page])
+
+				ptr := (page - 8) + alignment
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
+				memory[ptr+length] = 0
+				memory[128] = 3
+				memory[129] = 7
+
+				want := min(pos, length)
+
+				got := call(strcspn, uint64(ptr), 129)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strcspn(%d, %d) = %d, want %d",
+						ptr, 129, uint32(got), uint32(want))
+				}
+
+				got = call(strcspn, uint64(ptr), 128)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strcspn(%d, %d) = %d, want %d",
+						ptr, 128, uint32(got), uint32(want))
+				}
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+		memory[128] = 3
+		memory[129] = 7
+
+		want := length - 1
+		if length == 0 {
+			continue
+		}
+
+		got := call(strcspn, uint64(ptr), 129)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strcspn(%d, %d) = %d, want %d",
+				ptr, 129, uint32(got), uint32(want))
+		}
+
+		got = call(strcspn, uint64(ptr), 128)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strcspn(%d, %d) = %d, want %d",
+				ptr, 128, uint32(got), uint32(want))
+		}
+	}
+}
+
+func fill(s []byte, v byte) {
+	for i := range s {
+		s[i] = v
 	}
 }

@@ -23,6 +23,7 @@ EOF
 	-mbulk-memory -mreference-types \
 	-mnontrapping-fptoint -msign-ext \
 	-fno-stack-protector -fno-stack-clash-protection \
+	-Wl,-z,stack-size=1024 \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
 	-Wl,--initial-memory=16777216 \

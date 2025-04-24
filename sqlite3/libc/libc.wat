@@ -4,7 +4,7 @@
  (type $2 (func (param i32) (result i32)))
  (type $3 (func (param i32 i32 i32 i32)))
  (memory $0 256)
- (data $0 (i32.const 65536) "\01")
+ (data $0 (i32.const 1024) "\01")
  (table $0 1 1 funcref)
  (export "memory" (memory $0))
  (export "memset" (func $memset))
@@ -996,67 +996,67 @@
     )
    )
    (v128.store
-    (i32.const 65792)
+    (i32.const 1280)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65776)
+    (i32.const 1264)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65760)
+    (i32.const 1248)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65744)
+    (i32.const 1232)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65728)
+    (i32.const 1216)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65712)
+    (i32.const 1200)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65696)
+    (i32.const 1184)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65680)
+    (i32.const 1168)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65664)
+    (i32.const 1152)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65648)
+    (i32.const 1136)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65632)
+    (i32.const 1120)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65616)
+    (i32.const 1104)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65600)
+    (i32.const 1088)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65584)
+    (i32.const 1072)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65568)
+    (i32.const 1056)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (v128.store
-    (i32.const 65552)
+    (i32.const 1040)
     (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
    )
    (local.set $1
@@ -1072,7 +1072,7 @@
        (local.get $2)
        (i32.const 255)
       )
-      (i32.const 65552)
+      (i32.const 1040)
      )
      (i32.const 1)
     )
@@ -1105,7 +1105,7 @@
            (i32.load8_u
             (local.get $2)
            )
-           (i32.const 65552)
+           (i32.const 1040)
           )
          )
         )
@@ -1117,7 +1117,7 @@
            (i32.load8_u offset=1
             (local.get $2)
            )
-           (i32.const 65552)
+           (i32.const 1040)
           )
          )
         )
@@ -1129,7 +1129,7 @@
            (i32.load8_u offset=2
             (local.get $2)
            )
-           (i32.const 65552)
+           (i32.const 1040)
           )
          )
         )
@@ -1151,7 +1151,7 @@
            )
            (local.get $scratch)
           )
-          (i32.const 65552)
+          (i32.const 1040)
          )
         )
        )
@@ -1214,67 +1214,67 @@
        )
       )
       (v128.store
-       (i32.const 66048)
+       (i32.const 1536)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 66032)
+       (i32.const 1520)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 66016)
+       (i32.const 1504)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 66000)
+       (i32.const 1488)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65984)
+       (i32.const 1472)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65968)
+       (i32.const 1456)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65952)
+       (i32.const 1440)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65936)
+       (i32.const 1424)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65920)
+       (i32.const 1408)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65904)
+       (i32.const 1392)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65888)
+       (i32.const 1376)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65872)
+       (i32.const 1360)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65856)
+       (i32.const 1344)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65840)
+       (i32.const 1328)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65824)
+       (i32.const 1312)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (v128.store
-       (i32.const 65808)
+       (i32.const 1296)
        (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
       )
       (loop $label
@@ -1285,7 +1285,7 @@
            (local.get $1)
           )
          )
-         (i32.const 65808)
+         (i32.const 1296)
         )
         (i32.const 1)
        )
@@ -1309,7 +1309,7 @@
           (i32.load8_u
            (local.get $1)
           )
-          (i32.const 65808)
+          (i32.const 1296)
          )
         )
        )
@@ -1319,7 +1319,7 @@
           (i32.load8_u offset=1
            (local.get $1)
           )
-          (i32.const 65808)
+          (i32.const 1296)
          )
         )
        )
@@ -1329,7 +1329,7 @@
           (i32.load8_u offset=2
            (local.get $1)
           )
-          (i32.const 65808)
+          (i32.const 1296)
          )
         )
        )
@@ -1351,7 +1351,7 @@
             )
             (local.get $scratch)
            )
-           (i32.const 65808)
+           (i32.const 1296)
           )
          )
         )
