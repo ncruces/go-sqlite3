@@ -3,6 +3,9 @@ name: Benchmark libc
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:

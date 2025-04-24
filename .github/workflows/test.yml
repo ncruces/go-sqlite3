@@ -17,12 +17,17 @@ on:
       - '**.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
