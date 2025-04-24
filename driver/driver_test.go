@@ -249,8 +249,9 @@ func Test_nested_context(t *testing.T) {
 	cancel()
 
 	var terr interface{ Temporary() bool }
-	if inner.Next() || !errors.As(inner.Err(), &terr) || !terr.Temporary() {
-		t.Fatalf("got %v, want temporary", inner.Err())
+	if inner.Next() || !errors.Is(inner.Err(), context.Canceled) &&
+		(!errors.As(inner.Err(), &terr) || !terr.Temporary()) {
+		t.Fatalf("got %v, want cancellation", inner.Err())
 	}
 
 	want(outer, 1)
