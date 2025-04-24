@@ -50,7 +50,7 @@ void *memmove(void *dest, const void *src, size_t n) {
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
   // memcmp can read up to n bytes from each object.
-  // Using unaligned loads to handle the case where
+  // Use unaligned loads to handle the case where
   // the objects have mismatching alignments.
   const v128_t *w1 = v1;
   const v128_t *w2 = v2;
@@ -151,7 +151,7 @@ static int __strcmp(const char *s1, const char *s2) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
-  // Using unaligned loads to handle the case where
+  // Use unaligned loads to handle the case where
   // the strings have mismatching alignments.
   const v128_t *w1 = (void *)s1;
   const v128_t *w2 = (void *)s2;
@@ -199,7 +199,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
-  // Using unaligned loads to handle the case where
+  // Use unaligned loads to handle the case where
   // the strings have mismatching alignments.
   const v128_t *w1 = (void *)s1;
   const v128_t *w2 = (void *)s2;
@@ -304,7 +304,7 @@ size_t strspn(const char *s, const char *c) {
     return s - a;
   }
 
-#if defined(__OPTIMIZE_SIZE__) || !defined(__OPTIMIZE__)
+#if !__OPTIMIZE__ || __OPTIMIZE_SIZE__
 
   // Unoptimized version.
   memset(byteset, 0, sizeof(byteset));
@@ -339,7 +339,7 @@ size_t strcspn(const char *s, const char *c) {
 
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-#if defined(__OPTIMIZE_SIZE__) || !defined(__OPTIMIZE__)
+#if !__OPTIMIZE__ || __OPTIMIZE_SIZE__
 
   // Unoptimized version.
   memset(byteset, 0, sizeof(byteset));
