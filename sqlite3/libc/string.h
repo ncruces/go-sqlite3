@@ -25,7 +25,7 @@ void *memset(void *dest, int c, size_t n) {
 }
 
 __attribute__((weak))
-void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
+void *memcpy(void *__restrict dest, const void *__restrict src, size_t n) {
   return __builtin_memcpy(dest, src, n);
 }
 
@@ -52,8 +52,8 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   // memcmp can read up to n bytes from each object.
   // Use unaligned loads to handle the case where
   // the objects have mismatching alignments.
-  const v128_t *w1 = v1;
-  const v128_t *w2 = v2;
+  const v128_t *w1 = (v128_t *)v1;
+  const v128_t *w2 = (v128_t *)v2;
   for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
@@ -64,8 +64,8 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   }
 
   // Continue byte-by-byte.
-  const unsigned char *u1 = (void *)w1;
-  const unsigned char *u2 = (void *)w2;
+  const unsigned char *u1 = (unsigned char *)w1;
+  const unsigned char *u2 = (unsigned char *)w2;
   while (n--) {
     if (*u1 != *u2) return *u1 - *u2;
     u1++;
@@ -87,7 +87,7 @@ void *memchr(const void *v, int c, size_t n) {
   // and stops as soon as a match is found.
   // Aligning ensures loads can't fail.
   uintptr_t align = (uintptr_t)v % sizeof(v128_t);
-  const v128_t *w = (void *)(v - align);
+  const v128_t *w = (v128_t *)((char *)v - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
   while (true) {
@@ -106,7 +106,7 @@ void *memchr(const void *v, int c, size_t n) {
         // We found a match, unless it is beyond the end of the object.
         // Recall that we decremented n, so less-than-or-equal-to is correct.
         size_t ctz = __builtin_ctz(mask);
-        return ctz <= n + align ? (void *)w + ctz : NULL;
+        return ctz <= n + align ? (char *)w + ctz : NULL;
       }
     }
     // Decrement n; if it "overflows" we're done.
@@ -123,7 +123,7 @@ size_t strlen(const char *s) {
   // strlen must stop as soon as it finds the terminator.
   // Aligning ensures loads can't fail.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (void *)(s - align);
+  const v128_t *w = (v128_t *)(s - align);
 
   while (true) {
     // Bitmask is slow on AArch64, all_true is much faster.
@@ -153,8 +153,8 @@ static int __strcmp(const char *s1, const char *s2) {
 
   // Use unaligned loads to handle the case where
   // the strings have mismatching alignments.
-  const v128_t *w1 = (void *)s1;
-  const v128_t *w2 = (void *)s2;
+  const v128_t *w1 = (v128_t *)s1;
+  const v128_t *w2 = (v128_t *)s2;
   while (w1 <= limit && w2 <= limit) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
@@ -170,8 +170,8 @@ static int __strcmp(const char *s1, const char *s2) {
   }
 
   // Continue byte-by-byte.
-  const unsigned char *u1 = (void *)w1;
-  const unsigned char *u2 = (void *)w2;
+  const unsigned char *u1 = (unsigned char *)w1;
+  const unsigned char *u2 = (unsigned char *)w2;
   while (true) {
     if (*u1 != *u2) return *u1 - *u2;
     if (*u1 == 0) break;
@@ -201,8 +201,8 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
   // Use unaligned loads to handle the case where
   // the strings have mismatching alignments.
-  const v128_t *w1 = (void *)s1;
-  const v128_t *w2 = (void *)s2;
+  const v128_t *w1 = (v128_t *)s1;
+  const v128_t *w2 = (v128_t *)s2;
   for (; w1 <= limit && w2 <= limit && n >= sizeof(v128_t); n -= sizeof(v128_t)) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
@@ -218,8 +218,8 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   }
 
   // Continue byte-by-byte.
-  const unsigned char *u1 = (void *)w1;
-  const unsigned char *u2 = (void *)w2;
+  const unsigned char *u1 = (unsigned char *)w1;
+  const unsigned char *u2 = (unsigned char *)w2;
   while (n--) {
     if (*u1 != *u2) return *u1 - *u2;
     if (*u1 == 0) break;
@@ -233,7 +233,7 @@ static char *__strchrnul(const char *s, int c) {
   // strchrnul must stop as soon as a match is found.
   // Aligning ensures loads can't fail.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (void *)(s - align);
+  const v128_t *w = (v128_t *)(s - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
   while (true) {
@@ -290,7 +290,7 @@ size_t strspn(const char *s, const char *c) {
     const v128_t *const limit =
         (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
-    const v128_t *w = (void *)s;
+    const v128_t *w = (v128_t *)s;
     const v128_t wc = wasm_i8x16_splat(*c);
     while (w <= limit) {
       if (!wasm_i8x16_all_true(wasm_i8x16_eq(wasm_v128_load(w), wc))) {
@@ -299,7 +299,7 @@ size_t strspn(const char *s, const char *c) {
       w++;
     }
 
-    s = (void *)w;
+    s = (char *)w;
     while (*s == *c) s++;
     return s - a;
   }
@@ -314,7 +314,7 @@ size_t strspn(const char *s, const char *c) {
 #else
 
   // This is faster than memset.
-  volatile v128_t *w = (void *)byteset;
+  volatile v128_t *w = (v128_t *)byteset;
   #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
   static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
@@ -349,7 +349,7 @@ size_t strcspn(const char *s, const char *c) {
 #else
 
   // This is faster than memset.
-  volatile v128_t *w = (void *)byteset;
+  volatile v128_t *w = (v128_t *)byteset;
   #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
   static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
