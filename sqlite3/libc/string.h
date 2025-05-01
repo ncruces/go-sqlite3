@@ -39,13 +39,6 @@ void *memmove(void *dest, const void *src, size_t n) {
 #ifdef __wasm_simd128__
 
 // SIMD versions of some string.h functions.
-//
-// These assume aligned v128_t loads can't fail,
-// and so can't unaligned loads up to the last
-// aligned address less than memory size.
-//
-// These also assume unaligned access is not painfully slow,
-// but that bitmask extraction is really slow on AArch64.
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
@@ -55,9 +48,13 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   const v128_t *w1 = (v128_t *)v1;
   const v128_t *w2 = (v128_t *)v2;
   for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
-    // Find any single bit difference.
-    if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
-      break;
+    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w1), wasm_v128_load(w2));
+    // Bitmask is slow on AArch64, all_true is much faster.
+    if (!wasm_i8x16_all_true(cmp)) {
+      size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
+      const unsigned char *u1 = (unsigned char *)w1 + ctz;
+      const unsigned char *u2 = (unsigned char *)w2 + ctz;
+      return *u1 - *u2;
     }
     w1++;
     w2++;
@@ -77,7 +74,7 @@ int memcmp(const void *v1, const void *v2, size_t n) {
 __attribute__((weak))
 void *memchr(const void *v, int c, size_t n) {
   // When n is zero, a function that locates a character finds no occurrence.
-  // Otherwise, decrement n to ensure __builtin_sub_overflow "overflows"
+  // Otherwise, decrement n to ensure __builtin_sub_overflow overflows
   // when n would go equal-to-or-below zero.
   if (n-- == 0) {
     return NULL;
@@ -98,7 +95,7 @@ void *memchr(const void *v, int c, size_t n) {
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler. 
+      // Knowing this helps the compiler.
       __builtin_assume(mask || align);
       // If the mask is zero because of alignment,
       // it's as if we didn't find anything.
@@ -109,7 +106,7 @@ void *memchr(const void *v, int c, size_t n) {
         return ctz <= n + align ? (char *)w + ctz : NULL;
       }
     }
-    // Decrement n; if it "overflows" we're done.
+    // Decrement n; if it overflows we're done.
     if (__builtin_sub_overflow(n, sizeof(v128_t) - align, &n)) {
       return NULL;
     }
@@ -133,7 +130,7 @@ size_t strlen(const char *s) {
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler. 
+      // Knowing this helps the compiler.
       __builtin_assume(mask || align);
       if (mask) {
         return (char *)w - s + __builtin_ctz(mask);
@@ -181,12 +178,23 @@ static int __strcmp(const char *s1, const char *s2) {
   return 0;
 }
 
+static int __strcmp_s(const char *s1, const char *s2) {
+  const unsigned char *u1 = (unsigned char *)s1;
+  const unsigned char *u2 = (unsigned char *)s2;
+  while (true) {
+    if (*u1 != *u2) return *u1 - *u2;
+    if (*u1 == 0) break;
+    u1++;
+    u2++;
+  }
+  return 0;
+}
+
 __attribute__((weak, always_inline))
 int strcmp(const char *s1, const char *s2) {
-  // Use strncmp when comparing against literal strings.
-  // If the literal is small, the vector search will be skipped.
-  if (__builtin_constant_p(strlen(s2))) {
-    return strncmp(s1, s2, strlen(s2));
+  // Skip the vector search when comparing against small literal strings.
+  if (__builtin_constant_p(strlen(s2) && strlen(s2) < sizeof(v128_t))) {
+    return __strcmp_s(s1, s2);
   }
   return __strcmp(s1, s2);
 }
@@ -244,7 +252,7 @@ static char *__strchrnul(const char *s, int c) {
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler. 
+      // Knowing this helps the compiler.
       __builtin_assume(mask || align);
       if (mask) {
         return (char *)w + __builtin_ctz(mask);
@@ -277,7 +285,7 @@ char *strchr(const char *s, int c) {
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
 #ifndef _REENTRANT
-  static // Avoid the stack for builds without threads.
+  static  // Avoid the stack for builds without threads.
 #endif
   char byteset[UCHAR_MAX + 1];
   const char *const a = s;
@@ -293,12 +301,16 @@ size_t strspn(const char *s, const char *c) {
     const v128_t *w = (v128_t *)s;
     const v128_t wc = wasm_i8x16_splat(*c);
     while (w <= limit) {
-      if (!wasm_i8x16_all_true(wasm_i8x16_eq(wasm_v128_load(w), wc))) {
-        break;
+      const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w), wc);
+      // Bitmask is slow on AArch64, all_true is much faster.
+      if (!wasm_i8x16_all_true(cmp)) {
+        size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
+        return (char *)w + ctz - s;
       }
       w++;
     }
 
+    // Continue byte-by-byte.
     s = (char *)w;
     while (*s == *c) s++;
     return s - a;
@@ -311,20 +323,21 @@ size_t strspn(const char *s, const char *c) {
   while (*c && (byteset[*(unsigned char *)c] = 1)) c++;
   while (byteset[*(unsigned char *)s]) s++;
 
-#else
+#else  // __OPTIMIZE__
 
   // This is faster than memset.
+  // Going backward helps bounds check elimination.
   volatile v128_t *w = (v128_t *)byteset;
   #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
   static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
 
-  // Keeping byteset[0] = 0 avoids the other loop having to test for it.
+  // Keeping byteset[0] = 0 avoids the next loop needing that check.
   while (*c && (byteset[*(unsigned char *)c] = 1)) c++;
   #pragma unroll 4
   while (byteset[*(unsigned char *)s]) s++;
 
-#endif
+#endif  // __OPTIMIZE__
 
   return s - a;
 }
@@ -332,7 +345,7 @@ size_t strspn(const char *s, const char *c) {
 __attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
 #ifndef _REENTRANT
-  static // Avoid the stack for builds without threads.
+  static  // Avoid the stack for builds without threads.
 #endif
   char byteset[UCHAR_MAX + 1];
   const char *const a = s;
@@ -346,22 +359,29 @@ size_t strcspn(const char *s, const char *c) {
   while ((byteset[*(unsigned char *)c] = 1) && *c) c++;
   while (!byteset[*(unsigned char *)s]) s++;
 
-#else
+#else  // __OPTIMIZE__
 
   // This is faster than memset.
+  // Going backward helps bounds check elimination.
   volatile v128_t *w = (v128_t *)byteset;
   #pragma unroll
   for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
   static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
 
-  // Setting byteset[0] = 1 avoids the other loop having to test for it.
+  // Setting byteset[0] = 1 avoids the next loop needing that check.
   while ((byteset[*(unsigned char *)c] = 1) && *c) c++;
   #pragma unroll 4
   while (!byteset[*(unsigned char *)s]) s++;
 
-#endif
+#endif  // __OPTIMIZE__
 
   return s - a;
+}
+
+__attribute__((weak, always_inline))
+char *strpbrk(const char *s, const char *b) {
+	s += strcspn(s, b);
+	return *s ? (char *)s : 0;
 }
 
 #endif  // __wasm_simd128__
