@@ -16,6 +16,7 @@
  (export "strncmp" (func $strncmp))
  (export "strchrnul" (func $strchrnul))
  (export "strchr" (func $strchr))
+ (export "strrchr" (func $strrchr))
  (export "strspn" (func $strspn))
  (export "strcspn" (func $strcspn))
  (export "qsort" (func $qsort))
@@ -908,6 +909,126 @@
      (i32.const 255)
     )
    )
+  )
+ )
+ (func $strrchr (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 v128)
+  (local $4 v128)
+  (block $block1 (result i32)
+   (block $block
+    (br_if $block
+     (i32.lt_u
+      (local.tee $2
+       (i32.add
+        (call $strlen
+         (local.get $0)
+        )
+        (i32.const 1)
+       )
+      )
+      (i32.const 16)
+     )
+    )
+    (local.set $3
+     (i8x16.splat
+      (local.get $1)
+     )
+    )
+    (loop $label
+     (if
+      (i32.eqz
+       (v128.any_true
+        (local.tee $4
+         (i8x16.eq
+          (v128.load align=1
+           (i32.sub
+            (i32.add
+             (local.get $0)
+             (local.get $2)
+            )
+            (i32.const 16)
+           )
+          )
+          (local.get $3)
+         )
+        )
+       )
+      )
+      (then
+       (br_if $label
+        (i32.gt_u
+         (local.tee $2
+          (i32.sub
+           (local.get $2)
+           (i32.const 16)
+          )
+         )
+         (i32.const 15)
+        )
+       )
+       (br $block)
+      )
+     )
+    )
+    (br $block1
+     (i32.add
+      (i32.add
+       (i32.sub
+        (local.get $0)
+        (i32.clz
+         (i8x16.bitmask
+          (local.get $4)
+         )
+        )
+       )
+       (local.get $2)
+      )
+      (i32.const 15)
+     )
+    )
+   )
+   (local.set $0
+    (i32.add
+     (local.get $0)
+     (local.get $2)
+    )
+   )
+   (local.set $1
+    (i32.extend8_s
+     (local.get $1)
+    )
+   )
+   (loop $label1
+    (drop
+     (br_if $block1
+      (i32.const 0)
+      (i32.eqz
+       (local.get $2)
+      )
+     )
+    )
+    (local.set $2
+     (i32.sub
+      (local.get $2)
+      (i32.const 1)
+     )
+    )
+    (br_if $label1
+     (i32.ne
+      (local.get $1)
+      (i32.load8_s
+       (local.tee $0
+        (i32.sub
+         (local.get $0)
+         (i32.const 1)
+        )
+       )
+      )
+     )
+    )
+   )
+   (local.get $0)
   )
  )
  (func $strspn (param $0 i32) (param $1 i32) (result i32)

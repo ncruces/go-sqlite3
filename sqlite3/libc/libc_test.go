@@ -31,6 +31,7 @@ var (
 	strchr  api.Function
 	strcmp  api.Function
 	strspn  api.Function
+	strrchr api.Function
 	strncmp api.Function
 	strcspn api.Function
 	stack   [8]uint64
@@ -63,6 +64,7 @@ func TestMain(m *testing.M) {
 	strchr = mod.ExportedFunction("strchr")
 	strcmp = mod.ExportedFunction("strcmp")
 	strspn = mod.ExportedFunction("strspn")
+	strrchr = mod.ExportedFunction("strrchr")
 	strncmp = mod.ExportedFunction("strncmp")
 	strcspn = mod.ExportedFunction("strcspn")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
@@ -139,6 +141,18 @@ func Benchmark_strchr(b *testing.B) {
 	}
 }
 
+func Benchmark_strrchr(b *testing.B) {
+	clear(memory)
+	fill(memory[ptr1:ptr1+size/2], 5)
+	fill(memory[ptr1+size/2:ptr1+size-1], 7)
+
+	b.SetBytes(size/2 + 1)
+	b.ResetTimer()
+	for range b.N {
+		call(strrchr, ptr1, 5)
+	}
+}
+
 func Benchmark_strcmp(b *testing.B) {
 	clear(memory)
 	fill(memory[ptr1:ptr1+size-1], 7)
@@ -199,16 +213,15 @@ func Test_memchr(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
 			for alignment := range 24 {
-				clear(memory[:2*page])
-
 				ptr := (page - 8) + alignment
-				fill(memory[ptr:ptr+max(pos, length)], 5)
-				memory[ptr+pos] = 7
-
 				want := 0
 				if pos < length {
 					want = ptr + pos
 				}
+
+				clear(memory[:2*page])
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
 
 				got := call(memchr, uint64(ptr), 7, uint64(length))
 				if uint32(got) != uint32(want) {
@@ -239,9 +252,9 @@ func Test_memchr(t *testing.T) {
 func Test_strlen(t *testing.T) {
 	for length := range 64 {
 		for alignment := range 24 {
-			clear(memory[:2*page])
-
 			ptr := (page - 8) + alignment
+
+			clear(memory[:2*page])
 			fill(memory[ptr:ptr+length], 5)
 
 			got := call(strlen, uint64(ptr))
@@ -274,17 +287,17 @@ func Test_strchr(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
 			for alignment := range 24 {
-				clear(memory[:2*page])
-
 				ptr := (page - 8) + alignment
-				fill(memory[ptr:ptr+max(pos, length)], 5)
-				memory[ptr+pos] = 7
-				memory[ptr+length] = 0
-
 				want := 0
 				if pos < length {
 					want = ptr + pos
 				}
+
+				clear(memory[:2*page])
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr+pos] = 7
+				memory[ptr+pos+1] = 7
+				memory[ptr+length] = 0
 
 				got := call(strchr, uint64(ptr), 7)
 				if uint32(got) != uint32(want) {
@@ -312,20 +325,65 @@ func Test_strchr(t *testing.T) {
 	}
 }
 
+func Test_strrchr(t *testing.T) {
+	for length := range 64 {
+		for pos := range length + 2 {
+			for alignment := range 24 {
+				ptr := (page - 8) + alignment
+				want := 0
+				if pos < length {
+					want = ptr + pos
+				} else if length > 0 {
+					want = ptr
+				}
+
+				clear(memory[:2*page])
+				fill(memory[ptr:ptr+max(pos, length)], 5)
+				memory[ptr] = 7
+				memory[ptr+pos] = 7
+				memory[ptr+length] = 0
+
+				got := call(strrchr, uint64(ptr), 7)
+				if uint32(got) != uint32(want) {
+					t.Errorf("strrchr(%d, %d) = %d, want %d",
+						ptr, 7, uint32(got), uint32(want))
+				}
+			}
+		}
+
+		ptr := len(memory) - length
+		want := len(memory) - 2
+		if length <= 1 {
+			continue
+		}
+
+		clear(memory)
+		fill(memory[ptr:ptr+length], 5)
+		memory[ptr] = 7
+		memory[len(memory)-2] = 7
+		memory[len(memory)-1] = 0
+
+		got := call(strrchr, uint64(ptr), 7)
+		if uint32(got) != uint32(want) {
+			t.Errorf("strrchr(%d, %d) = %d, want %d",
+				ptr, 7, uint32(got), uint32(want))
+		}
+	}
+}
+
 func Test_strspn(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
 			for alignment := range 24 {
-				clear(memory[:2*page])
-
 				ptr := (page - 8) + alignment
+				want := min(pos, length)
+
+				clear(memory[:2*page])
 				fill(memory[ptr:ptr+max(pos, length)], 5)
 				memory[ptr+pos] = 7
 				memory[ptr+length] = 0
 				memory[128] = 3
 				memory[129] = 5
-
-				want := min(pos, length)
 
 				got := call(strspn, uint64(ptr), 129)
 				if uint32(got) != uint32(want) {
@@ -341,17 +399,17 @@ func Test_strspn(t *testing.T) {
 			}
 		}
 
-		clear(memory)
 		ptr := len(memory) - length
-		fill(memory[ptr:ptr+length], 5)
-		memory[len(memory)-1] = 7
-		memory[128] = 3
-		memory[129] = 5
-
 		want := length - 1
 		if length == 0 {
 			continue
 		}
+
+		clear(memory)
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+		memory[128] = 3
+		memory[129] = 5
 
 		got := call(strspn, uint64(ptr), 129)
 		if uint32(got) != uint32(want) {
@@ -371,16 +429,15 @@ func Test_strcspn(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
 			for alignment := range 24 {
-				clear(memory[:2*page])
-
 				ptr := (page - 8) + alignment
+				want := min(pos, length)
+
+				clear(memory[:2*page])
 				fill(memory[ptr:ptr+max(pos, length)], 5)
 				memory[ptr+pos] = 7
 				memory[ptr+length] = 0
 				memory[128] = 3
 				memory[129] = 7
-
-				want := min(pos, length)
 
 				got := call(strcspn, uint64(ptr), 129)
 				if uint32(got) != uint32(want) {
@@ -396,17 +453,17 @@ func Test_strcspn(t *testing.T) {
 			}
 		}
 
-		clear(memory)
 		ptr := len(memory) - length
-		fill(memory[ptr:ptr+length], 5)
-		memory[len(memory)-1] = 7
-		memory[128] = 3
-		memory[129] = 7
-
 		want := length - 1
 		if length == 0 {
 			continue
 		}
+
+		clear(memory)
+		fill(memory[ptr:ptr+length], 5)
+		memory[len(memory)-1] = 7
+		memory[128] = 3
+		memory[129] = 7
 
 		got := call(strcspn, uint64(ptr), 129)
 		if uint32(got) != uint32(want) {

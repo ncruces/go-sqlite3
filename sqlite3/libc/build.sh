@@ -37,6 +37,7 @@ EOF
 	-Wl,--export=strcspn \
 	-Wl,--export=strlen \
 	-Wl,--export=strncmp \
+	-Wl,--export=strrchr \
 	-Wl,--export=strspn \
 	-Wl,--export=qsort
 

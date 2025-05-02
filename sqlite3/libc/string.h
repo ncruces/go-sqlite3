@@ -42,15 +42,17 @@ void *memmove(void *dest, const void *src, size_t n) {
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
-  // memcmp can read up to n bytes from each object.
-  // Use unaligned loads to handle the case where
-  // the objects have mismatching alignments.
+  // memcmp is allowed to read up to n bytes from each object.
+  // Find the first different character in the objects.
+  // Unaligned loads handle the case where the objects
+  // have mismatching alignments.
   const v128_t *w1 = (v128_t *)v1;
   const v128_t *w2 = (v128_t *)v2;
   for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
     const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w1), wasm_v128_load(w2));
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
+      // Find the offset of the first zero bit (little-endian).
       size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
       const unsigned char *u1 = (unsigned char *)w1 + ctz;
       const unsigned char *u2 = (unsigned char *)w2 + ctz;
@@ -60,7 +62,7 @@ int memcmp(const void *v1, const void *v2, size_t n) {
     w2++;
   }
 
-  // Continue byte-by-byte.
+  // Baseline algorithm.
   const unsigned char *u1 = (unsigned char *)w1;
   const unsigned char *u2 = (unsigned char *)w2;
   while (n--) {
@@ -74,7 +76,7 @@ int memcmp(const void *v1, const void *v2, size_t n) {
 __attribute__((weak))
 void *memchr(const void *v, int c, size_t n) {
   // When n is zero, a function that locates a character finds no occurrence.
-  // Otherwise, decrement n to ensure __builtin_sub_overflow overflows
+  // Otherwise, decrement n to ensure sub_overflow overflows
   // when n would go equal-to-or-below zero.
   if (n-- == 0) {
     return NULL;
@@ -82,16 +84,16 @@ void *memchr(const void *v, int c, size_t n) {
 
   // memchr must behave as if it reads characters sequentially
   // and stops as soon as a match is found.
-  // Aligning ensures loads can't fail.
+  // Aligning ensures loads beyond the first match don't fail.
   uintptr_t align = (uintptr_t)v % sizeof(v128_t);
   const v128_t *w = (v128_t *)((char *)v - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
-  while (true) {
+  for (;;) {
     const v128_t cmp = wasm_i8x16_eq(*w, wc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Clear the bits corresponding to alignment
+      // Clear the bits corresponding to alignment (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
@@ -116,17 +118,40 @@ void *memchr(const void *v, int c, size_t n) {
 }
 
 __attribute__((weak))
+void *memrchr(const void *v, int c, size_t n) {
+  // memrchr is allowed to read up to n bytes from the object.
+  // Search backward for the last matching character.
+  const v128_t *w = (v128_t *)((char *)v + n);
+  const v128_t wc = wasm_i8x16_splat(c);
+  for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
+    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(--w), wc);
+    // Bitmask is slow on AArch64, any_true is much faster.
+    if (wasm_v128_any_true(cmp)) {
+      size_t clz = __builtin_clz(wasm_i8x16_bitmask(cmp)) - 15;
+      return (char *)(w + 1) - clz;
+    }
+  }
+
+  // Baseline algorithm.
+  const char *a = (char *)w;
+  while (n--) {
+    if (*(--a) == (char)c) return (char *)a;
+  }
+  return NULL;
+}
+
+__attribute__((weak))
 size_t strlen(const char *s) {
   // strlen must stop as soon as it finds the terminator.
-  // Aligning ensures loads can't fail.
+  // Aligning ensures loads beyond the terminator don't fail.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (v128_t *)(s - align);
 
-  while (true) {
+  for (;;) {
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(*w)) {
       const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){});
-      // Clear the bits corresponding to alignment
+      // Clear the bits corresponding to alignment (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
@@ -148,17 +173,19 @@ static int __strcmp(const char *s1, const char *s2) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
-  // Use unaligned loads to handle the case where
-  // the strings have mismatching alignments.
+  // Unaligned loads handle the case where the strings
+  // have mismatching alignments.
   const v128_t *w1 = (v128_t *)s1;
   const v128_t *w2 = (v128_t *)s2;
   while (w1 <= limit && w2 <= limit) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
+      // The strings may still be equal,
+      // if the terminator is found before that difference.
       break;
     }
-    // All bytes are equal.
-    // If any byte is zero (on both strings) the strings are equal.
+    // All characters are equal.
+    // If any is a terminator the strings are equal.
     if (!wasm_i8x16_all_true(wasm_v128_load(w1))) {
       return 0;
     }
@@ -166,10 +193,10 @@ static int __strcmp(const char *s1, const char *s2) {
     w2++;
   }
 
-  // Continue byte-by-byte.
+  // Baseline algorithm.
   const unsigned char *u1 = (unsigned char *)w1;
   const unsigned char *u2 = (unsigned char *)w2;
-  while (true) {
+  for (;;) {
     if (*u1 != *u2) return *u1 - *u2;
     if (*u1 == 0) break;
     u1++;
@@ -181,7 +208,7 @@ static int __strcmp(const char *s1, const char *s2) {
 static int __strcmp_s(const char *s1, const char *s2) {
   const unsigned char *u1 = (unsigned char *)s1;
   const unsigned char *u2 = (unsigned char *)s2;
-  while (true) {
+  for (;;) {
     if (*u1 != *u2) return *u1 - *u2;
     if (*u1 == 0) break;
     u1++;
@@ -207,17 +234,19 @@ int strncmp(const char *s1, const char *s2, size_t n) {
   const v128_t *const limit =
       (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
 
-  // Use unaligned loads to handle the case where
-  // the strings have mismatching alignments.
+  // Unaligned loads handle the case where the strings
+  // have mismatching alignments.
   const v128_t *w1 = (v128_t *)s1;
   const v128_t *w2 = (v128_t *)s2;
   for (; w1 <= limit && w2 <= limit && n >= sizeof(v128_t); n -= sizeof(v128_t)) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
+      // The strings may still be equal,
+      // if the terminator is found before that difference.
       break;
     }
-    // All bytes are equal.
-    // If any byte is zero (on both strings) the strings are equal.
+    // All characters are equal.
+    // If any is a terminator the strings are equal.
     if (!wasm_i8x16_all_true(wasm_v128_load(w1))) {
       return 0;
     }
@@ -225,7 +254,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
     w2++;
   }
 
-  // Continue byte-by-byte.
+  // Baseline algorithm.
   const unsigned char *u1 = (unsigned char *)w1;
   const unsigned char *u2 = (unsigned char *)w2;
   while (n--) {
@@ -239,16 +268,16 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
 static char *__strchrnul(const char *s, int c) {
   // strchrnul must stop as soon as a match is found.
-  // Aligning ensures loads can't fail.
+  // Aligning ensures loads beyond the first match don't fail.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (v128_t *)(s - align);
   const v128_t wc = wasm_i8x16_splat(c);
 
-  while (true) {
+  for (;;) {
     const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){}) | wasm_i8x16_eq(*w, wc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Clear the bits corresponding to alignment
+      // Clear the bits corresponding to alignment (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
       // At least one bit will be set, unless we cleared them.
@@ -279,7 +308,16 @@ char *strchr(const char *s, int c) {
     return (char *)s + strlen(s);
   }
   char *r = __strchrnul(s, c);
-  return *(char *)r == (char)c ? r : NULL;
+  return *r == (char)c ? r : NULL;
+}
+
+__attribute__((weak, always_inline))
+char *strrchr(const char *s, int c) {
+  // For finding the terminator, strlen is faster.
+  if (__builtin_constant_p(c) && (char)c == 0) {
+    return (char *)s + strlen(s);
+  }
+  return (char *)memrchr(s, c, strlen(s) + 1);
 }
 
 __attribute__((weak))
@@ -310,7 +348,7 @@ size_t strspn(const char *s, const char *c) {
       w++;
     }
 
-    // Continue byte-by-byte.
+    // Baseline algorithm.
     s = (char *)w;
     while (*s == *c) s++;
     return s - a;
