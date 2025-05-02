@@ -38,7 +38,7 @@ void *memmove(void *dest, const void *src, size_t n) {
 
 #ifdef __wasm_simd128__
 
-// SIMD versions of some string.h functions.
+// SIMD implementations of string.h functions.
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
@@ -220,7 +220,7 @@ static int __strcmp_s(const char *s1, const char *s2) {
 __attribute__((weak, always_inline))
 int strcmp(const char *s1, const char *s2) {
   // Skip the vector search when comparing against small literal strings.
-  if (__builtin_constant_p(strlen(s2) && strlen(s2) < sizeof(v128_t))) {
+  if (__builtin_constant_p(strlen(s2)) && strlen(s2) < sizeof(v128_t)) {
     return __strcmp_s(s1, s2);
   }
   return __strcmp(s1, s2);
@@ -317,6 +317,9 @@ char *strrchr(const char *s, int c) {
   if (__builtin_constant_p(c) && (char)c == 0) {
     return (char *)s + strlen(s);
   }
+  // This could also be implemented in a single pass using strchr,
+  // advancing to the next match until no more matches are found.
+  // That would be suboptimal with lots of consecutive matches.
   return (char *)memrchr(s, c, strlen(s) + 1);
 }
 
@@ -416,10 +419,67 @@ size_t strcspn(const char *s, const char *c) {
   return s - a;
 }
 
+// Given the above SIMD implementations,
+// these are best implemented as
+// small wrappers over those functions.
+
+// Simple wrappers from musl:
+//  - mempcpy
+//  - strcat
+//  - strdup
+//  - strndup
+//  - strnlen
+//  - strpbrk
+//  - strsep
+//  - strtok
+
 __attribute__((weak, always_inline))
-char *strpbrk(const char *s, const char *b) {
-	s += strcspn(s, b);
-	return *s ? (char *)s : 0;
+void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n) {
+  const void *m = memchr(src, c, n);
+  if (m != NULL) {
+    n = (char *)m - (char *)src + 1;
+    m = (char *)dest + n;
+  }
+  memcpy(dest, src, n);
+  return (void *)m;
+}
+
+__attribute__((weak, always_inline))
+char *stpcpy(char *__restrict dest, const char *__restrict src) {
+  size_t slen = strlen(src);
+  memcpy(dest, src, slen + 1);
+  return dest + slen;
+}
+
+__attribute__((weak, always_inline))
+char *stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+  size_t strnlen(const char *s, size_t n);
+  size_t slen = strnlen(src, n);
+  memcpy(dest, src, slen);
+  memset(dest + slen, 0, n - slen);
+  return dest + slen;
+}
+
+__attribute__((weak, always_inline))
+char *strcpy(char *__restrict dest, const char *__restrict src) {
+  stpcpy(dest, src);
+  return dest;
+}
+
+__attribute__((weak, always_inline))
+char *strncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+  stpncpy(dest, src, n);
+  return dest;
+}
+
+__attribute__((weak, always_inline))
+char *strncat(char *__restrict dest, const char *__restrict src, size_t n) {
+  size_t strnlen(const char *s, size_t n);
+  size_t dlen = strlen(dest);
+  size_t slen = strnlen(src, n);
+  memcpy(dest + dlen, src, slen);
+  dest[dlen + slen] = 0;
+  return dest;
 }
 
 #endif  // __wasm_simd128__
