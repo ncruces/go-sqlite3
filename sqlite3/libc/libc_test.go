@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/tetratelabs/wazero"
@@ -209,6 +210,155 @@ func Benchmark_strcspn(b *testing.B) {
 	}
 }
 
+func Test_memcmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	p1 := ptr1
+	p2 := len(memory) - len(s2)
+
+	clear(memory)
+	copy(memory[p1:], s1)
+	copy(memory[p2:], s2)
+
+	for i := range len(s1) + 1 {
+		for j := range len(s1) - i {
+			want := strings.Compare(s1[i:i+j], s2[i:i+j])
+			got := call(memcmp, uint64(p1+i), uint64(p2+i), uint64(j))
+			if sign(int32(got)) != want {
+				t.Errorf("strcmp(%d, %d, %d) = %d, want %d",
+					ptr1+i, ptr2+i, j, int32(got), want)
+			}
+		}
+	}
+}
+
+func Test_strcmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	p1 := ptr1
+	p2 := len(memory) - len(s2) - 1
+
+	clear(memory)
+	copy(memory[p1:], s1)
+	copy(memory[p2:], s2)
+
+	for i := range len(s1) + 1 {
+		want := strings.Compare(term(s1[i:]), term(s2[i:]))
+		got := call(strcmp, uint64(p1+i), uint64(p2+i))
+		if sign(int32(got)) != want {
+			t.Errorf("strcmp(%d, %d) = %d, want %d",
+				p1+i, ptr2+i, int32(got), want)
+		}
+	}
+}
+
+func Test_strncmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	p1 := ptr1
+	p2 := len(memory) - len(s2) - 1
+
+	clear(memory)
+	copy(memory[p1:], s1)
+	copy(memory[p2:], s2)
+
+	for i := range len(s1) + 1 {
+		for j := range len(s1) - i + 1 {
+			want := strings.Compare(term(s1[i:i+j]), term(s2[i:i+j]))
+			got := call(strncmp, uint64(p1+i), uint64(p2+i), uint64(j))
+			if sign(int32(got)) != want {
+				t.Errorf("strncmp(%d, %d, %d) = %d, want %d",
+					ptr1+i, ptr2+i, j, int32(got), want)
+			}
+		}
+	}
+}
+
+func Test_strlen(t *testing.T) {
+	for length := range 64 {
+		for alignment := range 24 {
+			ptr := (page - 8) + alignment
+
+			clear(memory[:2*page])
+			fill(memory[ptr:ptr+length], 5)
+
+			got := call(strlen, uint64(ptr))
+			if uint32(got) != uint32(length) {
+				t.Errorf("strlen(%d) = %d, want %d",
+					ptr, uint32(got), uint32(length))
+			}
+
+			memory[ptr-1] = 5
+			got = call(strlen, uint64(ptr))
+			if uint32(got) != uint32(length) {
+				t.Errorf("strlen(%d) = %d, want %d",
+					ptr, uint32(got), uint32(length))
+			}
+		}
+
+		clear(memory)
+		ptr := len(memory) - length - 1
+		fill(memory[ptr:ptr+length], 5)
+
+		got := call(strlen, uint64(ptr))
+		if uint32(got) != uint32(length) {
+			t.Errorf("strlen(%d) = %d, want %d",
+				ptr, uint32(got), uint32(length))
+		}
+	}
+}
+
 func Test_memchr(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
@@ -245,40 +395,6 @@ func Test_memchr(t *testing.T) {
 		if uint32(got) != uint32(want) {
 			t.Errorf("memchr(%d, %d, %d) = %d, want %d",
 				ptr, 7, uint64(length), uint32(got), uint32(want))
-		}
-	}
-}
-
-func Test_strlen(t *testing.T) {
-	for length := range 64 {
-		for alignment := range 24 {
-			ptr := (page - 8) + alignment
-
-			clear(memory[:2*page])
-			fill(memory[ptr:ptr+length], 5)
-
-			got := call(strlen, uint64(ptr))
-			if uint32(got) != uint32(length) {
-				t.Errorf("strlen(%d) = %d, want %d",
-					ptr, uint32(got), uint32(length))
-			}
-
-			memory[ptr-1] = 5
-			got = call(strlen, uint64(ptr))
-			if uint32(got) != uint32(length) {
-				t.Errorf("strlen(%d) = %d, want %d",
-					ptr, uint32(got), uint32(length))
-			}
-		}
-
-		clear(memory)
-		ptr := len(memory) - length - 1
-		fill(memory[ptr:ptr+length], 5)
-
-		got := call(strlen, uint64(ptr))
-		if uint32(got) != uint32(length) {
-			t.Errorf("strlen(%d) = %d, want %d",
-				ptr, uint32(got), uint32(length))
 		}
 	}
 }
@@ -483,4 +599,22 @@ func fill(s []byte, v byte) {
 	for i := range s {
 		s[i] = v
 	}
+}
+
+func sign(x int32) int {
+	switch {
+	case x > 0:
+		return +1
+	case x < 0:
+		return -1
+	default:
+		return 0
+	}
+}
+
+func term(s string) string {
+	if i := strings.IndexByte(s, 0); i >= 0 {
+		return s[:i]
+	}
+	return s
 }

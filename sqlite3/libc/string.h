@@ -56,6 +56,8 @@ int memcmp(const void *v1, const void *v2, size_t n) {
       size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
       const unsigned char *u1 = (unsigned char *)w1 + ctz;
       const unsigned char *u2 = (unsigned char *)w2 + ctz;
+      // This may help the compiler if the function is inlined.
+      __builtin_assume(*u1 - *u2 != 0);
       return *u1 - *u2;
     }
     w1++;
@@ -423,7 +425,7 @@ size_t strcspn(const char *s, const char *c) {
 // these are best implemented as
 // small wrappers over those functions.
 
-// Simple wrappers from musl:
+// Simple wrappers already in musl:
 //  - mempcpy
 //  - strcat
 //  - strdup
