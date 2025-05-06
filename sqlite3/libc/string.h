@@ -42,13 +42,25 @@ void *memmove(void *dest, const void *src, size_t n) {
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
+  // Baseline algorithm.
+  if (n < sizeof(v128_t)) {
+    const unsigned char *u1 = (unsigned char *)v1;
+    const unsigned char *u2 = (unsigned char *)v2;
+    while (n--) {
+      if (*u1 != *u2) return *u1 - *u2;
+      u1++;
+      u2++;
+    }
+    return 0;
+  }
+
   // memcmp is allowed to read up to n bytes from each object.
   // Find the first different character in the objects.
   // Unaligned loads handle the case where the objects
   // have mismatching alignments.
   const v128_t *w1 = (v128_t *)v1;
   const v128_t *w2 = (v128_t *)v2;
-  for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
+  while (n) {
     const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w1), wasm_v128_load(w2));
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
@@ -60,17 +72,12 @@ int memcmp(const void *v1, const void *v2, size_t n) {
       __builtin_assume(*u1 - *u2 != 0);
       return *u1 - *u2;
     }
-    w1++;
-    w2++;
-  }
-
-  // Baseline algorithm.
-  const unsigned char *u1 = (unsigned char *)w1;
-  const unsigned char *u2 = (unsigned char *)w2;
-  while (n--) {
-    if (*u1 != *u2) return *u1 - *u2;
-    u1++;
-    u2++;
+    // This makes n a multiple of sizeof(v128_t)
+    // for every iteration except the first.
+    size_t align = (n - 1) % sizeof(v128_t) + 1;
+    w1 = (v128_t *)((char *)w1 + align);
+    w2 = (v128_t *)((char *)w2 + align);
+    n -= align;
   }
   return 0;
 }
@@ -359,29 +366,13 @@ size_t strspn(const char *s, const char *c) {
     return s - a;
   }
 
-#if !__OPTIMIZE__ || __OPTIMIZE_SIZE__
-
-  // Unoptimized version.
   memset(byteset, 0, sizeof(byteset));
-  while (*c && (byteset[*(unsigned char *)c] = 1)) c++;
-  while (byteset[*(unsigned char *)s]) s++;
-
-#else  // __OPTIMIZE__
-
-  // This is faster than memset.
-  // Going backward helps bounds check elimination.
-  volatile v128_t *w = (v128_t *)byteset;
-  #pragma unroll
-  for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
-  static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
-
   // Keeping byteset[0] = 0 avoids the next loop needing that check.
   while (*c && (byteset[*(unsigned char *)c] = 1)) c++;
-  #pragma unroll 4
+#if __OPTIMIZE__ && !__OPTIMIZE_SIZE__
+#pragma unroll 4
+#endif
   while (byteset[*(unsigned char *)s]) s++;
-
-#endif  // __OPTIMIZE__
-
   return s - a;
 }
 
@@ -395,29 +386,13 @@ size_t strcspn(const char *s, const char *c) {
 
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-#if !__OPTIMIZE__ || __OPTIMIZE_SIZE__
-
-  // Unoptimized version.
   memset(byteset, 0, sizeof(byteset));
-  while ((byteset[*(unsigned char *)c] = 1) && *c) c++;
-  while (!byteset[*(unsigned char *)s]) s++;
-
-#else  // __OPTIMIZE__
-
-  // This is faster than memset.
-  // Going backward helps bounds check elimination.
-  volatile v128_t *w = (v128_t *)byteset;
-  #pragma unroll
-  for (size_t i = sizeof(byteset) / sizeof(v128_t); i--;) w[i] = (v128_t){};
-  static_assert(sizeof(byteset) % sizeof(v128_t) == 0);
-
   // Setting byteset[0] = 1 avoids the next loop needing that check.
   while ((byteset[*(unsigned char *)c] = 1) && *c) c++;
-  #pragma unroll 4
+#if __OPTIMIZE__ && !__OPTIMIZE_SIZE__
+#pragma unroll 4
+#endif
   while (!byteset[*(unsigned char *)s]) s++;
-
-#endif  // __OPTIMIZE__
-
   return s - a;
 }
 
@@ -435,8 +410,9 @@ size_t strcspn(const char *s, const char *c) {
 //  - strsep
 //  - strtok
 
-__attribute__((weak, always_inline))
+__attribute__((weak))
 void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n) {
+  void *memchr(const void *v, int c, size_t n);
   const void *m = memchr(src, c, n);
   if (m != NULL) {
     n = (char *)m - (char *)src + 1;
@@ -446,15 +422,23 @@ void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n
   return (void *)m;
 }
 
-__attribute__((weak, always_inline))
-char *stpcpy(char *__restrict dest, const char *__restrict src) {
+__attribute__((weak))
+char *strncat(char *__restrict dest, const char *__restrict src, size_t n) {
+  size_t strnlen(const char *s, size_t n);
+  size_t dlen = strlen(dest);
+  size_t slen = strnlen(src, n);
+  memcpy(dest + dlen, src, slen);
+  dest[dlen + slen] = 0;
+  return dest;
+}
+
+static char *__stpcpy(char *__restrict dest, const char *__restrict src) {
   size_t slen = strlen(src);
   memcpy(dest, src, slen + 1);
   return dest + slen;
 }
 
-__attribute__((weak, always_inline))
-char *stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+static char *__stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
   size_t strnlen(const char *s, size_t n);
   size_t slen = strnlen(src, n);
   memcpy(dest, src, slen);
@@ -463,24 +447,23 @@ char *stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
 }
 
 __attribute__((weak, always_inline))
+char *stpcpy(char *__restrict dest, const char *__restrict src) {
+  return __stpcpy(dest, src);
+}
+
 char *strcpy(char *__restrict dest, const char *__restrict src) {
-  stpcpy(dest, src);
+  __stpcpy(dest, src);
   return dest;
+}
+
+__attribute__((weak, always_inline))
+char *stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+  return __stpncpy(dest, src, n);
 }
 
 __attribute__((weak, always_inline))
 char *strncpy(char *__restrict dest, const char *__restrict src, size_t n) {
-  stpncpy(dest, src, n);
-  return dest;
-}
-
-__attribute__((weak, always_inline))
-char *strncat(char *__restrict dest, const char *__restrict src, size_t n) {
-  size_t strnlen(const char *s, size_t n);
-  size_t dlen = strlen(dest);
-  size_t slen = strnlen(src, n);
-  memcpy(dest + dlen, src, slen);
-  dest[dlen + slen] = 0;
+  __stpncpy(dest, src, n);
   return dest;
 }
 

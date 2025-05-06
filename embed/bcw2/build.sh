@@ -43,8 +43,8 @@ cd ~-
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-	-o bcw2.wasm "build/main.c" \
-	-I"build" \
+	-o bcw2.wasm build/main.c \
+	-I"$ROOT/sqlite3/libc" -I"build" \
 	-mexec-model=reactor \
 	-msimd128 -mmutable-globals -mmultivalue \
 	-mbulk-memory -mreference-types \

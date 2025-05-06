@@ -27,16 +27,24 @@ EOF
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
 	-Wl,--initial-memory=16777216 \
+	-Wl,--export=memccpy \
 	-Wl,--export=memchr \
 	-Wl,--export=memcmp \
 	-Wl,--export=memcpy \
+	-Wl,--export=memmove \
+	-Wl,--export=memrchr \
 	-Wl,--export=memset \
+	-Wl,--export=stpcpy \
+	-Wl,--export=stpncpy \
 	-Wl,--export=strchr \
 	-Wl,--export=strchrnul \
 	-Wl,--export=strcmp \
+	-Wl,--export=strcpy \
 	-Wl,--export=strcspn \
 	-Wl,--export=strlen \
+	-Wl,--export=strncat \
 	-Wl,--export=strncmp \
+	-Wl,--export=strncpy \
 	-Wl,--export=strrchr \
 	-Wl,--export=strspn \
 	-Wl,--export=qsort
