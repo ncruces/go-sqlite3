@@ -176,17 +176,15 @@ size_t strlen(const char *s) {
 }
 
 static int __strcmp(const char *s1, const char *s2) {
-  // Set limit to the largest possible valid v128_t pointer.
-  // Unsigned modular arithmetic gives the correct result
-  // unless memory size is zero, in which case all pointers are invalid.
-  const v128_t *const limit =
-      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+  // How many bytes can be read before pointers go out of bounds.
+  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE -  //
+             (size_t)(s1 > s2 ? s1 : s2);
 
   // Unaligned loads handle the case where the strings
   // have mismatching alignments.
   const v128_t *w1 = (v128_t *)s1;
   const v128_t *w2 = (v128_t *)s2;
-  while (w1 <= limit && w2 <= limit) {
+  for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
       // The strings may still be equal,
@@ -237,17 +235,16 @@ int strcmp(const char *s1, const char *s2) {
 
 __attribute__((weak))
 int strncmp(const char *s1, const char *s2, size_t n) {
-  // Set limit to the largest possible valid v128_t pointer.
-  // Unsigned modular arithmetic gives the correct result
-  // unless memory size is zero, in which case all pointers are invalid.
-  const v128_t *const limit =
-      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+  // How many bytes can be read before pointers go out of bounds.
+  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE -  //
+             (size_t)(s1 > s2 ? s1 : s2);
+  if (n > N) n = N;
 
   // Unaligned loads handle the case where the strings
   // have mismatching alignments.
   const v128_t *w1 = (v128_t *)s1;
   const v128_t *w2 = (v128_t *)s2;
-  for (; w1 <= limit && w2 <= limit && n >= sizeof(v128_t); n -= sizeof(v128_t)) {
+  for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
     // Find any single bit difference.
     if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
       // The strings may still be equal,
@@ -332,21 +329,62 @@ char *strrchr(const char *s, int c) {
   return (char *)memrchr(s, c, strlen(s) + 1);
 }
 
+// http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+
+#define _WASM_SIMD128_BITMAP256_T                                    \
+  struct {                                                           \
+    uint8_t l __attribute__((__vector_size__(16), __aligned__(16))); \
+    uint8_t h __attribute__((__vector_size__(16), __aligned__(16))); \
+  }
+
+#define _WASM_SIMD128_SETBIT(bitmap, i)            \
+  ({                                               \
+    uint8_t _c = (uint8_t)(i);                     \
+    uint8_t _hi_nibble = _c >> 4;                  \
+    uint8_t _lo_nibble = _c & 0xf;                 \
+    bitmap.l[_lo_nibble] |= 1 << (_hi_nibble - 0); \
+    bitmap.h[_lo_nibble] |= 1 << (_hi_nibble - 8); \
+  })
+
+#define _WASM_SIMD128_CHKBIT(bitmap, i)                                   \
+  ({                                                                      \
+    uint8_t _c = (uint8_t)(i);                                            \
+    uint8_t _hi_nibble = _c >> 4;                                         \
+    uint8_t _lo_nibble = _c & 0xf;                                        \
+    uint8_t _bitmask = 1 << (_hi_nibble & 0x7);                           \
+    uint8_t _bitset = (_hi_nibble < 8 ? bitmap.l : bitmap.h)[_lo_nibble]; \
+    _bitmask & _bitset;                                                   \
+  })
+
+#define _WASM_SIMD128_CHKBITS(bitmap, v)                                    \
+  ({                                                                        \
+    v128_t _w = v;                                                          \
+    v128_t _hi_nibbles = wasm_u8x16_shr(_w, 4);                             \
+    v128_t _lo_nibbles = _w & wasm_u8x16_const_splat(0xf);                  \
+                                                                            \
+    v128_t _bitmask_lookup = wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  \
+                                              1, 2, 4, 8, 16, 32, 64, 128); \
+                                                                            \
+    v128_t _bitmask = wasm_i8x16_swizzle(_bitmask_lookup, _hi_nibbles);     \
+    v128_t _bitsets = wasm_v128_bitselect(                                  \
+        wasm_i8x16_swizzle(bitmap.l, _lo_nibbles),                          \
+        wasm_i8x16_swizzle(bitmap.h, _lo_nibbles),                          \
+        wasm_i8x16_lt(_hi_nibbles, wasm_u8x16_const_splat(8)));             \
+                                                                            \
+    wasm_i8x16_eq(_bitsets & _bitmask, _bitmask);                           \
+  })
+
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
-  // Set limit to the largest possible valid v128_t pointer.
-  // Unsigned modular arithmetic gives the correct result
-  // unless memory size is zero, in which case all pointers are invalid.
-  const v128_t *const limit =
-      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
-
+  // How many bytes can be read before the pointer goes out of bounds.
+  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE - (size_t)s;
   const v128_t *w = (v128_t *)s;
   const char *const a = s;
 
   if (!c[0]) return 0;
   if (!c[1]) {
     const v128_t wc = wasm_i8x16_splat(*c);
-    while (w <= limit) {
+    for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
       const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w), wc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
@@ -361,110 +399,64 @@ size_t strspn(const char *s, const char *c) {
     return s - a;
   }
 
-  // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
-  typedef unsigned char u8x16
-      __attribute__((__vector_size__(16), __aligned__(16)));
+  _WASM_SIMD128_BITMAP256_T bitmap = {};
 
-  u8x16 bitmap07 = {};
-  u8x16 bitmap8f = {};
   for (; *c; c++) {
-    unsigned lo_nibble = *(unsigned char *)c % 16;
-    unsigned hi_nibble = *(unsigned char *)c / 16;
-    bitmap07[lo_nibble] |= 1 << (hi_nibble - 0);
-    bitmap8f[lo_nibble] |= 1 << (hi_nibble - 8);
+    _WASM_SIMD128_SETBIT(bitmap, *c);
     // Terminator IS NOT on the bitmap.
   }
 
-  for (; w <= limit; w++) {
-    const v128_t lo_nibbles = wasm_v128_load(w) & wasm_u8x16_const_splat(0xf);
-    const v128_t hi_nibbles = wasm_u8x16_shr(wasm_v128_load(w), 4);
-
-    const v128_t bitmask_lookup =
-        wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
-                         1, 2, 4, 8, 16, 32, 64, 128);
-
-    const v128_t bitmask = wasm_i8x16_swizzle(bitmask_lookup, hi_nibbles);
-    const v128_t bitsets = wasm_v128_bitselect(
-        wasm_i8x16_swizzle(bitmap07, lo_nibbles),
-        wasm_i8x16_swizzle(bitmap8f, lo_nibbles),
-        wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
-
-    const v128_t cmp = wasm_i8x16_eq(bitsets & bitmask, bitmask);
+  for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
+    const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
+    // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
       size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
       return (char *)w + ctz - s;
     }
+    w++;
   }
 
   // Baseline algorithm.
-  for (s = (char *)w;; s++) {
-    const unsigned lo_nibble = *(unsigned char *)s & 0xf;
-    const unsigned hi_nibble = *(unsigned char *)s >> 4;
-    const unsigned bitmask = 1 << (hi_nibble & 0x7);
-    const unsigned bitset =
-        hi_nibble < 8 ? bitmap07[lo_nibble] : bitmap8f[lo_nibble];
-    if ((bitset & bitmask) == 0) return s - a;
-  }
+  for (s = (char *)w; _WASM_SIMD128_CHKBIT(bitmap, *s); s++);
+  return s - a;
 }
 
 __attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-  // Set limit to the largest possible valid v128_t pointer.
-  // Unsigned modular arithmetic gives the correct result
-  // unless memory size is zero, in which case all pointers are invalid.
-  const v128_t *const limit =
-      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
-
+  // How many bytes can be read before the pointer goes out of bounds.
+  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE - (size_t)s;
   const v128_t *w = (v128_t *)s;
   const char *const a = s;
 
-  // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
-  typedef unsigned char u8x16
-      __attribute__((__vector_size__(16), __aligned__(16)));
+  _WASM_SIMD128_BITMAP256_T bitmap = {};
 
-  u8x16 bitmap07 = {};
-  u8x16 bitmap8f = {};
-  for (;; c++) {
-    unsigned lo_nibble = *(unsigned char *)c % 16;
-    unsigned hi_nibble = *(unsigned char *)c / 16;
-    bitmap07[lo_nibble] |= 1 << (hi_nibble - 0);
-    bitmap8f[lo_nibble] |= 1 << (hi_nibble - 8);
-    if (!*c) break;  // Terminator IS on the bitmap.
+  for (;;) {
+    _WASM_SIMD128_SETBIT(bitmap, *c);
+    // Terminator IS on the bitmap.
+    if (!*c++) break;
   }
 
-  for (; w <= limit; w++) {
-    const v128_t lo_nibbles = wasm_v128_load(w) & wasm_u8x16_const_splat(0xf);
-    const v128_t hi_nibbles = wasm_u8x16_shr(wasm_v128_load(w), 4);
-
-    const v128_t bitmask_lookup =
-        wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
-                         1, 2, 4, 8, 16, 32, 64, 128);
-
-    const v128_t bitmask = wasm_i8x16_swizzle(bitmask_lookup, hi_nibbles);
-    const v128_t bitsets = wasm_v128_bitselect(
-        wasm_i8x16_swizzle(bitmap07, lo_nibbles),
-        wasm_i8x16_swizzle(bitmap8f, lo_nibbles),
-        wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
-
-    const v128_t cmp = wasm_i8x16_eq(bitsets & bitmask, bitmask);
+  for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
+    const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
+    // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       size_t ctz = __builtin_ctz(wasm_i8x16_bitmask(cmp));
       return (char *)w + ctz - s;
     }
+    w++;
   }
 
   // Baseline algorithm.
-  for (s = (char *)w;; s++) {
-    const unsigned lo_nibble = *(unsigned char *)s & 0xf;
-    const unsigned hi_nibble = *(unsigned char *)s >> 4;
-    const unsigned bitmask = 1 << (hi_nibble & 0x7);
-    const unsigned bitset =
-        hi_nibble < 8 ? bitmap07[lo_nibble] : bitmap8f[lo_nibble];
-    if (bitset & bitmask) return s - a;
-  }
+  for (s = (char *)w; !_WASM_SIMD128_CHKBIT(bitmap, *s); s++);
+  return s - a;
 }
+
+#undef _WASM_SIMD128_SETBIT
+#undef _WASM_SIMD128_CHKBIT
+#undef _WASM_SIMD128_CHKBITS
+#undef _WASM_SIMD128_BITMAP256_T
 
 // Given the above SIMD implementations,
 // these are best implemented as
