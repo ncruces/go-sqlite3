@@ -470,18 +470,33 @@ char *strstr(const char *s, const char *needle) {
 
   // Return if needle is longer than haystack.
   size_t n = strlen(s);
-  size_t k = strlen(needle);
-  if (n < k) return NULL;
+  size_t m = strlen(needle);
+  if (n < m) return NULL;
+
+  // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
+
+  size_t t;
+  static uint8_t bmbc[256];
+  if (__builtin_sub_overflow(m, 16, &t)) t = 0;
+  if (t > 255) t = 255;
+  for (size_t i = 0; i < 256; ++i) {
+    bmbc[i] = t;
+  }
+  for (size_t i = 0; i < m - 1; ++i) {
+    if (__builtin_sub_overflow(m - i - 1, 16, &t)) t = 0;
+    if (t > 255) t = 255;
+    bmbc[(unsigned char)s[i]] = t;
+  }
 
   // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
 
   const v128_t fst = wasm_i8x16_splat(needle[0]);
-  const v128_t lst = wasm_i8x16_splat(needle[k - 1]);
+  const v128_t lst = wasm_i8x16_splat(needle[m - 1]);
   int bcmp(const void *v1, const void *v2, size_t n);
 
-  for (size_t i = 0; i <= n - k; i += sizeof(v128_t)) {
-    const v128_t blk_fst = wasm_v128_load((v128_t *)(s + i));
-    const v128_t blk_lst = wasm_v128_load((v128_t *)(s + i + k - 1));
+  for (;;) {
+    const v128_t blk_fst = wasm_v128_load((v128_t *)(s));
+    const v128_t blk_lst = wasm_v128_load((v128_t *)(s + m - 1));
     const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
     const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
 
@@ -489,11 +504,16 @@ char *strstr(const char *s, const char *needle) {
     if (wasm_v128_any_true(cmp)) {
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
-        if (!bcmp(s + i + ctz + 1, needle + 1, k - 2)) {
-          return (char *)s + i + ctz;
+        if (!bcmp(s + ctz + 1, needle + 1, m - 2)) {
+          return (char *)s + ctz;
         }
       }
     }
+
+    size_t skip = sizeof(v128_t) + bmbc[wasm_i8x16_extract_lane(blk_lst, 15)];
+    if (__builtin_sub_overflow(n, skip, &n)) break;
+    if (n < m) break;
+    s += skip;
   }
   return NULL;
 }
