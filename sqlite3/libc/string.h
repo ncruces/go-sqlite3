@@ -458,6 +458,46 @@ size_t strcspn(const char *s, const char *c) {
 #undef _WASM_SIMD128_CHKBITS
 #undef _WASM_SIMD128_BITMAP256_T
 
+__attribute__((weak))
+char *strstr(const char *s, const char *needle) {
+  // Return immediately on empty needle.
+  if (!needle[0]) return (char *)s;
+
+  // Skip to the first matching character using strchr
+  // (and handle single character needle).
+  s = strchr(s, *needle);
+  if (!s || !needle[1]) return (char *)s;
+
+  // Return if needle is longer than haystack.
+  size_t n = strlen(s);
+  size_t k = strlen(needle);
+  if (n < k) return NULL;
+
+  // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
+
+  const v128_t fst = wasm_i8x16_splat(needle[0]);
+  const v128_t lst = wasm_i8x16_splat(needle[k - 1]);
+  int bcmp(const void *v1, const void *v2, size_t n);
+
+  for (size_t i = 0; i <= n - k; i += sizeof(v128_t)) {
+    const v128_t blk_fst = wasm_v128_load((v128_t *)(s + i));
+    const v128_t blk_lst = wasm_v128_load((v128_t *)(s + i + k - 1));
+    const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
+    const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
+
+    const v128_t cmp = eq_fst & eq_lst;
+    if (wasm_v128_any_true(cmp)) {
+      for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
+        size_t ctz = __builtin_ctz(mask);
+        if (!bcmp(s + i + ctz + 1, needle + 1, k - 2)) {
+          return (char *)s + i + ctz;
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
 // Given the above SIMD implementations,
 // these are best implemented as
 // small wrappers over those functions.

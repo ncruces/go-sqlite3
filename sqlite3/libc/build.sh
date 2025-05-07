@@ -47,6 +47,7 @@ EOF
 	-Wl,--export=strncpy \
 	-Wl,--export=strrchr \
 	-Wl,--export=strspn \
+	-Wl,--export=strstr \
 	-Wl,--export=qsort
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
