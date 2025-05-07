@@ -31,6 +31,7 @@ EOF
 	-Wl,--export=memchr \
 	-Wl,--export=memcmp \
 	-Wl,--export=memcpy \
+	-Wl,--export=memmem \
 	-Wl,--export=memmove \
 	-Wl,--export=memrchr \
 	-Wl,--export=memset \
