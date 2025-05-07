@@ -19,7 +19,7 @@ func Test_init(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != "3.49.1" {
+	if version != "3.49.2" {
 		t.Error(version)
 	}
 }
