@@ -334,21 +334,17 @@ char *strrchr(const char *s, int c) {
 
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
-#ifndef _REENTRANT
-  static  // Avoid the stack for builds without threads.
-#endif
-  char byteset[UCHAR_MAX + 1];
+  // Set limit to the largest possible valid v128_t pointer.
+  // Unsigned modular arithmetic gives the correct result
+  // unless memory size is zero, in which case all pointers are invalid.
+  const v128_t *const limit =
+      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+
+  const v128_t *w = (v128_t *)s;
   const char *const a = s;
 
   if (!c[0]) return 0;
   if (!c[1]) {
-    // Set limit to the largest possible valid v128_t pointer.
-    // Unsigned modular arithmetic gives the correct result
-    // unless memory size is zero, in which case all pointers are invalid.
-    const v128_t *const limit =
-        (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
-
-    const v128_t *w = (v128_t *)s;
     const v128_t wc = wasm_i8x16_splat(*c);
     while (w <= limit) {
       const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w), wc);
@@ -361,39 +357,113 @@ size_t strspn(const char *s, const char *c) {
     }
 
     // Baseline algorithm.
-    s = (char *)w;
-    while (*s == *c) s++;
+    for (s = (char *)w; *s == *c; s++);
     return s - a;
   }
 
-  memset(byteset, 0, sizeof(byteset));
-  // Keeping byteset[0] = 0 avoids the next loop needing that check.
-  while (*c && (byteset[*(unsigned char *)c] = 1)) c++;
-#if __OPTIMIZE__ && !__OPTIMIZE_SIZE__
-#pragma unroll 4
-#endif
-  while (byteset[*(unsigned char *)s]) s++;
-  return s - a;
+  // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+  typedef unsigned char u8x16
+      __attribute__((__vector_size__(16), __aligned__(16)));
+
+  u8x16 bitmap07 = {};
+  u8x16 bitmap8f = {};
+  for (; *c; c++) {
+    unsigned lo_nibble = *(unsigned char *)c % 16;
+    unsigned hi_nibble = *(unsigned char *)c / 16;
+    bitmap07[lo_nibble] |= 1 << (hi_nibble - 0);
+    bitmap8f[lo_nibble] |= 1 << (hi_nibble - 8);
+    // Terminator IS NOT on the bitmap.
+  }
+
+  for (; w <= limit; w++) {
+    const v128_t lo_nibbles = wasm_v128_load(w) & wasm_u8x16_const_splat(0xf);
+    const v128_t hi_nibbles = wasm_u8x16_shr(wasm_v128_load(w), 4);
+
+    const v128_t bitmask_lookup =
+        wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
+                         1, 2, 4, 8, 16, 32, 64, 128);
+
+    const v128_t bitmask = wasm_i8x16_swizzle(bitmask_lookup, hi_nibbles);
+    const v128_t bitsets = wasm_v128_bitselect(
+        wasm_i8x16_swizzle(bitmap07, lo_nibbles),
+        wasm_i8x16_swizzle(bitmap8f, lo_nibbles),
+        wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
+
+    const v128_t cmp = wasm_i8x16_eq(bitsets & bitmask, bitmask);
+    if (!wasm_i8x16_all_true(cmp)) {
+      size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
+      return (char *)w + ctz - s;
+    }
+  }
+
+  // Baseline algorithm.
+  for (s = (char *)w;; s++) {
+    const unsigned lo_nibble = *(unsigned char *)s & 0xf;
+    const unsigned hi_nibble = *(unsigned char *)s >> 4;
+    const unsigned bitmask = 1 << (hi_nibble & 0x7);
+    const unsigned bitset =
+        hi_nibble < 8 ? bitmap07[lo_nibble] : bitmap8f[lo_nibble];
+    if ((bitset & bitmask) == 0) return s - a;
+  }
 }
 
 __attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
-#ifndef _REENTRANT
-  static  // Avoid the stack for builds without threads.
-#endif
-  char byteset[UCHAR_MAX + 1];
-  const char *const a = s;
-
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-  memset(byteset, 0, sizeof(byteset));
-  // Setting byteset[0] = 1 avoids the next loop needing that check.
-  while ((byteset[*(unsigned char *)c] = 1) && *c) c++;
-#if __OPTIMIZE__ && !__OPTIMIZE_SIZE__
-#pragma unroll 4
-#endif
-  while (!byteset[*(unsigned char *)s]) s++;
-  return s - a;
+  // Set limit to the largest possible valid v128_t pointer.
+  // Unsigned modular arithmetic gives the correct result
+  // unless memory size is zero, in which case all pointers are invalid.
+  const v128_t *const limit =
+      (v128_t *)(__builtin_wasm_memory_size(0) * PAGESIZE) - 1;
+
+  const v128_t *w = (v128_t *)s;
+  const char *const a = s;
+
+  // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+  typedef unsigned char u8x16
+      __attribute__((__vector_size__(16), __aligned__(16)));
+
+  u8x16 bitmap07 = {};
+  u8x16 bitmap8f = {};
+  for (;; c++) {
+    unsigned lo_nibble = *(unsigned char *)c % 16;
+    unsigned hi_nibble = *(unsigned char *)c / 16;
+    bitmap07[lo_nibble] |= 1 << (hi_nibble - 0);
+    bitmap8f[lo_nibble] |= 1 << (hi_nibble - 8);
+    if (!*c) break;  // Terminator IS on the bitmap.
+  }
+
+  for (; w <= limit; w++) {
+    const v128_t lo_nibbles = wasm_v128_load(w) & wasm_u8x16_const_splat(0xf);
+    const v128_t hi_nibbles = wasm_u8x16_shr(wasm_v128_load(w), 4);
+
+    const v128_t bitmask_lookup =
+        wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
+                         1, 2, 4, 8, 16, 32, 64, 128);
+
+    const v128_t bitmask = wasm_i8x16_swizzle(bitmask_lookup, hi_nibbles);
+    const v128_t bitsets = wasm_v128_bitselect(
+        wasm_i8x16_swizzle(bitmap07, lo_nibbles),
+        wasm_i8x16_swizzle(bitmap8f, lo_nibbles),
+        wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
+
+    const v128_t cmp = wasm_i8x16_eq(bitsets & bitmask, bitmask);
+    if (wasm_v128_any_true(cmp)) {
+      size_t ctz = __builtin_ctz(wasm_i8x16_bitmask(cmp));
+      return (char *)w + ctz - s;
+    }
+  }
+
+  // Baseline algorithm.
+  for (s = (char *)w;; s++) {
+    const unsigned lo_nibble = *(unsigned char *)s & 0xf;
+    const unsigned hi_nibble = *(unsigned char *)s >> 4;
+    const unsigned bitmask = 1 << (hi_nibble & 0x7);
+    const unsigned bitset =
+        hi_nibble < 8 ? bitmap07[lo_nibble] : bitmap8f[lo_nibble];
+    if (bitset & bitmask) return s - a;
+  }
 }
 
 // Given the above SIMD implementations,
