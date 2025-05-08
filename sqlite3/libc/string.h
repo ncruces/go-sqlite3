@@ -467,9 +467,10 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
 
   const v128_t fst = wasm_i8x16_splat(needle[0]);
   const v128_t lst = wasm_i8x16_splat(needle[sn - 1]);
-  int bcmp(const void *v1, const void *v2, size_t n);
+  const char *N =
+      (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - sn - sizeof(v128_t));
 
-  for (;;) {
+  while (haystk <= N) {
     const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
     const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + sn - 1));
     const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
@@ -487,9 +488,18 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
 
     size_t skip = sizeof(v128_t);
     if (bmbc) skip += bmbc[wasm_i8x16_extract_lane(blk_lst, 15)];
-    if (__builtin_sub_overflow(sh, skip, &sh)) break;
-    if (sn > sh) break;
+    if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
+    if (sn > sh) return NULL;
     haystk += skip;
+  }
+
+  // Baseline algorithm.
+  for (size_t j = 0; j <= sh - sn; j++) {
+    for (size_t i = 0;; i++) {
+      if (i >= sn) return haystk;
+      if (needle[i] != haystk[i]) break;
+    }
+    haystk++;
   }
   return NULL;
 }
@@ -501,7 +511,7 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
 
   static uint8_t bmbc[256];
   memset(bmbc, sn - 1 < 255 ? sn - 1 : 255, sizeof(bmbc));
-  for (size_t i = 0; i < sn - 1; ++i) {
+  for (size_t i = 0; i < sn - 1; i++) {
     size_t t = sn - 1 - i - 1;
     if (t > 255) t = 255;
     bmbc[(unsigned char)needle[i]] = t;
