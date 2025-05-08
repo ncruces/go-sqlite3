@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #ifdef __wasm_simd128__
+#ifndef __OPTIMIZE_SIZE__
 
 __attribute__((weak))
 int bcmp(const void *v1, const void *v2, size_t n) {
@@ -48,6 +49,7 @@ int bcmp(const void *v1, const void *v2, size_t n) {
   return 0;
 }
 
+#endif  // __OPTIMIZE_SIZE__
 #endif  // __wasm_simd128__
 
 #ifdef __cplusplus

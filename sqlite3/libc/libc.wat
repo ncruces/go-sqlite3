@@ -5,7 +5,7 @@
  (type $3 (func (param i32) (result i32)))
  (type $4 (func (param i32 i32 i32 i32)))
  (memory $0 256)
- (data $0 (i32.const 1024) "\01")
+ (data $0 (i32.const 4096) "\01")
  (table $0 1 1 funcref)
  (export "memory" (memory $0))
  (export "memset" (func $memset))
@@ -1228,7 +1228,7 @@
      )
      (loop $label
       (v128.store
-       (i32.const 992)
+       (i32.const 4064)
        (local.get $6)
       )
       (i32.store8
@@ -1240,7 +1240,7 @@
            (i32.const 15)
           )
          )
-         (i32.const 992)
+         (i32.const 4064)
         )
        )
        (i32.or
@@ -1262,14 +1262,14 @@
        )
       )
       (v128.store
-       (i32.const 1008)
+       (i32.const 4080)
        (local.get $7)
       )
       (i32.store8
        (local.tee $2
         (i32.or
          (local.get $2)
-         (i32.const 1008)
+         (i32.const 4080)
         )
        )
        (i32.or
@@ -1292,12 +1292,12 @@
       )
       (local.set $6
        (v128.load
-        (i32.const 992)
+        (i32.const 4064)
        )
       )
       (local.set $7
        (v128.load
-        (i32.const 1008)
+        (i32.const 4080)
        )
       )
       (local.set $1
@@ -1417,7 +1417,7 @@
      )
      (loop $label2
       (v128.store
-       (i32.const 976)
+       (i32.const 4048)
        (select
         (local.get $7)
         (local.get $6)
@@ -1452,7 +1452,7 @@
             (local.get $0)
             (i32.const 15)
            )
-           (i32.const 976)
+           (i32.const 4048)
           )
          )
          (i32.and
@@ -1719,7 +1719,7 @@
         )
         (loop $label1
          (v128.store
-          (i32.const 1008)
+          (i32.const 4080)
           (local.get $6)
          )
          (i32.store8
@@ -1734,13 +1734,13 @@
              (i32.const 15)
             )
            )
-           (i32.const 1008)
+           (i32.const 4080)
           )
           (i32.or
            (i32.load8_u
             (i32.or
              (local.get $3)
-             (i32.const 1008)
+             (i32.const 4080)
             )
            )
            (i32.shl
@@ -1758,14 +1758,14 @@
           )
          )
          (v128.store
-          (i32.const 992)
+          (i32.const 4064)
           (local.get $7)
          )
          (i32.store8
           (local.tee $3
            (i32.or
             (local.get $3)
-            (i32.const 992)
+            (i32.const 4064)
            )
           )
           (i32.or
@@ -1786,12 +1786,12 @@
          )
          (local.set $6
           (v128.load
-           (i32.const 1008)
+           (i32.const 4080)
           )
          )
          (local.set $7
           (v128.load
-           (i32.const 992)
+           (i32.const 4064)
           )
          )
          (br_if $label1
@@ -1897,7 +1897,7 @@
   )
   (loop $label3
    (v128.store
-    (i32.const 976)
+    (i32.const 4048)
     (select
      (local.get $6)
      (local.get $7)
@@ -1926,7 +1926,7 @@
           (local.get $1)
           (i32.const 15)
          )
-         (i32.const 976)
+         (i32.const 4048)
         )
        )
        (i32.and
@@ -2206,7 +2206,7 @@
      )
     )
     (memory.fill
-     (i32.const 1040)
+     (i32.const 4112)
      (select
       (i32.const 255)
       (local.tee $6
@@ -2273,7 +2273,7 @@
             )
            )
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.tee $10
           (i8x16.narrow_i16x8_u
@@ -2325,7 +2325,7 @@
           (i32x4.extract_lane 1
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2334,7 +2334,7 @@
           (i32x4.extract_lane 2
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2343,7 +2343,7 @@
           (i32x4.extract_lane 3
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2361,7 +2361,7 @@
             )
            )
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2370,7 +2370,7 @@
           (i32x4.extract_lane 1
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2379,7 +2379,7 @@
           (i32x4.extract_lane 2
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2388,7 +2388,7 @@
           (i32x4.extract_lane 3
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2406,7 +2406,7 @@
             )
            )
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2415,7 +2415,7 @@
           (i32x4.extract_lane 1
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2424,7 +2424,7 @@
           (i32x4.extract_lane 2
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2433,7 +2433,7 @@
           (i32x4.extract_lane 3
            (local.get $11)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2451,7 +2451,7 @@
             )
            )
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2460,7 +2460,7 @@
           (i32x4.extract_lane 1
            (local.get $14)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2469,7 +2469,7 @@
           (i32x4.extract_lane 2
            (local.get $14)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2478,7 +2478,7 @@
           (i32x4.extract_lane 3
            (local.get $14)
           )
-          (i32.const 1040)
+          (i32.const 4112)
          )
          (local.get $10)
         )
@@ -2550,7 +2550,7 @@
         (i32.load8_u
          (local.get $5)
         )
-        (i32.const 1040)
+        (i32.const 4112)
        )
        (select
         (i32.const 255)
@@ -2721,7 +2721,7 @@
               (i8x16.extract_lane_s 15
                (local.get $13)
               )
-              (i32.const 1040)
+              (i32.const 4112)
              )
             )
             (i32.const 16)

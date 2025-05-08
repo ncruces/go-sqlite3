@@ -212,6 +212,21 @@ func Benchmark_strcspn(b *testing.B) {
 	}
 }
 
+//go:embed string.h
+var source string
+
+func Benchmark_strstr(b *testing.B) {
+	clear(memory)
+	copy(memory[ptr1:], source)
+	copy(memory[ptr2:], "memcpy(dest, src, slen)")
+
+	b.SetBytes(int64(len(source)))
+	b.ResetTimer()
+	for range b.N {
+		call(strstr, ptr1, ptr2)
+	}
+}
+
 func Test_memcmp(t *testing.T) {
 	const s1 string = "" +
 		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
@@ -232,17 +247,16 @@ func Test_memcmp(t *testing.T) {
 		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
 		"\x80\xf3\x93\x01\x00\x02"
 
-	p1 := ptr1
-	p2 := len(memory) - len(s2)
+	ptr2 := len(memory) - len(s2)
 
 	clear(memory)
-	copy(memory[p1:], s1)
-	copy(memory[p2:], s2)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
 
 	for i := range len(s1) + 1 {
 		for j := range len(s1) - i {
 			want := strings.Compare(s1[i:i+j], s2[i:i+j])
-			got := call(memcmp, uint64(p1+i), uint64(p2+i), uint64(j))
+			got := call(memcmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
 			if sign(int32(got)) != want {
 				t.Errorf("strcmp(%d, %d, %d) = %d, want %d",
 					ptr1+i, ptr2+i, j, int32(got), want)
@@ -271,19 +285,18 @@ func Test_strcmp(t *testing.T) {
 		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
 		"\x80\xf3\x93\x01\x00\x02"
 
-	p1 := ptr1
-	p2 := len(memory) - len(s2) - 1
+	ptr2 := len(memory) - len(s2) - 1
 
 	clear(memory)
-	copy(memory[p1:], s1)
-	copy(memory[p2:], s2)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
 
 	for i := range len(s1) + 1 {
 		want := strings.Compare(term(s1[i:]), term(s2[i:]))
-		got := call(strcmp, uint64(p1+i), uint64(p2+i))
+		got := call(strcmp, uint64(ptr1+i), uint64(ptr2+i))
 		if sign(int32(got)) != want {
 			t.Errorf("strcmp(%d, %d) = %d, want %d",
-				p1+i, ptr2+i, int32(got), want)
+				ptr1+i, ptr2+i, int32(got), want)
 		}
 	}
 }
@@ -308,17 +321,16 @@ func Test_strncmp(t *testing.T) {
 		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
 		"\x80\xf3\x93\x01\x00\x02"
 
-	p1 := ptr1
-	p2 := len(memory) - len(s2) - 1
+	ptr2 := len(memory) - len(s2) - 1
 
 	clear(memory)
-	copy(memory[p1:], s1)
-	copy(memory[p2:], s2)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
 
 	for i := range len(s1) + 1 {
 		for j := range len(s1) - i + 1 {
 			want := strings.Compare(term(s1[i:i+j]), term(s2[i:i+j]))
-			got := call(strncmp, uint64(p1+i), uint64(p2+i), uint64(j))
+			got := call(strncmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
 			if sign(int32(got)) != want {
 				t.Errorf("strncmp(%d, %d, %d) = %d, want %d",
 					ptr1+i, ptr2+i, j, int32(got), want)
@@ -599,7 +611,7 @@ func Test_strcspn(t *testing.T) {
 
 func Test_strstr(t *testing.T) {
 	var tt = []struct {
-		s   string
+		h   string
 		n   string
 		out int
 	}{
@@ -619,7 +631,6 @@ func Test_strstr(t *testing.T) {
 		{"999f2xmimunbuyew5vrkla9cpwhmxan8o98ec", "98ec", 33},
 		{"9lpt9r98i04k8bz6c6dsrthb96bhi", "96bhi", 24},
 		{"55u558eqfaod2r2gu42xxsu631xf0zobs5840vl", "5840vl", 33},
-		// cases with one byte strings - test special case in Index()
 		{"", "a", -1},
 		{"x", "a", -1},
 		{"x", "x", 0},
@@ -627,7 +638,6 @@ func Test_strstr(t *testing.T) {
 		{"abc", "b", 1},
 		{"abc", "c", 2},
 		{"abc", "x", -1},
-		// test special cases in Index() for short strings
 		{"", "ab", -1},
 		{"bc", "ab", -1},
 		{"ab", "ab", 0},
@@ -692,19 +702,48 @@ func Test_strstr(t *testing.T) {
 		{"xx012345678901234567890123456789012345678901234567890123456789012"[:41], "0123456789012345678901234567890123456789", -1},
 		{"xx012345678901234567890123456789012345678901234567890123456789012", "0123456789012345678901234567890123456xxx", -1},
 		{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx", "0123456789012345678901234567890123456xxx", 65},
-		// test fallback to Rabin-Karp.
+		{"barfoobarfooyyyzzzyyyzzzyyyzzzyyyxxxzzzyyy", "x", 33},
+		{"fofofofooofoboo", "oo", 7},
+		{"fofofofofofoboo", "ob", 11},
+		{"fofofofofofoboo", "boo", 12},
+		{"fofofofofofoboo", "oboo", 11},
+		{"fofofofofoooboo", "fooo", 8},
+		{"fofofofofofoboo", "foboo", 10},
+		{"fofofofofofoboo", "fofob", 8},
+		{"fofofofofofofoffofoobarfoo", "foffof", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffof", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofo", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofo", 13},
+		{"fofofofofoofofoffofoobarfoo", "foffofoo", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoo", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofoob", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoob", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofooba", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofooba", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofoobar", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoobar", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofoobarf", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoobarf", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofoobarfo", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoobarfo", 12},
+		{"fofofofofoofofoffofoobarfoo", "foffofoobarfoo", 13},
+		{"fofofofofofofoffofoobarfoo", "foffofoobarfoo", 12},
+		{"fofofofofoofofoffofoobarfoo", "ofoffofoobarfoo", 12},
+		{"fofofofofofofoffofoobarfoo", "ofoffofoobarfoo", 11},
+		{"fofofofofoofofoffofoobarfoo", "fofoffofoobarfoo", 11},
+		{"fofofofofofofoffofoobarfoo", "fofoffofoobarfoo", 10},
+		{"fofofofofoofofoffofoobarfoo", "foobars", -1},
+		{"foofyfoobarfoobar", "y", 4},
+		{"oooooooooooooooooooooo", "r", -1},
 		{"oxoxoxoxoxoxoxoxoxoxoxoy", "oy", 22},
 		{"oxoxoxoxoxoxoxoxoxoxoxox", "oy", -1},
-		// test fallback to IndexRune
-		{"oxoxoxoxoxoxoxoxoxoxox☺", "☺", 22},
-		// invalid UTF-8 byte sequence (must be longer than bytealg.MaxBruteForce to
-		// test that we don't use IndexRune)
-		{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx\xed\x9f\xc0", "\xed\x9f\xc0", 105},
 	}
 
 	for i := range tt {
+		ptr1 := uint64(len(memory) - len(tt[i].h) - 1)
+
 		clear(memory)
-		copy(memory[ptr1:], tt[i].s)
+		copy(memory[ptr1:], tt[i].h)
 		copy(memory[ptr2:], tt[i].n)
 
 		var want uint64
@@ -712,10 +751,10 @@ func Test_strstr(t *testing.T) {
 			want = ptr1 + uint64(tt[i].out)
 		}
 
-		got := call(strstr, ptr1, ptr2)
+		got := call(strstr, uint64(ptr1), uint64(ptr2))
 		if got != want {
 			t.Errorf("strstr(%q, %q) = %d, want %d",
-				tt[i].s, tt[i].n, uint32(got), uint32(want))
+				tt[i].h, tt[i].n, uint32(got), uint32(want))
 		}
 	}
 }

@@ -1,7 +1,6 @@
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
-#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <strings.h>
@@ -509,7 +508,10 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
   // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
   __builtin_assume(2 <= sn && sn <= sh);
 
-  static uint8_t bmbc[256];
+#ifndef _REENTRANT
+  static
+#endif
+  uint8_t bmbc[256];
   memset(bmbc, sn - 1 < 255 ? sn - 1 : 255, sizeof(bmbc));
   for (size_t i = 0; i < sn - 1; i++) {
     size_t t = sn - 1 - i - 1;
