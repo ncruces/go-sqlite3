@@ -1,9 +1,9 @@
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
-#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <strings.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
 
@@ -458,6 +458,110 @@ size_t strcspn(const char *s, const char *c) {
 #undef _WASM_SIMD128_CHKBITS
 #undef _WASM_SIMD128_BITMAP256_T
 
+static const char *__memmem_rabin(const char *haystk, size_t sh,
+                                  const char *needle, size_t sn,
+                                  uint8_t bmbc[256]) {
+  // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
+  __builtin_assume(2 <= sn && sn <= sh);
+
+  const v128_t fst = wasm_i8x16_splat(needle[0]);
+  const v128_t lst = wasm_i8x16_splat(needle[sn - 1]);
+  const char *N =
+      (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - sn - sizeof(v128_t));
+
+  while (haystk <= N) {
+    const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
+    const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + sn - 1));
+    const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
+    const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
+
+    const v128_t cmp = eq_fst & eq_lst;
+    if (wasm_v128_any_true(cmp)) {
+      for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
+        size_t ctz = __builtin_ctz(mask);
+        if (!bcmp(haystk + ctz + 1, needle + 1, sn - 2)) {
+          return haystk + ctz;
+        }
+      }
+    }
+
+    size_t skip = sizeof(v128_t);
+    if (bmbc) skip += bmbc[wasm_i8x16_extract_lane(blk_lst, 15)];
+    if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
+    if (sn > sh) return NULL;
+    haystk += skip;
+  }
+
+  // Baseline algorithm.
+  for (size_t j = 0; j <= sh - sn; j++) {
+    for (size_t i = 0;; i++) {
+      if (i >= sn) return haystk;
+      if (needle[i] != haystk[i]) break;
+    }
+    haystk++;
+  }
+  return NULL;
+}
+
+static const char *__memmem_raita(const char *haystk, size_t sh,
+                                  const char *needle, size_t sn) {
+  // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
+  __builtin_assume(2 <= sn && sn <= sh);
+
+#ifndef _REENTRANT
+  static
+#endif
+  uint8_t bmbc[256];
+  memset(bmbc, sn - 1 < 255 ? sn - 1 : 255, sizeof(bmbc));
+  for (size_t i = 0; i < sn - 1; i++) {
+    size_t t = sn - 1 - i - 1;
+    if (t > 255) t = 255;
+    bmbc[(unsigned char)needle[i]] = t;
+  }
+
+  return __memmem_rabin(haystk, sh, needle, sn, bmbc);
+}
+
+static const char *__memmem(const char *haystk, size_t sh,  //
+                            const char *needle, size_t sn) {
+  // Return when needle is longer than haystack.
+  if (sn > sh) return NULL;
+
+  return sn < sizeof(v128_t) ? __memmem_rabin(haystk, sh, needle, sn, NULL)
+                             : __memmem_raita(haystk, sh, needle, sn);
+}
+
+__attribute__((weak))
+void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
+  // Return immediately on empty needle.
+  if (sn == 0) return (void *)vh;
+
+  // Return immediately when needle is longer than haystack.
+  if (sn > sh) return NULL;
+
+  // Skip to the first matching character using memchr,
+  // handling single character needles.
+  const char *needle = (char *)vn;
+  const char *haystk = (char *)memchr(vh, *needle, sh);
+  if (!haystk || sn == 1) return (void *)haystk;
+
+  sh -= haystk - (char *)vh;
+  return (void *)__memmem(haystk, sh, needle, sn);
+}
+
+__attribute__((weak))
+char *strstr(const char *haystk, const char *needle) {
+  // Return immediately on empty needle.
+  if (!needle[0]) return (char *)haystk;
+
+  // Skip to the first matching character using strchr,
+  // handling single character needles.
+  haystk = strchr(haystk, *needle);
+  if (!haystk || !needle[1]) return (char *)haystk;
+
+  return (char *)__memmem(haystk, strlen(haystk), needle, strlen(needle));
+}
+
 // Given the above SIMD implementations,
 // these are best implemented as
 // small wrappers over those functions.
@@ -500,7 +604,8 @@ static char *__stpcpy(char *__restrict dest, const char *__restrict src) {
   return dest + slen;
 }
 
-static char *__stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+static char *__stpncpy(char *__restrict dest, const char *__restrict src,
+                       size_t n) {
   size_t strnlen(const char *s, size_t n);
   size_t slen = strnlen(src, n);
   memcpy(dest, src, slen);
@@ -513,6 +618,7 @@ char *stpcpy(char *__restrict dest, const char *__restrict src) {
   return __stpcpy(dest, src);
 }
 
+__attribute__((weak, always_inline))
 char *strcpy(char *__restrict dest, const char *__restrict src) {
   __stpcpy(dest, src);
   return dest;
