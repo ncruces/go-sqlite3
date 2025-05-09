@@ -93,7 +93,7 @@ void *memchr(const void *v, int c, size_t n) {
 
   // memchr must behave as if it reads characters sequentially
   // and stops as soon as a match is found.
-  // Aligning ensures loads beyond the first match don't fail.
+  // Aligning ensures loads beyond the first match are safe.
   uintptr_t align = (uintptr_t)v % sizeof(v128_t);
   const v128_t *w = (v128_t *)((char *)v - align);
   const v128_t wc = wasm_i8x16_splat(c);
@@ -111,7 +111,8 @@ void *memchr(const void *v, int c, size_t n) {
       // If the mask is zero because of alignment,
       // it's as if we didn't find anything.
       if (mask) {
-        // We found a match, unless it is beyond the end of the object.
+        // Find the offset of the first one bit (little-endian).
+        // That's a match, unless it is beyond the end of the object.
         // Recall that we decremented n, so less-than-or-equal-to is correct.
         size_t ctz = __builtin_ctz(mask);
         return ctz <= n + align ? (char *)w + ctz : NULL;
@@ -136,6 +137,7 @@ void *memrchr(const void *v, int c, size_t n) {
     const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(--w), wc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
+      // Find the offset of the last one bit (little-endian).
       size_t clz = __builtin_clz(wasm_i8x16_bitmask(cmp)) - 15;
       return (char *)(w + 1) - clz;
     }
@@ -152,7 +154,7 @@ void *memrchr(const void *v, int c, size_t n) {
 __attribute__((weak))
 size_t strlen(const char *s) {
   // strlen must stop as soon as it finds the terminator.
-  // Aligning ensures loads beyond the terminator don't fail.
+  // Aligning ensures loads beyond the terminator are safe.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (v128_t *)(s - align);
 
@@ -167,6 +169,7 @@ size_t strlen(const char *s) {
       // Knowing this helps the compiler.
       __builtin_assume(mask || align);
       if (mask) {
+        // Find the offset of the first one bit (little-endian).
         return (char *)w - s + __builtin_ctz(mask);
       }
     }
@@ -191,7 +194,7 @@ static int __strcmp(const char *s1, const char *s2) {
       // if the terminator is found before that difference.
       break;
     }
-    // All characters are equal.
+    // We know all characters are equal.
     // If any is a terminator the strings are equal.
     if (!wasm_i8x16_all_true(wasm_v128_load(w1))) {
       return 0;
@@ -251,7 +254,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
       // if the terminator is found before that difference.
       break;
     }
-    // All characters are equal.
+    // We know all characters are equal.
     // If any is a terminator the strings are equal.
     if (!wasm_i8x16_all_true(wasm_v128_load(w1))) {
       return 0;
@@ -274,7 +277,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 
 static char *__strchrnul(const char *s, int c) {
   // strchrnul must stop as soon as a match is found.
-  // Aligning ensures loads beyond the first match don't fail.
+  // Aligning ensures loads beyond the first match are safe.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (v128_t *)(s - align);
   const v128_t wc = wasm_i8x16_splat(c);
@@ -290,6 +293,7 @@ static char *__strchrnul(const char *s, int c) {
       // Knowing this helps the compiler.
       __builtin_assume(mask || align);
       if (mask) {
+        // Find the offset of the first one bit (little-endian).
         return (char *)w + __builtin_ctz(mask);
       }
     }
@@ -388,6 +392,7 @@ size_t strspn(const char *s, const char *c) {
       const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w), wc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
+        // Find the offset of the first zero bit (little-endian).
         size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
         return (char *)w + ctz - s;
       }
@@ -410,6 +415,7 @@ size_t strspn(const char *s, const char *c) {
     const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
+      // Find the offset of the first zero bit (little-endian).
       size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
       return (char *)w + ctz - s;
     }
@@ -442,6 +448,7 @@ size_t strcspn(const char *s, const char *c) {
     const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
+      // Find the offset of the first one bit (little-endian).
       size_t ctz = __builtin_ctz(wasm_i8x16_bitmask(cmp));
       return (char *)w + ctz - s;
     }
@@ -462,14 +469,18 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
                                   const char *needle, size_t sn,
                                   uint8_t bmbc[256]) {
   // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
+
+  // We've handled empty and single character needles.
+  // The needle is no longer than haystack.
   __builtin_assume(2 <= sn && sn <= sh);
 
   const v128_t fst = wasm_i8x16_splat(needle[0]);
   const v128_t lst = wasm_i8x16_splat(needle[sn - 1]);
-  const char *N =
-      (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - sn - sizeof(v128_t));
+  // The last haystk offset for which loading blk_lst is safe.
+  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - sn + 1 -
+                           sizeof(v128_t));
 
-  while (haystk <= N) {
+  while (haystk <= H) {
     const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
     const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + sn - 1));
     const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
@@ -477,17 +488,26 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
 
     const v128_t cmp = eq_fst & eq_lst;
     if (wasm_v128_any_true(cmp)) {
+      // Find the offset of the first one bit (little-endian).
+      // Each iteration clears that bit, tries again.
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
-        if (!bcmp(haystk + ctz + 1, needle + 1, sn - 2)) {
+        // This could compare one less byte.
+        // Since bcmp compares left-to-right (this could change)
+        // the last byte only matters if we just found the needle.
+        // Otherwise this may help bcmp vectorize.
+        if (!bcmp(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
       }
     }
 
     size_t skip = sizeof(v128_t);
+    // Apply the bad-character rule to the last byte of the haystack.
     if (bmbc) skip += bmbc[wasm_i8x16_extract_lane(blk_lst, 15)];
+    // Have we reached the end of the haystack?
     if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
+    // Is the needle longer than the haystack?
     if (sn > sh) return NULL;
     haystk += skip;
   }
@@ -506,16 +526,31 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
 static const char *__memmem_raita(const char *haystk, size_t sh,
                                   const char *needle, size_t sn) {
   // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
+
+  // We've handled empty and single character needles.
+  // The needle is no longer than haystack.
   __builtin_assume(2 <= sn && sn <= sh);
+
+  // Compute Boyer-Moore's bad-character shift function.
+  // Only the last 255 characters of the needle matter for shifts up to 255,
+  // which is good enough for most needles.
+  size_t n = sn - 1;
+  size_t i = 0;
+  int c = n;
+  if (c >= 255) {
+    c = 255;
+    i = n - 255;
+  }
 
 #ifndef _REENTRANT
   static
 #endif
   uint8_t bmbc[256];
-  memset(bmbc, sn - 1 < 255 ? sn - 1 : 255, sizeof(bmbc));
-  for (size_t i = 0; i < sn - 1; i++) {
-    size_t t = sn - 1 - i - 1;
-    if (t > 255) t = 255;
+  memset(bmbc, c, sizeof(bmbc));
+  for (; i < n; i++) {
+    // One less than the usual offset.
+    // Added back later (as vector).
+    size_t t = n - i - 1;
     bmbc[(unsigned char)needle[i]] = t;
   }
 
@@ -527,8 +562,10 @@ static const char *__memmem(const char *haystk, size_t sh,  //
   // Return when needle is longer than haystack.
   if (sn > sh) return NULL;
 
-  return sn < sizeof(v128_t) ? __memmem_rabin(haystk, sh, needle, sn, NULL)
-                             : __memmem_raita(haystk, sh, needle, sn);
+  // Decide if Boyer-Moore's bad-character rule will be useful.
+  return sn < sizeof(v128_t) || sh - sn < sizeof(v128_t)
+             ? __memmem_rabin(haystk, sh, needle, sn, NULL)
+             : __memmem_raita(haystk, sh, needle, sn);
 }
 
 __attribute__((weak))
