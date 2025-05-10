@@ -474,15 +474,21 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
   // The needle is no longer than haystack.
   __builtin_assume(2 <= sn && sn <= sh);
 
+  // Find the farthest character not equal to the first one.
+  size_t i = sn - 1;
+  while (i > 0 && needle[0] == needle[i]) i--;
+  if (i == 0) i = sn - 1;
+
   const v128_t fst = wasm_i8x16_splat(needle[0]);
-  const v128_t lst = wasm_i8x16_splat(needle[sn - 1]);
+  const v128_t lst = wasm_i8x16_splat(needle[i]);
+
   // The last haystk offset for which loading blk_lst is safe.
-  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - sn + 1 -
+  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i -
                            sizeof(v128_t));
 
   while (haystk <= H) {
     const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
-    const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + sn - 1));
+    const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + i));
     const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
     const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
 
@@ -492,10 +498,6 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
       // Each iteration clears that bit, tries again.
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
-        // This could compare one less byte.
-        // Since bcmp compares left-to-right (this could change)
-        // the last byte only matters if we just found the needle.
-        // Otherwise this may help bcmp vectorize.
         if (!bcmp(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
@@ -503,8 +505,9 @@ static const char *__memmem_rabin(const char *haystk, size_t sh,
     }
 
     size_t skip = sizeof(v128_t);
-    // Apply the bad-character rule to the last byte of the haystack.
-    if (bmbc) skip += bmbc[wasm_i8x16_extract_lane(blk_lst, 15)];
+    // Apply the bad-character rule to the last checked
+    // character of the haystack.
+    if (bmbc) skip += bmbc[(unsigned char)haystk[sn + 14]];
     // Have we reached the end of the haystack?
     if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
     // Is the needle longer than the haystack?
@@ -641,8 +644,7 @@ static char *__stpcpy(char *__restrict dest, const char *__restrict src) {
   return dest + slen;
 }
 
-static char *__stpncpy(char *__restrict dest, const char *__restrict src,
-                       size_t n) {
+static char *__stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
   size_t strnlen(const char *s, size_t n);
   size_t slen = strnlen(src, n);
   memcpy(dest, src, slen);
