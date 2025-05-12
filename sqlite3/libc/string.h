@@ -333,10 +333,17 @@ char *strrchr(const char *s, int c) {
 
 // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
 
-#define _WASM_SIMD128_BITMAP256_T                                    \
-  struct {                                                           \
-    uint8_t l __attribute__((__vector_size__(16), __aligned__(16))); \
-    uint8_t h __attribute__((__vector_size__(16), __aligned__(16))); \
+#ifndef __wasm_relaxed_simd__
+
+#define wasm_i8x16_relaxed_laneselect wasm_v128_bitselect
+#define wasm_i8x16_relaxed_swizzle wasm_i8x16_swizzle
+
+#endif  // __wasm_relaxed_simd__
+
+#define _WASM_SIMD128_BITMAP256_T \
+  struct {                        \
+    __u8x16 l;                    \
+    __u8x16 h;                    \
   }
 
 #define _WASM_SIMD128_SETBIT(bitmap, i)            \
@@ -367,10 +374,11 @@ char *strrchr(const char *s, int c) {
     v128_t _bitmask_lookup = wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  \
                                               1, 2, 4, 8, 16, 32, 64, 128); \
                                                                             \
-    v128_t _bitmask = wasm_i8x16_swizzle(_bitmask_lookup, _hi_nibbles);     \
-    v128_t _bitsets = wasm_v128_bitselect(                                  \
-        wasm_i8x16_swizzle(bitmap.l, _lo_nibbles),                          \
-        wasm_i8x16_swizzle(bitmap.h, _lo_nibbles),                          \
+    v128_t _bitmask =                                                       \
+        wasm_i8x16_relaxed_swizzle(_bitmask_lookup, _hi_nibbles);           \
+    v128_t _bitsets = wasm_i8x16_relaxed_laneselect(                        \
+        wasm_i8x16_relaxed_swizzle(bitmap.l, _lo_nibbles),                  \
+        wasm_i8x16_relaxed_swizzle(bitmap.h, _lo_nibbles),                  \
         wasm_i8x16_lt(_hi_nibbles, wasm_u8x16_const_splat(8)));             \
                                                                             \
     wasm_i8x16_eq(_bitsets & _bitmask, _bitmask);                           \
@@ -457,6 +465,9 @@ size_t strcspn(const char *s, const char *c) {
   for (s = (char *)w; !_WASM_SIMD128_CHKBIT(bitmap, *s); s++);
   return s - a;
 }
+
+#undef wasm_i8x16_relaxed_laneselect
+#undef wasm_i8x16_relaxed_swizzle
 
 #undef _WASM_SIMD128_SETBIT
 #undef _WASM_SIMD128_CHKBIT
