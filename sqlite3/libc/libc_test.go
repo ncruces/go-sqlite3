@@ -733,6 +733,7 @@ func Test_strstr(t *testing.T) {
 		{"fofofofofoofofoffofoobarfoo", "fofoffofoobarfoo", 11},
 		{"fofofofofofofoffofoobarfoo", "fofoffofoobarfoo", 10},
 		{"fofofofofoofofoffofoobarfoo", "foobars", -1},
+		{"fofofofofofo\x00foffofoobar", "foffof", -1},
 		{"foofyfoobarfoobar", "y", 4},
 		{"oooooooooooooooooooooo", "r", -1},
 		{"oxoxoxoxoxoxoxoxoxoxoxoy", "oy", 22},
