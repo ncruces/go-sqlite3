@@ -295,6 +295,17 @@ func TestConn_Filename(t *testing.T) {
 	t.Parallel()
 
 	file := filepath.Join(t.TempDir(), "test.db")
+	f, err := os.Create(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	file, err = filepath.EvalSymlinks(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	db, err := sqlite3.Open(file)
 	if err != nil {
 		t.Fatal(err)
