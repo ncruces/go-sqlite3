@@ -22,21 +22,23 @@ const (
 )
 
 var (
-	memory  []byte
-	module  api.Module
-	memset  api.Function
-	memcpy  api.Function
-	memchr  api.Function
-	memcmp  api.Function
-	strlen  api.Function
-	strchr  api.Function
-	strcmp  api.Function
-	strstr  api.Function
-	strspn  api.Function
-	strrchr api.Function
-	strncmp api.Function
-	strcspn api.Function
-	stack   [8]uint64
+	memory      []byte
+	module      api.Module
+	memset      api.Function
+	memcpy      api.Function
+	memchr      api.Function
+	memcmp      api.Function
+	strlen      api.Function
+	strchr      api.Function
+	strcmp      api.Function
+	strstr      api.Function
+	strspn      api.Function
+	strrchr     api.Function
+	strncmp     api.Function
+	strcspn     api.Function
+	strcasecmp  api.Function
+	strncasecmp api.Function
+	stack       [8]uint64
 )
 
 func call(fn api.Function, arg ...uint64) uint64 {
@@ -70,6 +72,8 @@ func TestMain(m *testing.M) {
 	strrchr = mod.ExportedFunction("strrchr")
 	strncmp = mod.ExportedFunction("strncmp")
 	strcspn = mod.ExportedFunction("strcspn")
+	strcasecmp = mod.ExportedFunction("strcasecmp")
+	strncasecmp = mod.ExportedFunction("strncasecmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
 
 	os.Exit(m.Run())
@@ -179,6 +183,32 @@ func Benchmark_strncmp(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		call(strncmp, ptr1, ptr2, size-1)
+	}
+}
+
+func Benchmark_strcasecmp(b *testing.B) {
+	clear(memory)
+	fill(memory[ptr1:ptr1+size-1], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size-1], 5)
+
+	b.SetBytes(size/2 + 1)
+	b.ResetTimer()
+	for range b.N {
+		call(strcasecmp, ptr1, ptr2, size)
+	}
+}
+
+func Benchmark_strncasecmp(b *testing.B) {
+	clear(memory)
+	fill(memory[ptr1:ptr1+size-1], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size-1], 5)
+
+	b.SetBytes(size/2 + 1)
+	b.ResetTimer()
+	for range b.N {
+		call(strncasecmp, ptr1, ptr2, size-1)
 	}
 }
 

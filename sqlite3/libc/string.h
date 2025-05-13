@@ -40,7 +40,7 @@ void *memmove(void *dest, const void *src, size_t n) {
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
-  // Baseline algorithm.
+  // Scalar algorithm.
   if (n < sizeof(v128_t)) {
     const unsigned char *u1 = (unsigned char *)v1;
     const unsigned char *u2 = (unsigned char *)v2;
@@ -89,7 +89,7 @@ int memcmp(const void *v1, const void *v2, size_t n) {
 #else  // __OPTIMIZE_SIZE__
 
 static int __memcmpeq(const void *v1, const void *v2, size_t n) {
-  // Baseline algorithm.
+  // Scalar algorithm.
   if (n < sizeof(v128_t)) {
     const unsigned char *u1 = (unsigned char *)v1;
     const unsigned char *u2 = (unsigned char *)v2;
@@ -184,7 +184,7 @@ void *memrchr(const void *v, int c, size_t n) {
     }
   }
 
-  // Baseline algorithm.
+  // Scalar algorithm.
   const char *a = (char *)w;
   while (n--) {
     if (*(--a) == (char)c) return (char *)a;
@@ -219,6 +219,19 @@ size_t strlen(const char *s) {
   }
 }
 
+static int __strcmp_s(const char *s1, const char *s2) {
+  // Scalar algorithm.
+  const unsigned char *u1 = (unsigned char *)s1;
+  const unsigned char *u2 = (unsigned char *)s2;
+  for (;;) {
+    if (*u1 != *u2) return *u1 - *u2;
+    if (*u1 == 0) break;
+    u1++;
+    u2++;
+  }
+  return 0;
+}
+
 static int __strcmp(const char *s1, const char *s2) {
   // How many bytes can be read before pointers go out of bounds.
   size_t N = __builtin_wasm_memory_size(0) * PAGESIZE -  //
@@ -243,28 +256,7 @@ static int __strcmp(const char *s1, const char *s2) {
     w2++;
   }
 
-  // Baseline algorithm.
-  const unsigned char *u1 = (unsigned char *)w1;
-  const unsigned char *u2 = (unsigned char *)w2;
-  for (;;) {
-    if (*u1 != *u2) return *u1 - *u2;
-    if (*u1 == 0) break;
-    u1++;
-    u2++;
-  }
-  return 0;
-}
-
-static int __strcmp_s(const char *s1, const char *s2) {
-  const unsigned char *u1 = (unsigned char *)s1;
-  const unsigned char *u2 = (unsigned char *)s2;
-  for (;;) {
-    if (*u1 != *u2) return *u1 - *u2;
-    if (*u1 == 0) break;
-    u1++;
-    u2++;
-  }
-  return 0;
+  return __strcmp_s((char *)w1, (char *)w2);
 }
 
 __attribute__((weak, always_inline))
@@ -302,7 +294,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
     w2++;
   }
 
-  // Baseline algorithm.
+  // Scalar algorithm.
   const unsigned char *u1 = (unsigned char *)w1;
   const unsigned char *u2 = (unsigned char *)w2;
   while (n--) {
@@ -446,7 +438,7 @@ size_t strspn(const char *s, const char *c) {
       w++;
     }
 
-    // Baseline algorithm.
+    // Scalar algorithm.
     for (s = (char *)w; *s == *c; s++);
     return s - a;
   }
@@ -469,7 +461,7 @@ size_t strspn(const char *s, const char *c) {
     w++;
   }
 
-  // Baseline algorithm.
+  // Scalar algorithm.
   for (s = (char *)w; _WASM_SIMD128_CHKBIT(bitmap, *s); s++);
   return s - a;
 }
@@ -502,7 +494,7 @@ size_t strcspn(const char *s, const char *c) {
     w++;
   }
 
-  // Baseline algorithm.
+  // Scalar algorithm.
   for (s = (char *)w; !_WASM_SIMD128_CHKBIT(bitmap, *s); s++);
   return s - a;
 }
@@ -573,7 +565,7 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
     haystk += skip;
   }
 
-  // Baseline algorithm.
+  // Scalar algorithm.
   for (size_t j = 0; j <= sh - sn; j++) {
     for (size_t i = 0;; i++) {
       if (sn == i) return haystk;

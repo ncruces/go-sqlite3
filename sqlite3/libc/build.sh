@@ -11,8 +11,9 @@ SRCS="${1:-libc.c}"
 
 trap 'rm -f libc.c libc.tmp' EXIT
 cat << EOF > libc.c
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 EOF
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
@@ -40,11 +41,13 @@ EOF
 	-Wl,--export=strchr \
 	-Wl,--export=strchrnul \
 	-Wl,--export=strcmp \
+	-Wl,--export=strcasecmp \
 	-Wl,--export=strcpy \
 	-Wl,--export=strcspn \
 	-Wl,--export=strlen \
 	-Wl,--export=strncat \
 	-Wl,--export=strncmp \
+	-Wl,--export=strncasecmp \
 	-Wl,--export=strncpy \
 	-Wl,--export=strrchr \
 	-Wl,--export=strspn \
