@@ -1,9 +1,7 @@
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
-#include <stddef.h>
 #include <stdint.h>
-#include <strings.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
 
@@ -81,6 +79,49 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   }
   return 0;
 }
+
+#ifdef __OPTIMIZE_SIZE__
+
+// __memcmpeq is the same as memcmp but only compares for equality.
+
+#define __memcmpeq(v1, v2, n) memcmp(v1, v2, n)
+
+#else  // __OPTIMIZE_SIZE__
+
+static int __memcmpeq(const void *v1, const void *v2, size_t n) {
+  // Baseline algorithm.
+  if (n < sizeof(v128_t)) {
+    const unsigned char *u1 = (unsigned char *)v1;
+    const unsigned char *u2 = (unsigned char *)v2;
+    while (n--) {
+      if (*u1 != *u2) return 1;
+      u1++;
+      u2++;
+    }
+    return 0;
+  }
+
+  // memcmpeq is allowed to read up to n bytes from each object.
+  // Unaligned loads handle the case where the objects
+  // have mismatching alignments.
+  const v128_t *w1 = (v128_t *)v1;
+  const v128_t *w2 = (v128_t *)v2;
+  while (n) {
+    // Find any single bit difference.
+    if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
+      return 1;
+    }
+    // This makes n a multiple of sizeof(v128_t)
+    // for every iteration except the first.
+    size_t align = (n - 1) % sizeof(v128_t) + 1;
+    w1 = (v128_t *)((char *)w1 + align);
+    w2 = (v128_t *)((char *)w2 + align);
+    n -= align;
+  }
+  return 0;
+}
+
+#endif  // __OPTIMIZE_SIZE__
 
 __attribute__((weak))
 void *memchr(const void *v, int c, size_t n) {
@@ -510,7 +551,7 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
       // Each iteration clears that bit, tries again.
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
-        if (!bcmp(haystk + ctz + 1, needle + 1, sn - 1)) {
+        if (!__memcmpeq(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
       }

@@ -14,9 +14,9 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 	-o sql3parse_table.wasm main.c \
 	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
 	-mexec-model=reactor \
-	-msimd128 -mmutable-globals -mmultivalue \
-	-mbulk-memory -mreference-types \
-	-mnontrapping-fptoint -msign-ext \
+	-mmutable-globals -mnontrapping-fptoint \
+	-msimd128 -mbulk-memory -msign-ext \
+	-mreference-types -mmultivalue \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -25,6 +25,6 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 "$BINARYEN/wasm-ctor-eval" -c _initialize sql3parse_table.wasm -o sql3parse_table.tmp
 "$BINARYEN/wasm-opt" --strip --strip-debug --strip-producers -c -Oz \
 	sql3parse_table.tmp -o sql3parse_table.wasm --low-memory-unused \
-	--enable-simd --enable-mutable-globals --enable-multivalue \
-	--enable-bulk-memory --enable-reference-types \
-	--enable-nontrapping-float-to-int --enable-sign-ext
+	--enable-mutable-globals --enable-nontrapping-float-to-int \
+	--enable-simd --enable-bulk-memory --enable-sign-ext \
+	--enable-reference-types --enable-multivalue

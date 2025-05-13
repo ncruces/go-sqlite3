@@ -10,9 +10,9 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
 	-o mptest.wasm main.c \
 	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
-	-msimd128 -mmutable-globals -mmultivalue \
-	-mbulk-memory -mreference-types \
-	-mnontrapping-fptoint -msign-ext \
+	-mmutable-globals -mnontrapping-fptoint \
+	-msimd128 -mbulk-memory -msign-ext \
+	-mreference-types -mmultivalue \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -27,7 +27,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	mptest.wasm -o mptest.tmp --low-memory-unused \
-	--enable-simd --enable-mutable-globals --enable-multivalue \
-	--enable-bulk-memory --enable-reference-types \
-	--enable-nontrapping-float-to-int --enable-sign-ext
+	--enable-mutable-globals --enable-nontrapping-float-to-int \
+	--enable-simd --enable-bulk-memory --enable-sign-ext \
+	--enable-reference-types --enable-multivalue
 mv mptest.tmp mptest.wasm

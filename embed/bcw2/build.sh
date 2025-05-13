@@ -46,9 +46,9 @@ cd ~-
 	-o bcw2.wasm build/main.c \
 	-I"$ROOT/sqlite3/libc" -I"build" \
 	-mexec-model=reactor \
-	-msimd128 -mmutable-globals -mmultivalue \
-	-mbulk-memory -mreference-types \
-	-mnontrapping-fptoint -msign-ext \
+	-mmutable-globals -mnontrapping-fptoint \
+	-msimd128 -mbulk-memory -msign-ext \
+	-mreference-types -mmultivalue \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -61,6 +61,6 @@ cd ~-
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize bcw2.wasm -o bcw2.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	bcw2.tmp -o bcw2.wasm --low-memory-unused \
-	--enable-simd --enable-mutable-globals --enable-multivalue \
-	--enable-bulk-memory --enable-reference-types \
-	--enable-nontrapping-float-to-int --enable-sign-ext
+	--enable-mutable-globals --enable-nontrapping-float-to-int \
+	--enable-simd --enable-bulk-memory --enable-sign-ext \
+	--enable-reference-types --enable-multivalue

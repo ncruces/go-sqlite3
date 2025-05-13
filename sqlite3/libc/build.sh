@@ -19,9 +19,9 @@ EOF
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o libc.wasm -I. "$SRCS" \
 	-mexec-model=reactor \
-	-msimd128 -mmutable-globals -mmultivalue \
-	-mbulk-memory -mreference-types \
-	-mnontrapping-fptoint -msign-ext \
+	-mmutable-globals -mnontrapping-fptoint \
+	-msimd128 -mbulk-memory -msign-ext \
+	-mreference-types -mmultivalue \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,-z,stack-size=4096 \
 	-Wl,--stack-first \
@@ -54,8 +54,8 @@ EOF
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
 "$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
 	libc.tmp -o libc.wasm \
-	--enable-simd --enable-mutable-globals --enable-multivalue \
-	--enable-bulk-memory --enable-reference-types \
-	--enable-nontrapping-float-to-int --enable-sign-ext
+	--enable-mutable-globals --enable-nontrapping-float-to-int \
+	--enable-simd --enable-bulk-memory --enable-sign-ext \
+	--enable-reference-types --enable-multivalue
 
 "$BINARYEN/wasm-dis" -o libc.wat libc.wasm

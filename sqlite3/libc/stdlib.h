@@ -1,9 +1,6 @@
 #ifndef _WASM_SIMD128_STDLIB_H
 #define _WASM_SIMD128_STDLIB_H
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include_next <stdlib.h>  // the system stdlib.h
 
 #ifdef __cplusplus
