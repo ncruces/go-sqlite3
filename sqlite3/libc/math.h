@@ -1,9 +1,9 @@
+#include_next <math.h>  // the system math.h
+
 #ifndef _WASM_SIMD128_MATH_H
 #define _WASM_SIMD128_MATH_H
 
 #include <wasm_simd128.h>
-
-#include_next <math.h>  // the system math.h
 
 #ifdef __cplusplus
 extern "C" {

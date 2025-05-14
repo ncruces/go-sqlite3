@@ -1,3 +1,5 @@
+#include_next <strings.h>  // the system strings.h
+
 #ifndef _WASM_SIMD128_STRINGS_H
 #define _WASM_SIMD128_STRINGS_H
 
@@ -6,8 +8,6 @@
 #include <string.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
-
-#include_next <strings.h>  // the system strings.h
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,7 +20,7 @@ int bcmp(const void *v1, const void *v2, size_t n) {
   return __memcmpeq(v1, v2, n);
 }
 
-v128_t __tolower8x16(v128_t v) {
+static v128_t __tolower8x16(v128_t v) {
   __i8x16 i;
   i = v + wasm_i8x16_splat(INT8_MAX - ('Z'));
   i = i > wasm_i8x16_splat(INT8_MAX - ('Z' - 'A' + 1));

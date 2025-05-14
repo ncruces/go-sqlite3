@@ -1,11 +1,11 @@
+#include_next <string.h>  // the system string.h
+
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
 #include <stdint.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
-
-#include_next <string.h>  // the system string.h
 
 #ifdef __cplusplus
 extern "C" {
@@ -657,6 +657,7 @@ char *strstr(const char *haystk, const char *needle) {
 // Simple wrappers already in musl:
 //  - mempcpy
 //  - strcat
+//  - strlcat
 //  - strdup
 //  - strndup
 //  - strnlen
@@ -666,7 +667,6 @@ char *strstr(const char *haystk, const char *needle) {
 
 __attribute__((weak))
 void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n) {
-  void *memchr(const void *v, int c, size_t n);
   const void *m = memchr(src, c, n);
   if (m != NULL) {
     n = (char *)m - (char *)src + 1;
@@ -674,6 +674,17 @@ void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n
   }
   memcpy(dest, src, n);
   return (void *)m;
+}
+
+__attribute__((weak))
+size_t strlcpy(char *__restrict dest, const char *__restrict src, size_t n) {
+  size_t slen = strlen(src);
+  if (n--) {
+    if (n > slen) n = slen;
+    memcpy(dest, src, n);
+    dest[n] = 0;
+  }
+  return slen;
 }
 
 __attribute__((weak))

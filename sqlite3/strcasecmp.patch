@@ -1,0 +1,41 @@
+# Use strcasecmp and strncasecmp.
+--- sqlite3.c.orig
++++ sqlite3.c
+@@ -35685,35 +35685,15 @@
+   return sqlite3StrICmp(zLeft, zRight);
+ }
+ SQLITE_PRIVATE int sqlite3StrICmp(const char *zLeft, const char *zRight){
+-  unsigned char *a, *b;
+-  int c, x;
+-  a = (unsigned char *)zLeft;
+-  b = (unsigned char *)zRight;
+-  for(;;){
+-    c = *a;
+-    x = *b;
+-    if( c==x ){
+-      if( c==0 ) break;
+-    }else{
+-      c = (int)UpperToLower[c] - (int)UpperToLower[x];
+-      if( c ) break;
+-    }
+-    a++;
+-    b++;
+-  }
+-  return c;
++  return strcasecmp(zLeft, zRight);
+ }
+ SQLITE_API int sqlite3_strnicmp(const char *zLeft, const char *zRight, int N){
+-  register unsigned char *a, *b;
+   if( zLeft==0 ){
+     return zRight ? -1 : 0;
+   }else if( zRight==0 ){
+     return 1;
+   }
+-  a = (unsigned char *)zLeft;
+-  b = (unsigned char *)zRight;
+-  while( N-- > 0 && *a!=0 && UpperToLower[*a]==UpperToLower[*b]){ a++; b++; }
+-  return N<0 ? 0 : UpperToLower[*a] - UpperToLower[*b];
++  return strncasecmp(zLeft, zRight, N);
+ }
+ 
+ /*
