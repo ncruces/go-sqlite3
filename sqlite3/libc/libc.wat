@@ -2374,7 +2374,7 @@
     )
     (then
      (return
-      (call $__memmem_raita
+      (call $__memmem
        (local.get $4)
        (local.get $8)
        (local.get $2)
@@ -2584,7 +2584,7 @@
     )
    )
    (local.set $6
-    (call $__memmem_raita
+    (call $__memmem
      (local.get $4)
      (local.get $8)
      (local.get $2)
@@ -2595,7 +2595,7 @@
   )
   (local.get $6)
  )
- (func $__memmem_raita (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
+ (func $__memmem (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
   (local $5 i32)
   (local $6 i32)
   (local $7 i32)
@@ -2617,8 +2617,8 @@
     (local.get $2)
    )
   )
-  (local.set $6
-   (local.tee $8
+  (local.set $5
+   (local.tee $9
     (i32.sub
      (local.get $3)
      (i32.const 1)
@@ -2634,16 +2634,16 @@
        (i32.load8_u
         (i32.add
          (local.get $2)
-         (local.get $6)
+         (local.get $5)
         )
        )
       )
      )
     )
     (br_if $label
-     (local.tee $6
+     (local.tee $5
       (i32.sub
-       (local.get $6)
+       (local.get $5)
        (i32.const 1)
       )
      )
@@ -2653,12 +2653,12 @@
     (i32.load8_u
      (i32.add
       (local.get $2)
-      (local.get $8)
+      (local.get $9)
      )
     )
    )
-   (local.set $6
-    (local.get $8)
+   (local.set $5
+    (local.get $9)
    )
   )
   (block $block5
@@ -2672,7 +2672,7 @@
           (memory.size)
           (i32.const 16)
          )
-         (local.get $6)
+         (local.get $5)
         )
         (i32.const 16)
        )
@@ -2720,7 +2720,7 @@
             (v128.load align=1
              (i32.add
               (local.get $0)
-              (local.get $6)
+              (local.get $5)
              )
             )
            )
@@ -2764,14 +2764,30 @@
        )
       )
       (loop $label3
-       (local.set $9
+       (if
+        (i32.lt_u
+         (local.get $1)
+         (i32.add
+          (local.tee $6
+           (i32.ctz
+            (local.get $11)
+           )
+          )
+          (local.get $3)
+         )
+        )
+        (then
+         (return
+          (i32.const 0)
+         )
+        )
+       )
+       (local.set $8
         (i32.add
          (local.tee $12
           (i32.add
            (local.get $0)
-           (i32.ctz
-            (local.get $11)
-           )
+           (local.get $6)
           )
          )
          (i32.const 1)
@@ -2786,8 +2802,8 @@
           (local.set $7
            (local.get $10)
           )
-          (local.set $5
-           (local.get $8)
+          (local.set $6
+           (local.get $9)
           )
           (loop $label1
            (br_if $block4
@@ -2797,7 +2813,7 @@
                (local.get $7)
               )
               (v128.load align=1
-               (local.get $9)
+               (local.get $8)
               )
              )
             )
@@ -2809,7 +2825,7 @@
               (i32.add
                (i32.and
                 (i32.sub
-                 (local.get $5)
+                 (local.get $6)
                  (i32.const 1)
                 )
                 (i32.const 15)
@@ -2819,16 +2835,16 @@
              )
             )
            )
-           (local.set $9
+           (local.set $8
             (i32.add
-             (local.get $9)
+             (local.get $8)
              (local.get $13)
             )
            )
            (br_if $label1
-            (local.tee $5
+            (local.tee $6
              (i32.sub
-              (local.get $5)
+              (local.get $6)
               (local.get $13)
              )
             )
@@ -2837,8 +2853,8 @@
           (br $block5)
          )
         )
-        (local.set $5
-         (local.get $8)
+        (local.set $6
+         (local.get $9)
         )
         (local.set $7
          (local.get $10)
@@ -2847,7 +2863,7 @@
          (br_if $block4
           (i32.ne
            (i32.load8_u
-            (local.get $9)
+            (local.get $8)
            )
            (i32.load8_u
             (local.get $7)
@@ -2860,16 +2876,16 @@
            (i32.const 1)
           )
          )
-         (local.set $9
+         (local.set $8
           (i32.add
-           (local.get $9)
+           (local.get $8)
            (i32.const 1)
           )
          )
          (br_if $label2
-          (local.tee $5
+          (local.tee $6
            (i32.sub
-            (local.get $5)
+            (local.get $6)
             (i32.const 1)
            )
           )
@@ -2890,70 +2906,74 @@
        )
       )
      )
-     (local.set $5
-      (if (result i32)
-       (local.get $4)
-       (then
-        (i32.add
-         (i32.load8_u
-          (i32.add
-           (local.get $4)
-           (i32.load8_u
-            (i32.add
-             (local.get $0)
-             (local.get $15)
-            )
-           )
-          )
-         )
-         (i32.const 16)
-        )
-       )
-       (else
-        (i32.const 16)
-       )
-      )
-     )
      (block $block6
       (if
-       (i32.ne
+       (i32.eq
         (local.get $1)
         (i32.const -1)
        )
        (then
-        (local.set $12
+        (if
+         (i8x16.all_true
+          (local.get $17)
+         )
+         (then
+          (local.set $8
+           (i32.const 16)
+          )
+          (local.set $1
+           (i32.const -1)
+          )
+          (br $block6)
+         )
+        )
+        (return
          (i32.const 0)
         )
-        (br_if $block5
-         (i32.lt_u
+       )
+      )
+      (local.set $12
+       (i32.const 0)
+      )
+      (br_if $block5
+       (i32.lt_u
+        (local.get $1)
+        (local.tee $1
+         (i32.sub
           (local.get $1)
-          (local.tee $1
-           (i32.sub
-            (local.get $1)
-            (local.get $5)
+          (local.tee $8
+           (if (result i32)
+            (local.get $4)
+            (then
+             (i32.add
+              (i32.load8_u
+               (i32.add
+                (local.get $4)
+                (i32.load8_u
+                 (i32.add
+                  (local.get $0)
+                  (local.get $15)
+                 )
+                )
+               )
+              )
+              (i32.const 16)
+             )
+            )
+            (else
+             (i32.const 16)
+            )
            )
           )
          )
         )
-        (br_if $block5
-         (i32.lt_u
-          (local.get $1)
-          (local.get $3)
-         )
-        )
-        (br $block6)
        )
       )
-      (local.set $1
-       (i32.const -1)
-      )
-      (br_if $block6
-       (i8x16.all_true
-        (local.get $17)
+      (br_if $block5
+       (i32.lt_u
+        (local.get $1)
+        (local.get $3)
        )
-      )
-      (return
-       (i32.const 0)
       )
      )
      (br_if $label4
@@ -2961,7 +2981,7 @@
        (local.tee $0
         (i32.add
          (local.get $0)
-         (local.get $5)
+         (local.get $8)
         )
        )
        (local.get $14)
@@ -2969,13 +2989,13 @@
      )
     )
    )
-   (local.set $8
+   (local.set $9
     (i32.sub
      (local.get $1)
      (local.get $3)
     )
    )
-   (local.set $5
+   (local.set $6
     (i32.const 0)
    )
    (local.set $4
@@ -2984,93 +3004,88 @@
      (i32.const -1)
     )
    )
-   (loop $label5
-    (local.set $6
+   (loop $label6
+    (local.set $5
      (i32.const 0)
     )
-    (loop $label6
-     (local.set $12
-      (i32.const 0)
-     )
-     (br_if $block5
-      (i32.eqz
-       (i32.or
-        (local.get $4)
-        (local.tee $1
-         (i32.load8_u
-          (i32.add
-           (local.get $0)
-           (local.get $6)
+    (block $block7
+     (loop $label5
+      (local.set $12
+       (i32.const 0)
+      )
+      (br_if $block5
+       (i32.eqz
+        (i32.or
+         (local.get $4)
+         (local.tee $1
+          (i32.load8_u
+           (i32.add
+            (local.get $0)
+            (local.get $5)
+           )
           )
          )
         )
        )
       )
-     )
-     (if
-      (i32.ne
-       (local.get $1)
-       (i32.load8_u
-        (i32.add
-         (local.get $2)
-         (local.get $6)
-        )
-       )
-      )
-      (then
-       (local.set $0
-        (i32.add
-         (local.get $0)
-         (i32.const 1)
-        )
-       )
-       (br_if $label5
-        (i32.le_u
-         (local.tee $5
-          (i32.add
-           (local.get $5)
-           (i32.const 1)
-          )
+      (br_if $block7
+       (i32.ne
+        (i32.load8_u
+         (i32.add
+          (local.get $2)
+          (local.get $5)
          )
-         (local.get $8)
+        )
+        (local.get $1)
+       )
+      )
+      (br_if $label5
+       (i32.ne
+        (local.get $3)
+        (local.tee $5
+         (i32.add
+          (local.get $5)
+          (i32.const 1)
+         )
         )
        )
-       (br $block5)
       )
      )
-     (br_if $label6
-      (i32.ne
-       (local.get $3)
-       (local.tee $6
-        (i32.add
-         (local.get $6)
-         (i32.const 1)
-        )
-       )
-      )
+     (return
+      (local.get $0)
      )
     )
-   )
-   (local.set $12
-    (local.get $0)
+    (local.set $0
+     (i32.add
+      (local.get $0)
+      (i32.const 1)
+     )
+    )
+    (br_if $label6
+     (i32.le_u
+      (local.tee $6
+       (i32.add
+        (local.get $6)
+        (i32.const 1)
+       )
+      )
+      (local.get $9)
+     )
+    )
    )
   )
   (local.get $12)
  )
  (func $strstr (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
+  (local $2 v128)
+  (local $3 v128)
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 v128)
-  (local $10 v128)
   (block $block
    (br_if $block
     (i32.eqz
-     (local.tee $4
+     (local.tee $5
       (i32.load8_u
        (local.get $1)
       )
@@ -3080,12 +3095,12 @@
    (block $block1
     (if
      (v128.any_true
-      (local.tee $9
+      (local.tee $2
        (v128.or
         (i8x16.eq
-         (local.tee $9
+         (local.tee $2
           (v128.load
-           (local.tee $2
+           (local.tee $4
             (i32.and
              (local.get $0)
              (i32.const -16)
@@ -3096,10 +3111,10 @@
          (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
         )
         (i8x16.eq
-         (local.get $9)
-         (local.tee $10
+         (local.get $2)
+         (local.tee $3
           (i8x16.splat
-           (local.get $4)
+           (local.get $5)
           )
          )
         )
@@ -3108,10 +3123,10 @@
      )
      (then
       (br_if $block1
-       (local.tee $3
+       (local.tee $6
         (i32.and
          (i8x16.bitmask
-          (local.get $9)
+          (local.get $2)
          )
          (i32.shl
           (i32.const -1)
@@ -3126,29 +3141,29 @@
      )
     )
     (loop $label
-     (local.set $9
+     (local.set $2
       (v128.load offset=16
-       (local.get $2)
+       (local.get $4)
       )
      )
-     (local.set $2
+     (local.set $4
       (i32.add
-       (local.get $2)
+       (local.get $4)
        (i32.const 16)
       )
      )
      (br_if $label
       (i32.eqz
        (v128.any_true
-        (local.tee $9
+        (local.tee $2
          (v128.or
           (i8x16.eq
-           (local.get $9)
+           (local.get $2)
            (v128.const i32x4 0x00000000 0x00000000 0x00000000 0x00000000)
           )
           (i8x16.eq
-           (local.get $9)
-           (local.get $10)
+           (local.get $2)
+           (local.get $3)
           )
          )
         )
@@ -3156,9 +3171,9 @@
       )
      )
     )
-    (local.set $3
+    (local.set $6
      (i8x16.bitmask
-      (local.get $9)
+      (local.get $2)
      )
     )
    )
@@ -3167,13 +3182,13 @@
    )
    (br_if $block
     (i32.ne
-     (local.get $4)
+     (local.get $5)
      (i32.load8_u
-      (local.tee $7
+      (local.tee $4
        (i32.add
-        (local.get $2)
+        (local.get $4)
         (i32.ctz
-         (local.get $3)
+         (local.get $6)
         )
        )
       )
@@ -3188,240 +3203,19 @@
     )
     (then
      (return
-      (local.get $7)
-     )
-    )
-   )
-   (if
-    (i32.le_u
-     (i32.add
-      (local.tee $5
-       (call $strlen
-        (local.get $1)
-       )
-      )
-      (i32.const 16)
-     )
-     (i32.const 31)
-    )
-    (then
-     (return
-      (call $__memmem_raita
-       (local.get $7)
-       (i32.const -1)
-       (local.get $1)
-       (local.get $5)
-       (i32.const 0)
-      )
-     )
-    )
-   )
-   (memory.fill
-    (i32.const 4112)
-    (select
-     (i32.const -1)
-     (local.tee $6
-      (i32.sub
-       (local.get $5)
-       (i32.const 1)
-      )
-     )
-     (local.tee $0
-      (i32.gt_s
-       (local.get $6)
-       (i32.const 254)
-      )
-     )
-    )
-    (i32.const 256)
-   )
-   (block $block2
-    (br_if $block2
-     (i32.ge_u
-      (local.tee $2
-       (select
-        (i32.sub
-         (local.get $5)
-         (i32.const 256)
-        )
-        (i32.const 0)
-        (local.get $0)
-       )
-      )
-      (local.get $6)
-     )
-    )
-    (local.set $3
-     (i32.sub
-      (i32.sub
-       (local.get $5)
-       (local.get $2)
-      )
-      (i32.const 2)
-     )
-    )
-    (if
-     (local.tee $4
-      (i32.and
-       (i32.add
-        (local.get $5)
-        (i32.xor
-         (local.get $2)
-         (i32.const -1)
-        )
-       )
-       (i32.const 3)
-      )
-     )
-     (then
-      (local.set $0
-       (local.get $3)
-      )
-      (loop $label1
-       (i32.store8
-        (i32.add
-         (i32.load8_u
-          (i32.add
-           (local.get $1)
-           (local.get $2)
-          )
-         )
-         (i32.const 4112)
-        )
-        (local.get $0)
-       )
-       (local.set $0
-        (i32.sub
-         (local.get $0)
-         (i32.const 1)
-        )
-       )
-       (local.set $2
-        (i32.add
-         (local.get $2)
-         (i32.const 1)
-        )
-       )
-       (br_if $label1
-        (local.tee $4
-         (i32.sub
-          (local.get $4)
-          (i32.const 1)
-         )
-        )
-       )
-      )
-     )
-    )
-    (br_if $block2
-     (i32.lt_u
-      (local.get $3)
-      (i32.const 3)
-     )
-    )
-    (local.set $0
-     (i32.sub
-      (local.get $5)
-      (local.get $2)
-     )
-    )
-    (local.set $3
-     (local.get $1)
-    )
-    (loop $label2
-     (i32.store8
-      (i32.add
-       (i32.load8_u
-        (local.tee $8
-         (i32.add
-          (local.get $2)
-          (local.get $3)
-         )
-        )
-       )
-       (i32.const 4112)
-      )
-      (i32.sub
-       (local.get $0)
-       (i32.const 2)
-      )
-     )
-     (i32.store8
-      (i32.add
-       (i32.load8_u
-        (i32.add
-         (local.get $8)
-         (i32.const 1)
-        )
-       )
-       (i32.const 4112)
-      )
-      (i32.sub
-       (local.get $0)
-       (i32.const 3)
-      )
-     )
-     (i32.store8
-      (i32.add
-       (i32.load8_u
-        (i32.add
-         (local.get $8)
-         (i32.const 2)
-        )
-       )
-       (i32.const 4112)
-      )
-      (local.tee $4
-       (i32.sub
-        (local.get $0)
-        (i32.const 4)
-       )
-      )
-     )
-     (i32.store8
-      (i32.add
-       (i32.load8_u
-        (i32.add
-         (local.get $8)
-         (i32.const 3)
-        )
-       )
-       (i32.const 4112)
-      )
-      (i32.sub
-       (local.get $0)
-       (i32.const 5)
-      )
-     )
-     (local.set $3
-      (i32.add
-       (local.get $3)
-       (i32.const 4)
-      )
-     )
-     (local.set $0
       (local.get $4)
-     )
-     (br_if $label2
-      (i32.ne
-       (local.get $2)
-       (local.tee $6
-        (i32.sub
-         (local.get $6)
-         (i32.const 4)
-        )
-       )
-      )
      )
     )
    )
    (local.set $0
-    (call $__memmem_raita
-     (local.get $7)
+    (call $__memmem
+     (local.get $4)
      (i32.const -1)
      (local.get $1)
-     (local.get $5)
-     (i32.const 4112)
+     (call $strlen
+      (local.get $1)
+     )
+     (i32.const 0)
     )
    )
   )

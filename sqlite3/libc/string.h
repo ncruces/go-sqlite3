@@ -507,9 +507,9 @@ size_t strcspn(const char *s, const char *c) {
 #undef _WASM_SIMD128_CHKBITS
 #undef _WASM_SIMD128_BITMAP256_T
 
-static const char *__memmem_raita(const char *haystk, size_t sh,
-                                  const char *needle, size_t sn,
-                                  uint8_t bmbc[256]) {
+static const char *__memmem(const char *haystk, size_t sh,
+                            const char *needle, size_t sn,
+                            uint8_t bmbc[256]) {
   // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
   // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
 
@@ -543,6 +543,8 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
       // Each iteration clears that bit, tries again.
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
+        // The match may be after the end of the haystack.
+        if (ctz + sn > sh) return NULL;
         if (!__memcmpeq(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
@@ -550,17 +552,17 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
     }
 
     size_t skip = sizeof(v128_t);
-    // Apply the bad-character rule to the last checked
-    // character of the haystack.
-    if (bmbc) skip += bmbc[(unsigned char)haystk[sn + 14]];
-    if (sh != SIZE_MAX) {
+    if (sh == SIZE_MAX) {
+      // Have we reached the end of the haystack?
+      if (!wasm_i8x16_all_true(blk_fst)) return NULL;
+    } else {
+      // Apply the bad-character rule to the last checked
+      // character of the haystack.
+      if (bmbc) skip += bmbc[(unsigned char)haystk[sn - 1 + 15]];
       // Have we reached the end of the haystack?
       if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
       // Is the needle longer than the haystack?
       if (sn > sh) return NULL;
-    } else if (!wasm_i8x16_all_true(blk_fst)) {
-      // We found a terminator.
-      return NULL;
     }
     haystk += skip;
   }
@@ -577,11 +579,27 @@ static const char *__memmem_raita(const char *haystk, size_t sh,
   return NULL;
 }
 
-static const char *__memmem(const char *haystk, size_t sh,  //
-                            const char *needle, size_t sn) {
+__attribute__((weak))
+void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
+  // Return immediately on empty needle.
+  if (sn == 0) return (void *)vh;
+
+  // Return immediately when needle is longer than haystack.
+  if (sn > sh) return NULL;
+
+  // Skip to the first matching character using memchr,
+  // handling single character needles.
+  const char *needle = (char *)vn;
+  const char *haystk = (char *)memchr(vh, *needle, sh);
+  if (!haystk || sn == 1) return (void *)haystk;
+
+  // The haystack got shorter, is the needle now longer?
+  sh -= haystk - (char *)vh;
+  if (sn > sh) return NULL;
+
   // Is Boyer-Moore's bad-character rule useful?
   if (sn < sizeof(v128_t) || sh - sn < sizeof(v128_t)) {
-    return __memmem_raita(haystk, sh, needle, sn, NULL);
+    return (void *)__memmem(haystk, sh, needle, sn, NULL);
   }
 
   // https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
@@ -613,28 +631,7 @@ static const char *__memmem(const char *haystk, size_t sh,  //
     bmbc[(unsigned char)needle[i]] = t;
   }
 
-  return __memmem_raita(haystk, sh, needle, sn, bmbc);
-}
-
-__attribute__((weak))
-void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
-  // Return immediately on empty needle.
-  if (sn == 0) return (void *)vh;
-
-  // Return immediately when needle is longer than haystack.
-  if (sn > sh) return NULL;
-
-  // Skip to the first matching character using memchr,
-  // handling single character needles.
-  const char *needle = (char *)vn;
-  const char *haystk = (char *)memchr(vh, *needle, sh);
-  if (!haystk || sn == 1) return (void *)haystk;
-
-  // The haystack got shorter, is the needle now longer?
-  sh -= haystk - (char *)vh;
-  if (sn > sh) return NULL;
-
-  return (void *)__memmem(haystk, sh, needle, sn);
+  return (void *)__memmem(haystk, sh, needle, sn, bmbc);
 }
 
 __attribute__((weak))
@@ -647,7 +644,7 @@ char *strstr(const char *haystk, const char *needle) {
   haystk = strchr(haystk, *needle);
   if (!haystk || !needle[1]) return (char *)haystk;
 
-  return (char *)__memmem(haystk, SIZE_MAX, needle, strlen(needle));
+  return (char *)__memmem(haystk, SIZE_MAX, needle, strlen(needle), NULL);
 }
 
 // Given the above SIMD implementations,
