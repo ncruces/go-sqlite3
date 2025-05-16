@@ -3,6 +3,7 @@ package sqlite3
 
 import (
 	"context"
+	"log"
 	"math/bits"
 	"os"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -53,8 +55,8 @@ func compileSQLite() {
 		} else {
 			cfg = cfg.WithMemoryLimitPages(4096) // 256MB
 		}
-		cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2)
 	}
+	cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesTailCall)
 
 	instance.runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
 
@@ -178,12 +180,17 @@ func (sqlt *sqlite) putfn(name string, fn api.Function) {
 }
 
 func (sqlt *sqlite) call(name string, params ...stk_t) stk_t {
+	// All calls go through here, it's a nice place to add a breakpoint.
+	// I also added some logging.
 	copy(sqlt.stack[:], params)
 	fn := sqlt.getfn(name)
+	log.Println(name, params, "...")
 	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
 	if err != nil {
+		log.Println(name, params, "panic")
 		panic(err)
 	}
+	log.Println(name, params, stk_t(sqlt.stack[0]))
 	sqlt.putfn(name, fn)
 	return stk_t(sqlt.stack[0])
 }

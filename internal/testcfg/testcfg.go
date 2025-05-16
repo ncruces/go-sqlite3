@@ -12,7 +12,8 @@ import (
 // notest
 
 func init() {
-	sqlite3.RuntimeConfig = wazero.NewRuntimeConfig().WithMemoryLimitPages(512)
+	// This is the configuration used by most tests.
+	sqlite3.RuntimeConfig = wazero.NewRuntimeConfigInterpreter().WithMemoryLimitPages(512)
 	if os.Getenv("CI") != "" {
 		path := filepath.Join(os.TempDir(), "wazero")
 		if err := os.MkdirAll(path, 0777); err == nil {
