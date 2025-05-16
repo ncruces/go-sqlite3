@@ -38,6 +38,7 @@ var (
 	strncmp     api.Function
 	strcspn     api.Function
 	strcasecmp  api.Function
+	strcasestr  api.Function
 	strncasecmp api.Function
 	stack       [8]uint64
 )
@@ -75,6 +76,7 @@ func TestMain(m *testing.M) {
 	strncmp = mod.ExportedFunction("strncmp")
 	strcspn = mod.ExportedFunction("strcspn")
 	strcasecmp = mod.ExportedFunction("strcasecmp")
+	strcasestr = mod.ExportedFunction("strcasestr")
 	strncasecmp = mod.ExportedFunction("strncasecmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
 
@@ -102,6 +104,17 @@ func Benchmark_memcpy(b *testing.B) {
 	}
 }
 
+func Benchmark_strlen(b *testing.B) {
+	clear(memory)
+	fill(memory[ptr1:ptr1+size-1], 5)
+
+	b.SetBytes(size)
+	b.ResetTimer()
+	for range b.N {
+		call(strlen, ptr1)
+	}
+}
+
 func Benchmark_memchr(b *testing.B) {
 	clear(memory)
 	fill(memory[ptr1:ptr1+size/2], 7)
@@ -111,30 +124,6 @@ func Benchmark_memchr(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		call(memchr, ptr1, 5, size)
-	}
-}
-
-func Benchmark_memcmp(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size], 7)
-	fill(memory[ptr2:ptr2+size/2], 7)
-	fill(memory[ptr2+size/2:ptr2+size], 5)
-
-	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
-		call(memcmp, ptr1, ptr2, size)
-	}
-}
-
-func Benchmark_strlen(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size-1], 5)
-
-	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
-		call(strlen, ptr1)
 	}
 }
 
@@ -159,6 +148,19 @@ func Benchmark_strrchr(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		call(strrchr, ptr1, 5)
+	}
+}
+
+func Benchmark_memcmp(b *testing.B) {
+	clear(memory)
+	fill(memory[ptr1:ptr1+size], 7)
+	fill(memory[ptr2:ptr2+size/2], 7)
+	fill(memory[ptr2+size/2:ptr2+size], 5)
+
+	b.SetBytes(size/2 + 1)
+	b.ResetTimer()
+	for range b.N {
+		call(memcmp, ptr1, ptr2, size)
 	}
 }
 
@@ -247,20 +249,6 @@ func Benchmark_strcspn(b *testing.B) {
 //go:embed string.h
 var source string
 
-func Benchmark_strstr(b *testing.B) {
-	needle := "memcpy(dest, src, slen)"
-
-	clear(memory)
-	copy(memory[ptr1:], source)
-	copy(memory[ptr2:], needle)
-
-	b.SetBytes(int64(len(source)))
-	b.ResetTimer()
-	for range b.N {
-		call(strstr, ptr1, ptr2)
-	}
-}
-
 func Benchmark_memmem(b *testing.B) {
 	needle := "memcpy(dest, src, slen)"
 
@@ -275,115 +263,31 @@ func Benchmark_memmem(b *testing.B) {
 	}
 }
 
-func Test_memcmp(t *testing.T) {
-	const s1 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x7f\xf3\x93\x01\x00\x01"
-	const s2 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x80\xf3\x93\x01\x00\x02"
-
-	ptr2 := len(memory) - len(s2)
+func Benchmark_strstr(b *testing.B) {
+	needle := "memcpy(dest, src, slen)"
 
 	clear(memory)
-	copy(memory[ptr1:], s1)
-	copy(memory[ptr2:], s2)
+	copy(memory[ptr1:], source)
+	copy(memory[ptr2:], needle)
 
-	for i := range len(s1) + 1 {
-		for j := range len(s1) - i {
-			want := strings.Compare(s1[i:i+j], s2[i:i+j])
-			got := call(memcmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
-			if sign(int32(got)) != want {
-				t.Errorf("strcmp(%d, %d, %d) = %d, want %d",
-					ptr1+i, ptr2+i, j, int32(got), want)
-			}
-		}
+	b.SetBytes(int64(len(source)))
+	b.ResetTimer()
+	for range b.N {
+		call(strstr, ptr1, ptr2)
 	}
 }
 
-func Test_strcmp(t *testing.T) {
-	const s1 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x7f\xf3\x93\x01\x00\x01"
-	const s2 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x80\xf3\x93\x01\x00\x02"
-
-	ptr2 := len(memory) - len(s2) - 1
+func Benchmark_strcasestr(b *testing.B) {
+	needle := "MEMCPY(dest, src, slen)"
 
 	clear(memory)
-	copy(memory[ptr1:], s1)
-	copy(memory[ptr2:], s2)
+	copy(memory[ptr1:], source)
+	copy(memory[ptr2:], needle)
 
-	for i := range len(s1) + 1 {
-		want := strings.Compare(term(s1[i:]), term(s2[i:]))
-		got := call(strcmp, uint64(ptr1+i), uint64(ptr2+i))
-		if sign(int32(got)) != want {
-			t.Errorf("strcmp(%d, %d) = %d, want %d",
-				ptr1+i, ptr2+i, int32(got), want)
-		}
-	}
-}
-
-func Test_strncmp(t *testing.T) {
-	const s1 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x7f\xf3\x93\x01\x00\x01"
-	const s2 string = "" +
-		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
-		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
-		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
-		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
-		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
-		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
-		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
-		"\x80\xf3\x93\x01\x00\x02"
-
-	ptr2 := len(memory) - len(s2) - 1
-
-	clear(memory)
-	copy(memory[ptr1:], s1)
-	copy(memory[ptr2:], s2)
-
-	for i := range len(s1) + 1 {
-		for j := range len(s1) - i + 1 {
-			want := strings.Compare(term(s1[i:i+j]), term(s2[i:i+j]))
-			got := call(strncmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
-			if sign(int32(got)) != want {
-				t.Errorf("strncmp(%d, %d, %d) = %d, want %d",
-					ptr1+i, ptr2+i, j, int32(got), want)
-			}
-		}
+	b.SetBytes(int64(len(source)))
+	b.ResetTimer()
+	for range b.N {
+		call(strcasestr, ptr1, ptr2)
 	}
 }
 
@@ -549,6 +453,118 @@ func Test_strrchr(t *testing.T) {
 	}
 }
 
+func Test_memcmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	ptr2 := len(memory) - len(s2)
+
+	clear(memory)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
+
+	for i := range len(s1) + 1 {
+		for j := range len(s1) - i {
+			want := strings.Compare(s1[i:i+j], s2[i:i+j])
+			got := call(memcmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
+			if sign(int32(got)) != want {
+				t.Errorf("strcmp(%d, %d, %d) = %d, want %d",
+					ptr1+i, ptr2+i, j, int32(got), want)
+			}
+		}
+	}
+}
+
+func Test_strcmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	ptr2 := len(memory) - len(s2) - 1
+
+	clear(memory)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
+
+	for i := range len(s1) + 1 {
+		want := strings.Compare(term(s1[i:]), term(s2[i:]))
+		got := call(strcmp, uint64(ptr1+i), uint64(ptr2+i))
+		if sign(int32(got)) != want {
+			t.Errorf("strcmp(%d, %d) = %d, want %d",
+				ptr1+i, ptr2+i, int32(got), want)
+		}
+	}
+}
+
+func Test_strncmp(t *testing.T) {
+	const s1 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\x14\xf4\x93\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x80\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x7f\xf3\x93\x01\x00\x01"
+	const s2 string = "" +
+		"\x94\x63\x8f\x01\x74\x63\x8f\x01\x54\x63\x8f\x01\x34\x63\x8f\x01" +
+		"\xb4\xf2\x93\x01\x94\xf2\x93\x01\x54\xf1\x93\x01\x34\xf1\x93\x01" +
+		"\x14\xf1\x93\x01\x14\xf2\x93\x01\x34\xf2\x93\x01\x54\xf2\x93\x01" +
+		"\x74\xf2\x93\x01\x74\xf1\x93\x01\xd4\xf2\x93\x01\x94\xf1\x93\x01" +
+		"\xb4\xf1\x93\x01\xd4\xf1\x93\x01\xf4\xf1\x93\x01\xf4\xf2\x93\x01" +
+		"\xbc\x40\x96\x01\xf4\xf3\x93\x01\xd4\xf3\x93\x01\xb4\xf3\x93\x01" +
+		"\x94\xf3\x93\x01\x74\x7f\x93\x01\x54\xf3\x93\x01\x34\xf3\x93\x01" +
+		"\x80\xf3\x93\x01\x00\x02"
+
+	ptr2 := len(memory) - len(s2) - 1
+
+	clear(memory)
+	copy(memory[ptr1:], s1)
+	copy(memory[ptr2:], s2)
+
+	for i := range len(s1) + 1 {
+		for j := range len(s1) - i + 1 {
+			want := strings.Compare(term(s1[i:i+j]), term(s2[i:i+j]))
+			got := call(strncmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
+			if sign(int32(got)) != want {
+				t.Errorf("strncmp(%d, %d, %d) = %d, want %d",
+					ptr1+i, ptr2+i, j, int32(got), want)
+			}
+		}
+	}
+}
+
 func Test_strspn(t *testing.T) {
 	for length := range 64 {
 		for pos := range length + 2 {
@@ -675,7 +691,6 @@ var searchTests = []searchTest{
 	{"barfoobarfoo", "foo", 3},
 	{"foo", "", 0},
 	{"foo", "o", 1},
-	{"abcABCabc", "A", 3},
 	{"jrzm6jjhorimglljrea4w3rlgosts0w2gia17hno2td4qd1jz", "jz", 47},
 	{"ekkuk5oft4eq0ocpacknhwouic1uua46unx12l37nioq9wbpnocqks6", "ks6", 52},
 	{"999f2xmimunbuyew5vrkla9cpwhmxan8o98ec", "98ec", 33},
@@ -792,35 +807,9 @@ var searchTests = []searchTest{
 	{"000000000000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000001", 5},
 }
 
-func Test_strstr(t *testing.T) {
-	tt := append(searchTests,
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
-	)
-
-	for i := range tt {
-		ptr1 := uint64(len(memory) - len(tt[i].haystk) - 1)
-
-		clear(memory)
-		copy(memory[ptr1:], tt[i].haystk)
-		copy(memory[ptr2:], tt[i].needle)
-
-		var want uint64
-		if tt[i].out >= 0 {
-			want = ptr1 + uint64(tt[i].out)
-		}
-
-		got := call(strstr, uint64(ptr1), uint64(ptr2))
-		if got != want {
-			t.Errorf("strstr(%q, %q) = %d, want %d",
-				tt[i].haystk, tt[i].needle,
-				uint32(got), uint32(want))
-		}
-	}
-}
-
 func Test_memmem(t *testing.T) {
 	tt := append(searchTests,
+		searchTest{"abcABCabc", "A", 3},
 		searchTest{"fofofofofofo\x00foffofoobar", "foffof", 13},
 		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", 17},
 	)
@@ -848,42 +837,75 @@ func Test_memmem(t *testing.T) {
 	}
 }
 
-func Fuzz_strstr(f *testing.F) {
+func Test_strstr(t *testing.T) {
 	tt := append(searchTests,
+		searchTest{"abcABCabc", "A", 3},
 		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
 		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
 	)
 
 	for i := range tt {
-		f.Add(tt[i].haystk, tt[i].needle)
-	}
+		ptr1 := uint64(len(memory) - len(tt[i].haystk) - 1)
 
-	f.Fuzz(func(t *testing.T, haystk, needle string) {
-		if len(haystk) > 128 || len(needle) > 32 {
-			t.SkipNow()
-		}
-		clear(memory[ptr1 : ptr1+256])
-		clear(memory[ptr2 : ptr2+256])
-		copy(memory[ptr1:], haystk)
-		copy(memory[ptr2:], needle)
+		clear(memory)
+		copy(memory[ptr1:], tt[i].haystk)
+		copy(memory[ptr2:], tt[i].needle)
 
-		want := strings.Index(term(haystk), term(needle))
-		if want >= 0 {
-			want = ptr1 + want
-		} else {
-			want = 0
+		var want uint64
+		if tt[i].out >= 0 {
+			want = ptr1 + uint64(tt[i].out)
 		}
 
 		got := call(strstr, uint64(ptr1), uint64(ptr2))
-		if uint32(got) != uint32(want) {
+		if got != want {
 			t.Errorf("strstr(%q, %q) = %d, want %d",
-				haystk, needle, uint32(got), uint32(want))
+				tt[i].haystk, tt[i].needle,
+				uint32(got), uint32(want))
 		}
-	})
+	}
+}
+
+func Test_strcasestr(t *testing.T) {
+	tt := append(searchTests[1:],
+		searchTest{"A", "a", 0},
+		searchTest{"a", "A", 0},
+		searchTest{"Z", "z", 0},
+		searchTest{"z", "Z", 0},
+		searchTest{"@", "`", -1},
+		searchTest{"`", "@", -1},
+		searchTest{"[", "{", -1},
+		searchTest{"{", "[", -1},
+		searchTest{"abcABCabc", "A", 0},
+		searchTest{"fofofofofofofoffofoobarfoo", "FoFFoF", 12},
+		searchTest{"fofofofofofofOffOfoobarfoo", "FoFFoF", 12},
+		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
+		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
+	)
+
+	for i := range tt {
+		ptr1 := uint64(len(memory) - len(tt[i].haystk) - 1)
+
+		clear(memory)
+		copy(memory[ptr1:], tt[i].haystk)
+		copy(memory[ptr2:], tt[i].needle)
+
+		var want uint64
+		if tt[i].out >= 0 {
+			want = ptr1 + uint64(tt[i].out)
+		}
+
+		got := call(strcasestr, uint64(ptr1), uint64(ptr2))
+		if got != want {
+			t.Errorf("strcasestr(%q, %q) = %d, want %d",
+				tt[i].haystk, tt[i].needle,
+				uint32(got), uint32(want))
+		}
+	}
 }
 
 func Fuzz_memmem(f *testing.F) {
 	tt := append(searchTests,
+		searchTest{"abcABCabc", "A", 3},
 		searchTest{"fofofofofofo\x00foffofoobar", "foffof", 13},
 		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", 17},
 	)
@@ -913,6 +935,41 @@ func Fuzz_memmem(f *testing.F) {
 			uint64(ptr2), uint64(len(needle)))
 		if uint32(got) != uint32(want) {
 			t.Errorf("memmem(%q, %q) = %d, want %d",
+				haystk, needle, uint32(got), uint32(want))
+		}
+	})
+}
+
+func Fuzz_strstr(f *testing.F) {
+	tt := append(searchTests,
+		searchTest{"abcABCabc", "A", 3},
+		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
+		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
+	)
+
+	for i := range tt {
+		f.Add(tt[i].haystk, tt[i].needle)
+	}
+
+	f.Fuzz(func(t *testing.T, haystk, needle string) {
+		if len(haystk) > 128 || len(needle) > 32 {
+			t.SkipNow()
+		}
+		clear(memory[ptr1 : ptr1+256])
+		clear(memory[ptr2 : ptr2+256])
+		copy(memory[ptr1:], haystk)
+		copy(memory[ptr2:], needle)
+
+		want := strings.Index(term(haystk), term(needle))
+		if want >= 0 {
+			want = ptr1 + want
+		} else {
+			want = 0
+		}
+
+		got := call(strstr, uint64(ptr1), uint64(ptr2))
+		if uint32(got) != uint32(want) {
+			t.Errorf("strstr(%q, %q) = %d, want %d",
 				haystk, needle, uint32(got), uint32(want))
 		}
 	})

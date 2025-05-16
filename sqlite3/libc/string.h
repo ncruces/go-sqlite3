@@ -3,7 +3,9 @@
 #ifndef _WASM_SIMD128_STRING_H
 #define _WASM_SIMD128_STRING_H
 
+#include <ctype.h>
 #include <stdint.h>
+#include <strings.h>
 #include <wasm_simd128.h>
 #include <__macro_PAGESIZE.h>
 
@@ -35,8 +37,6 @@ void *memmove(void *dest, const void *src, size_t n) {
 #endif  // __wasm_bulk_memory__
 
 #ifdef __wasm_simd128__
-
-// SIMD implementations of string.h functions.
 
 __attribute__((weak))
 int memcmp(const void *v1, const void *v2, size_t n) {
@@ -79,49 +79,6 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   }
   return 0;
 }
-
-#ifdef __OPTIMIZE_SIZE__
-
-// __memcmpeq is the same as memcmp but only compares for equality.
-
-#define __memcmpeq(v1, v2, n) memcmp(v1, v2, n)
-
-#else  // __OPTIMIZE_SIZE__
-
-static int __memcmpeq(const void *v1, const void *v2, size_t n) {
-  // Scalar algorithm.
-  if (n < sizeof(v128_t)) {
-    const unsigned char *u1 = (unsigned char *)v1;
-    const unsigned char *u2 = (unsigned char *)v2;
-    while (n--) {
-      if (*u1 != *u2) return 1;
-      u1++;
-      u2++;
-    }
-    return 0;
-  }
-
-  // memcmpeq is allowed to read up to n bytes from each object.
-  // Unaligned loads handle the case where the objects
-  // have mismatching alignments.
-  const v128_t *w1 = (v128_t *)v1;
-  const v128_t *w2 = (v128_t *)v2;
-  while (n) {
-    // Find any single bit difference.
-    if (wasm_v128_any_true(wasm_v128_load(w1) ^ wasm_v128_load(w2))) {
-      return 1;
-    }
-    // This makes n a multiple of sizeof(v128_t)
-    // for every iteration except the first.
-    size_t align = (n - 1) % sizeof(v128_t) + 1;
-    w1 = (v128_t *)((char *)w1 + align);
-    w2 = (v128_t *)((char *)w2 + align);
-    n -= align;
-  }
-  return 0;
-}
-
-#endif  // __OPTIMIZE_SIZE__
 
 __attribute__((weak))
 void *memchr(const void *v, int c, size_t n) {
@@ -364,7 +321,30 @@ char *strrchr(const char *s, int c) {
   return (char *)memrchr(s, c, strlen(s) + 1);
 }
 
+// SIMDized check which bytes are in a set
 // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
+
+typedef struct {
+  __u8x16 l;
+  __u8x16 h;
+} __wasm_v128_bitmap256_t;
+
+__attribute__((always_inline))
+static void __wasm_v128_setbit(__wasm_v128_bitmap256_t *bitmap, int i) {
+  uint8_t hi_nibble = (uint8_t)i >> 4;
+  uint8_t lo_nibble = (uint8_t)i & 0xf;
+  bitmap->l[lo_nibble] |= 1 << (hi_nibble - 0);
+  bitmap->h[lo_nibble] |= 1 << (hi_nibble - 8);
+}
+
+__attribute__((always_inline))
+static int __wasm_v128_chkbit(__wasm_v128_bitmap256_t bitmap, int i) {
+  uint8_t hi_nibble = (uint8_t)i >> 4;
+  uint8_t lo_nibble = (uint8_t)i & 0xf;
+  uint8_t bitmask = 1 << (hi_nibble & 0x7);
+  uint8_t bitset = (hi_nibble < 8 ? bitmap.l : bitmap.h)[lo_nibble];
+  return bitmask & bitset;
+}
 
 #ifndef __wasm_relaxed_simd__
 
@@ -373,49 +353,25 @@ char *strrchr(const char *s, int c) {
 
 #endif  // __wasm_relaxed_simd__
 
-#define _WASM_SIMD128_BITMAP256_T \
-  struct {                        \
-    __u8x16 l;                    \
-    __u8x16 h;                    \
-  }
+__attribute__((always_inline))
+static v128_t __wasm_v128_chkbits(__wasm_v128_bitmap256_t bitmap, v128_t v) {
+  v128_t hi_nibbles = wasm_u8x16_shr(v, 4);
+  v128_t lo_nibbles = v & wasm_u8x16_const_splat(0xf);
 
-#define _WASM_SIMD128_SETBIT(bitmap, i)            \
-  ({                                               \
-    uint8_t _c = (uint8_t)(i);                     \
-    uint8_t _hi_nibble = _c >> 4;                  \
-    uint8_t _lo_nibble = _c & 0xf;                 \
-    bitmap.l[_lo_nibble] |= 1 << (_hi_nibble - 0); \
-    bitmap.h[_lo_nibble] |= 1 << (_hi_nibble - 8); \
-  })
+  v128_t bitmask_lookup = wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
+                                           1, 2, 4, 8, 16, 32, 64, 128);
 
-#define _WASM_SIMD128_CHKBIT(bitmap, i)                                   \
-  ({                                                                      \
-    uint8_t _c = (uint8_t)(i);                                            \
-    uint8_t _hi_nibble = _c >> 4;                                         \
-    uint8_t _lo_nibble = _c & 0xf;                                        \
-    uint8_t _bitmask = 1 << (_hi_nibble & 0x7);                           \
-    uint8_t _bitset = (_hi_nibble < 8 ? bitmap.l : bitmap.h)[_lo_nibble]; \
-    _bitmask & _bitset;                                                   \
-  })
+  v128_t bitmask = wasm_i8x16_relaxed_swizzle(bitmask_lookup, hi_nibbles);
+  v128_t bitsets = wasm_i8x16_relaxed_laneselect(
+      wasm_i8x16_relaxed_swizzle(bitmap.l, lo_nibbles),
+      wasm_i8x16_relaxed_swizzle(bitmap.h, lo_nibbles),
+      wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
 
-#define _WASM_SIMD128_CHKBITS(bitmap, v)                                    \
-  ({                                                                        \
-    v128_t _w = v;                                                          \
-    v128_t _hi_nibbles = wasm_u8x16_shr(_w, 4);                             \
-    v128_t _lo_nibbles = _w & wasm_u8x16_const_splat(0xf);                  \
-                                                                            \
-    v128_t _bitmask_lookup = wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  \
-                                              1, 2, 4, 8, 16, 32, 64, 128); \
-                                                                            \
-    v128_t _bitmask =                                                       \
-        wasm_i8x16_relaxed_swizzle(_bitmask_lookup, _hi_nibbles);           \
-    v128_t _bitsets = wasm_i8x16_relaxed_laneselect(                        \
-        wasm_i8x16_relaxed_swizzle(bitmap.l, _lo_nibbles),                  \
-        wasm_i8x16_relaxed_swizzle(bitmap.h, _lo_nibbles),                  \
-        wasm_i8x16_lt(_hi_nibbles, wasm_u8x16_const_splat(8)));             \
-                                                                            \
-    wasm_i8x16_eq(_bitsets & _bitmask, _bitmask);                           \
-  })
+  return wasm_i8x16_eq(bitsets & bitmask, bitmask);
+}
+
+#undef wasm_i8x16_relaxed_laneselect
+#undef wasm_i8x16_relaxed_swizzle
 
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
@@ -443,15 +399,15 @@ size_t strspn(const char *s, const char *c) {
     return s - a;
   }
 
-  _WASM_SIMD128_BITMAP256_T bitmap = {};
+  __wasm_v128_bitmap256_t bitmap = {};
 
   for (; *c; c++) {
-    _WASM_SIMD128_SETBIT(bitmap, *c);
+    __wasm_v128_setbit(&bitmap, *c);
     // Terminator IS NOT on the bitmap.
   }
 
   for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
-    const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, wasm_v128_load(w));
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
       // Find the offset of the first zero bit (little-endian).
@@ -462,7 +418,7 @@ size_t strspn(const char *s, const char *c) {
   }
 
   // Scalar algorithm.
-  for (s = (char *)w; _WASM_SIMD128_CHKBIT(bitmap, *s); s++);
+  for (s = (char *)w; __wasm_v128_chkbit(bitmap, *s); s++);
   return s - a;
 }
 
@@ -475,16 +431,16 @@ size_t strcspn(const char *s, const char *c) {
   const v128_t *w = (v128_t *)s;
   const char *const a = s;
 
-  _WASM_SIMD128_BITMAP256_T bitmap = {};
+  __wasm_v128_bitmap256_t bitmap = {};
 
   for (;;) {
-    _WASM_SIMD128_SETBIT(bitmap, *c);
+    __wasm_v128_setbit(&bitmap, *c);
     // Terminator IS on the bitmap.
     if (!*c++) break;
   }
 
   for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
-    const v128_t cmp = _WASM_SIMD128_CHKBITS(bitmap, wasm_v128_load(w));
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, wasm_v128_load(w));
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Find the offset of the first one bit (little-endian).
@@ -495,24 +451,23 @@ size_t strcspn(const char *s, const char *c) {
   }
 
   // Scalar algorithm.
-  for (s = (char *)w; !_WASM_SIMD128_CHKBIT(bitmap, *s); s++);
+  for (s = (char *)w; !__wasm_v128_chkbit(bitmap, *s); s++);
   return s - a;
 }
 
-#undef wasm_i8x16_relaxed_laneselect
-#undef wasm_i8x16_relaxed_swizzle
+// SIMD-friendly algorithms for substring searching
+// http://0x80.pl/notesen/2016-11-28-simd-strfind.html
 
-#undef _WASM_SIMD128_SETBIT
-#undef _WASM_SIMD128_CHKBIT
-#undef _WASM_SIMD128_CHKBITS
-#undef _WASM_SIMD128_BITMAP256_T
+// For haystacks of known length and large enough needles,
+// Boyer-Moore's bad-character rule may be useful,
+// as proposed by Horspool and Raita.
+// https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
+// https://www-igm.univ-mlv.fr/~lecroq/string/node18.html
+// https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
 
 static const char *__memmem(const char *haystk, size_t sh,
                             const char *needle, size_t sn,
                             uint8_t bmbc[256]) {
-  // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
-  // http://0x80.pl/notesen/2016-11-28-simd-strfind.html
-
   // We've handled empty and single character needles.
   // The needle is not longer than the haystack.
   __builtin_assume(2 <= sn && sn <= sh);
@@ -525,7 +480,7 @@ static const char *__memmem(const char *haystk, size_t sh,
   const v128_t fst = wasm_i8x16_splat(needle[0]);
   const v128_t lst = wasm_i8x16_splat(needle[i]);
 
-  // The last haystk offset for which loading blk_lst is safe.
+  // The last haystack offset for which loading blk_lst is safe.
   const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i -
                            sizeof(v128_t));
 
@@ -545,7 +500,7 @@ static const char *__memmem(const char *haystk, size_t sh,
         size_t ctz = __builtin_ctz(mask);
         // The match may be after the end of the haystack.
         if (ctz + sn > sh) return NULL;
-        if (!__memcmpeq(haystk + ctz + 1, needle + 1, sn - 1)) {
+        if (!bcmp(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
       }
@@ -556,8 +511,8 @@ static const char *__memmem(const char *haystk, size_t sh,
       // Have we reached the end of the haystack?
       if (!wasm_i8x16_all_true(blk_fst)) return NULL;
     } else {
-      // Apply the bad-character rule to the last checked
-      // character of the haystack.
+      // Apply the bad-character rule to the rightmost
+      // character of the window.
       if (bmbc) skip += bmbc[(unsigned char)haystk[sn - 1 + 15]];
       // Have we reached the end of the haystack?
       if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
@@ -588,12 +543,12 @@ void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
   if (sn > sh) return NULL;
 
   // Skip to the first matching character using memchr,
-  // handling single character needles.
+  // thereby handling single character needles.
   const char *needle = (char *)vn;
   const char *haystk = (char *)memchr(vh, *needle, sh);
   if (!haystk || sn == 1) return (void *)haystk;
 
-  // The haystack got shorter, is the needle now longer?
+  // The haystack got shorter, is the needle now longer than it?
   sh -= haystk - (char *)vh;
   if (sn > sh) return NULL;
 
@@ -601,12 +556,6 @@ void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
   if (sn < sizeof(v128_t) || sh - sn < sizeof(v128_t)) {
     return (void *)__memmem(haystk, sh, needle, sn, NULL);
   }
-
-  // https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
-
-  // We've handled empty and single character needles.
-  // The needle is not longer than the haystack.
-  __builtin_assume(2 <= sn && sn <= sh);
 
   // Compute Boyer-Moore's bad-character shift function.
   // Only the last 255 characters of the needle matter for shifts up to 255,
@@ -640,11 +589,69 @@ char *strstr(const char *haystk, const char *needle) {
   if (!needle[0]) return (char *)haystk;
 
   // Skip to the first matching character using strchr,
-  // handling single character needles.
+  // thereby handling single character needles.
   haystk = strchr(haystk, *needle);
   if (!haystk || !needle[1]) return (char *)haystk;
 
   return (char *)__memmem(haystk, SIZE_MAX, needle, strlen(needle), NULL);
+}
+
+__attribute__((weak))
+char *strcasestr(const char *haystk, const char *needle) {
+  // Return immediately on empty needle.
+  if (!needle[0]) return (char *)haystk;
+
+  // We've handled empty needles.
+  size_t sn = strlen(needle);
+  __builtin_assume(sn >= 1);
+
+  // Find the farthest character not equal to the first one.
+  size_t i = sn - 1;
+  while (i > 0 && needle[0] == needle[i]) i--;
+  if (i == 0) i = sn - 1;
+
+  const v128_t fst = wasm_i8x16_splat(tolower(needle[0]));
+  const v128_t lst = wasm_i8x16_splat(tolower(needle[i]));
+
+  // The last haystk offset for which loading blk_lst is safe.
+  const char *H =
+      (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i - sizeof(v128_t));
+
+  while (haystk <= H) {
+    const v128_t blk_fst = __tolower8x16(wasm_v128_load((v128_t *)(haystk)));
+    const v128_t blk_lst = __tolower8x16(wasm_v128_load((v128_t *)(haystk + i)));
+    const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
+    const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
+
+    const v128_t cmp = eq_fst & eq_lst;
+    if (wasm_v128_any_true(cmp)) {
+      // The terminator may come before the match.
+      if (!wasm_i8x16_all_true(blk_fst)) break;
+      // Find the offset of the first one bit (little-endian).
+      // Each iteration clears that bit, tries again.
+      for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
+        size_t ctz = __builtin_ctz(mask);
+        if (!strncasecmp(haystk + ctz + 1, needle + 1, sn - 1)) {
+          return (char *)haystk + ctz;
+        }
+      }
+    }
+
+    // Have we reached the end of the haystack?
+    if (!wasm_i8x16_all_true(blk_fst)) return NULL;
+    haystk += sizeof(v128_t);
+  }
+
+  // Scalar algorithm.
+  for (;;) {
+    for (size_t i = 0;; i++) {
+      if (sn == i) return (char *)haystk;
+      if (!haystk[i]) return NULL;
+      if (tolower(needle[i]) != tolower(haystk[i])) break;
+    }
+    haystk++;
+  }
+  return NULL;
 }
 
 // Given the above SIMD implementations,
