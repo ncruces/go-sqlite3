@@ -460,9 +460,15 @@ size_t strcspn(const char *s, const char *c) {
 
 // For haystacks of known length and large enough needles,
 // Boyer-Moore's bad-character rule may be useful,
-// as proposed by Horspool and Raita.
+// as proposed by Horspool, Sunday and Raita.
+//
+// We augment the SIMD algorithm with Quick Search's
+// bad-character shift. This does NOT depend on the order
+// in which the window matched.
+//
 // https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
 // https://www-igm.univ-mlv.fr/~lecroq/string/node18.html
+// https://www-igm.univ-mlv.fr/~lecroq/string/node19.html
 // https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
 
 static const char *__memmem(const char *haystk, size_t sh,
@@ -511,9 +517,9 @@ static const char *__memmem(const char *haystk, size_t sh,
       // Have we reached the end of the haystack?
       if (!wasm_i8x16_all_true(blk_fst)) return NULL;
     } else {
-      // Apply the bad-character rule to the rightmost
-      // character of the window.
-      if (bmbc) skip += bmbc[(unsigned char)haystk[sn - 1 + 15]];
+      // Apply the bad-character rule to the character to the right
+      // of the righmost character of the search window.
+      if (bmbc) skip += bmbc[(unsigned char)haystk[sn - 1 + sizeof(v128_t)]];
       // Have we reached the end of the haystack?
       if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
       // Is the needle longer than the haystack?
@@ -560,12 +566,11 @@ void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
   // Compute Boyer-Moore's bad-character shift function.
   // Only the last 255 characters of the needle matter for shifts up to 255,
   // which is good enough for most needles.
-  size_t n = sn - 1;
+  size_t c = sn;
   size_t i = 0;
-  int c = n;
   if (c >= 255) {
+    i = sn - 255;
     c = 255;
-    i = n - 255;
   }
 
 #ifndef _REENTRANT
@@ -573,10 +578,10 @@ void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
 #endif
   uint8_t bmbc[256];
   memset(bmbc, c, sizeof(bmbc));
-  for (; i < n; i++) {
+  for (; i < sn; i++) {
     // One less than the usual offset because
     // we advance at least one vector at a time.
-    size_t t = n - i - 1;
+    size_t t = sn - i - 1;
     bmbc[(unsigned char)needle[i]] = t;
   }
 
