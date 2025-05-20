@@ -463,8 +463,7 @@ size_t strcspn(const char *s, const char *c) {
 // as proposed by Horspool, Sunday and Raita.
 //
 // We augment the SIMD algorithm with Quick Search's
-// bad-character shift. This does NOT depend on the order
-// in which the window matched.
+// bad-character shift.
 //
 // https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
 // https://www-igm.univ-mlv.fr/~lecroq/string/node18.html
@@ -482,6 +481,10 @@ static const char *__memmem(const char *haystk, size_t sh,
   size_t i = sn - 1;
   while (i > 0 && needle[0] == needle[i]) i--;
   if (i == 0) i = sn - 1;
+
+  // Subtracting ensures sub_overflow overflows
+  // when we reach the end of the haystack.
+  if (sh != SIZE_MAX) sh -= sn;
 
   const v128_t fst = wasm_i8x16_splat(needle[0]);
   const v128_t lst = wasm_i8x16_splat(needle[i]);
@@ -505,7 +508,8 @@ static const char *__memmem(const char *haystk, size_t sh,
       for (uint32_t mask = wasm_i8x16_bitmask(cmp); mask; mask &= mask - 1) {
         size_t ctz = __builtin_ctz(mask);
         // The match may be after the end of the haystack.
-        if (ctz + sn > sh) return NULL;
+        if (ctz > sh) return NULL;
+        // We know the first character matches.
         if (!bcmp(haystk + ctz + 1, needle + 1, sn - 1)) {
           return haystk + ctz;
         }
@@ -522,14 +526,12 @@ static const char *__memmem(const char *haystk, size_t sh,
       if (bmbc) skip += bmbc[(unsigned char)haystk[sn - 1 + sizeof(v128_t)]];
       // Have we reached the end of the haystack?
       if (__builtin_sub_overflow(sh, skip, &sh)) return NULL;
-      // Is the needle longer than the haystack?
-      if (sn > sh) return NULL;
     }
     haystk += skip;
   }
 
   // Scalar algorithm.
-  for (size_t j = 0; j <= sh - sn; j++) {
+  for (size_t j = 0; j <= sh; j++) {
     for (size_t i = 0;; i++) {
       if (sn == i) return haystk;
       if (sh == SIZE_MAX && !haystk[i]) return NULL;
@@ -581,8 +583,7 @@ void *memmem(const void *vh, size_t sh, const void *vn, size_t sn) {
   for (; i < sn; i++) {
     // One less than the usual offset because
     // we advance at least one vector at a time.
-    size_t t = sn - i - 1;
-    bmbc[(unsigned char)needle[i]] = t;
+    bmbc[(unsigned char)needle[i]] = sn - i - 1;
   }
 
   return (void *)__memmem(haystk, sh, needle, sn, bmbc);

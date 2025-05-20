@@ -35,7 +35,7 @@ int bcmp(const void *v1, const void *v2, size_t n) {
     return 0;
   }
 
-  // memcmpeq is allowed to read up to n bytes from each object.
+  // bcmp is allowed to read up to n bytes from each object.
   // Unaligned loads handle the case where the objects
   // have mismatching alignments.
   const v128_t *w1 = (v128_t *)v1;

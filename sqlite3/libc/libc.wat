@@ -3115,10 +3115,24 @@
     (local.get $11)
    )
   )
-  (block $block6
+  (local.set $1
+   (select
+    (i32.const -1)
+    (i32.sub
+     (local.get $1)
+     (local.get $3)
+    )
+    (i32.eq
+     (local.get $1)
+     (i32.const -1)
+    )
+   )
+  )
+  (block $block5
    (block $block1
-    (br_if $block1
-     (i32.lt_u
+    (if
+     (i32.gt_u
+      (local.get $0)
       (local.tee $14
        (i32.sub
         (i32.sub
@@ -3131,7 +3145,12 @@
         (i32.const 16)
        )
       )
-      (local.get $0)
+     )
+     (then
+      (local.set $5
+       (local.get $1)
+      )
+      (br $block1)
      )
     )
     (local.set $18
@@ -3185,22 +3204,21 @@
         )
        )
       )
-      (block $block3
-       (br_if $block3
-        (i32.ne
+      (local.set $5
+       (i32.const -1)
+      )
+      (br_if $block1
+       (i32.and
+        (i32.eqz
+         (i8x16.all_true
+          (local.get $17)
+         )
+        )
+        (i32.eq
          (local.get $1)
          (i32.const -1)
         )
        )
-       (br_if $block3
-        (i8x16.all_true
-         (local.get $17)
-        )
-       )
-       (local.set $1
-        (i32.const -1)
-       )
-       (br $block1)
       )
       (br_if $block2
        (i32.eqz
@@ -3215,13 +3233,10 @@
        (if
         (i32.lt_u
          (local.get $1)
-         (i32.add
-          (local.tee $5
-           (i32.ctz
-            (local.get $7)
-           )
+         (local.tee $5
+          (i32.ctz
+           (local.get $7)
           )
-          (local.get $3)
          )
         )
         (then
@@ -3230,9 +3245,9 @@
          )
         )
        )
-       (br_if $block6
+       (br_if $block5
         (i32.eqz
-         (block $block5 (result i32)
+         (block $block4 (result i32)
           (local.set $9
            (i32.add
             (local.tee $8
@@ -3250,7 +3265,7 @@
           (local.set $12
            (i32.const 0)
           )
-          (block $block4
+          (block $block3
            (if
             (i32.ge_u
              (local.tee $10
@@ -3263,7 +3278,7 @@
               (i32.const 1)
              )
              (loop $label1
-              (br_if $block4
+              (br_if $block3
                (v128.any_true
                 (v128.xor
                  (v128.load align=1
@@ -3307,19 +3322,19 @@
                )
               )
              )
-             (br $block5
+             (br $block4
               (i32.const 0)
              )
             )
            )
-           (br_if $block4
+           (br_if $block3
             (i32.eqz
              (local.get $10)
             )
            )
            (loop $label2
             (drop
-             (br_if $block5
+             (br_if $block4
               (i32.const 1)
               (i32.ne
                (i32.load8_u
@@ -3370,7 +3385,7 @@
        )
       )
      )
-     (block $block7
+     (block $block6
       (if
        (i32.eq
         (local.get $1)
@@ -3385,10 +3400,10 @@
           (local.set $7
            (i32.const 16)
           )
-          (local.set $1
+          (local.set $5
            (i32.const -1)
           )
-          (br $block7)
+          (br $block6)
          )
         )
         (return
@@ -3396,13 +3411,9 @@
         )
        )
       )
-      (local.set $8
-       (i32.const 0)
-      )
       (br_if $block6
-       (i32.lt_u
-        (local.get $1)
-        (local.tee $1
+       (i32.le_u
+        (local.tee $5
          (i32.sub
           (local.get $1)
           (local.tee $7
@@ -3431,14 +3442,15 @@
           )
          )
         )
-       )
-      )
-      (br_if $block6
-       (i32.lt_u
         (local.get $1)
-        (local.get $3)
        )
       )
+      (return
+       (i32.const 0)
+      )
+     )
+     (local.set $1
+      (local.get $5)
      )
      (br_if $label4
       (i32.le_u
@@ -3453,89 +3465,84 @@
      )
     )
    )
-   (local.set $11
-    (i32.sub
-     (local.get $1)
-     (local.get $3)
-    )
-   )
-   (local.set $4
+   (local.set $1
     (i32.const 0)
    )
-   (local.set $1
+   (local.set $4
     (i32.ne
-     (local.get $1)
+     (local.get $5)
      (i32.const -1)
     )
    )
-   (loop $label6
+   (loop $label5
     (local.set $6
      (i32.const 0)
     )
-    (block $block8
-     (loop $label5
-      (local.set $8
-       (i32.const 0)
-      )
-      (br_if $block6
-       (i32.eqz
-        (i32.or
-         (local.get $1)
-         (local.tee $5
-          (i32.load8_u
-           (i32.add
-            (local.get $0)
-            (local.get $6)
-           )
+    (loop $label6
+     (local.set $8
+      (i32.const 0)
+     )
+     (br_if $block5
+      (i32.eqz
+       (i32.or
+        (local.get $4)
+        (local.tee $11
+         (i32.load8_u
+          (i32.add
+           (local.get $0)
+           (local.get $6)
           )
          )
         )
        )
       )
-      (br_if $block8
-       (i32.ne
-        (i32.load8_u
-         (i32.add
-          (local.get $2)
-          (local.get $6)
-         )
-        )
-        (local.get $5)
-       )
-      )
-      (br_if $label5
-       (i32.ne
-        (local.get $3)
-        (local.tee $6
-         (i32.add
-          (local.get $6)
-          (i32.const 1)
-         )
+     )
+     (if
+      (i32.ne
+       (local.get $11)
+       (i32.load8_u
+        (i32.add
+         (local.get $2)
+         (local.get $6)
         )
        )
       )
+      (then
+       (local.set $0
+        (i32.add
+         (local.get $0)
+         (i32.const 1)
+        )
+       )
+       (br_if $label5
+        (i32.le_u
+         (local.tee $1
+          (i32.add
+           (local.get $1)
+           (i32.const 1)
+          )
+         )
+         (local.get $5)
+        )
+       )
+       (br $block5)
+      )
      )
-     (return
-      (local.get $0)
-     )
-    )
-    (local.set $0
-     (i32.add
-      (local.get $0)
-      (i32.const 1)
-     )
-    )
-    (br_if $label6
-     (i32.le_u
-      (local.tee $4
-       (i32.add
-        (local.get $4)
-        (i32.const 1)
+     (br_if $label6
+      (i32.ne
+       (local.get $3)
+       (local.tee $6
+        (i32.add
+         (local.get $6)
+         (i32.const 1)
+        )
        )
       )
-      (local.get $11)
      )
     )
+   )
+   (local.set $8
+    (local.get $0)
    )
   )
   (local.get $8)
