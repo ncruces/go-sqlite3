@@ -878,6 +878,74 @@ func Test_strcasestr(t *testing.T) {
 	}
 }
 
+func Fuzz_memchr(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string, c, i byte) {
+		if len(s) > 128 || int(i) > len(s) {
+			t.SkipNow()
+		}
+		copy(memory[ptr1:], s)
+
+		got := call(memchr, ptr1+uint64(i), uint64(c), uint64(len(s)-int(i)))
+		want := strings.IndexByte(s[i:], c)
+		if want >= 0 {
+			want = ptr1 + int(i) + want
+		} else {
+			want = 0
+		}
+
+		if uint32(got) != uint32(want) {
+			t.Errorf("memchr(%q, %q) = %d, want %d",
+				s[i:], c, uint32(got), uint32(want))
+		}
+	})
+}
+
+func Fuzz_strchr(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string, c, i byte) {
+		if len(s) > 128 || int(i) > len(s) {
+			t.SkipNow()
+		}
+		copy(memory[ptr1:], s)
+		memory[ptr1+len(s)] = 0
+
+		got := call(strchr, ptr1+uint64(i), uint64(c))
+		want := bytes.IndexByte(term1(memory[ptr1+uint64(i):]), c)
+		if want >= 0 {
+			want = ptr1 + int(i) + want
+		} else {
+			want = 0
+		}
+
+		if uint32(got) != uint32(want) {
+			t.Errorf("strchr(%q, %q) = %d, want %d",
+				s[i:], c, uint32(got), uint32(want))
+		}
+	})
+}
+
+func Fuzz_strrchr(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string, c, i byte) {
+		if len(s) > 128 || int(i) > len(s) {
+			t.SkipNow()
+		}
+		copy(memory[ptr1:], s)
+		memory[ptr1+len(s)] = 0
+
+		got := call(strrchr, ptr1+uint64(i), uint64(c))
+		want := bytes.LastIndexByte(term1(memory[ptr1+uint64(i):]), c)
+		if want >= 0 {
+			want = ptr1 + int(i) + want
+		} else {
+			want = 0
+		}
+
+		if uint32(got) != uint32(want) {
+			t.Errorf("strrchr(%q, %q) = %d, want %d",
+				s[i:], c, uint32(got), uint32(want))
+		}
+	})
+}
+
 func Fuzz_memcmp(f *testing.F) {
 	const s1 = compareTest1
 	const s2 = compareTest2
@@ -935,10 +1003,10 @@ func Fuzz_strncmp(f *testing.F) {
 	const s2 = compareTest2
 
 	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]), uint8(len(s1)))
+		f.Add(term(s1[i:]), term(s2[i:]), byte(len(s1)))
 	}
 
-	f.Fuzz(func(t *testing.T, s1, s2 string, n uint8) {
+	f.Fuzz(func(t *testing.T, s1, s2 string, n byte) {
 		if len(s1) > 128 || len(s2) > 128 {
 			t.SkipNow()
 		}
@@ -993,10 +1061,10 @@ func Fuzz_strncasecmp(f *testing.F) {
 	const s2 = compareTest2
 
 	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]), uint8(len(s1)))
+		f.Add(term(s1[i:]), term(s2[i:]), byte(len(s1)))
 	}
 
-	f.Fuzz(func(t *testing.T, s1, s2 string, n uint8) {
+	f.Fuzz(func(t *testing.T, s1, s2 string, n byte) {
 		if len(s1) > 128 || len(s2) > 128 {
 			t.SkipNow()
 		}
@@ -1022,32 +1090,32 @@ func Fuzz_strspn(f *testing.F) {
 		f.Add(t.haystk, t.needle)
 	}
 
-	f.Fuzz(func(t *testing.T, text, chars string) {
-		if len(text) > 128 || len(chars) > 128 {
+	f.Fuzz(func(t *testing.T, s, chars string) {
+		if len(s) > 128 || len(chars) > 128 {
 			t.SkipNow()
 		}
-		copy(memory[ptr1:], text)
+		copy(memory[ptr1:], s)
 		copy(memory[ptr2:], chars)
-		memory[ptr1+len(text)] = 0
+		memory[ptr1+len(s)] = 0
 		memory[ptr2+len(chars)] = 0
 
 		got := call(strspn, uint64(ptr1), uint64(ptr2))
 
-		text = term(text)
+		s = term(s)
 		chars = term(chars)
-		want := strings.IndexFunc(text, func(r rune) bool {
+		want := strings.IndexFunc(s, func(r rune) bool {
 			if uint32(r) >= utf8.RuneSelf {
 				t.Skip()
 			}
 			return strings.IndexByte(chars, byte(r)) < 0
 		})
 		if want < 0 {
-			want = len(text)
+			want = len(s)
 		}
 
 		if uint32(got) != uint32(want) {
 			t.Errorf("strspn(%q, %q) = %d, want %d",
-				text, chars, uint32(got), uint32(want))
+				s, chars, uint32(got), uint32(want))
 		}
 	})
 }
@@ -1057,32 +1125,32 @@ func Fuzz_strcspn(f *testing.F) {
 		f.Add(t.haystk, t.needle)
 	}
 
-	f.Fuzz(func(t *testing.T, text, chars string) {
-		if len(text) > 128 || len(chars) > 128 {
+	f.Fuzz(func(t *testing.T, s, chars string) {
+		if len(s) > 128 || len(chars) > 128 {
 			t.SkipNow()
 		}
-		copy(memory[ptr1:], text)
+		if strings.ContainsFunc(chars, func(r rune) bool {
+			return uint32(r) >= utf8.RuneSelf
+		}) {
+			t.SkipNow()
+		}
+		copy(memory[ptr1:], s)
 		copy(memory[ptr2:], chars)
-		memory[ptr1+len(text)] = 0
+		memory[ptr1+len(s)] = 0
 		memory[ptr2+len(chars)] = 0
 
 		got := call(strcspn, uint64(ptr1), uint64(ptr2))
 
-		text = term(text)
+		s = term(s)
 		chars = term(chars)
-		want := strings.IndexFunc(text, func(r rune) bool {
-			if uint32(r) >= utf8.RuneSelf {
-				t.Skip()
-			}
-			return strings.IndexByte(chars, byte(r)) >= 0
-		})
+		want := strings.IndexAny(s, chars)
 		if want < 0 {
-			want = len(text)
+			want = len(s)
 		}
 
 		if uint32(got) != uint32(want) {
 			t.Errorf("strcspn(%q, %q) = %d, want %d",
-				text, chars, uint32(got), uint32(want))
+				s, chars, uint32(got), uint32(want))
 		}
 	})
 }
@@ -1184,6 +1252,9 @@ func Fuzz_strcasestr(f *testing.F) {
 		if len(haystk) > 128 || len(needle) > 128 {
 			t.SkipNow()
 		}
+		if len(needle) == 0 {
+			t.Skip("musl bug")
+		}
 		copy(memory[ptr1:], haystk)
 		copy(memory[ptr2:], needle)
 		memory[ptr1+len(haystk)] = 0
@@ -1237,6 +1308,15 @@ func term[T interface{ []byte | string }](s T) T {
 	for i, c := range []byte(s) {
 		if c == 0 {
 			return s[:i]
+		}
+	}
+	return s
+}
+
+func term1[T interface{ []byte | string }](s T) T {
+	for i, c := range []byte(s) {
+		if c == 0 {
+			return s[:i+1]
 		}
 	}
 	return s
