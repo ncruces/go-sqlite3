@@ -1,6 +1,7 @@
 package blobio_test
 
 import (
+	"database/sql"
 	"io"
 	"log"
 	"os"
@@ -34,7 +35,8 @@ func Example() {
 	const message = "Hello BLOB!"
 
 	// Create the BLOB.
-	r, err := db.Exec(`INSERT INTO test VALUES (?)`, sqlite3.ZeroBlob(len(message)))
+	r, err := db.Exec(`INSERT INTO test VALUES (:data)`,
+		sql.Named("data", sqlite3.ZeroBlob(len(message))))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,15 +47,19 @@ func Example() {
 	}
 
 	// Write the BLOB.
-	_, err = db.Exec(`SELECT writeblob('main', 'test', 'col', ?, 0, ?)`,
-		id, message)
+	_, err = db.Exec(`SELECT writeblob('main', 'test', 'col', :rowid, :offset, :message)`,
+		sql.Named("rowid", id),
+		sql.Named("offset", 0),
+		sql.Named("message", message))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Read the BLOB.
-	_, err = db.Exec(`SELECT readblob('main', 'test', 'col', ?, 0, ?)`,
-		id, sqlite3.Pointer(os.Stdout))
+	_, err = db.Exec(`SELECT readblob('main', 'test', 'col', :rowid, :offset, :writer)`,
+		sql.Named("rowid", id),
+		sql.Named("offset", 0),
+		sql.Named("writer", sqlite3.Pointer(os.Stdout)))
 	if err != nil {
 		log.Fatal(err)
 	}
