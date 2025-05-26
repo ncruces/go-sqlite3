@@ -43,7 +43,7 @@ db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 
 ### Advanced features
 
-- [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html)
+- [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html) ([example](ext/blobio/blob_test.go))
 - [nested transactions](https://sqlite.org/lang_savepoint.html)
 - [custom functions](https://sqlite.org/c3ref/create_function.html)
 - [virtual tables](https://sqlite.org/vtab.html)
