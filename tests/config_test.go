@@ -114,6 +114,7 @@ func TestConn_FileControl(t *testing.T) {
 			t.Errorf("got %v, want MISUSE", err)
 		}
 	})
+
 	t.Run("FCNTL_RESET_CACHE", func(t *testing.T) {
 		o, err := db.FileControl("", sqlite3.FCNTL_RESET_CACHE)
 		if err != nil {
@@ -235,6 +236,16 @@ func TestConn_FileControl(t *testing.T) {
 		}
 		if o != vfs.LOCK_EXCLUSIVE {
 			t.Errorf("got %v, want LOCK_EXCLUSIVE", o)
+		}
+	})
+
+	t.Run("FCNTL_NULL_IO", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_NULL_IO)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != nil {
+			t.Errorf("got %v, want nil", o)
 		}
 	})
 }
