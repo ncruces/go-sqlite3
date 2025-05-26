@@ -30,10 +30,10 @@ db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 
 - [`github.com/ncruces/go-sqlite3`](https://pkg.go.dev/github.com/ncruces/go-sqlite3)
   wraps the [C SQLite API](https://sqlite.org/cintro.html)
-  ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3#example-package)).
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3#example-package)).
 - [`github.com/ncruces/go-sqlite3/driver`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver)
   provides a [`database/sql`](https://pkg.go.dev/database/sql) driver
-  ([example usage](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
 - [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
   embeds a build of SQLite into your application.
 - [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
@@ -43,13 +43,20 @@ db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 
 ### Advanced features
 
-- [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html) ([example](ext/blobio/blob_test.go))
+- [incremental BLOB I/O](https://sqlite.org/c3ref/blob_open.html)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blobio#example-package))
 - [nested transactions](https://sqlite.org/lang_savepoint.html)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-Savepoint))
 - [custom functions](https://sqlite.org/c3ref/create_function.html)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3#example-Conn.CreateFunction))
 - [virtual tables](https://sqlite.org/vtab.html)
-- [custom VFSes](vfs/README.md#custom-vfses)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3#example-CreateModule))
+- [custom VFSes](https://sqlite.org/vfs.html)
+  ([examples](vfs/README.md#custom-vfses))
 - [online backup](https://sqlite.org/backup.html)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#Conn))
 - [JSON support](https://sqlite.org/json1.html)
+  ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package-Json))
 - [math functions](https://sqlite.org/lang_mathfunc.html)
 - [full-text search](https://sqlite.org/fts5.html)
 - [geospatial search](https://sqlite.org/geopoly.html)
