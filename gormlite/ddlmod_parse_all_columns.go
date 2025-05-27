@@ -95,7 +95,7 @@ func parseAllColumns(in string) ([]string, error) {
 			}
 			return nil, fmt.Errorf("unexpected token: %s", string(s[i]))
 		case parseAllColumnsState_State_End:
-			break
+			continue // avoid SA4011
 		}
 	}
 	if state != parseAllColumnsState_State_End {
