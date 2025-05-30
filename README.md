@@ -83,10 +83,19 @@ It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) and
 [wazero's](https://tetrate.io/blog/introducing-wazero-from-tetrate/#:~:text=Rock%2Dsolid%20test%20approach)
 thorough testing.
 
-Every commit is [tested](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) on
-Linux (amd64/arm64/386/riscv64/ppc64le/s390x), macOS (arm64/amd64),
-Windows (amd64), FreeBSD (amd64/arm64), OpenBSD (amd64), NetBSD (amd64/arm64),
-DragonFly BSD (amd64), illumos (amd64), and Solaris (amd64).
+Every commit is tested on:
+* Linux: amd64, arm64, 386, riscv64, ppc64le, s390x
+* macOS: amd64, arm64
+* Windows: amd64
+* BSD:
+  * FreeBSD: amd64, arm64
+  * OpenBSD: amd64
+  * NetBSD: amd64, arm64
+  * DragonFly BSD: amd64
+* illumos: amd64
+* Solaris: amd64
+
+Certain operating system and CPU combinations have some limitations. See the [support matrix](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) for a complete overview.
 
 The Go VFS is tested by running SQLite's
 [mptest](https://github.com/sqlite/sqlite/blob/master/mptest/mptest.c).
