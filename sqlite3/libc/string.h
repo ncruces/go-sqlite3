@@ -616,18 +616,22 @@ char *strcasestr(const char *haystk, const char *needle) {
   while (i > 0 && needle[0] == needle[i]) i--;
   if (i == 0) i = sn - 1;
 
-  const v128_t fst = wasm_i8x16_splat(tolower(needle[0]));
-  const v128_t lst = wasm_i8x16_splat(tolower(needle[i]));
+  const v128_t fstl = wasm_i8x16_splat(tolower(needle[0]));
+  const v128_t fstu = wasm_i8x16_splat(toupper(needle[0]));
+  const v128_t lstl = wasm_i8x16_splat(tolower(needle[i]));
+  const v128_t lstu = wasm_i8x16_splat(toupper(needle[i]));
 
   // The last haystk offset for which loading blk_lst is safe.
   const char *H =
       (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i - sizeof(v128_t));
 
   while (haystk <= H) {
-    const v128_t blk_fst = __tolower8x16(wasm_v128_load((v128_t *)(haystk)));
-    const v128_t blk_lst = __tolower8x16(wasm_v128_load((v128_t *)(haystk + i)));
-    const v128_t eq_fst = wasm_i8x16_eq(fst, blk_fst);
-    const v128_t eq_lst = wasm_i8x16_eq(lst, blk_lst);
+    const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
+    const v128_t blk_lst = wasm_v128_load((v128_t *)(haystk + i));
+    const v128_t eq_fst =
+        wasm_i8x16_eq(fstl, blk_fst) | wasm_i8x16_eq(fstu, blk_fst);
+    const v128_t eq_lst =
+        wasm_i8x16_eq(lstl, blk_lst) | wasm_i8x16_eq(lstu, blk_lst);
 
     const v128_t cmp = eq_fst & eq_lst;
     if (wasm_v128_any_true(cmp)) {
