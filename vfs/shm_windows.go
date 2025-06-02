@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/windows"
@@ -26,8 +27,11 @@ type vfsShm struct {
 	ptrs     []ptr_t
 	stack    [1]stk_t
 	fileLock bool
+	blocking bool
 	sync.Mutex
 }
+
+var _ blockingSharedMemory = &vfsShm{}
 
 func (s *vfsShm) Close() error {
 	// Unmap regions.
@@ -42,11 +46,19 @@ func (s *vfsShm) Close() error {
 
 func (s *vfsShm) shmOpen() _ErrorCode {
 	if s.File == nil {
-		f, err := os.OpenFile(s.path, os.O_RDWR|os.O_CREATE, 0666)
+		path, err := windows.UTF16PtrFromString(s.path)
 		if err != nil {
 			return _CANTOPEN
 		}
-		s.File = f
+		h, err := windows.CreateFile(path,
+			windows.GENERIC_READ|windows.GENERIC_WRITE,
+			windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE,
+			nil, windows.OPEN_ALWAYS,
+			windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OVERLAPPED, 0)
+		if err != nil {
+			return _CANTOPEN
+		}
+		s.File = os.NewFile(uintptr(h), s.path)
 	}
 	if s.fileLock {
 		return _OK
@@ -60,7 +72,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return _IOERR_SHMOPEN
 		}
 	}
-	rc := osReadLock(s.File, _SHM_DMS, 1, 0)
+	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
 	s.fileLock = rc == _OK
 	return rc
 }
@@ -128,6 +140,11 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
+	var timeout time.Duration
+	if s.blocking {
+		timeout = time.Millisecond
+	}
+
 	switch {
 	case flags&_SHM_LOCK != 0:
 		defer s.shmAcquire(&rc)
@@ -139,9 +156,9 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (rc _ErrorCode) {
 	case flags&_SHM_UNLOCK != 0:
 		return osUnlock(s.File, _SHM_BASE+uint32(offset), uint32(n))
 	case flags&_SHM_SHARED != 0:
-		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
+		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
 	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
+		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
 	default:
 		panic(util.AssertErr())
 	}
@@ -171,4 +188,8 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	if delete {
 		os.Remove(s.path)
 	}
+}
+
+func (s *vfsShm) shmEnableBlocking(block bool) {
+	s.blocking = block
 }

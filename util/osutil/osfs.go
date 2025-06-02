@@ -32,10 +32,3 @@ func (FS) Stat(name string) (fs.FileInfo, error) {
 func (FS) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
 }
-
-// OpenFile behaves the same as [os.OpenFile].
-//
-// Deprecated: use os.OpenFile instead.
-func OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	return os.OpenFile(name, flag, perm)
-}
