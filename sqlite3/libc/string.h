@@ -402,8 +402,8 @@ size_t strspn(const char *s, const char *c) {
   __wasm_v128_bitmap256_t bitmap = {};
 
   for (; *c; c++) {
-    __wasm_v128_setbit(&bitmap, *c);
     // Terminator IS NOT on the bitmap.
+    __wasm_v128_setbit(&bitmap, *c);
   }
 
   for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
@@ -433,11 +433,10 @@ size_t strcspn(const char *s, const char *c) {
 
   __wasm_v128_bitmap256_t bitmap = {};
 
-  for (;;) {
-    __wasm_v128_setbit(&bitmap, *c);
+  do {
     // Terminator IS on the bitmap.
-    if (!*c++) break;
-  }
+    __wasm_v128_setbit(&bitmap, *c);
+  } while (*c++);
 
   for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
     const v128_t cmp = __wasm_v128_chkbits(bitmap, wasm_v128_load(w));
@@ -465,13 +464,13 @@ size_t strcspn(const char *s, const char *c) {
 // We augment the SIMD algorithm with Quick Search's
 // bad-character shift.
 //
-// https://www-igm.univ-mlv.fr/~lecroq/string/node14.html
-// https://www-igm.univ-mlv.fr/~lecroq/string/node18.html
-// https://www-igm.univ-mlv.fr/~lecroq/string/node19.html
-// https://www-igm.univ-mlv.fr/~lecroq/string/node22.html
+// https://igm.univ-mlv.fr/~lecroq/string/node14.html
+// https://igm.univ-mlv.fr/~lecroq/string/node18.html
+// https://igm.univ-mlv.fr/~lecroq/string/node19.html
+// https://igm.univ-mlv.fr/~lecroq/string/node22.html
 
-static const char *__memmem(const char *haystk, size_t sh,
-                            const char *needle, size_t sn,
+static const char *__memmem(const char *haystk, size_t sh,  //
+                            const char *needle, size_t sn,  //
                             uint8_t bmbc[256]) {
   // We've handled empty and single character needles.
   // The needle is not longer than the haystack.
@@ -490,8 +489,8 @@ static const char *__memmem(const char *haystk, size_t sh,
   const v128_t lst = wasm_i8x16_splat(needle[i]);
 
   // The last haystack offset for which loading blk_lst is safe.
-  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i -
-                           sizeof(v128_t));
+  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE -  //
+                           (sizeof(v128_t) + i));
 
   while (haystk <= H) {
     const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
@@ -622,8 +621,8 @@ char *strcasestr(const char *haystk, const char *needle) {
   const v128_t lstu = wasm_i8x16_splat(toupper(needle[i]));
 
   // The last haystk offset for which loading blk_lst is safe.
-  const char *H =
-      (char *)(__builtin_wasm_memory_size(0) * PAGESIZE - i - sizeof(v128_t));
+  const char *H = (char *)(__builtin_wasm_memory_size(0) * PAGESIZE -  //
+                           (sizeof(v128_t) + i));
 
   while (haystk <= H) {
     const v128_t blk_fst = wasm_v128_load((v128_t *)(haystk));
@@ -680,7 +679,8 @@ char *strcasestr(const char *haystk, const char *needle) {
 //  - strtok
 
 __attribute__((weak))
-void *memccpy(void *__restrict dest, const void *__restrict src, int c, size_t n) {
+void *memccpy(void *__restrict dest, const void *__restrict src, int c,
+              size_t n) {
   const void *m = memchr(src, c, n);
   if (m != NULL) {
     n = (char *)m - (char *)src + 1;
@@ -717,7 +717,8 @@ static char *__stpcpy(char *__restrict dest, const char *__restrict src) {
   return dest + slen;
 }
 
-static char *__stpncpy(char *__restrict dest, const char *__restrict src, size_t n) {
+static char *__stpncpy(char *__restrict dest, const char *__restrict src,
+                       size_t n) {
   size_t strnlen(const char *s, size_t n);
   size_t slen = strnlen(src, n);
   memcpy(dest, src, slen);
