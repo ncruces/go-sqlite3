@@ -47,7 +47,7 @@
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [Built-in Window Functions]: https://sqlite.org/windowfunctions.html#builtins
-// [ANSI SQL Aggregate Functions]: https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
+// [ANSI SQL Aggregate Functions]: https://oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 package stats
 
 import (

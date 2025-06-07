@@ -1,6 +1,6 @@
 # ANSI SQL Aggregate Functions
 
-https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
+https://oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
 
 ## Built in aggregates
 

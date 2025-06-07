@@ -5,8 +5,8 @@ go 1.23.0
 toolchain go1.24.0
 
 require (
-	github.com/ncruces/go-sqlite3 v0.25.0
-	gorm.io/gorm v1.25.12
+	github.com/ncruces/go-sqlite3 v0.26.0
+	gorm.io/gorm v1.30.0
 )
 
 require (
@@ -14,6 +14,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 )

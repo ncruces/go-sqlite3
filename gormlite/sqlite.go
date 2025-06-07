@@ -1,4 +1,3 @@
-// Package gormlite provides a GORM driver for SQLite.
 package gormlite
 
 import (
@@ -52,7 +51,9 @@ func (dialector _Dialector) Initialize(db *gorm.DB) (err error) {
 	})
 
 	for k, v := range dialector.ClauseBuilders() {
-		db.ClauseBuilders[k] = v
+		if _, ok := db.ClauseBuilders[k]; !ok {
+			db.ClauseBuilders[k] = v
+		}
 	}
 	return
 }

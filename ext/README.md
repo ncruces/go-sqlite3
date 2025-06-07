@@ -30,7 +30,7 @@ you can load into your database connections.
 - [`github.com/ncruces/go-sqlite3/ext/statement`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/statement)
   creates [parameterized views](https://github.com/0x09/sqlite-statement-vtab).
 - [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
-  provides [statistics](https://www.oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html) functions.
+  provides [statistics](https://oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html) functions.
 - [`github.com/ncruces/go-sqlite3/ext/unicode`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/unicode)
   provides [Unicode aware](https://sqlite.org/src/dir/ext/icu) functions.
 - [`github.com/ncruces/go-sqlite3/ext/uuid`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/uuid)

@@ -38,7 +38,7 @@ func TestRegister(t *testing.T) {
 		{`regexp_instr('Hello', '.', 6)`, ""},
 		{`regexp_substr('Hello', 'el.')`, "ell"},
 		{`regexp_replace('Hello', 'llo', 'll')`, "Hell"},
-		// https://www.postgresql.org/docs/current/functions-matching.html
+		// https://postgresql.org/docs/current/functions-matching.html
 		{`regexp_count('ABCABCAXYaxy', 'A.')`, "3"},
 		{`regexp_count('ABCABCAXYaxy', '(?i)A.', 1)`, "4"},
 		{`regexp_instr('number of your street, town zip, FR', '[^,]+', 1, 2)`, "23"},
