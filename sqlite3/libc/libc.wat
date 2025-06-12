@@ -1325,11 +1325,11 @@
    )
    (i32.const 0)
    (i32.le_u
-    (local.get $0)
-    (i32.add
-     (local.get $1)
+    (i32.sub
+     (local.get $0)
      (local.get $3)
     )
+    (local.get $1)
    )
   )
  )

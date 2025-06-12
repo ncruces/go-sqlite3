@@ -57,6 +57,7 @@ int bcmp(const void *v1, const void *v2, size_t n) {
 
 #endif  // __OPTIMIZE_SIZE__
 
+__attribute__((always_inline))
 static v128_t __tolower8x16(v128_t v) {
   __i8x16 i = v;
   i = i + wasm_i8x16_splat(INT8_MAX - ('Z'));

@@ -113,7 +113,7 @@ void *memchr(const void *v, int c, size_t n) {
         // That's a match, unless it is beyond the end of the object.
         // Recall that we decremented n, so less-than-or-equal-to is correct.
         size_t ctz = __builtin_ctz(mask);
-        return ctz <= n + align ? (char *)w + ctz : NULL;
+        return ctz - align <= n ? (char *)w + ctz : NULL;
       }
     }
     // Decrement n; if it overflows we're done.
@@ -166,6 +166,8 @@ size_t strlen(const char *s) {
       // At least one bit will be set, unless we cleared them.
       // Knowing this helps the compiler.
       __builtin_assume(mask || align);
+      // If the mask is zero because of alignment,
+      // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
         return (char *)w - s + __builtin_ctz(mask);
@@ -280,6 +282,8 @@ static char *__strchrnul(const char *s, int c) {
       // At least one bit will be set, unless we cleared them.
       // Knowing this helps the compiler.
       __builtin_assume(mask || align);
+      // If the mask is zero because of alignment,
+      // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
         return (char *)w + __builtin_ctz(mask);
