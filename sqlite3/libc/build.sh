@@ -22,7 +22,7 @@ EOF
 	-mexec-model=reactor \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
+	-mreference-types -mmultivalue -mtail-call \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,-z,stack-size=4096 \
 	-Wl,--stack-first \
@@ -60,6 +60,6 @@ EOF
 	libc.tmp -o libc.wasm \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue --enable-tail-call
 
 "$BINARYEN/wasm-dis" -o libc.wat libc.wasm

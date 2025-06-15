@@ -16,7 +16,7 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 	-mexec-model=reactor \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
+	-mreference-types -mmultivalue -mtail-call \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -27,4 +27,4 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 	sql3parse_table.tmp -o sql3parse_table.wasm --low-memory-unused \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue --enable-tail-call

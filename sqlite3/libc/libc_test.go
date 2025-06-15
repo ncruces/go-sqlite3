@@ -11,6 +11,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 )
 
 //go:embed libc.wasm
@@ -57,7 +58,8 @@ func call(fn api.Function, arg ...uint64) uint64 {
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	runtime := wazero.NewRuntime(ctx)
+	runtime := wazero.NewRuntimeWithConfig(ctx,
+		wazero.NewRuntimeConfig().WithCoreFeatures(api.CoreFeaturesV2|experimental.CoreFeaturesTailCall))
 	mod, err := runtime.Instantiate(ctx, binary)
 	if err != nil {
 		panic(err)

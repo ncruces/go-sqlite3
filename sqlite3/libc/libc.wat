@@ -1961,7 +1961,7 @@
   )
  )
  (func $strrchr (param $0 i32) (param $1 i32) (result i32)
-  (call $memrchr
+  (return_call $memrchr
    (local.get $0)
    (local.get $1)
    (i32.add
@@ -4264,6 +4264,6 @@
    (local.get $2)
   )
  )
- ;; features section: mutable-globals, nontrapping-float-to-int, simd, bulk-memory, sign-ext, reference-types, multivalue, bulk-memory-opt
+ ;; features section: mutable-globals, nontrapping-float-to-int, simd, bulk-memory, sign-ext, tail-call, reference-types, multivalue, bulk-memory-opt
 )
 

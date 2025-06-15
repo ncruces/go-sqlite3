@@ -25,3 +25,5 @@ retract (
 	v0.23.2 // tagged from the wrong branch
 	v0.4.0 // tagged from the wrong branch
 )
+
+replace github.com/tetratelabs/wazero => github.com/evacchi/wazero v1.7.1-0.20250614121304-43e7020053f6

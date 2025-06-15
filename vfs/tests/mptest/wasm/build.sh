@@ -12,7 +12,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
+	-mreference-types -mmultivalue -mtail-call \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -29,5 +29,5 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	mptest.wasm -o mptest.tmp --low-memory-unused \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue --enable-tail-call
 mv mptest.tmp mptest.wasm

@@ -7,6 +7,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
@@ -31,7 +32,8 @@ var (
 func ParseTable(sql string) (_ *Table, err error) {
 	once.Do(func() {
 		ctx := context.Background()
-		cfg := wazero.NewRuntimeConfigInterpreter()
+		cfg := wazero.NewRuntimeConfigInterpreter().
+			WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesTailCall)
 		runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
 		compiled, err = runtime.CompileModule(ctx, binary)
 	})

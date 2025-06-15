@@ -10,6 +10,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -53,8 +54,8 @@ func compileSQLite() {
 		} else {
 			cfg = cfg.WithMemoryLimitPages(4096) // 256MB
 		}
-		cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2)
 	}
+	cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2 | experimental.CoreFeaturesTailCall)
 
 	instance.runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
 

@@ -48,7 +48,7 @@ cd ~-
 	-mexec-model=reactor \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
+	-mreference-types -mmultivalue -mtail-call \
 	-fno-stack-protector -fno-stack-clash-protection \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
@@ -63,4 +63,4 @@ cd ~-
 	bcw2.tmp -o bcw2.wasm --low-memory-unused \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue --enable-tail-call
