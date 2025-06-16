@@ -266,8 +266,8 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 }
 
 static char *__strchrnul(const char *s, int c) {
-  // strchrnul must stop as soon as a match is found.
-  // Aligning ensures loads beyond the first match are safe.
+  // strchrnul must stop as soon as it finds the terminator.
+  // Aligning ensures loads beyond the terminator are safe.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
   const v128_t *w = (v128_t *)(s - align);
   const v128_t wc = wasm_i8x16_splat(c);
@@ -325,7 +325,7 @@ char *strrchr(const char *s, int c) {
   return (char *)memrchr(s, c, strlen(s) + 1);
 }
 
-// SIMDized check which bytes are in a set
+// SIMDized check which bytes are in a set (Geoff Langdale)
 // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
 
 typedef struct {
@@ -341,66 +341,62 @@ static void __wasm_v128_setbit(__wasm_v128_bitmap256_t *bitmap, int i) {
   bitmap->h[lo_nibble] |= 1 << (hi_nibble - 8);
 }
 
-__attribute__((always_inline))
-static int __wasm_v128_chkbit(__wasm_v128_bitmap256_t bitmap, int i) {
-  uint8_t hi_nibble = (uint8_t)i >> 4;
-  uint8_t lo_nibble = (uint8_t)i & 0xf;
-  uint8_t bitmask = 1 << (hi_nibble & 0x7);
-  uint8_t bitset = (hi_nibble < 8 ? bitmap.l : bitmap.h)[lo_nibble];
-  return bitmask & bitset;
-}
-
 #ifndef __wasm_relaxed_simd__
 
-#define wasm_i8x16_relaxed_laneselect wasm_v128_bitselect
 #define wasm_i8x16_relaxed_swizzle wasm_i8x16_swizzle
 
 #endif  // __wasm_relaxed_simd__
 
 __attribute__((always_inline))
 static v128_t __wasm_v128_chkbits(__wasm_v128_bitmap256_t bitmap, v128_t v) {
-  v128_t hi_nibbles = wasm_u8x16_shr(v, 4);
-  v128_t lo_nibbles = v & wasm_u8x16_const_splat(0xf);
+  v128_t indices_0_7 = v & wasm_u8x16_const_splat(0x8f);
+  v128_t indices_8_15 = (v & wasm_u8x16_const_splat(0x80)) ^ indices_0_7;
 
+  v128_t row_0_7 = wasm_i8x16_swizzle(bitmap.l, indices_0_7);
+  v128_t row_8_15 = wasm_i8x16_swizzle(bitmap.h, indices_8_15);
+
+  v128_t bitsets = row_0_7 | row_8_15;
+
+  v128_t hi_nibbles = wasm_u8x16_shr(v, 4);
   v128_t bitmask_lookup = wasm_u8x16_const(1, 2, 4, 8, 16, 32, 64, 128,  //
                                            1, 2, 4, 8, 16, 32, 64, 128);
-
   v128_t bitmask = wasm_i8x16_relaxed_swizzle(bitmask_lookup, hi_nibbles);
-  v128_t bitsets = wasm_i8x16_relaxed_laneselect(
-      wasm_i8x16_relaxed_swizzle(bitmap.l, lo_nibbles),
-      wasm_i8x16_relaxed_swizzle(bitmap.h, lo_nibbles),
-      wasm_i8x16_lt(hi_nibbles, wasm_u8x16_const_splat(8)));
 
   return wasm_i8x16_eq(bitsets & bitmask, bitmask);
 }
 
-#undef wasm_i8x16_relaxed_laneselect
 #undef wasm_i8x16_relaxed_swizzle
 
 __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
-  // How many bytes can be read before the pointer goes out of bounds.
-  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE - (size_t)s;
-  const v128_t *w = (v128_t *)s;
-  const char *const a = s;
+  // strspn must stop as soon as it finds the terminator.
+  // Aligning ensures loads beyond the terminator are safe.
+  uintptr_t align = (uintptr_t)s % sizeof(v128_t);
+  const v128_t *w = (v128_t *)(s - align);
 
   if (!c[0]) return 0;
   if (!c[1]) {
     const v128_t wc = wasm_i8x16_splat(*c);
-    for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
-      const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w), wc);
+    for (;;) {
+      const v128_t cmp = wasm_i8x16_eq(*w, wc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
-        // Find the offset of the first zero bit (little-endian).
-        size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
-        return (char *)w + ctz - s;
+        // Clear the bits corresponding to alignment (little-endian)
+        // so we can count trailing zeros.
+        int mask = (uint16_t)~wasm_i8x16_bitmask(cmp) >> align << align;
+        // At least one bit will be set, unless we cleared them.
+        // Knowing this helps the compiler.
+        __builtin_assume(mask || align);
+        // If the mask is zero because of alignment,
+        // it's as if we didn't find anything.
+        if (mask) {
+          // Find the offset of the first one bit (little-endian).
+          return (char *)w - s + __builtin_ctz(mask);
+        }
       }
+      align = 0;
       w++;
     }
-
-    // Scalar algorithm.
-    for (s = (char *)w; *s == *c; s++);
-    return s - a;
   }
 
   __wasm_v128_bitmap256_t bitmap = {};
@@ -410,30 +406,36 @@ size_t strspn(const char *s, const char *c) {
     __wasm_v128_setbit(&bitmap, *c);
   }
 
-  for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
-    const v128_t cmp = __wasm_v128_chkbits(bitmap, wasm_v128_load(w));
+  for (;;) {
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, *w);
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
-      // Find the offset of the first zero bit (little-endian).
-      size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
-      return (char *)w + ctz - s;
+      // Clear the bits corresponding to alignment (little-endian)
+      // so we can count trailing zeros.
+      int mask = (uint16_t)~wasm_i8x16_bitmask(cmp) >> align << align;
+      // At least one bit will be set, unless we cleared them.
+      // Knowing this helps the compiler.
+      __builtin_assume(mask || align);
+      // If the mask is zero because of alignment,
+      // it's as if we didn't find anything.
+      if (mask) {
+        // Find the offset of the first one bit (little-endian).
+        return (char *)w - s + __builtin_ctz(mask);
+      }
     }
+    align = 0;
     w++;
   }
-
-  // Scalar algorithm.
-  for (s = (char *)w; __wasm_v128_chkbit(bitmap, *s); s++);
-  return s - a;
 }
 
 __attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
-  // How many bytes can be read before the pointer goes out of bounds.
-  size_t N = __builtin_wasm_memory_size(0) * PAGESIZE - (size_t)s;
-  const v128_t *w = (v128_t *)s;
-  const char *const a = s;
+  // strcspn must stop as soon as it finds the terminator.
+  // Aligning ensures loads beyond the terminator are safe.
+  uintptr_t align = (uintptr_t)s % sizeof(v128_t);
+  const v128_t *w = (v128_t *)(s - align);
 
   __wasm_v128_bitmap256_t bitmap = {};
 
@@ -442,20 +444,26 @@ size_t strcspn(const char *s, const char *c) {
     __wasm_v128_setbit(&bitmap, *c);
   } while (*c++);
 
-  for (; N >= sizeof(v128_t); N -= sizeof(v128_t)) {
-    const v128_t cmp = __wasm_v128_chkbits(bitmap, wasm_v128_load(w));
+  for (;;) {
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, *w);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Find the offset of the first one bit (little-endian).
-      size_t ctz = __builtin_ctz(wasm_i8x16_bitmask(cmp));
-      return (char *)w + ctz - s;
+      // Clear the bits corresponding to alignment (little-endian)
+      // so we can count trailing zeros.
+      int mask = wasm_i8x16_bitmask(cmp) >> align << align;
+      // At least one bit will be set, unless we cleared them.
+      // Knowing this helps the compiler.
+      __builtin_assume(mask || align);
+      // If the mask is zero because of alignment,
+      // it's as if we didn't find anything.
+      if (mask) {
+        // Find the offset of the first one bit (little-endian).
+        return (char *)w - s + __builtin_ctz(mask);
+      }
     }
+    align = 0;
     w++;
   }
-
-  // Scalar algorithm.
-  for (s = (char *)w; !__wasm_v128_chkbit(bitmap, *s); s++);
-  return s - a;
 }
 
 // SIMD-friendly algorithms for substring searching
