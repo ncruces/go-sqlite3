@@ -39,11 +39,11 @@ void *memmove(void *dest, const void *src, size_t n) {
 #ifdef __wasm_simd128__
 
 __attribute__((weak))
-int memcmp(const void *v1, const void *v2, size_t n) {
+int memcmp(const void *vl, const void *vr, size_t n) {
   // Scalar algorithm.
   if (n < sizeof(v128_t)) {
-    const unsigned char *u1 = (unsigned char *)v1;
-    const unsigned char *u2 = (unsigned char *)v2;
+    const unsigned char *u1 = (unsigned char *)vl;
+    const unsigned char *u2 = (unsigned char *)vr;
     while (n--) {
       if (*u1 != *u2) return *u1 - *u2;
       u1++;
@@ -56,16 +56,16 @@ int memcmp(const void *v1, const void *v2, size_t n) {
   // Find the first different character in the objects.
   // Unaligned loads handle the case where the objects
   // have mismatching alignments.
-  const v128_t *w1 = (v128_t *)v1;
-  const v128_t *w2 = (v128_t *)v2;
+  const v128_t *v1 = (v128_t *)vl;
+  const v128_t *v2 = (v128_t *)vr;
   while (n) {
-    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(w1), wasm_v128_load(w2));
+    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(v1), wasm_v128_load(v2));
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
       // Find the offset of the first zero bit (little-endian).
       size_t ctz = __builtin_ctz(~wasm_i8x16_bitmask(cmp));
-      const unsigned char *u1 = (unsigned char *)w1 + ctz;
-      const unsigned char *u2 = (unsigned char *)w2 + ctz;
+      const unsigned char *u1 = (unsigned char *)v1 + ctz;
+      const unsigned char *u2 = (unsigned char *)v2 + ctz;
       // This may help the compiler if the function is inlined.
       __builtin_assume(*u1 - *u2 != 0);
       return *u1 - *u2;
@@ -73,15 +73,15 @@ int memcmp(const void *v1, const void *v2, size_t n) {
     // This makes n a multiple of sizeof(v128_t)
     // for every iteration except the first.
     size_t align = (n - 1) % sizeof(v128_t) + 1;
-    w1 = (v128_t *)((char *)w1 + align);
-    w2 = (v128_t *)((char *)w2 + align);
+    v1 = (v128_t *)((char *)v1 + align);
+    v2 = (v128_t *)((char *)v2 + align);
     n -= align;
   }
   return 0;
 }
 
 __attribute__((weak))
-void *memchr(const void *v, int c, size_t n) {
+void *memchr(const void *s, int c, size_t n) {
   // When n is zero, a function that locates a character finds no occurrence.
   // Otherwise, decrement n to ensure sub_overflow overflows
   // when n would go equal-to-or-below zero.
@@ -92,12 +92,13 @@ void *memchr(const void *v, int c, size_t n) {
   // memchr must behave as if it reads characters sequentially
   // and stops as soon as a match is found.
   // Aligning ensures loads beyond the first match are safe.
-  uintptr_t align = (uintptr_t)v % sizeof(v128_t);
-  const v128_t *w = (v128_t *)((char *)v - align);
-  const v128_t wc = wasm_i8x16_splat(c);
+  // Volatile avoids compiler tricks around out of bounds loads.
+  uintptr_t align = (uintptr_t)s % sizeof(v128_t);
+  const volatile v128_t *v = (v128_t *)((char *)s - align);
+  const v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
-    const v128_t cmp = wasm_i8x16_eq(*w, wc);
+    const v128_t cmp = wasm_i8x16_eq(*v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Clear the bits corresponding to alignment (little-endian)
@@ -113,7 +114,7 @@ void *memchr(const void *v, int c, size_t n) {
         // That's a match, unless it is beyond the end of the object.
         // Recall that we decremented n, so less-than-or-equal-to is correct.
         size_t ctz = __builtin_ctz(mask);
-        return ctz - align <= n ? (char *)w + ctz : NULL;
+        return ctz - align <= n ? (char *)v + ctz : NULL;
       }
     }
     // Decrement n; if it overflows we're done.
@@ -121,28 +122,28 @@ void *memchr(const void *v, int c, size_t n) {
       return NULL;
     }
     align = 0;
-    w++;
+    v++;
   }
 }
 
 __attribute__((weak))
-void *memrchr(const void *v, int c, size_t n) {
+void *memrchr(const void *s, int c, size_t n) {
   // memrchr is allowed to read up to n bytes from the object.
   // Search backward for the last matching character.
-  const v128_t *w = (v128_t *)((char *)v + n);
-  const v128_t wc = wasm_i8x16_splat(c);
+  const v128_t *v = (v128_t *)((char *)s + n);
+  const v128_t vc = wasm_i8x16_splat(c);
   for (; n >= sizeof(v128_t); n -= sizeof(v128_t)) {
-    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(--w), wc);
+    const v128_t cmp = wasm_i8x16_eq(wasm_v128_load(--v), vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Find the offset of the last one bit (little-endian).
       size_t clz = __builtin_clz(wasm_i8x16_bitmask(cmp)) - 15;
-      return (char *)(w + 1) - clz;
+      return (char *)(v + 1) - clz;
     }
   }
 
   // Scalar algorithm.
-  const char *a = (char *)w;
+  const char *a = (char *)v;
   while (n--) {
     if (*(--a) == (char)c) return (char *)a;
   }
@@ -154,12 +155,13 @@ size_t strlen(const char *s) {
   // strlen must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (v128_t *)(s - align);
+  const volatile v128_t *v = (v128_t *)(s - align);
 
   for (;;) {
+    const v128_t vv = *v;
     // Bitmask is slow on AArch64, all_true is much faster.
-    if (!wasm_i8x16_all_true(*w)) {
-      const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){});
+    if (!wasm_i8x16_all_true(vv)) {
+      const v128_t cmp = wasm_i8x16_eq(vv, (v128_t){});
       // Clear the bits corresponding to alignment (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
@@ -170,11 +172,11 @@ size_t strlen(const char *s) {
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
-        return (char *)w - s + __builtin_ctz(mask);
+        return (char *)v - s + __builtin_ctz(mask);
       }
     }
     align = 0;
-    w++;
+    v++;
   }
 }
 
@@ -268,12 +270,14 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 static char *__strchrnul(const char *s, int c) {
   // strchrnul must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
+  // Volatile avoids compiler tricks around out of bounds loads.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (v128_t *)(s - align);
-  const v128_t wc = wasm_i8x16_splat(c);
+  const volatile v128_t *v = (v128_t *)(s - align);
+  const v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
-    const v128_t cmp = wasm_i8x16_eq(*w, (v128_t){}) | wasm_i8x16_eq(*w, wc);
+    const v128_t vv = *v;
+    const v128_t cmp = wasm_i8x16_eq(vv, (v128_t){}) | wasm_i8x16_eq(vv, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Clear the bits corresponding to alignment (little-endian)
@@ -286,11 +290,11 @@ static char *__strchrnul(const char *s, int c) {
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
-        return (char *)w + __builtin_ctz(mask);
+        return (char *)v + __builtin_ctz(mask);
       }
     }
     align = 0;
-    w++;
+    v++;
   }
 }
 
@@ -371,14 +375,15 @@ __attribute__((weak))
 size_t strspn(const char *s, const char *c) {
   // strspn must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
+  // Volatile avoids compiler tricks around out of bounds loads.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (v128_t *)(s - align);
+  const volatile v128_t *v = (v128_t *)(s - align);
 
   if (!c[0]) return 0;
   if (!c[1]) {
-    const v128_t wc = wasm_i8x16_splat(*c);
+    const v128_t vc = wasm_i8x16_splat(*c);
     for (;;) {
-      const v128_t cmp = wasm_i8x16_eq(*w, wc);
+      const v128_t cmp = wasm_i8x16_eq(*v, vc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
         // Clear the bits corresponding to alignment (little-endian)
@@ -391,11 +396,11 @@ size_t strspn(const char *s, const char *c) {
         // it's as if we didn't find anything.
         if (mask) {
           // Find the offset of the first one bit (little-endian).
-          return (char *)w - s + __builtin_ctz(mask);
+          return (char *)v - s + __builtin_ctz(mask);
         }
       }
       align = 0;
-      w++;
+      v++;
     }
   }
 
@@ -407,7 +412,7 @@ size_t strspn(const char *s, const char *c) {
   }
 
   for (;;) {
-    const v128_t cmp = __wasm_v128_chkbits(bitmap, *w);
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, *v);
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
       // Clear the bits corresponding to alignment (little-endian)
@@ -420,11 +425,11 @@ size_t strspn(const char *s, const char *c) {
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
-        return (char *)w - s + __builtin_ctz(mask);
+        return (char *)v - s + __builtin_ctz(mask);
       }
     }
     align = 0;
-    w++;
+    v++;
   }
 }
 
@@ -434,8 +439,9 @@ size_t strcspn(const char *s, const char *c) {
 
   // strcspn must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
+  // Volatile avoids compiler tricks around out of bounds loads.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const v128_t *w = (v128_t *)(s - align);
+  const volatile v128_t *v = (v128_t *)(s - align);
 
   __wasm_v128_bitmap256_t bitmap = {};
 
@@ -445,7 +451,7 @@ size_t strcspn(const char *s, const char *c) {
   } while (*c++);
 
   for (;;) {
-    const v128_t cmp = __wasm_v128_chkbits(bitmap, *w);
+    const v128_t cmp = __wasm_v128_chkbits(bitmap, *v);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Clear the bits corresponding to alignment (little-endian)
@@ -458,11 +464,11 @@ size_t strcspn(const char *s, const char *c) {
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
-        return (char *)w - s + __builtin_ctz(mask);
+        return (char *)v - s + __builtin_ctz(mask);
       }
     }
     align = 0;
-    w++;
+    v++;
   }
 }
 
