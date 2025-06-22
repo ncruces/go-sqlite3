@@ -24,25 +24,18 @@ const (
 )
 
 var (
-	memory      []byte
-	module      api.Module
-	memset      api.Function
-	memcpy      api.Function
-	memchr      api.Function
-	memcmp      api.Function
-	memmem      api.Function
-	strlen      api.Function
-	strchr      api.Function
-	strcmp      api.Function
-	strstr      api.Function
-	strspn      api.Function
-	strrchr     api.Function
-	strncmp     api.Function
-	strcspn     api.Function
-	strcasecmp  api.Function
-	strcasestr  api.Function
-	strncasecmp api.Function
-	stack       [8]uint64
+	memory  []byte
+	module  api.Module
+	memset  api.Function
+	memcpy  api.Function
+	memchr  api.Function
+	memcmp  api.Function
+	strlen  api.Function
+	strchr  api.Function
+	strspn  api.Function
+	strrchr api.Function
+	strcspn api.Function
+	stack   [8]uint64
 )
 
 func call(fn api.Function, arg ...uint64) uint64 {
@@ -68,18 +61,11 @@ func TestMain(m *testing.M) {
 	memcpy = mod.ExportedFunction("memcpy")
 	memchr = mod.ExportedFunction("memchr")
 	memcmp = mod.ExportedFunction("memcmp")
-	memmem = mod.ExportedFunction("memmem")
 	strlen = mod.ExportedFunction("strlen")
 	strchr = mod.ExportedFunction("strchr")
-	strcmp = mod.ExportedFunction("strcmp")
-	strstr = mod.ExportedFunction("strstr")
 	strspn = mod.ExportedFunction("strspn")
 	strrchr = mod.ExportedFunction("strrchr")
-	strncmp = mod.ExportedFunction("strncmp")
 	strcspn = mod.ExportedFunction("strcspn")
-	strcasecmp = mod.ExportedFunction("strcasecmp")
-	strcasestr = mod.ExportedFunction("strcasestr")
-	strncasecmp = mod.ExportedFunction("strncasecmp")
 	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
 
 	os.Exit(m.Run())
@@ -166,58 +152,6 @@ func Benchmark_memcmp(b *testing.B) {
 	}
 }
 
-func Benchmark_strcmp(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size-1], 7)
-	fill(memory[ptr2:ptr2+size/2], 7)
-	fill(memory[ptr2+size/2:ptr2+size-1], 5)
-
-	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
-		call(strcmp, ptr1, ptr2, size)
-	}
-}
-
-func Benchmark_strncmp(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size-1], 7)
-	fill(memory[ptr2:ptr2+size/2], 7)
-	fill(memory[ptr2+size/2:ptr2+size-1], 5)
-
-	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
-		call(strncmp, ptr1, ptr2, size-1)
-	}
-}
-
-func Benchmark_strcasecmp(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size-1], 7)
-	fill(memory[ptr2:ptr2+size/2], 7)
-	fill(memory[ptr2+size/2:ptr2+size-1], 5)
-
-	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
-		call(strcasecmp, ptr1, ptr2, size)
-	}
-}
-
-func Benchmark_strncasecmp(b *testing.B) {
-	clear(memory)
-	fill(memory[ptr1:ptr1+size-1], 7)
-	fill(memory[ptr2:ptr2+size/2], 7)
-	fill(memory[ptr2+size/2:ptr2+size-1], 5)
-
-	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
-		call(strncasecmp, ptr1, ptr2, size-1)
-	}
-}
-
 func Benchmark_strspn(b *testing.B) {
 	clear(memory)
 	fill(memory[ptr1:ptr1+size/2], 7)
@@ -245,51 +179,6 @@ func Benchmark_strcspn(b *testing.B) {
 	b.ResetTimer()
 	for range b.N {
 		call(strcspn, ptr1, ptr2)
-	}
-}
-
-//go:embed string.h
-var source string
-
-func Benchmark_memmem(b *testing.B) {
-	needle := "memcpy(dest, src, slen)"
-
-	clear(memory)
-	copy(memory[ptr1:], source)
-	copy(memory[ptr2:], needle)
-
-	b.SetBytes(int64(len(source)))
-	b.ResetTimer()
-	for range b.N {
-		call(memmem, ptr1, uint64(len(source)), ptr2, uint64(len(needle)))
-	}
-}
-
-func Benchmark_strstr(b *testing.B) {
-	needle := "memcpy(dest, src, slen)"
-
-	clear(memory)
-	copy(memory[ptr1:], source)
-	copy(memory[ptr2:], needle)
-
-	b.SetBytes(int64(len(source)))
-	b.ResetTimer()
-	for range b.N {
-		call(strstr, ptr1, ptr2)
-	}
-}
-
-func Benchmark_strcasestr(b *testing.B) {
-	needle := "MEMCPY(dest, src, slen)"
-
-	clear(memory)
-	copy(memory[ptr1:], source)
-	copy(memory[ptr2:], needle)
-
-	b.SetBytes(int64(len(source)))
-	b.ResetTimer()
-	for range b.N {
-		call(strcasestr, ptr1, ptr2)
 	}
 }
 
@@ -492,48 +381,6 @@ func Test_memcmp(t *testing.T) {
 			got := call(memcmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
 			if sign(int32(got)) != want {
 				t.Errorf("strcmp(%d, %d, %d) = %d, want %d",
-					ptr1+i, ptr2+i, j, int32(got), want)
-			}
-		}
-	}
-}
-
-func Test_strcmp(t *testing.T) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	ptr2 := len(memory) - len(s2) - 1
-
-	clear(memory)
-	copy(memory[ptr1:], s1)
-	copy(memory[ptr2:], s2)
-
-	for i := range len(s1) + 1 {
-		want := strings.Compare(term(s1[i:]), term(s2[i:]))
-		got := call(strcmp, uint64(ptr1+i), uint64(ptr2+i))
-		if sign(int32(got)) != want {
-			t.Errorf("strcmp(%d, %d) = %d, want %d",
-				ptr1+i, ptr2+i, int32(got), want)
-		}
-	}
-}
-
-func Test_strncmp(t *testing.T) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	ptr2 := len(memory) - len(s2) - 1
-
-	clear(memory)
-	copy(memory[ptr1:], s1)
-	copy(memory[ptr2:], s2)
-
-	for i := range len(s1) + 1 {
-		for j := range len(s1) - i + 1 {
-			want := strings.Compare(term(s1[i:i+j]), term(s2[i:i+j]))
-			got := call(strncmp, uint64(ptr1+i), uint64(ptr2+i), uint64(j))
-			if sign(int32(got)) != want {
-				t.Errorf("strncmp(%d, %d, %d) = %d, want %d",
 					ptr1+i, ptr2+i, j, int32(got), want)
 			}
 		}
@@ -782,102 +629,6 @@ var searchTests = []searchTest{
 	{"000000000000000000000000000000000000000000000000000000000000000000000001", "0000000000000000000000000000000000000000000000000000000000000000001", 5},
 }
 
-func Test_memmem(t *testing.T) {
-	tt := append(searchTests,
-		searchTest{"abcABCabc", "A", 3},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", 13},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", 17},
-	)
-
-	for i := range tt {
-		ptr1 := uint64(len(memory) - len(tt[i].haystk))
-
-		clear(memory)
-		copy(memory[ptr1:], tt[i].haystk)
-		copy(memory[ptr2:], tt[i].needle)
-
-		var want uint64
-		if tt[i].out >= 0 {
-			want = ptr1 + uint64(tt[i].out)
-		}
-
-		got := call(memmem,
-			uint64(ptr1), uint64(len(tt[i].haystk)),
-			uint64(ptr2), uint64(len(tt[i].needle)))
-		if got != want {
-			t.Errorf("memmem(%q, %q) = %d, want %d",
-				tt[i].haystk, tt[i].needle,
-				uint32(got), uint32(want))
-		}
-	}
-}
-
-func Test_strstr(t *testing.T) {
-	tt := append(searchTests,
-		searchTest{"abcABCabc", "A", 3},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
-	)
-
-	for i := range tt {
-		ptr1 := uint64(len(memory) - len(tt[i].haystk) - 1)
-
-		clear(memory)
-		copy(memory[ptr1:], tt[i].haystk)
-		copy(memory[ptr2:], tt[i].needle)
-
-		var want uint64
-		if tt[i].out >= 0 {
-			want = ptr1 + uint64(tt[i].out)
-		}
-
-		got := call(strstr, uint64(ptr1), uint64(ptr2))
-		if got != want {
-			t.Errorf("strstr(%q, %q) = %d, want %d",
-				tt[i].haystk, tt[i].needle,
-				uint32(got), uint32(want))
-		}
-	}
-}
-
-func Test_strcasestr(t *testing.T) {
-	tt := append(searchTests[1:],
-		searchTest{"A", "a", 0},
-		searchTest{"a", "A", 0},
-		searchTest{"Z", "z", 0},
-		searchTest{"z", "Z", 0},
-		searchTest{"@", "`", -1},
-		searchTest{"`", "@", -1},
-		searchTest{"[", "{", -1},
-		searchTest{"{", "[", -1},
-		searchTest{"abcABCabc", "A", 0},
-		searchTest{"fofofofofofofoffofoobarfoo", "FoFFoF", 12},
-		searchTest{"fofofofofofofOffOfoobarfoo", "FoFFoF", 12},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
-	)
-
-	for i := range tt {
-		ptr1 := uint64(len(memory) - len(tt[i].haystk) - 1)
-
-		clear(memory)
-		copy(memory[ptr1:], tt[i].haystk)
-		copy(memory[ptr2:], tt[i].needle)
-
-		var want uint64
-		if tt[i].out >= 0 {
-			want = ptr1 + uint64(tt[i].out)
-		}
-
-		got := call(strcasestr, uint64(ptr1), uint64(ptr2))
-		if got != want {
-			t.Errorf("strcasestr(%q, %q) = %d, want %d",
-				tt[i].haystk, tt[i].needle,
-				uint32(got), uint32(want))
-		}
-	}
-}
-
 func Fuzz_memchr(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string, c, i byte) {
 		if len(s) > 128 || int(i) > len(s) {
@@ -971,120 +722,6 @@ func Fuzz_memcmp(f *testing.F) {
 	})
 }
 
-func Fuzz_strcmp(f *testing.F) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]))
-	}
-
-	f.Fuzz(func(t *testing.T, s1, s2 string) {
-		if len(s1) > 128 || len(s2) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], s1)
-		copy(memory[ptr2:], s2)
-		memory[ptr1+len(s1)] = 0
-		memory[ptr2+len(s2)] = 0
-
-		got := call(strcmp, uint64(ptr1), uint64(ptr2))
-		want := strings.Compare(term(s1), term(s2))
-
-		if sign(int32(got)) != want {
-			t.Errorf("strcmp(%q, %q) = %d, want %d",
-				s1, s2, uint32(got), uint32(want))
-		}
-	})
-}
-
-func Fuzz_strncmp(f *testing.F) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]), byte(len(s1)))
-	}
-
-	f.Fuzz(func(t *testing.T, s1, s2 string, n byte) {
-		if len(s1) > 128 || len(s2) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], s1)
-		copy(memory[ptr2:], s2)
-		memory[ptr1+len(s1)] = 0
-		memory[ptr2+len(s2)] = 0
-
-		got := call(strncmp, uint64(ptr1), uint64(ptr2), uint64(n))
-		want := bytes.Compare(
-			term(memory[ptr1:][:n]),
-			term(memory[ptr2:][:n]))
-
-		if sign(int32(got)) != want {
-			t.Errorf("strncmp(%q, %q, %d) = %d, want %d",
-				s1, s2, n, uint32(got), uint32(want))
-		}
-	})
-}
-
-func Fuzz_strcasecmp(f *testing.F) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]))
-	}
-
-	f.Fuzz(func(t *testing.T, s1, s2 string) {
-		if len(s1) > 128 || len(s2) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], s1)
-		copy(memory[ptr2:], s2)
-		memory[ptr1+len(s1)] = 0
-		memory[ptr2+len(s2)] = 0
-
-		got := call(strcasecmp, uint64(ptr1), uint64(ptr2))
-		want := bytes.Compare(
-			lower(term(memory[ptr1:])),
-			lower(term(memory[ptr2:])))
-
-		if sign(int32(got)) != want {
-			t.Errorf("strcasecmp(%q, %q) = %d, want %d",
-				s1, s2, uint32(got), uint32(want))
-		}
-	})
-}
-
-func Fuzz_strncasecmp(f *testing.F) {
-	const s1 = compareTest1
-	const s2 = compareTest2
-
-	for i := range len(compareTest1) + 1 {
-		f.Add(term(s1[i:]), term(s2[i:]), byte(len(s1)))
-	}
-
-	f.Fuzz(func(t *testing.T, s1, s2 string, n byte) {
-		if len(s1) > 128 || len(s2) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], s1)
-		copy(memory[ptr2:], s2)
-		memory[ptr1+len(s1)] = 0
-		memory[ptr2+len(s2)] = 0
-
-		got := call(strncasecmp, uint64(ptr1), uint64(ptr2), uint64(n))
-		want := bytes.Compare(
-			lower(term(memory[ptr1:][:n])),
-			lower(term(memory[ptr2:][:n])))
-
-		if sign(int32(got)) != want {
-			t.Errorf("strncasecmp(%q, %q, %d) = %d, want %d",
-				s1, s2, n, uint32(got), uint32(want))
-		}
-	})
-}
-
 func Fuzz_strspn(f *testing.F) {
 	for _, t := range searchTests {
 		f.Add(t.haystk, t.needle)
@@ -1155,129 +792,6 @@ func Fuzz_strcspn(f *testing.F) {
 	})
 }
 
-func Fuzz_memmem(f *testing.F) {
-	tt := append(searchTests,
-		searchTest{"abcABCabc", "A", 3},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", 13},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", 17},
-	)
-
-	for _, t := range tt {
-		f.Add(t.haystk, t.needle)
-	}
-
-	f.Fuzz(func(t *testing.T, haystk, needle string) {
-		if len(haystk) > 128 || len(needle) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], haystk)
-		copy(memory[ptr2:], needle)
-
-		got := call(memmem,
-			uint64(ptr1), uint64(len(haystk)),
-			uint64(ptr2), uint64(len(needle)))
-
-		want := strings.Index(haystk, needle)
-		if want >= 0 {
-			want = ptr1 + want
-		} else {
-			want = 0
-		}
-
-		if uint32(got) != uint32(want) {
-			t.Errorf("memmem(%q, %q) = %d, want %d",
-				haystk, needle, uint32(got), uint32(want))
-		}
-	})
-}
-
-func Fuzz_strstr(f *testing.F) {
-	tt := append(searchTests,
-		searchTest{"abcABCabc", "A", 3},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
-	)
-
-	for _, t := range tt {
-		f.Add(t.haystk, t.needle)
-	}
-
-	f.Fuzz(func(t *testing.T, haystk, needle string) {
-		if len(haystk) > 128 || len(needle) > 128 {
-			t.SkipNow()
-		}
-		copy(memory[ptr1:], haystk)
-		copy(memory[ptr2:], needle)
-		memory[ptr1+len(haystk)] = 0
-		memory[ptr2+len(needle)] = 0
-
-		got := call(strstr, uint64(ptr1), uint64(ptr2))
-
-		want := strings.Index(term(haystk), term(needle))
-		if want >= 0 {
-			want = ptr1 + want
-		} else {
-			want = 0
-		}
-
-		if uint32(got) != uint32(want) {
-			t.Errorf("strstr(%q, %q) = %d, want %d",
-				haystk, needle, uint32(got), uint32(want))
-		}
-	})
-}
-
-func Fuzz_strcasestr(f *testing.F) {
-	tt := append(searchTests,
-		searchTest{"A", "a", 0},
-		searchTest{"a", "A", 0},
-		searchTest{"Z", "z", 0},
-		searchTest{"z", "Z", 0},
-		searchTest{"@", "`", -1},
-		searchTest{"`", "@", -1},
-		searchTest{"[", "{", -1},
-		searchTest{"{", "[", -1},
-		searchTest{"abcABCabc", "A", 0},
-		searchTest{"fofofofofofofoffofoobarfoo", "FoFFoF", 12},
-		searchTest{"fofofofofofofOffOfoobarfoo", "FoFFoF", 12},
-		searchTest{"fofofofofofo\x00foffofoobar", "foffof", -1},
-		searchTest{"0000000000000000\x000123456789012345678901234567890", "0123456789012345", -1},
-	)
-
-	for _, t := range tt {
-		f.Add(t.haystk, t.needle)
-	}
-
-	f.Fuzz(func(t *testing.T, haystk, needle string) {
-		if len(haystk) > 128 || len(needle) > 128 {
-			t.SkipNow()
-		}
-		if len(needle) == 0 {
-			t.Skip("musl bug")
-		}
-		copy(memory[ptr1:], haystk)
-		copy(memory[ptr2:], needle)
-		memory[ptr1+len(haystk)] = 0
-		memory[ptr2+len(needle)] = 0
-
-		got := call(strcasestr, uint64(ptr1), uint64(ptr2))
-
-		want := bytes.Index(
-			lower(term(memory[ptr1:])),
-			lower(term(memory[ptr2:])))
-		if want >= 0 {
-			want = ptr1 + want
-		} else {
-			want = 0
-		}
-
-		if uint32(got) != uint32(want) {
-			t.Errorf("strcasestr(%q, %q) = %d, want %d",
-				haystk, needle, uint32(got), uint32(want))
-		}
-	})
-}
-
 func sign(x int32) int {
 	switch {
 	case x > 0:
@@ -1293,15 +807,6 @@ func fill(s []byte, v byte) {
 	for i := range s {
 		s[i] = v
 	}
-}
-
-func lower(s []byte) []byte {
-	for i, c := range s {
-		if 'A' <= c && c <= 'Z' {
-			s[i] = c - 'A' + 'a'
-		}
-	}
-	return s
 }
 
 func term[T interface{ []byte | string }](s T) T {
