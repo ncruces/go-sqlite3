@@ -17,7 +17,6 @@ extern "C" {
 
 // Use the builtins if compiled with bulk memory operations.
 // Clang will intrinsify using SIMD for small, constant N.
-// For everything else, this helps inlining.
 
 __attribute__((weak, always_inline))
 void *memset(void *dest, int c, size_t n) {
@@ -80,7 +79,7 @@ int memcmp(const void *vl, const void *vr, size_t n) {
   return 0;
 }
 
-__attribute__((weak, noinline))
+__attribute__((weak))
 void *memchr(const void *s, int c, size_t n) {
   // When n is zero, a function that locates a character finds no occurrence.
   // Otherwise, decrement n to ensure sub_overflow overflows
@@ -92,9 +91,10 @@ void *memchr(const void *s, int c, size_t n) {
   // memchr must behave as if it reads characters sequentially
   // and stops as soon as a match is found.
   // Aligning ensures loads beyond the first match are safe.
-  // Volatile avoids compiler tricks around out of bounds loads.
+  // Casting through uintptr_t makes this implementation-defined,
+  // rather than undefined behavior.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const volatile v128_t *v = (v128_t *)((char *)s - align);
+  const v128_t *v = (v128_t *)((uintptr_t)s - align);
   const v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
@@ -126,7 +126,7 @@ void *memchr(const void *s, int c, size_t n) {
   }
 }
 
-__attribute__((weak, noinline))
+__attribute__((weak))
 void *memrchr(const void *s, int c, size_t n) {
   // memrchr is allowed to read up to n bytes from the object.
   // Search backward for the last matching character.
@@ -150,18 +150,19 @@ void *memrchr(const void *s, int c, size_t n) {
   return NULL;
 }
 
-__attribute__((weak, noinline))
+__attribute__((weak))
 size_t strlen(const char *s) {
   // strlen must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
+  // Casting through uintptr_t makes this implementation-defined,
+  // rather than undefined behavior.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const volatile v128_t *v = (v128_t *)(s - align);
+  const v128_t *v = (v128_t *)((uintptr_t)s - align);
 
   for (;;) {
-    const v128_t vv = *v;
     // Bitmask is slow on AArch64, all_true is much faster.
-    if (!wasm_i8x16_all_true(vv)) {
-      const v128_t cmp = wasm_i8x16_eq(vv, (v128_t){});
+    if (!wasm_i8x16_all_true(*v)) {
+      const v128_t cmp = wasm_i8x16_eq(*v, (v128_t){});
       // Clear the bits corresponding to alignment (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
@@ -183,14 +184,14 @@ size_t strlen(const char *s) {
 static char *__strchrnul(const char *s, int c) {
   // strchrnul must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
-  // Volatile avoids compiler tricks around out of bounds loads.
+  // Casting through uintptr_t makes this implementation-defined,
+  // rather than undefined behavior.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const volatile v128_t *v = (v128_t *)(s - align);
+  const v128_t *v = (v128_t *)((uintptr_t)s - align);
   const v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
-    const v128_t vv = *v;
-    const v128_t cmp = wasm_i8x16_eq(vv, (v128_t){}) | wasm_i8x16_eq(vv, vc);
+    const v128_t cmp = wasm_i8x16_eq(*v, (v128_t){}) | wasm_i8x16_eq(*v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Clear the bits corresponding to alignment (little-endian)
@@ -284,13 +285,14 @@ static v128_t __wasm_v128_chkbits(__wasm_v128_bitmap256_t bitmap, v128_t v) {
 
 #undef wasm_i8x16_relaxed_swizzle
 
-__attribute__((weak, noinline))
+__attribute__((weak))
 size_t strspn(const char *s, const char *c) {
   // strspn must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
-  // Volatile avoids compiler tricks around out of bounds loads.
+  // Casting through uintptr_t makes this implementation-defined,
+  // rather than undefined behavior.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const volatile v128_t *v = (v128_t *)(s - align);
+  const v128_t *v = (v128_t *)((uintptr_t)s - align);
 
   if (!c[0]) return 0;
   if (!c[1]) {
@@ -346,15 +348,16 @@ size_t strspn(const char *s, const char *c) {
   }
 }
 
-__attribute__((weak, noinline))
+__attribute__((weak))
 size_t strcspn(const char *s, const char *c) {
   if (!c[0] || !c[1]) return __strchrnul(s, *c) - s;
 
   // strcspn must stop as soon as it finds the terminator.
   // Aligning ensures loads beyond the terminator are safe.
-  // Volatile avoids compiler tricks around out of bounds loads.
+  // Casting through uintptr_t makes this implementation-defined,
+  // rather than undefined behavior.
   uintptr_t align = (uintptr_t)s % sizeof(v128_t);
-  const volatile v128_t *v = (v128_t *)(s - align);
+  const v128_t *v = (v128_t *)((uintptr_t)s - align);
 
   __wasm_v128_bitmap256_t bitmap = {};
 
