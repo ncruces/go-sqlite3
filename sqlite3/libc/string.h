@@ -101,13 +101,13 @@ void *memchr(const void *s, int c, size_t n) {
     const v128_t cmp = wasm_i8x16_eq(*v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Clear the bits corresponding to alignment (little-endian)
+      // Clear the bits corresponding to align (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler.
+      // At least one bit will be set, unless align cleared them.
+      // Knowing this helps the compiler if it unrolls the loop.
       __builtin_assume(mask || align);
-      // If the mask is zero because of alignment,
+      // If the mask became zero because of align,
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
@@ -137,8 +137,10 @@ void *memrchr(const void *s, int c, size_t n) {
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
       // Find the offset of the last one bit (little-endian).
-      size_t clz = __builtin_clz(wasm_i8x16_bitmask(cmp)) - 15;
-      return (char *)(v + 1) - clz;
+      // The leading 16 bits of the bitmask are always zero,
+      // and to be ignored.
+      size_t clz = __builtin_clz(wasm_i8x16_bitmask(cmp)) - 16;
+      return (char *)(v + 1) - (clz + 1);
     }
   }
 
@@ -163,13 +165,13 @@ size_t strlen(const char *s) {
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(*v)) {
       const v128_t cmp = wasm_i8x16_eq(*v, (v128_t){});
-      // Clear the bits corresponding to alignment (little-endian)
+      // Clear the bits corresponding to align (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler.
+      // At least one bit will be set, unless align cleared them.
+      // Knowing this helps the compiler if it unrolls the loop.
       __builtin_assume(mask || align);
-      // If the mask is zero because of alignment,
+      // If the mask became zero because of align,
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
@@ -194,13 +196,13 @@ static char *__strchrnul(const char *s, int c) {
     const v128_t cmp = wasm_i8x16_eq(*v, (v128_t){}) | wasm_i8x16_eq(*v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Clear the bits corresponding to alignment (little-endian)
+      // Clear the bits corresponding to align (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler.
+      // At least one bit will be set, unless align cleared them.
+      // Knowing this helps the compiler if it unrolls the loop.
       __builtin_assume(mask || align);
-      // If the mask is zero because of alignment,
+      // If the mask became zero because of align,
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
@@ -301,13 +303,13 @@ size_t strspn(const char *s, const char *c) {
       const v128_t cmp = wasm_i8x16_eq(*v, vc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
-        // Clear the bits corresponding to alignment (little-endian)
+        // Clear the bits corresponding to align (little-endian)
         // so we can count trailing zeros.
         int mask = (uint16_t)~wasm_i8x16_bitmask(cmp) >> align << align;
-        // At least one bit will be set, unless we cleared them.
-        // Knowing this helps the compiler.
+        // At least one bit will be set, unless align cleared them.
+        // Knowing this helps the compiler if it unrolls the loop.
         __builtin_assume(mask || align);
-        // If the mask is zero because of alignment,
+        // If the mask became zero because of align,
         // it's as if we didn't find anything.
         if (mask) {
           // Find the offset of the first one bit (little-endian).
@@ -330,13 +332,13 @@ size_t strspn(const char *s, const char *c) {
     const v128_t cmp = __wasm_v128_chkbits(bitmap, *v);
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(cmp)) {
-      // Clear the bits corresponding to alignment (little-endian)
+      // Clear the bits corresponding to align (little-endian)
       // so we can count trailing zeros.
       int mask = (uint16_t)~wasm_i8x16_bitmask(cmp) >> align << align;
-      // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler.
+      // At least one bit will be set, unless align cleared them.
+      // Knowing this helps the compiler if it unrolls the loop.
       __builtin_assume(mask || align);
-      // If the mask is zero because of alignment,
+      // If the mask became zero because of align,
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).
@@ -370,13 +372,13 @@ size_t strcspn(const char *s, const char *c) {
     const v128_t cmp = __wasm_v128_chkbits(bitmap, *v);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
-      // Clear the bits corresponding to alignment (little-endian)
+      // Clear the bits corresponding to align (little-endian)
       // so we can count trailing zeros.
       int mask = wasm_i8x16_bitmask(cmp) >> align << align;
-      // At least one bit will be set, unless we cleared them.
-      // Knowing this helps the compiler.
+      // At least one bit will be set, unless align cleared them.
+      // Knowing this helps the compiler if it unrolls the loop.
       __builtin_assume(mask || align);
-      // If the mask is zero because of alignment,
+      // If the mask became zero because of align,
       // it's as if we didn't find anything.
       if (mask) {
         // Find the offset of the first one bit (little-endian).

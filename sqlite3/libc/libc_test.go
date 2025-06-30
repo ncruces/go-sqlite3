@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -230,6 +231,10 @@ func Test_memchr(t *testing.T) {
 				fill(memory[ptr:ptr+max(pos, length)], 5)
 				memory[ptr+pos] = 7
 
+				if pos >= 0 {
+					memory[ptr+pos+2] = 7
+				}
+
 				got := call(memchr, uint64(ptr), 7, uint64(length))
 				if uint32(got) != uint32(want) {
 					t.Errorf("memchr(%d, %d, %d) = %d, want %d",
@@ -243,9 +248,14 @@ func Test_memchr(t *testing.T) {
 		fill(memory[ptr:ptr+length], 5)
 		memory[len(memory)-1] = 7
 
-		want := len(memory) - 1
-		if length == 0 {
-			want = 0
+		var want int
+		if length != 0 {
+			want = len(memory) - 1
+			got := call(memchr, uint64(ptr), 7, math.MaxUint32)
+			if uint32(got) != uint32(want) {
+				t.Errorf("memchr(%d, %d, %d) = %d, want %d",
+					ptr, 7, uint32(math.MaxUint32), uint32(got), uint32(want))
+			}
 		}
 
 		got := call(memchr, uint64(ptr), 7, uint64(length))
