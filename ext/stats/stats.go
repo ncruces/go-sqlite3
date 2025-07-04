@@ -58,8 +58,11 @@ import (
 
 // Register registers statistics functions.
 func Register(db *sqlite3.Conn) error {
-	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	const order = sqlite3.SELFORDER1 | flags
+	const (
+		flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+		json  = sqlite3.RESULT_SUBTYPE | flags
+		order = sqlite3.SELFORDER1 | flags
+	)
 	return errors.Join(
 		db.CreateWindowFunction("var_pop", 1, flags, newVariance(var_pop)),
 		db.CreateWindowFunction("var_samp", 1, flags, newVariance(var_samp)),
@@ -81,7 +84,7 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("regr_slope", 2, flags, newCovariance(regr_slope)),
 		db.CreateWindowFunction("regr_intercept", 2, flags, newCovariance(regr_intercept)),
 		db.CreateWindowFunction("regr_count", 2, flags, newCovariance(regr_count)),
-		db.CreateWindowFunction("regr_json", 2, flags, newCovariance(regr_json)),
+		db.CreateWindowFunction("regr_json", 2, json, newCovariance(regr_json)),
 		db.CreateWindowFunction("median", 1, order, newPercentile(median)),
 		db.CreateWindowFunction("percentile", 2, order, newPercentile(percentile_100)),
 		db.CreateWindowFunction("percentile_cont", 2, order, newPercentile(percentile_cont)),
@@ -227,6 +230,7 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 	case regr_json:
 		var buf [128]byte
 		ctx.ResultRawText(fn.regr_json(buf[:0]))
+		ctx.ResultSubtype('J')
 		return
 	}
 	ctx.ResultFloat(r)

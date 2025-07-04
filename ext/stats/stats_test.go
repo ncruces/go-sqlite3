@@ -156,49 +156,50 @@ func TestRegister_covariance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 0.9881049293224639 {
-			t.Errorf("got %v, want 0.9881049293224639", got)
-		}
-		if got := stmt.ColumnFloat(1); got != 21.25 {
-			t.Errorf("got %v, want 21.25", got)
-		}
-		if got := stmt.ColumnFloat(2); got != 17 {
-			t.Errorf("got %v, want 17", got)
-		}
-		if got := stmt.ColumnFloat(3); got != 4.2 {
-			t.Errorf("got %v, want 4.2", got)
-		}
-		if got := stmt.ColumnFloat(4); got != 75 {
-			t.Errorf("got %v, want 75", got)
-		}
-		if got := stmt.ColumnFloat(5); got != 14.8 {
-			t.Errorf("got %v, want 14.8", got)
-		}
-		if got := stmt.ColumnFloat(6); got != 500 {
-			t.Errorf("got %v, want 500", got)
-		}
-		if got := stmt.ColumnFloat(7); got != 85 {
-			t.Errorf("got %v, want 85", got)
-		}
-		if got := stmt.ColumnFloat(8); got != 0.17 {
-			t.Errorf("got %v, want 0.17", got)
-		}
-		if got := stmt.ColumnFloat(9); got != -8.55 {
-			t.Errorf("got %v, want -8.55", got)
-		}
-		if got := stmt.ColumnFloat(10); got != 0.9763513513513513 {
-			t.Errorf("got %v, want 0.9763513513513513", got)
-		}
-		if got := stmt.ColumnInt(11); got != 5 {
-			t.Errorf("got %v, want 5", got)
-		}
-		var a map[string]float64
-		if err := stmt.ColumnJSON(12, &a); err != nil {
-			t.Error(err)
-		} else if got := a["count"]; got != 5 {
-			t.Errorf("got %v, want 5", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	}
+	if got := stmt.ColumnFloat(0); got != 0.9881049293224639 {
+		t.Errorf("got %v, want 0.9881049293224639", got)
+	}
+	if got := stmt.ColumnFloat(1); got != 21.25 {
+		t.Errorf("got %v, want 21.25", got)
+	}
+	if got := stmt.ColumnFloat(2); got != 17 {
+		t.Errorf("got %v, want 17", got)
+	}
+	if got := stmt.ColumnFloat(3); got != 4.2 {
+		t.Errorf("got %v, want 4.2", got)
+	}
+	if got := stmt.ColumnFloat(4); got != 75 {
+		t.Errorf("got %v, want 75", got)
+	}
+	if got := stmt.ColumnFloat(5); got != 14.8 {
+		t.Errorf("got %v, want 14.8", got)
+	}
+	if got := stmt.ColumnFloat(6); got != 500 {
+		t.Errorf("got %v, want 500", got)
+	}
+	if got := stmt.ColumnFloat(7); got != 85 {
+		t.Errorf("got %v, want 85", got)
+	}
+	if got := stmt.ColumnFloat(8); got != 0.17 {
+		t.Errorf("got %v, want 0.17", got)
+	}
+	if got := stmt.ColumnFloat(9); got != -8.55 {
+		t.Errorf("got %v, want -8.55", got)
+	}
+	if got := stmt.ColumnFloat(10); got != 0.9763513513513513 {
+		t.Errorf("got %v, want 0.9763513513513513", got)
+	}
+	if got := stmt.ColumnInt(11); got != 5 {
+		t.Errorf("got %v, want 5", got)
+	}
+	var a map[string]float64
+	if err := stmt.ColumnJSON(12, &a); err != nil {
+		t.Error(err)
+	} else if got := a["count"]; got != 5 {
+		t.Errorf("got %v, want 5", got)
 	}
 	stmt.Close()
 
