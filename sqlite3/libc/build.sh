@@ -13,7 +13,6 @@ trap 'rm -f libc.c libc.tmp' EXIT
 cat << EOF > libc.c
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 EOF
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \

@@ -57,7 +57,7 @@ func (v Value) Type() Datatype {
 	return Datatype(v.c.call("sqlite3_value_type", v.protected()))
 }
 
-// Type returns the numeric datatype of the value.
+// NumericType returns the numeric datatype of the value.
 //
 // https://sqlite.org/c3ref/value_blob.html
 func (v Value) NumericType() Datatype {

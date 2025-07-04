@@ -408,7 +408,7 @@ func Test_strspn(t *testing.T) {
 				fill(memory[ptr:ptr+max(pos, length)], 5)
 				memory[ptr+pos] = 7
 				memory[ptr+length] = 0
-				memory[128] = 3
+				memory[128] = 7 | 128
 				memory[129] = 5
 
 				got := call(strspn, uint64(ptr), 129)
@@ -434,7 +434,7 @@ func Test_strspn(t *testing.T) {
 		clear(memory)
 		fill(memory[ptr:ptr+length], 5)
 		memory[len(memory)-1] = 7
-		memory[128] = 3
+		memory[128] = 7 | 128
 		memory[129] = 5
 
 		got := call(strspn, uint64(ptr), 129)
@@ -462,7 +462,7 @@ func Test_strcspn(t *testing.T) {
 				fill(memory[ptr:ptr+max(pos, length)], 5)
 				memory[ptr+pos] = 7
 				memory[ptr+length] = 0
-				memory[128] = 3
+				memory[128] = 5 | 128
 				memory[129] = 7
 
 				got := call(strcspn, uint64(ptr), 129)
@@ -488,7 +488,7 @@ func Test_strcspn(t *testing.T) {
 		clear(memory)
 		fill(memory[ptr:ptr+length], 5)
 		memory[len(memory)-1] = 7
-		memory[128] = 3
+		memory[128] = 5 | 128
 		memory[129] = 7
 
 		got := call(strcspn, uint64(ptr), 129)
@@ -761,8 +761,10 @@ func Fuzz_strspn(f *testing.F) {
 		}
 
 		if uint32(got) != uint32(want) {
-			t.Errorf("strspn(%q, %q) = %d, want %d",
-				s, chars, uint32(got), uint32(want))
+			t.Errorf("strspn(%v, %v) = %d, want %d",
+				[]byte(memory[ptr1:ptr1+len(s)]),
+				[]byte(memory[ptr2:ptr2+len(chars)]),
+				uint32(got), uint32(want))
 		}
 	})
 }
