@@ -1,19 +1,18 @@
-//go:build !wasmtime
+//go:build wasmtime
 
 package libc
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"unicode/utf8"
 
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
+	"github.com/bytecodealliance/wasmtime-go/v34"
 )
 
 //go:embed libc.wasm
@@ -28,50 +27,63 @@ const (
 
 var (
 	memory  []byte
-	module  api.Module
-	memset  api.Function
-	memcpy  api.Function
-	memchr  api.Function
-	memcmp  api.Function
-	strlen  api.Function
-	strchr  api.Function
-	strspn  api.Function
-	strrchr api.Function
-	strcspn api.Function
-	stack   [8]uint64
+	store   *wasmtime.Store
+	module  *wasmtime.Module
+	memset  *wasmtime.Func
+	memcpy  *wasmtime.Func
+	memchr  *wasmtime.Func
+	memcmp  *wasmtime.Func
+	strlen  *wasmtime.Func
+	strchr  *wasmtime.Func
+	strspn  *wasmtime.Func
+	strrchr *wasmtime.Func
+	strcspn *wasmtime.Func
+	stack   []any
 )
 
-func call(fn api.Function, arg ...uint64) uint64 {
-	copy(stack[:], arg)
-	err := fn.CallWithStack(context.Background(), stack[:])
+func call(fn *wasmtime.Func, arg ...uint64) uint64 {
+	stack = stack[:0]
+	for _, arg := range arg {
+		stack = append(stack, int32(arg))
+	}
+	res, err := fn.Call(store, stack...)
 	if err != nil {
 		panic(err)
 	}
-	return stack[0]
+	return uint64(res.(int32))
 }
 
 func TestMain(m *testing.M) {
-	ctx := context.Background()
+	config := wasmtime.NewConfig()
+	config.SetWasmBulkMemory(true)
+	config.SetWasmSIMD(true)
 
-	runtime := wazero.NewRuntime(ctx)
-	mod, err := runtime.Instantiate(ctx, binary)
+	store = wasmtime.NewStore(wasmtime.NewEngineWithConfig(config))
+
+	mod, err := wasmtime.NewModule(store.Engine, binary)
+	if err != nil {
+		panic(err)
+	}
+
+	instance, err := wasmtime.NewInstance(store, mod, nil)
 	if err != nil {
 		panic(err)
 	}
 
 	module = mod
-	memset = mod.ExportedFunction("memset")
-	memcpy = mod.ExportedFunction("memcpy")
-	memchr = mod.ExportedFunction("memchr")
-	memcmp = mod.ExportedFunction("memcmp")
-	strlen = mod.ExportedFunction("strlen")
-	strchr = mod.ExportedFunction("strchr")
-	strspn = mod.ExportedFunction("strspn")
-	strrchr = mod.ExportedFunction("strrchr")
-	strcspn = mod.ExportedFunction("strcspn")
-	memory, _ = mod.Memory().Read(0, mod.Memory().Size())
+	memset = instance.GetFunc(store, "memset")
+	memcpy = instance.GetFunc(store, "memcpy")
+	memchr = instance.GetFunc(store, "memchr")
+	memcmp = instance.GetFunc(store, "memcmp")
+	strlen = instance.GetFunc(store, "strlen")
+	strchr = instance.GetFunc(store, "strchr")
+	strspn = instance.GetFunc(store, "strspn")
+	strrchr = instance.GetFunc(store, "strrchr")
+	strcspn = instance.GetFunc(store, "strcspn")
+	memory = instance.GetExport(store, "memory").Memory().UnsafeData(store)
 
 	os.Exit(m.Run())
+	runtime.KeepAlive(memory)
 }
 
 func Benchmark_memset(b *testing.B) {
