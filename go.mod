@@ -9,7 +9,7 @@ require (
 	github.com/ncruces/sort v0.1.5
 	github.com/tetratelabs/wazero v1.9.0
 	golang.org/x/crypto v0.39.0
-	golang.org/x/sys v0.33.0
+	golang.org/x/sys v0.34.0
 )
 
 require (
