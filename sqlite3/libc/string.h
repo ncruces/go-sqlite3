@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 #include <wasm_simd128.h>
-#include <__macro_PAGESIZE.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -244,16 +243,16 @@ char *strrchr(const char *s, int c) {
 // http://0x80.pl/notesen/2018-10-18-simd-byte-lookup.html
 
 typedef struct {
-  __u8x16 l;
-  __u8x16 h;
+  __u8x16 lo;
+  __u8x16 hi;
 } __wasm_v128_bitmap256_t;
 
 __attribute__((always_inline))
 static void __wasm_v128_setbit(__wasm_v128_bitmap256_t *bitmap, int i) {
   uint8_t hi_nibble = (uint8_t)i >> 4;
   uint8_t lo_nibble = (uint8_t)i & 0xf;
-  bitmap->l[lo_nibble] |= 1 << (hi_nibble - 0);
-  bitmap->h[lo_nibble] |= 1 << (hi_nibble - 8);
+  bitmap->lo[lo_nibble] |= (uint8_t)((uint32_t)1 << (hi_nibble - 0));
+  bitmap->hi[lo_nibble] |= (uint8_t)((uint32_t)1 << (hi_nibble - 8));
 }
 
 #ifndef __wasm_relaxed_simd__
@@ -272,11 +271,10 @@ static v128_t __wasm_v128_chkbits(__wasm_v128_bitmap256_t bitmap, v128_t v) {
   v128_t indices_0_7 = v & wasm_u8x16_const_splat(0x8f);
   v128_t indices_8_15 = indices_0_7 ^ wasm_u8x16_const_splat(0x80);
 
-  v128_t row_0_7 = wasm_i8x16_swizzle(bitmap.l, indices_0_7);
-  v128_t row_8_15 = wasm_i8x16_swizzle(bitmap.h, indices_8_15);
+  v128_t row_0_7 = wasm_i8x16_swizzle(bitmap.lo, indices_0_7);
+  v128_t row_8_15 = wasm_i8x16_swizzle(bitmap.hi, indices_8_15);
 
   v128_t bitsets = row_0_7 | row_8_15;
-
   return wasm_i8x16_eq(bitsets & bitmask, bitmask);
 }
 
