@@ -82,4 +82,20 @@ func TestRegister_mode(t *testing.T) {
 	for stmt.Step() {
 	}
 	stmt.Close()
+
+	stmt, _, err = db.Prepare(`SELECT mode(column1) FROM (VALUES (?), (?), (?), (?), (?))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmt.BindInt(1, 1)
+	stmt.BindInt(2, 1)
+	stmt.BindInt(3, 2)
+	stmt.BindFloat(4, 2)
+	stmt.BindFloat(5, 2)
+	if stmt.Step() {
+		if got := stmt.ColumnInt(0); got != 2 {
+			t.Errorf("got %v, want 2", got)
+		}
+	}
+	stmt.Close()
 }
