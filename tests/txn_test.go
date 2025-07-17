@@ -37,11 +37,10 @@ func TestConn_Transaction_exec(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer stmt.Close()
-		if stmt.Step() {
-			return stmt.ColumnInt(0)
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
 		}
-		t.Fatal(stmt.Err())
-		return 0
+		return stmt.ColumnInt(0)
 	}
 
 	insert := func(succeed bool) (err error) {
@@ -130,14 +129,12 @@ func TestConn_Transaction_panic(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer stmt.Close()
-		if stmt.Step() {
-			got := stmt.ColumnInt(0)
-			if got != 1 {
-				t.Errorf("got %d, want 1", got)
-			}
-			return
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
 		}
-		t.Fatal(stmt.Err())
+		if got := stmt.ColumnInt(0); got != 1 {
+			t.Errorf("got %d, want 1", got)
+		}
 	}()
 
 	err = panics()
@@ -213,15 +210,10 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		got := stmt.ColumnInt(0)
-		if got != 1 {
-			t.Errorf("got %d, want 1", got)
-		}
-	}
-	err = stmt.Err()
-	if err != nil {
-		t.Error(err)
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("got %d, want 1", got)
 	}
 }
 
@@ -333,15 +325,10 @@ func TestConn_Transaction_rollback(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		got := stmt.ColumnInt(0)
-		if got != 1 {
-			t.Errorf("got %d, want 1", got)
-		}
-	}
-	err = stmt.Err()
-	if err != nil {
-		t.Error(err)
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("got %d, want 1", got)
 	}
 }
 
@@ -382,11 +369,10 @@ func TestConn_Savepoint_exec(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer stmt.Close()
-		if stmt.Step() {
-			return stmt.ColumnInt(0)
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
 		}
-		t.Fatal(stmt.Err())
-		return 0
+		return stmt.ColumnInt(0)
 	}
 
 	insert := func(succeed bool) (err error) {
@@ -469,14 +455,12 @@ func TestConn_Savepoint_panic(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer stmt.Close()
-		if stmt.Step() {
-			got := stmt.ColumnInt(0)
-			if got != 1 {
-				t.Errorf("got %d, want 1", got)
-			}
-			return
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
 		}
-		t.Fatal(stmt.Err())
+		if got := stmt.ColumnInt(0); got != 1 {
+			t.Errorf("got %d, want 1", got)
+		}
 	}()
 
 	err = panics()
@@ -553,15 +537,10 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		got := stmt.ColumnInt(0)
-		if got != 1 {
-			t.Errorf("got %d, want 1", got)
-		}
-	}
-	err = stmt.Err()
-	if err != nil {
-		t.Error(err)
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("got %d, want 1", got)
 	}
 }
 
@@ -599,14 +578,9 @@ func TestConn_Savepoint_rollback(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		got := stmt.ColumnInt(0)
-		if got != 1 {
-			t.Errorf("got %d, want 1", got)
-		}
-	}
-	err = stmt.Err()
-	if err != nil {
-		t.Error(err)
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("got %d, want 1", got)
 	}
 }

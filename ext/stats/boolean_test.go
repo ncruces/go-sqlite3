@@ -37,7 +37,9 @@ func TestRegister_boolean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnBool(0); got != true {
 			t.Errorf("got %v, want true", got)
 		}

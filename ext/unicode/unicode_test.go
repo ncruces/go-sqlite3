@@ -26,11 +26,10 @@ func TestRegister(t *testing.T) {
 		}
 		defer stmt.Close()
 
-		if stmt.Step() {
-			return stmt.ColumnText(0)
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
 		}
-		t.Fatal(stmt.Err())
-		return ""
+		return stmt.ColumnText(0)
 	}
 
 	Register(db)

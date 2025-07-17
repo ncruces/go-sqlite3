@@ -34,10 +34,10 @@ func TestRegister_variance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnType(0); got != sqlite3.NULL {
-			t.Errorf("got %v, want NULL", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnType(0); got != sqlite3.NULL {
+		t.Errorf("got %v, want NULL", got)
 	}
 	stmt.Close()
 
@@ -57,7 +57,9 @@ func TestRegister_variance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnFloat(0); got != 40 {
 			t.Errorf("got %v, want 40", got)
 		}
@@ -131,7 +133,9 @@ func TestRegister_covariance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnInt(0); got != 0 {
 			t.Errorf("got %v, want 0", got)
 		}
@@ -249,7 +253,9 @@ func Benchmark_average(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		b.Fatal(stmt.Err())
+	} else {
 		want := float64(b.N) / 2
 		if got := stmt.ColumnFloat(0); got != want {
 			b.Errorf("got %v, want %v", got, want)
@@ -283,7 +289,9 @@ func Benchmark_variance(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	if stmt.Step() && b.N > 100 {
+	if !stmt.Step() {
+		b.Fatal(stmt.Err())
+	} else if b.N > 100 {
 		want := float64(b.N*b.N) / 12
 		if got := stmt.ColumnFloat(0); want > (got-want)*float64(b.N) {
 			b.Errorf("got %v, want %v", got, want)

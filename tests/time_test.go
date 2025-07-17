@@ -244,7 +244,9 @@ func TestDB_isoWeek(t *testing.T) {
 	tstart := time.Date(1500, 1, 1, 12, 0, 0, 0, time.UTC)
 	for tm := tstart; tm.Before(tend); tm = tm.AddDate(0, 0, 1) {
 		stmt.BindTime(1, tm, sqlite3.TimeFormatDefault)
-		if stmt.Step() {
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
+		} else {
 			y, w := tm.ISOWeek()
 			d := tm.Weekday()
 			if d == 0 {

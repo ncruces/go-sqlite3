@@ -144,18 +144,16 @@ func Test_readblob(t *testing.T) {
 				}
 			}
 
-			if stmt.Step() {
-				got := stmt.ColumnText(0)
-				if got != tt.want1 {
-					t.Errorf("got %q", got)
-				}
+			if !stmt.Step() {
+				t.Fatal(stmt.Err())
+			} else if got := stmt.ColumnText(0); got != tt.want1 {
+				t.Errorf("got %q", got)
 			}
 
-			if stmt.Step() {
-				got := stmt.ColumnText(0)
-				if got != tt.want2 {
-					t.Errorf("got %q", got)
-				}
+			if !stmt.Step() {
+				t.Fatal(stmt.Err())
+			} else if got := stmt.ColumnText(0); got != tt.want2 {
+				t.Errorf("got %q", got)
 			}
 
 			err = stmt.Err()

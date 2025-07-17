@@ -147,20 +147,21 @@ func TestAffinity(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		if got := stmt.ColumnText(0); got != "1" {
-			t.Errorf("got %q want 1", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnText(0); got != "1" {
+		t.Errorf("got %q want 1", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnText(0); got != "0.1" {
-			t.Errorf("got %q want 0.1", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnText(0); got != "0.1" {
+		t.Errorf("got %q want 0.1", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnText(0); got != "e" {
-			t.Errorf("got %q want e", got)
-		}
+
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnText(0); got != "e" {
+		t.Errorf("got %q want e", got)
 	}
 }
 

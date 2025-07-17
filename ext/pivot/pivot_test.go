@@ -141,10 +141,10 @@ func TestRegister(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
-		if got := stmt.ColumnInt(0); got != 3 {
-			t.Errorf("got %d, want 3", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 3 {
+		t.Errorf("got %d, want 3", got)
 	}
 
 	err = db.Exec(`ALTER TABLE v_x RENAME TO v_y`)

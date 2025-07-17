@@ -168,7 +168,9 @@ func TestStmt(t *testing.T) {
 		t.Errorf(`got %q, want "main"`, got)
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -195,7 +197,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -222,7 +226,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -249,7 +255,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.FLOAT {
 			t.Errorf("got %v, want FLOAT", got)
 		}
@@ -276,7 +284,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Errorf("got %v, want NULL", got)
 		}
@@ -303,7 +313,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -328,7 +340,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -353,7 +367,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -378,7 +394,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -403,7 +421,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -428,7 +448,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -453,7 +475,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -480,7 +504,9 @@ func TestStmt(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Errorf("got %v, want NULL", got)
 		}
@@ -643,7 +669,9 @@ func TestStmt_ColumnValue(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		val := stmt.ColumnValue(0)
 		if _, err := val.InFirst(); err == nil {
 			t.Error("want error")
@@ -675,7 +703,9 @@ func TestStmt_Columns(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		var dest [5]any
 		if err := stmt.Columns(dest[:]...); err != nil {
 			t.Fatal(err)

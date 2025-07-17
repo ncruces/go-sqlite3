@@ -92,7 +92,9 @@ func TestRegister(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		x := stmt.ColumnInt(0)
 		y := stmt.ColumnInt(1)
 		hypot := stmt.ColumnInt(2)

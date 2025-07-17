@@ -64,7 +64,9 @@ func TestCreateFunction(t *testing.T) {
 	}
 	defer stmt.Close()
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -73,7 +75,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -82,7 +86,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -91,7 +97,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.FLOAT {
 			t.Errorf("got %v, want FLOAT", got)
 		}
@@ -100,7 +108,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -109,7 +119,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -118,7 +130,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.BLOB {
 			t.Errorf("got %v, want BLOB", got)
 		}
@@ -127,7 +141,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -136,7 +152,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.TEXT {
 			t.Errorf("got %v, want TEXT", got)
 		}
@@ -148,7 +166,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.INTEGER {
 			t.Errorf("got %v, want INTEGER", got)
 		}
@@ -157,7 +177,9 @@ func TestCreateFunction(t *testing.T) {
 		}
 	}
 
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Errorf("got %v, want NULL", got)
 		}

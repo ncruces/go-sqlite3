@@ -38,7 +38,9 @@ func TestRegister_percentile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnFloat(0); got != 10 {
 			t.Errorf("got %v, want 10", got)
 		}
@@ -65,30 +67,30 @@ func TestRegister_percentile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 5.5 {
-			t.Errorf("got %v, want 5.5", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 5.5 {
+		t.Errorf("got %v, want 5.5", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 7 {
-			t.Errorf("got %v, want 7", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 7 {
+		t.Errorf("got %v, want 7", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 10 {
-			t.Errorf("got %v, want 10", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 10 {
+		t.Errorf("got %v, want 10", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 14.5 {
-			t.Errorf("got %v, want 14.5", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 14.5 {
+		t.Errorf("got %v, want 14.5", got)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 16 {
-			t.Errorf("got %v, want 16", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 16 {
+		t.Errorf("got %v, want 16", got)
 	}
 	stmt.Close()
 
@@ -103,7 +105,9 @@ func TestRegister_percentile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnFloat(0); got != 4 {
 			t.Errorf("got %v, want 4", got)
 		}
@@ -134,7 +138,9 @@ func TestRegister_percentile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else {
 		if got := stmt.ColumnType(0); got != sqlite3.NULL {
 			t.Error("want NULL")
 		}

@@ -59,7 +59,9 @@ func Test_endianness(t *testing.T) {
 		}
 		defer stmt.Close()
 
-		if stmt.Step() {
+		if !stmt.Step() {
+			t.Fatal(stmt.Err())
+		} else {
 			if got := stmt.ColumnInt64(0); got != value {
 				t.Errorf("got %d, want %d", got, value)
 			}
@@ -67,9 +69,5 @@ func Test_endianness(t *testing.T) {
 				t.Errorf("got %s, want %d", got, value)
 			}
 		}
-		if err != nil {
-			t.Fatal(err)
-		}
 	}
-
 }

@@ -21,10 +21,10 @@ func TestRegister_mode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnInt(0); got != 3 {
-			t.Errorf("got %v, want 3", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 3 {
+		t.Errorf("got %v, want 3", got)
 	}
 	stmt.Close()
 
@@ -32,10 +32,10 @@ func TestRegister_mode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnInt(0); got != 1 {
-			t.Errorf("got %v, want 1", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("got %v, want 1", got)
 	}
 	stmt.Close()
 
@@ -43,10 +43,10 @@ func TestRegister_mode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnFloat(0); got != 2.5 {
-			t.Errorf("got %v, want 2.5", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnFloat(0); got != 2.5 {
+		t.Errorf("got %v, want 2.5", got)
 	}
 	stmt.Close()
 
@@ -54,21 +54,22 @@ func TestRegister_mode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnText(0); got != "red" {
-			t.Errorf("got %q, want red", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnText(0); got != "red" {
+		t.Errorf("got %q, want red", got)
 	}
+
 	stmt.Close()
 
 	stmt, _, err = db.Prepare(`SELECT mode(column1) FROM (VALUES (X'cafebabe'), ('green'), ('blue'), (X'cafebabe'))`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stmt.Step() {
-		if got := stmt.ColumnText(0); got != "\xca\xfe\xba\xbe" {
-			t.Errorf("got %q, want cafebabe", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnText(0); got != "\xca\xfe\xba\xbe" {
+		t.Errorf("got %q, want cafebabe", got)
 	}
 	stmt.Close()
 
@@ -92,10 +93,10 @@ func TestRegister_mode(t *testing.T) {
 	stmt.BindInt(3, 2)
 	stmt.BindFloat(4, 2)
 	stmt.BindFloat(5, 2)
-	if stmt.Step() {
-		if got := stmt.ColumnInt(0); got != 2 {
-			t.Errorf("got %v, want 2", got)
-		}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	} else if got := stmt.ColumnInt(0); got != 2 {
+		t.Errorf("got %v, want 2", got)
 	}
 	stmt.Close()
 }
