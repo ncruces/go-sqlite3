@@ -12,7 +12,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
-	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestConn_Open_dir(t *testing.T) {
@@ -109,6 +109,48 @@ func TestConn_Close_BUSY(t *testing.T) {
 	}
 	if got := err.Error(); got != `sqlite3: database is locked: unable to close due to unfinalized statements or unfinished backups` {
 		t.Error("got message:", got)
+	}
+}
+
+func TestConn_BusyHandler(t *testing.T) {
+	t.Parallel()
+
+	dsn := memdb.TestDB(t)
+
+	db1, err := sqlite3.Open(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db1.Close()
+
+	db2, err := sqlite3.Open(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db2.Close()
+
+	var called bool
+	err = db2.BusyHandler(func(ctx context.Context, count int) (retry bool) {
+		called = true
+		return count < 1
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := db1.BeginExclusive()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.End(&err)
+
+	_, err = db2.BeginExclusive()
+	if !errors.Is(err, sqlite3.BUSY) {
+		t.Errorf("got %v, want sqlite3.BUSY", err)
+	}
+
+	if !called {
+		t.Error("busy handler not called")
 	}
 }
 

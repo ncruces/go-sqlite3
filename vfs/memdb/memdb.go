@@ -76,18 +76,16 @@ func (memVFS) FullPathname(name string) (string, error) {
 type memDB struct {
 	name string
 
+	// +checklocks:lockMtx
+	waiter *sync.Cond
 	// +checklocks:dataMtx
 	data []*[sectorSize]byte
-	// +checklocks:dataMtx
-	size int64
 
-	// +checklocks:memoryMtx
-	refs int32
-
-	shared   int32      // +checklocks:lockMtx
-	pending  bool       // +checklocks:lockMtx
-	reserved bool       // +checklocks:lockMtx
-	waiter   *sync.Cond // +checklocks:lockMtx
+	size     int64 // +checklocks:dataMtx
+	refs     int32 // +checklocks:memoryMtx
+	shared   int32 // +checklocks:lockMtx
+	pending  bool  // +checklocks:lockMtx
+	reserved bool  // +checklocks:lockMtx
 
 	lockMtx sync.Mutex
 	dataMtx sync.RWMutex
@@ -129,7 +127,7 @@ func (m *memFile) ReadAt(b []byte, off int64) (n int, err error) {
 	base := off / sectorSize
 	rest := off % sectorSize
 	have := int64(sectorSize)
-	if base == int64(len(m.data))-1 {
+	if m.size < off+int64(len(b)) {
 		have = modRoundUp(m.size, sectorSize)
 	}
 	n = copy(b, (*m.data[base])[rest:have])
@@ -150,12 +148,12 @@ func (m *memFile) WriteAt(b []byte, off int64) (n int, err error) {
 		m.data = append(m.data, new([sectorSize]byte))
 	}
 	n = copy((*m.data[base])[rest:], b)
+	if size := off + int64(n); size > m.size {
+		m.size = size
+	}
 	if n < len(b) {
 		// notest // assume writes are page aligned
 		return n, io.ErrShortWrite
-	}
-	if size := off + int64(len(b)); size > m.size {
-		m.size = size
 	}
 	return n, nil
 }
