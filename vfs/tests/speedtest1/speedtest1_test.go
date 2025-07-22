@@ -21,6 +21,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/mvcc"
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
