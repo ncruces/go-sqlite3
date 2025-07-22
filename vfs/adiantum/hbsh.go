@@ -160,10 +160,11 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		if off > min || len(p[n:]) < blockSize {
 			// Partial block write: read-update-write.
 			m, err := h.File.ReadAt(h.block[:], min)
-			if m != blockSize {
-				if err != io.EOF {
-					return n, err
-				}
+			if m == blockSize {
+				data = h.hbsh.Decrypt(h.block[:], h.tweak[:])
+			} else if err != io.EOF {
+				return n, err
+			} else {
 				// Writing past the EOF.
 				// We're either appending an entirely new block,
 				// or the final block was only partially written.
@@ -171,8 +172,6 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 				// and is as good as corrupt.
 				// Either way, zero pad the file to the next block size.
 				clear(data)
-			} else {
-				data = h.hbsh.Decrypt(h.block[:], h.tweak[:])
 			}
 			if off > min {
 				data = data[off-min:]
@@ -223,15 +222,15 @@ func (h *hbshFile) SizeHint(size int64) error {
 	return vfsutil.WrapSizeHint(h.File, roundUp(size))
 }
 
+// Wrap optional methods.
+
 func (h *hbshFile) Unwrap() vfs.File {
-	return h.File
+	return h.File // notest
 }
 
 func (h *hbshFile) SharedMemory() vfs.SharedMemory {
-	return vfsutil.WrapSharedMemory(h.File)
+	return vfsutil.WrapSharedMemory(h.File) // notest
 }
-
-// Wrap optional methods.
 
 func (h *hbshFile) LockState() vfs.LockLevel {
 	return vfsutil.WrapLockState(h.File) // notest

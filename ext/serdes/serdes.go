@@ -2,9 +2,8 @@
 package serdes
 
 import (
-	"io"
-
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -14,16 +13,16 @@ func init() {
 	vfs.Register(vfsName, sliceVFS{})
 }
 
-var fileToOpen = make(chan *sliceFile, 1)
+var fileToOpen = make(chan *[]byte, 1)
 
 // Serialize backs up a database into a byte slice.
 //
 // https://sqlite.org/c3ref/serialize.html
 func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
-	var file sliceFile
+	var file []byte
 	fileToOpen <- &file
 	err := db.Backup(schema, "file:serdes.db?vfs="+vfsName)
-	return file.data, err
+	return file, err
 }
 
 // Deserialize restores a database from a byte slice,
@@ -41,7 +40,7 @@ func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 // ["memdb"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/memdb
 // ["reader"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs
 func Deserialize(db *sqlite3.Conn, schema string, data []byte) error {
-	fileToOpen <- &sliceFile{data}
+	fileToOpen <- &data
 	return db.Restore(schema, "file:serdes.db?vfs="+vfsName)
 }
 
@@ -53,7 +52,7 @@ func (sliceVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, e
 	}
 	select {
 	case file := <-fileToOpen:
-		return file, flags | vfs.OPEN_MEMORY, nil
+		return (*vfsutil.SliceFile)(file), flags | vfs.OPEN_MEMORY, nil
 	default:
 		return nil, flags, sqlite3.MISUSE
 	}
@@ -70,71 +69,4 @@ func (sliceVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 
 func (sliceVFS) FullPathname(name string) (string, error) {
 	return name, nil
-}
-
-type sliceFile struct{ data []byte }
-
-func (f *sliceFile) ReadAt(b []byte, off int64) (n int, err error) {
-	if d := f.data; off < int64(len(d)) {
-		n = copy(b, d[off:])
-	}
-	if n == 0 {
-		err = io.EOF
-	}
-	return
-}
-
-func (f *sliceFile) WriteAt(b []byte, off int64) (n int, err error) {
-	if d := f.data; off > int64(len(d)) {
-		f.data = append(d, make([]byte, off-int64(len(d)))...)
-	}
-	d := append(f.data[:off], b...)
-	if len(d) > len(f.data) {
-		f.data = d
-	}
-	return len(b), nil
-}
-
-func (f *sliceFile) Size() (int64, error) {
-	return int64(len(f.data)), nil
-}
-
-func (f *sliceFile) Truncate(size int64) error {
-	if d := f.data; size < int64(len(d)) {
-		f.data = d[:size]
-	}
-	return nil
-}
-
-func (f *sliceFile) SizeHint(size int64) error {
-	if d := f.data; size > int64(len(d)) {
-		f.data = append(d, make([]byte, size-int64(len(d)))...)
-	}
-	return nil
-}
-
-func (*sliceFile) Close() error { return nil }
-
-func (*sliceFile) Sync(flag vfs.SyncFlag) error { return nil }
-
-func (*sliceFile) Lock(lock vfs.LockLevel) error { return nil }
-
-func (*sliceFile) Unlock(lock vfs.LockLevel) error { return nil }
-
-func (*sliceFile) CheckReservedLock() (bool, error) {
-	// notest // OPEN_MEMORY
-	return false, nil
-}
-
-func (*sliceFile) SectorSize() int {
-	// notest // IOCAP_POWERSAFE_OVERWRITE
-	return 0
-}
-
-func (*sliceFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
-	return vfs.IOCAP_ATOMIC |
-		vfs.IOCAP_SAFE_APPEND |
-		vfs.IOCAP_SEQUENTIAL |
-		vfs.IOCAP_POWERSAFE_OVERWRITE |
-		vfs.IOCAP_SUBPAGE_READ
 }

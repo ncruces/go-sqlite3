@@ -124,10 +124,10 @@ func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
 			return n, err
 		}
 
-		sectorNum := uint64(min / sectorSize)
-		x.cipher.Decrypt(x.sector[:], x.sector[:], sectorNum)
-
 		data := x.sector[:]
+		sectorNum := uint64(min / sectorSize)
+		x.cipher.Decrypt(data, x.sector[:], sectorNum)
+
 		if off > min {
 			data = data[off-min:]
 		}
@@ -150,16 +150,17 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 
 	// Write one block at a time.
 	for ; min < max; min += sectorSize {
-		sectorNum := uint64(min / sectorSize)
 		data := x.sector[:]
+		sectorNum := uint64(min / sectorSize)
 
 		if off > min || len(p[n:]) < sectorSize {
 			// Partial block write: read-update-write.
 			m, err := x.File.ReadAt(x.sector[:], min)
-			if m != sectorSize {
-				if err != io.EOF {
-					return n, err
-				}
+			if m == sectorSize {
+				x.cipher.Decrypt(data, x.sector[:], sectorNum)
+			} else if err != io.EOF {
+				return n, err
+			} else {
 				// Writing past the EOF.
 				// We're either appending an entirely new block,
 				// or the final block was only partially written.
@@ -167,8 +168,6 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 				// and is as good as corrupt.
 				// Either way, zero pad the file to the next block size.
 				clear(data)
-			} else {
-				x.cipher.Decrypt(data, data, sectorNum)
 			}
 			if off > min {
 				data = data[off-min:]
@@ -219,15 +218,15 @@ func (x *xtsFile) SizeHint(size int64) error {
 	return vfsutil.WrapSizeHint(x.File, roundUp(size))
 }
 
+// Wrap optional methods.
+
 func (x *xtsFile) Unwrap() vfs.File {
-	return x.File
+	return x.File // notest
 }
 
 func (x *xtsFile) SharedMemory() vfs.SharedMemory {
-	return vfsutil.WrapSharedMemory(x.File)
+	return vfsutil.WrapSharedMemory(x.File) // notest
 }
-
-// Wrap optional methods.
 
 func (x *xtsFile) LockState() vfs.LockLevel {
 	return vfsutil.WrapLockState(x.File) // notest

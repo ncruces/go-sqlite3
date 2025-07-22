@@ -28,7 +28,7 @@ func (readerVFS) Delete(name string, dirSync bool) error {
 
 func (readerVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 	// notest
-	return false, nil
+	return false, sqlite3.IOERR_ACCESS
 }
 
 func (readerVFS) FullPathname(name string) (string, error) {
@@ -43,32 +43,32 @@ func (readerFile) Close() error {
 
 func (readerFile) WriteAt(b []byte, off int64) (n int, err error) {
 	// notest
-	return 0, sqlite3.READONLY
+	return 0, sqlite3.IOERR_WRITE
 }
 
 func (readerFile) Truncate(size int64) error {
 	// notest
-	return sqlite3.READONLY
+	return sqlite3.IOERR_TRUNCATE
 }
 
 func (readerFile) Sync(flag vfs.SyncFlag) error {
 	// notest
-	return nil
+	return sqlite3.IOERR_FSYNC
 }
 
 func (readerFile) Lock(lock vfs.LockLevel) error {
 	// notest
-	return nil
+	return sqlite3.IOERR_LOCK
 }
 
 func (readerFile) Unlock(lock vfs.LockLevel) error {
 	// notest
-	return nil
+	return sqlite3.IOERR_UNLOCK
 }
 
 func (readerFile) CheckReservedLock() (bool, error) {
 	// notest
-	return false, nil
+	return false, sqlite3.IOERR_CHECKRESERVEDLOCK
 }
 
 func (readerFile) SectorSize() int {
