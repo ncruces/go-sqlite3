@@ -18,6 +18,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/mvcc"
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
@@ -93,6 +94,22 @@ func Test_memdb(t *testing.T) {
 	name := memdb.TestDB(t, url.Values{
 		"_pragma": {"busy_timeout(10000)"},
 	})
+	createDB(t, name)
+	testParallel(t, name, iter)
+	testIntegrity(t, name)
+}
+
+func Test_mvcc(t *testing.T) {
+	var iter int
+	if testing.Short() {
+		iter = 1000
+	} else {
+		iter = 5000
+	}
+
+	mvcc.Create("test.db", "")
+	name := "file:/test.db?vfs=mvcc" +
+		"&_pragma=busy_timeout(10000)"
 	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
@@ -306,6 +323,16 @@ func Benchmark_memdb(b *testing.B) {
 	name := memdb.TestDB(b, url.Values{
 		"_pragma": {"busy_timeout(10000)"},
 	})
+	createDB(b, name)
+
+	b.ResetTimer()
+	testParallel(b, name, b.N)
+}
+
+func Benchmark_mvcc(b *testing.B) {
+	mvcc.Create("test.db", "")
+	name := "file:/test.db?vfs=mvcc" +
+		"&_pragma=busy_timeout(10000)"
 	createDB(b, name)
 
 	b.ResetTimer()
