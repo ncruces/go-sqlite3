@@ -21,7 +21,7 @@ var fileToOpen = make(chan *[]byte, 1)
 func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 	var file []byte
 	fileToOpen <- &file
-	err := db.Backup(schema, "file:serdes.db?vfs="+vfsName)
+	err := db.Backup(schema, "file:serdes.db?nolock=1&vfs="+vfsName)
 	return file, err
 }
 
@@ -41,7 +41,7 @@ func Serialize(db *sqlite3.Conn, schema string) ([]byte, error) {
 // ["reader"]: https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/readervfs
 func Deserialize(db *sqlite3.Conn, schema string, data []byte) error {
 	fileToOpen <- &data
-	return db.Restore(schema, "file:serdes.db?vfs="+vfsName)
+	return db.Restore(schema, "file:serdes.db?immutable=1&vfs="+vfsName)
 }
 
 type sliceVFS struct{}

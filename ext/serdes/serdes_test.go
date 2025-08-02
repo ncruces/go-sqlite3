@@ -1,6 +1,7 @@
 package serdes_test
 
 import (
+	_ "embed"
 	"errors"
 	"io"
 	"net/http"
@@ -11,7 +12,30 @@ import (
 	"github.com/ncruces/go-sqlite3/ext/serdes"
 )
 
-func TestDeserialize(t *testing.T) {
+//go:embed testdata/wal.db
+var walDB []byte
+
+func Test_wal(t *testing.T) {
+	db, err := sqlite3.Open("testdata/wal.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	data, err := serdes.Serialize(db, "main")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	compareDBs(t, data, walDB)
+
+	err = serdes.Deserialize(db, "main", walDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func Test_northwind(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
@@ -37,10 +61,14 @@ func TestDeserialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(input) != len(output) {
+	compareDBs(t, input, output)
+}
+
+func compareDBs(t *testing.T, a, b []byte) {
+	if len(a) != len(b) {
 		t.Fatal("lengths are different")
 	}
-	for i := range input {
+	for i := range a {
 		// These may be different.
 		switch {
 		case 24 <= i && i < 28:
@@ -53,14 +81,14 @@ func TestDeserialize(t *testing.T) {
 			// SQLite version that wrote the file.
 			continue
 		}
-		if input[i] != output[i] {
-			t.Errorf("difference at %d: %d %d", i, input[i], output[i])
+		if a[i] != b[i] {
+			t.Errorf("difference at %d: %d %d", i, a[i], b[i])
 		}
 	}
 }
 
 func httpGet() ([]byte, error) {
-	res, err := http.Get("https://raw.githubusercontent.com/jpwhite3/northwind-SQLite3/refs/heads/main/dist/northwind.db")
+	res, err := http.Get("https://github.com/jpwhite3/northwind-SQLite3/raw/refs/heads/main/dist/northwind.db")
 	if err != nil {
 		return nil, err
 	}
