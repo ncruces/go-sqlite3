@@ -59,7 +59,7 @@ func (sliceVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, e
 }
 
 func (sliceVFS) Delete(name string, dirSync bool) error {
-	// notest // OPEN_MEMORY
+	// notest // no journals to delete
 	return sqlite3.IOERR_DELETE
 }
 

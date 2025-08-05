@@ -3,14 +3,19 @@ package readervfs
 import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
+	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 type readerVFS struct{}
 
 func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
+	// Temp journals, as used by the sorter, use SliceFile.
+	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
+		return &vfsutil.SliceFile{}, flags | vfs.OPEN_MEMORY, nil
+	}
+	// Refuse to open all other file types.
 	if flags&vfs.OPEN_MAIN_DB == 0 {
-		// notest
 		return nil, flags, sqlite3.CANTOPEN
 	}
 	readerMtx.RLock()
@@ -22,12 +27,12 @@ func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, 
 }
 
 func (readerVFS) Delete(name string, dirSync bool) error {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return sqlite3.IOERR_DELETE
 }
 
 func (readerVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return false, sqlite3.IOERR_ACCESS
 }
 
@@ -42,37 +47,37 @@ func (readerFile) Close() error {
 }
 
 func (readerFile) WriteAt(b []byte, off int64) (n int, err error) {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return 0, sqlite3.IOERR_WRITE
 }
 
 func (readerFile) Truncate(size int64) error {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return sqlite3.IOERR_TRUNCATE
 }
 
 func (readerFile) Sync(flag vfs.SyncFlag) error {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return sqlite3.IOERR_FSYNC
 }
 
 func (readerFile) Lock(lock vfs.LockLevel) error {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return sqlite3.IOERR_LOCK
 }
 
 func (readerFile) Unlock(lock vfs.LockLevel) error {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return sqlite3.IOERR_UNLOCK
 }
 
 func (readerFile) CheckReservedLock() (bool, error) {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return false, sqlite3.IOERR_CHECKRESERVEDLOCK
 }
 
 func (readerFile) SectorSize() int {
-	// notest
+	// notest // IOCAP_IMMUTABLE
 	return 0
 }
 

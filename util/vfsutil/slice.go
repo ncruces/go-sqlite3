@@ -69,20 +69,26 @@ func (*SliceFile) Close() error { return nil }
 func (*SliceFile) Sync(flags vfs.SyncFlag) error { return nil }
 
 // Lock implements [vfs.File].
-func (*SliceFile) Lock(lock vfs.LockLevel) error { return nil }
+func (*SliceFile) Lock(lock vfs.LockLevel) error {
+	// notest // not concurrency safe
+	return sqlite3.IOERR_LOCK
+}
 
 // Unlock implements [vfs.File].
-func (*SliceFile) Unlock(lock vfs.LockLevel) error { return nil }
+func (*SliceFile) Unlock(lock vfs.LockLevel) error {
+	// notest // not concurrency safe
+	return sqlite3.IOERR_UNLOCK
+}
 
 // CheckReservedLock implements [vfs.File].
 func (*SliceFile) CheckReservedLock() (bool, error) {
-	// notest // OPEN_MEMORY
+	// notest // not concurrency safe
 	return false, sqlite3.IOERR_CHECKRESERVEDLOCK
 }
 
 // SectorSize implements [vfs.File].
 func (*SliceFile) SectorSize() int {
-	// notest // IOCAP_POWERSAFE_OVERWRITE
+	// notest // safe default
 	return 0
 }
 

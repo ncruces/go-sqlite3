@@ -29,7 +29,7 @@ func Test_wal(t *testing.T) {
 
 	compareDBs(t, data, walDB)
 
-	err = serdes.Deserialize(db, "main", walDB)
+	err = serdes.Deserialize(db, "temp", walDB)
 	if err != nil {
 		t.Fatal(err)
 	}

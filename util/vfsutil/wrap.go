@@ -22,6 +22,14 @@ func UnwrapFile[T vfs.File](f vfs.File) (_ T, _ bool) {
 	}
 }
 
+// WrapOpen helps wrap [vfs.VFS].
+func WrapOpen(f vfs.VFS, name string, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
+	if f, ok := f.(vfs.VFSFilename); name == "" && ok {
+		return f.OpenFilename(nil, flags)
+	}
+	return f.Open(name, flags)
+}
+
 // WrapOpenFilename helps wrap [vfs.VFSFilename].
 func WrapOpenFilename(f vfs.VFS, name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
 	if f, ok := f.(vfs.VFSFilename); ok {
