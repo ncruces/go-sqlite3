@@ -12,7 +12,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
-func TestRegister_zorder(t *testing.T) {
+func Test_zorder(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
@@ -57,7 +57,7 @@ func TestRegister_zorder(t *testing.T) {
 	}
 }
 
-func TestRegister_unzorder(t *testing.T) {
+func Test_unzorder(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
@@ -85,7 +85,7 @@ func TestRegister_unzorder(t *testing.T) {
 	}
 }
 
-func TestRegister_error(t *testing.T) {
+func Test_zorder_error(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
@@ -103,12 +103,39 @@ func TestRegister_error(t *testing.T) {
 
 	var buf strings.Builder
 	buf.WriteString("SELECT zorder(0")
-	for i := 1; i < 80; i++ {
+	for i := 1; i < 25; i++ {
 		buf.WriteByte(',')
 		buf.WriteString(strconv.Itoa(0))
 	}
 	buf.WriteByte(')')
 	err = db.QueryRow(buf.String()).Scan(&got)
+	if err == nil {
+		t.Error("want error")
+	}
+}
+
+func Test_unzorder_error(t *testing.T) {
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	db, err := driver.Open(tmp, zorder.Register)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var got int64
+	err = db.QueryRow(`SELECT unzorder(-1, 2, 0)`).Scan(&got)
+	if err == nil {
+		t.Error("want error")
+	}
+
+	err = db.QueryRow(`SELECT unzorder(0, 2, 2)`).Scan(&got)
+	if err == nil {
+		t.Error("want error")
+	}
+
+	err = db.QueryRow(`SELECT unzorder(0, 25, 2)`).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}

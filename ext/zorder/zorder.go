@@ -19,9 +19,9 @@ func Register(db *sqlite3.Conn) error {
 }
 
 func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	var x [63]int64
-	if len(arg) > len(x) {
-		ctx.ResultError(util.ErrorString("zorder: too many parameters"))
+	var x [24]int64
+	if n := len(arg); n < 2 || n > 24 {
+		ctx.ResultError(util.ErrorString("zorder: needs between 2 and 24 dimensions"))
 		return
 	}
 	for i := range arg {
@@ -29,17 +29,15 @@ func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 
 	var z int64
-	if len(arg) > 0 {
-		for i := range x {
-			j := i % len(arg)
-			z |= (x[j] & 1) << i
-			x[j] >>= 1
-		}
+	for i := range 63 {
+		j := i % len(arg)
+		z |= (x[j] & 1) << i
+		x[j] >>= 1
 	}
 
 	for i := range arg {
 		if x[i] != 0 {
-			ctx.ResultError(util.ErrorString("zorder: parameter too large"))
+			ctx.ResultError(util.ErrorString("zorder: argument out of range"))
 			return
 		}
 	}
@@ -50,6 +48,19 @@ func unzorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	i := arg[2].Int64()
 	n := arg[1].Int64()
 	z := arg[0].Int64()
+
+	if n < 2 || n > 24 {
+		ctx.ResultError(util.ErrorString("unzorder: needs between 2 and 24 dimensions"))
+		return
+	}
+	if i < 0 || i >= n {
+		ctx.ResultError(util.ErrorString("unzorder: index out of range"))
+		return
+	}
+	if z < 0 {
+		ctx.ResultError(util.ErrorString("unzorder: argument out of range"))
+		return
+	}
 
 	var k int
 	var x int64
