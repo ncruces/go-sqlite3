@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"unicode/utf8"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -750,15 +749,7 @@ func Fuzz_strspn(f *testing.F) {
 
 		s = term(s)
 		chars = term(chars)
-		want := strings.IndexFunc(s, func(r rune) bool {
-			if uint32(r) >= utf8.RuneSelf {
-				t.Skip()
-			}
-			return strings.IndexByte(chars, byte(r)) < 0
-		})
-		if want < 0 {
-			want = len(s)
-		}
+		want := indexNotByte(s, chars)
 
 		if uint32(got) != uint32(want) {
 			t.Errorf("strspn(%v, %v) = %d, want %d",
@@ -778,11 +769,6 @@ func Fuzz_strcspn(f *testing.F) {
 		if len(s) > 128 || len(chars) > 128 {
 			t.SkipNow()
 		}
-		if strings.ContainsFunc(chars, func(r rune) bool {
-			return uint32(r) >= utf8.RuneSelf
-		}) {
-			t.SkipNow()
-		}
 		copy(memory[ptr1:], s)
 		copy(memory[ptr2:], chars)
 		memory[ptr1+len(s)] = 0
@@ -792,10 +778,7 @@ func Fuzz_strcspn(f *testing.F) {
 
 		s = term(s)
 		chars = term(chars)
-		want := strings.IndexAny(s, chars)
-		if want < 0 {
-			want = len(s)
-		}
+		want := indexAnyByte(s, chars)
 
 		if uint32(got) != uint32(want) {
 			t.Errorf("strcspn(%q, %q) = %d, want %d",
@@ -837,4 +820,22 @@ func term1[T interface{ []byte | string }](s T) T {
 		}
 	}
 	return s
+}
+
+func indexNotByte(s, chars string) int {
+	for i, c := range []byte(s) {
+		if strings.IndexByte(chars, c) < 0 {
+			return i
+		}
+	}
+	return len(s)
+}
+
+func indexAnyByte(s, chars string) int {
+	for i, c := range []byte(s) {
+		if strings.IndexByte(chars, c) >= 0 {
+			return i
+		}
+	}
+	return len(s)
 }
