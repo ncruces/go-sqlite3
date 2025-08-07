@@ -8,8 +8,8 @@ require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.5
 	github.com/tetratelabs/wazero v1.9.0
-	golang.org/x/crypto v0.40.0
-	golang.org/x/sys v0.34.0
+	golang.org/x/crypto v0.41.0
+	golang.org/x/sys v0.35.0
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
 	golang.org/x/sync v0.16.0 // test
-	golang.org/x/text v0.27.0 // ext/unicode
+	golang.org/x/text v0.28.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
