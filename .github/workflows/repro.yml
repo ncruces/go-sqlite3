@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - uses: ilammy/msvc-dev-cmd@v1
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Build
       shell: bash
