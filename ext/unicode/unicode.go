@@ -43,7 +43,7 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-// Set RegisterLike to false to not register a Unicode aware LIKE operator.
+// RegisterLike must be set to false to not register a Unicode aware LIKE operator.
 // Overriding the built-in LIKE operator disables the [LIKE optimization].
 //
 // [LIKE optimization]: https://sqlite.org/optoverview.html#the_like_optimization

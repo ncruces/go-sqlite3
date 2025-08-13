@@ -18,7 +18,7 @@ func Register(db *sqlite3.Conn) error {
 	return RegisterFS(db, nil)
 }
 
-// Register registers SQL functions readfile, lsmode,
+// RegisterFS registers SQL functions readfile, lsmode,
 // and the table-valued function fsdir;
 // fsys will be used to read files and list directories.
 func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {

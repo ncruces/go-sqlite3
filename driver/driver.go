@@ -740,7 +740,7 @@ func (r *rows) ColumnTypeScanType(index int) (typ reflect.Type) {
 		switch {
 		case scan == _TIME && val != _BLOB && val != _NULL:
 			t := r.Stmt.ColumnTime(index, r.tmRead)
-			useValType = t == time.Time{}
+			useValType = t.IsZero()
 		case scan == _BOOL && val == _INT:
 			i := r.Stmt.ColumnInt64(index)
 			useValType = i != 0 && i != 1

@@ -59,7 +59,7 @@ func (c *Conn) CreateCollation(name string, fn CollatingFunction) error {
 	return c.error(rc)
 }
 
-// Collating function is the type of a collation callback.
+// CollatingFunction is the type of a collation callback.
 // Implementations must not retain a or b.
 type CollatingFunction func(a, b []byte) int
 

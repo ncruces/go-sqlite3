@@ -49,7 +49,7 @@ func (s *SeekingReaderAt) Size() (int64, error) {
 	return s.r.Seek(0, io.SeekEnd)
 }
 
-// ReadAt implements [io.Closer].
+// Close implements [io.Closer].
 func (s *SeekingReaderAt) Close() error {
 	s.l.Lock()
 	defer s.l.Unlock()

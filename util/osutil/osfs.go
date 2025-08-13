@@ -23,7 +23,7 @@ func (FS) Open(name string) (fs.File, error) {
 	return os.OpenFile(name, os.O_RDONLY, 0)
 }
 
-// ReadFileFS implements [fs.StatFS].
+// Stat implements [fs.StatFS].
 func (FS) Stat(name string) (fs.FileInfo, error) {
 	return os.Stat(name)
 }

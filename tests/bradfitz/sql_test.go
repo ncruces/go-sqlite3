@@ -35,7 +35,7 @@ type params struct {
 	*sql.DB
 }
 
-func (t params) mustExec(sql string, args ...interface{}) sql.Result {
+func (t params) mustExec(sql string, args ...any) sql.Result {
 	res, err := t.DB.Exec(sql, args...)
 	if err != nil {
 		t.Fatalf("Error running %q: %v", sql, err)
