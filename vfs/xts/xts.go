@@ -19,7 +19,10 @@ type xtsVFS struct {
 
 func (x *xtsVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
 	// notest // OpenFilename is called instead
-	return nil, 0, sqlite3.CANTOPEN
+	if name == "" {
+		return x.OpenFilename(nil, flags)
+	}
+	return nil, flags, sqlite3.CANTOPEN
 }
 
 func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {

@@ -20,7 +20,10 @@ type hbshVFS struct {
 
 func (h *hbshVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
 	// notest // OpenFilename is called instead
-	return nil, 0, sqlite3.CANTOPEN
+	if name == "" {
+		return h.OpenFilename(nil, flags)
+	}
+	return nil, flags, sqlite3.CANTOPEN
 }
 
 func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
