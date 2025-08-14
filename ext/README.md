@@ -38,7 +38,7 @@ you can load into your database connections.
 - [`github.com/ncruces/go-sqlite3/ext/zorder`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/zorder)
   maps multidimensional data to one dimension.
 
-### Pakages
+### Packages
 
 These packages may also be useful to work with SQLite:
 
