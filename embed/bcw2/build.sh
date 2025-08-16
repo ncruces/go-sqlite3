@@ -7,16 +7,18 @@ ROOT=../../
 BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
-trap 'rm -rf build/ sqlite/ bcw2.tmp' EXIT
+trap 'rm -rf sqlite/ build/ bcw2.tmp' EXIT
 
+mkdir -p sqlite/
 mkdir -p build/ext/
 cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
+cd sqlite/
 
 # https://sqlite.org/src/info/ba2174bdca7d1d1a
-curl -# https://sqlite.org/src/tarball/sqlite.tar.gz?r=ba2174bdca | tar xz
+curl -#L https://github.com/sqlite/sqlite/archive/b46738f.tar.gz | tar xz --strip-components=1
+# curl -#L https://sqlite.org/src/tarball/sqlite.tar.gz?r=ba2174bdca | tar xz --strip-components=1
 
-cd sqlite
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
 	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c "OPTS=-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_ENABLE_ORDERED_SET_AGGREGATES"
 else
