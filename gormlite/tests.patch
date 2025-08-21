@@ -7,13 +7,14 @@ diff --git a/tests/.gitignore b/tests/.gitignore
 diff --git a/tests/tests_test.go b/tests/tests_test.go
 --- a/tests/tests_test.go
 +++ b/tests/tests_test.go
-@@ -7,9 +7,11 @@ import (
+@@ -8,9 +8,11 @@ import (
  	"path/filepath"
  	"time"
  
 +	_ "github.com/ncruces/go-sqlite3/embed"
 +	sqlite "github.com/ncruces/go-sqlite3/gormlite"
 +
+ 	"gorm.io/driver/gaussdb"
  	"gorm.io/driver/mysql"
  	"gorm.io/driver/postgres"
 -	"gorm.io/driver/sqlite"

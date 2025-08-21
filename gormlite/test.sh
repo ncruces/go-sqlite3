@@ -7,7 +7,7 @@ rm -rf gorm/ tests/
 go work use -r .
 go test
 
-git clone --branch v1.30.0 --filter=blob:none https://github.com/go-gorm/gorm.git
+git clone --branch v1.30.1 --filter=blob:none https://github.com/go-gorm/gorm.git
 mv gorm/tests tests
 rm -rf gorm/
 
