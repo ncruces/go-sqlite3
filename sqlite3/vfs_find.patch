@@ -1,7 +1,7 @@
 # Remove VFS registration. Go handles it.
 --- sqlite3.c.orig
 +++ sqlite3.c
-@@ -26882,7 +26882,7 @@
+@@ -26884,7 +26884,7 @@
    sqlite3_free(p);
    return sqlite3_os_init();
  }
@@ -10,7 +10,7 @@
  /*
  ** The list of all registered VFS implementations.
  */
-@@ -26979,7 +26979,7 @@
+@@ -26981,7 +26981,7 @@
    sqlite3_mutex_leave(mutex);
    return SQLITE_OK;
  }
