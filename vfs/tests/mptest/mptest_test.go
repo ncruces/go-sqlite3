@@ -24,6 +24,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	"github.com/ncruces/go-sqlite3/vfs/mvcc"
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
@@ -188,6 +189,50 @@ func Test_multiwrite01_memory(t *testing.T) {
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_config01_mvcc(t *testing.T) {
+	mvcc.Create("test.db", "")
+	ctx := util.NewContext(newContext(t))
+	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
+		"--vfs", "mvcc")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_crash01_mvcc(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+
+	mvcc.Create("test.db", "")
+	ctx := util.NewContext(newContext(t))
+	cfg := config(ctx).WithArgs("mptest", "/test.db", "crash01.test",
+		"--vfs", "mvcc")
+	mod, err := rt.InstantiateModule(ctx, module, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mod.Close(ctx)
+}
+
+func Test_multiwrite01_mvcc(t *testing.T) {
+	if testing.Short() && os.Getenv("CI") != "" {
+		t.Skip("skipping in slow CI")
+	}
+
+	mvcc.Create("test.db", "")
+	ctx := util.NewContext(newContext(t))
+	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
+		"--vfs", "mvcc")
 	mod, err := rt.InstantiateModule(ctx, module, cfg)
 	if err != nil {
 		t.Fatal(err)
