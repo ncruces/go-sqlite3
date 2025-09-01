@@ -47,9 +47,11 @@ func (m *virtualMemory) Reallocate(size uint64) []byte {
 	com := uint64(len(m.buf))
 	res := uint64(cap(m.buf))
 	if com < size && size <= res {
-		// Round up to the page size.
+		// Grow geometrically, round up to the page size.
 		rnd := uint64(windows.Getpagesize() - 1)
-		new := (size + rnd) &^ rnd
+		new := com + com>>3
+		new = min(max(size, new), res)
+		new = (size + rnd) &^ rnd
 
 		// Commit additional memory up to new bytes.
 		_, err := windows.VirtualAlloc(m.addr, uintptr(new), windows.MEM_COMMIT, windows.PAGE_READWRITE)
