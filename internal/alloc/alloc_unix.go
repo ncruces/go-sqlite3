@@ -44,7 +44,7 @@ func (m *mmappedMemory) Reallocate(size uint64) []byte {
 		rnd := uint64(unix.Getpagesize() - 1)
 		new := com + com>>3
 		new = min(max(size, new), res)
-		new = (size + rnd) &^ rnd
+		new = (new + rnd) &^ rnd
 
 		// Commit additional memory up to new bytes.
 		err := unix.Mprotect(m.buf[com:new], unix.PROT_READ|unix.PROT_WRITE)
