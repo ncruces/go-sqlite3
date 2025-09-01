@@ -40,9 +40,11 @@ func (m *mmappedMemory) Reallocate(size uint64) []byte {
 	com := uint64(len(m.buf))
 	res := uint64(cap(m.buf))
 	if com < size && size <= res {
-		// Round up to the page size.
+		// Grow geometrically, round up to the page size.
 		rnd := uint64(unix.Getpagesize() - 1)
-		new := (size + rnd) &^ rnd
+		new := com + com>>3
+		new = min(max(size, new), res)
+		new = (new + rnd) &^ rnd
 
 		// Commit additional memory up to new bytes.
 		err := unix.Mprotect(m.buf[com:new], unix.PROT_READ|unix.PROT_WRITE)
