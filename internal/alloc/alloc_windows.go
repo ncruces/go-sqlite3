@@ -28,7 +28,7 @@ func NewMemory(cap, max uint64) experimental.LinearMemory {
 
 	// Reserve max bytes of address space, to ensure we won't need to move it.
 	// This does not commit memory.
-	r, err := windows.VirtualAlloc(0, uintptr(max), kind, windows.PAGE_READWRITE)
+	r, err := windows.VirtualAlloc(0, uintptr(max), uint32(kind), windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
 	}
