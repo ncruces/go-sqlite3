@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func NewMemory(_, max uint64) experimental.LinearMemory {
+func NewMemory(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(unix.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd
@@ -20,13 +20,19 @@ func NewMemory(_, max uint64) experimental.LinearMemory {
 		max = math.MaxUint64
 	}
 
+	prot := unix.PROT_READ | unix.PROT_WRITE
+	if cap < max {
+		prot = unix.PROT_NONE
+		cap = 0
+	}
+
 	// Reserve max bytes of address space, to ensure we won't need to move it.
 	// A protected, private, anonymous mapping should not commit memory.
-	b, err := unix.Mmap(-1, 0, int(max), unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_ANON)
+	b, err := unix.Mmap(-1, 0, int(max), prot, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
 		panic(err)
 	}
-	return &mmappedMemory{buf: b[:0]}
+	return &mmappedMemory{buf: b[:cap]}
 }
 
 // The slice covers the entire mmapped memory:
