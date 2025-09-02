@@ -23,7 +23,7 @@ func NewMemory(cap, max uint64) experimental.LinearMemory {
 	kind := windows.MEM_COMMIT
 	if cap < max {
 		kind = windows.MEM_RESERVE
-		cap = max
+		cap = 0
 	}
 
 	// Reserve max bytes of address space, to ensure we won't need to move it.
