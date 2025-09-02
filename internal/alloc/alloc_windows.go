@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func NewMemory(_, max uint64) experimental.LinearMemory {
+func NewMemory(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
 	max = (max + rnd) &^ rnd
@@ -20,9 +20,15 @@ func NewMemory(_, max uint64) experimental.LinearMemory {
 		max = math.MaxUint64
 	}
 
+	kind := windows.MEM_COMMIT
+	if cap < max {
+		kind = windows.MEM_RESERVE
+		cap = max
+	}
+
 	// Reserve max bytes of address space, to ensure we won't need to move it.
 	// This does not commit memory.
-	r, err := windows.VirtualAlloc(0, uintptr(max), windows.MEM_RESERVE, windows.PAGE_READWRITE)
+	r, err := windows.VirtualAlloc(0, uintptr(max), kind, windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
 	}
@@ -30,6 +36,7 @@ func NewMemory(_, max uint64) experimental.LinearMemory {
 	mem := virtualMemory{addr: r}
 	// SliceHeader, although deprecated, avoids a go vet warning.
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&mem.buf))
+	sh.Len = int(cap)
 	sh.Cap = int(max)
 	sh.Data = r
 	return &mem
