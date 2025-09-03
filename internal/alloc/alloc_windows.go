@@ -66,8 +66,7 @@ func (m *virtualMemory) Reallocate(size uint64) []byte {
 			return nil
 		}
 
-		// Update committed memory.
-		m.buf = m.buf[:new]
+		m.buf = m.buf[:new] // Update committed memory.
 	}
 	// Limit returned capacity because bytes beyond
 	// len(m.buf) have not yet been committed.
