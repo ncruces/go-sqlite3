@@ -12,27 +12,28 @@ import (
 func NewMemory(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(unix.Getpagesize() - 1)
-	max = (max + rnd) &^ rnd
+	res := (max + rnd) &^ rnd
 
-	if max > math.MaxInt {
-		// This ensures int(max) overflows to a negative value,
+	if res > math.MaxInt {
+		// This ensures int(res) overflows to a negative value,
 		// and unix.Mmap returns EINVAL.
-		max = math.MaxUint64
+		res = math.MaxUint64
 	}
 
+	com := res
 	prot := unix.PROT_READ | unix.PROT_WRITE
-	if cap < max {
+	if cap < max { // Commit memory only if cap=max.
+		com = 0
 		prot = unix.PROT_NONE
-		cap = 0
 	}
 
-	// Reserve max bytes of address space, to ensure we won't need to move it.
+	// Reserve res bytes of address space, to ensure we won't need to move it.
 	// A protected, private, anonymous mapping should not commit memory.
-	b, err := unix.Mmap(-1, 0, int(max), prot, unix.MAP_PRIVATE|unix.MAP_ANON)
+	b, err := unix.Mmap(-1, 0, int(res), prot, unix.MAP_PRIVATE|unix.MAP_ANON)
 	if err != nil {
 		panic(err)
 	}
-	return &mmappedMemory{buf: b[:cap]}
+	return &mmappedMemory{buf: b[:com]}
 }
 
 // The slice covers the entire mmapped memory:
@@ -58,8 +59,7 @@ func (m *mmappedMemory) Reallocate(size uint64) []byte {
 			return nil
 		}
 
-		// Update committed memory.
-		m.buf = m.buf[:new]
+		m.buf = m.buf[:new] // Update committed memory.
 	}
 	// Limit returned capacity because bytes beyond
 	// len(m.buf) have not yet been committed.
