@@ -12,23 +12,23 @@ import (
 func NewMemory(cap, max uint64) experimental.LinearMemory {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
-	max = (max + rnd) &^ rnd
+	res := (max + rnd) &^ rnd
 
-	if max > math.MaxInt {
-		// This ensures uintptr(max) overflows to a large value,
+	if res > math.MaxInt {
+		// This ensures uintptr(res) overflows to a large value,
 		// and windows.VirtualAlloc returns an error.
-		max = math.MaxUint64
+		res = math.MaxUint64
 	}
 
+	com := res
 	kind := windows.MEM_COMMIT
-	if cap < max {
+	if cap < max { // Commit memory only if cap=max.
+		com = 0
 		kind = windows.MEM_RESERVE
-		cap = 0
 	}
 
-	// Reserve max bytes of address space, to ensure we won't need to move it.
-	// This does not commit memory.
-	r, err := windows.VirtualAlloc(0, uintptr(max), uint32(kind), windows.PAGE_READWRITE)
+	// Reserve res bytes of address space, to ensure we won't need to move it.
+	r, err := windows.VirtualAlloc(0, uintptr(res), uint32(kind), windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
 	}
@@ -36,9 +36,9 @@ func NewMemory(cap, max uint64) experimental.LinearMemory {
 	mem := virtualMemory{addr: r}
 	// SliceHeader, although deprecated, avoids a go vet warning.
 	sh := (*reflect.SliceHeader)(unsafe.Pointer(&mem.buf))
-	sh.Len = int(cap)
-	sh.Cap = int(max)
 	sh.Data = r
+	sh.Len = int(com)
+	sh.Cap = int(res)
 	return &mem
 }
 
