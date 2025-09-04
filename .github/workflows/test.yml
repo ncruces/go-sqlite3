@@ -31,7 +31,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with: { go-version: stable }
 
     - name: Format
@@ -175,7 +175,7 @@ jobs:
     steps:
     - uses: bytecodealliance/actions/wasmtime/setup@v1
     - uses: actions/checkout@v5
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with: { go-version: stable }
 
     - name: Set path
@@ -196,7 +196,7 @@ jobs:
     steps:
     - uses: docker/setup-qemu-action@v3
     - uses: actions/checkout@v5
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with: { go-version: stable }
 
     - name: Test 386 (32-bit)
@@ -217,7 +217,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with: { go-version: stable }
 
     - name: Test
@@ -229,7 +229,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with: { go-version: stable }
 
     - name: Test
