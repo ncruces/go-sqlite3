@@ -26,9 +26,10 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
-	mptest.wasm -o mptest.tmp --low-memory-unused \
+"$BINARYEN/wasm-opt" -g mptest.wasm -o mptest.tmp \
+	--low-memory-unused --gufa --generate-global-effects --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue \
+	--strip --strip-producers
 mv mptest.tmp mptest.wasm

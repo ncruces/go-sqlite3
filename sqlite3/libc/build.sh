@@ -43,10 +43,11 @@ EOF
 	-Wl,--export=qsort
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
-	libc.tmp -o libc.wasm \
+"$BINARYEN/wasm-opt" -g libc.tmp -o libc.wasm \
+	--low-memory-unused --generate-global-effects --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue \
+	--strip --strip-debug --strip-producers
 
 "$BINARYEN/wasm-dis" -o libc.wat libc.wasm

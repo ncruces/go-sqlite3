@@ -62,8 +62,9 @@ cd ~-
 	$(awk '{print "-Wl,--export="$0}' ../exports.txt)
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize bcw2.wasm -o bcw2.tmp
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
-	bcw2.tmp -o bcw2.wasm --low-memory-unused \
+"$BINARYEN/wasm-opt" -g bcw2.tmp -o bcw2.wasm \
+	--low-memory-unused --gufa --generate-global-effects --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue \
+	--strip --strip-producers

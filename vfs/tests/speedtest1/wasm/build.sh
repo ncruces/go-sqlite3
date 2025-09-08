@@ -21,9 +21,10 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
-"$BINARYEN/wasm-opt" -g --strip --strip-producers -c -O3 \
-	speedtest1.wasm -o speedtest1.tmp --low-memory-unused \
+"$BINARYEN/wasm-opt" -g speedtest1.wasm -o speedtest1.tmp \
+	--low-memory-unused --gufa --generate-global-effects --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue
+	--enable-reference-types --enable-multivalue \
+	--strip --strip-producers
 mv speedtest1.tmp speedtest1.wasm
