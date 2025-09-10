@@ -4,6 +4,7 @@ import (
 	_ "crypto/md5"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
+	_ "crypto/sha3"
 	_ "crypto/sha512"
 	"testing"
 
@@ -11,7 +12,6 @@ import (
 	_ "golang.org/x/crypto/blake2s"
 	_ "golang.org/x/crypto/md4"
 	_ "golang.org/x/crypto/ripemd160"
-	_ "golang.org/x/crypto/sha3"
 
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
