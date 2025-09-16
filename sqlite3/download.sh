@@ -4,6 +4,8 @@ set -euo pipefail
 cd -P -- "$(dirname -- "$0")"
 
 curl -#OL "https://sqlite.org/2025/sqlite-amalgamation-3500400.zip"
+openssl dgst -sha3-256 sqlite-amalgamation-*.zip | \
+grep f131b68e6ba5fb891cc13ebb5ff9555054c77294cb92d8d1268bad5dba4fa2a1
 unzip -d . sqlite-amalgamation-*.zip
 mv sqlite-amalgamation-*/sqlite3.c .
 mv sqlite-amalgamation-*/sqlite3.h .

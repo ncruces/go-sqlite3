@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ncruces/aa"
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/wbt"
 )
 
 type mvccVFS struct{}
@@ -68,9 +68,9 @@ func (mvccVFS) FullPathname(name string) (string, error) {
 }
 
 type mvccDB struct {
-	data   *aa.Tree[int64, string] // +checklocks:mtx
-	owner  *mvccFile               // +checklocks:mtx
-	waiter *sync.Cond              // +checklocks:mtx
+	data   *wbt.Tree[int64, string] // +checklocks:mtx
+	owner  *mvccFile                // +checklocks:mtx
+	waiter *sync.Cond               // +checklocks:mtx
 
 	name string
 	refs int // +checklocks:memoryMtx
@@ -97,7 +97,7 @@ func (m *mvccDB) fork() *mvccDB {
 
 type mvccFile struct {
 	*mvccDB
-	data     *aa.Tree[int64, string]
+	data     *wbt.Tree[int64, string]
 	lock     vfs.LockLevel
 	readOnly bool
 }
