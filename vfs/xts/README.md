@@ -9,12 +9,12 @@ In general, any XTS construction can be used to wrap any VFS.
 
 The default AES-XTS construction uses AES-128, AES-192, or AES-256
 for its block cipher.
-Additionally, we use [PBKDF2-HMAC-SHA512](https://pkg.go.dev/golang.org/x/crypto/pbkdf2)
+Additionally, we use [PBKDF2-HMAC-SHA512](https://pkg.go.dev/crypto/pbkdf2)
 to derive AES-128 keys from plain text where needed.
 File contents are encrypted in 512 byte sectors, matching the
 [minimum](https://sqlite.org/fileformat.html#pages) SQLite page size.
 
-This VFS uses _only_ NIST and FIPS 140-2 approved cryptographic primitives,
+This VFS uses _only_ NIST and FIPS 140-3 approved cryptographic primitives,
 which _may_ help you become FIPS compliant.
 
 The VFS encrypts all files _except_

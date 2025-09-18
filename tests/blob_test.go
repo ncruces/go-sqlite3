@@ -45,10 +45,7 @@ func TestBlob(t *testing.T) {
 	}
 
 	var data [1280]byte
-	_, err = rand.Read(data[:])
-	if err != nil {
-		t.Fatal(err)
-	}
+	rand.Read(data[:])
 
 	_, err = blob.Write(data[:size/2])
 	if err != nil {

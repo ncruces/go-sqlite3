@@ -25,8 +25,8 @@ func (adiantumCreator) HBSH(key []byte) *hbsh.HBSH {
 func (adiantumCreator) KDF(text string) []byte {
 	if text == "" {
 		key := make([]byte, 32)
-		n, _ := rand.Read(key)
-		return key[:n]
+		rand.Read(key)
+		return key
 	}
 	return argon2.IDKey([]byte(text), []byte(pepper), 3, 64*1024, 4, 32)
 }

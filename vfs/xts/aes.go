@@ -2,10 +2,10 @@ package xts
 
 import (
 	"crypto/aes"
+	"crypto/pbkdf2"
 	"crypto/rand"
 	"crypto/sha512"
 
-	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/xts"
 )
 
@@ -27,8 +27,12 @@ func (aesCreator) XTS(key []byte) *xts.Cipher {
 func (aesCreator) KDF(text string) []byte {
 	if text == "" {
 		key := make([]byte, 32)
-		n, _ := rand.Read(key)
-		return key[:n]
+		rand.Read(key)
+		return key
 	}
-	return pbkdf2.Key([]byte(text), []byte(pepper), 10_000, 32, sha512.New)
+	key, err := pbkdf2.Key(sha512.New, text, []byte(pepper), 10_000, 32)
+	if err != nil {
+		panic(err)
+	}
+	return key
 }

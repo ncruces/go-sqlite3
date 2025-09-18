@@ -45,8 +45,8 @@ func (hpolycCreator) KDF(secret string) []byte {
 	if secret == "" {
 		// No secret is given, generate a random key.
 		key := make([]byte, 32)
-		n, _ := rand.Read(key)
-		return key[:n]
+		rand.Read(key)
+		return key
 	}
 	// Hash the secret with a KDF.
 	return argon2.IDKey([]byte(secret), []byte("hpolyc"), 3, 64*1024, 4, 32)
