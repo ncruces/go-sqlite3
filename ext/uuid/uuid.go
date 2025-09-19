@@ -194,7 +194,7 @@ func timestamp(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		switch u.Version() {
 		case 1, 2, 6, 7:
 			ctx.ResultTime(
-				time.Unix(u.Time().UnixTime()),
+				time.Unix(u.Time().UnixTime()).UTC(),
 				sqlite3.TimeFormatDefault)
 		}
 	}

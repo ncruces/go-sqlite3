@@ -834,20 +834,24 @@ func (r *rows) Next(dest []driver.Value) error {
 
 func (r *rows) ScanColumn(dest any, index int) error {
 	// notest // Go 1.26
-	var ptr *time.Time
+	var tm *time.Time
+	var ok *bool
 	switch d := dest.(type) {
 	case *time.Time:
-		ptr = d
+		tm = d
 	case *sql.NullTime:
-		ptr = &d.Time
+		tm = &d.Time
+		ok = &d.Valid
 	case *sql.Null[time.Time]:
-		ptr = &d.V
+		tm = &d.V
+		ok = &d.Valid
 	default:
 		return driver.ErrSkip
 	}
-	if t := r.Stmt.ColumnTime(index, r.tmRead); !t.IsZero() {
-		*ptr = t
-		return nil
+	*tm = r.Stmt.ColumnTime(index, r.tmRead)
+	err := r.Stmt.Err()
+	if ok != nil && err == nil {
+		*ok = r.stmt.ColumnType(index) != sqlite3.NULL
 	}
-	return driver.ErrSkip
+	return err
 }
