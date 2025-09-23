@@ -496,7 +496,7 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnBlob(0, nil); string(got) != "true" {
 			t.Errorf("got %q, want true", got)
 		}
-		var got any = 1
+		var got any
 		if err := stmt.ColumnJSON(0, &got); err != nil {
 			t.Error(err)
 		} else if got != true {
