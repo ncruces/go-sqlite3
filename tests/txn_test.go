@@ -170,7 +170,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	db.SetInterrupt(ctx)
 
 	tx, err = db.BeginExclusive()
@@ -203,7 +203,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	db.SetInterrupt(context.Background())
+	db.SetInterrupt(t.Context())
 	stmt, _, err := db.Prepare(`SELECT count(*) FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -226,7 +226,7 @@ func TestConn_Transaction_interrupted(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	db.SetInterrupt(ctx)
 	cancel()
 
@@ -274,7 +274,7 @@ func TestConn_Transaction_busy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	db2.SetInterrupt(ctx)
 	go cancel()
 
@@ -493,7 +493,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	db.SetInterrupt(ctx)
 
 	savept1 := db.Savepoint()
@@ -530,7 +530,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	db.SetInterrupt(context.Background())
+	db.SetInterrupt(t.Context())
 	stmt, _, err := db.Prepare(`SELECT count(*) FROM test`)
 	if err != nil {
 		t.Fatal(err)

@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"context"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -15,9 +14,6 @@ func TestDriver(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	db, err := driver.Open(tmp, nil, func(c *sqlite3.Conn) error {
 		return c.Exec(`PRAGMA optimize`)
 	})
@@ -26,13 +22,13 @@ func TestDriver(t *testing.T) {
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(ctx)
+	conn, err := db.Conn(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	res, err := conn.ExecContext(ctx,
+	res, err := conn.ExecContext(t.Context(),
 		`CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +48,7 @@ func TestDriver(t *testing.T) {
 		t.Errorf("got %d want 0", changes)
 	}
 
-	res, err = conn.ExecContext(ctx,
+	res, err = conn.ExecContext(t.Context(),
 		`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +61,7 @@ func TestDriver(t *testing.T) {
 		t.Errorf("got %d want 3", changes)
 	}
 
-	stmt, err := conn.PrepareContext(context.Background(),
+	stmt, err := conn.PrepareContext(t.Context(),
 		`SELECT id, name FROM users`)
 	if err != nil {
 		t.Fatal(err)

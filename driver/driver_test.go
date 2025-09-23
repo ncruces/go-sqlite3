@@ -156,26 +156,23 @@ func Test_BeginTx(t *testing.T) {
 		"_pragma": {"busy_timeout(0)"},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	_, err = db.BeginTx(t.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err.Error() != string(util.IsolationErr) {
 		t.Error("want isolationErr")
 	}
 
-	tx1, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	tx1, err := db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx2, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	tx2, err := db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +233,7 @@ func Test_nested_context(t *testing.T) {
 
 	want(outer, 0)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	inner, err := tx.QueryContext(ctx, `SELECT value FROM generate_series(0)`)
@@ -302,22 +299,19 @@ func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	db, err := sql.Open("sqlite3", tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(ctx)
+	conn, err := db.Conn(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	stmt, err := conn.PrepareContext(ctx, `SELECT ?, ?5, :AAA, @AAA, $AAA`)
+	stmt, err := conn.PrepareContext(t.Context(), `SELECT ?, ?5, :AAA, @AAA, $AAA`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -539,12 +533,9 @@ func Benchmark_loop(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	b.Cleanup(cancel)
-
 	b.ResetTimer()
 	for range b.N {
-		_, err := db.ExecContext(ctx,
+		_, err := db.ExecContext(b.Context(),
 			`WITH RECURSIVE c(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM c WHERE x < 1000000) SELECT x FROM c;`)
 		if err != nil {
 			b.Fatal(err)

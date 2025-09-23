@@ -163,7 +163,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	db.SetInterrupt(ctx)
 
 	// Interrupt doesn't interrupt this.
@@ -202,9 +202,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-	db.SetInterrupt(ctx)
+	db.SetInterrupt(t.Context())
 
 	// Interrupting can be cleared.
 	err = db.Exec(`SELECT 1`)
@@ -212,9 +210,8 @@ func TestConn_SetInterrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db.SetInterrupt(ctx)
-	if got := db.GetInterrupt(); got != ctx {
-		t.Errorf("got %v, want %v", got, ctx)
+	if got := db.GetInterrupt(); got != t.Context() {
+		t.Errorf("got %v, want %v", got, t.Context())
 	}
 }
 

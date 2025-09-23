@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -136,35 +135,34 @@ func TestTimeFormat_Scanner(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	db, err := driver.Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(ctx)
+	conn, err := db.Conn(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(ctx, `CREATE TABLE test (col)`)
+	_, err = conn.ExecContext(t.Context(), `CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 
-	_, err = conn.ExecContext(ctx, `INSERT INTO test VALUES (?)`, sqlite3.TimeFormat7TZ.Encode(reference))
+	_, err = conn.ExecContext(t.Context(), `INSERT INTO test VALUES (?)`,
+		sqlite3.TimeFormat7TZ.Encode(reference))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var got time.Time
-	err = conn.QueryRowContext(ctx, "SELECT * FROM test").Scan(sqlite3.TimeFormatAuto.Scanner(&got))
+	err = conn.QueryRowContext(t.Context(), "SELECT * FROM test").
+		Scan(sqlite3.TimeFormatAuto.Scanner(&got))
 	if err != nil {
 		t.Fatal(err)
 	}

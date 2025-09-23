@@ -371,7 +371,7 @@ func Test_crash01_xts_wal(t *testing.T) {
 }
 
 func newContext(t *testing.T) context.Context {
-	return context.WithValue(context.Background(), logger{}, &testWriter{T: t})
+	return context.WithValue(t.Context(), logger{}, &testWriter{T: t})
 }
 
 type logger struct{}

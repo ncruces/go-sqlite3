@@ -1,7 +1,6 @@
 package driver
 
 import (
-	"context"
 	"database/sql/driver"
 	"slices"
 	"testing"
@@ -56,7 +55,7 @@ func Fuzz_notWhitespace(f *testing.F) {
 			t.SkipNow()
 		}
 
-		c, err := db.Conn(context.Background())
+		c, err := db.Conn(t.Context())
 		if err != nil {
 			t.Fatal(err)
 		}
