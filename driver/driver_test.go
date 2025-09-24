@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func Test_Open_error(t *testing.T) {
 func Test_Open_dir(t *testing.T) {
 	t.Parallel()
 
-	db, err := sql.Open("sqlite3", ".")
+	db, err := Open(".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func Test_Open_pragma(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func Test_Open_pragma_invalid(t *testing.T) {
 		"_pragma": {"busy_timeout 1000"},
 	})
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +106,7 @@ func Test_Open_txLock(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +141,7 @@ func Test_Open_txLock_invalid(t *testing.T) {
 		"_txlock": {"xclusive"},
 	})
 
-	_, err := sql.Open("sqlite3", tmp+"_txlock=xclusive")
+	_, err := Open(tmp)
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -156,7 +157,7 @@ func Test_BeginTx(t *testing.T) {
 		"_pragma": {"busy_timeout(0)"},
 	})
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +201,7 @@ func Test_nested_context(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +259,7 @@ func Test_Prepare(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +300,7 @@ func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +350,7 @@ func Test_QueryRow_blob_null(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +389,7 @@ func Test_time(t *testing.T) {
 				"_timefmt": {fmt},
 			})
 
-			db, err := sql.Open("sqlite3", tmp)
+			db, err := Open(tmp)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -433,7 +434,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	t.Parallel()
 	tmp := memdb.TestDB(t)
 
-	db, err := sql.Open("sqlite3", tmp)
+	db, err := Open(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,6 +521,39 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	}
 }
 
+func Test_rows_ScanColumn(t *testing.T) {
+	t.Parallel()
+	tmp := memdb.TestDB(t)
+
+	db, err := Open(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var tm time.Time
+	err = db.QueryRow(`SELECT NULL`).Scan(&tm)
+	if err == nil {
+		t.Error("want error")
+	}
+	// Go 1.26
+	err = db.QueryRow(`SELECT datetime()`).Scan(&tm)
+	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
+		t.Error(err)
+	}
+
+	var nt sql.NullTime
+	err = db.QueryRow(`SELECT NULL`).Scan(&nt)
+	if err != nil {
+		t.Error(err)
+	}
+	// Go 1.26
+	err = db.QueryRow(`SELECT datetime()`).Scan(&nt)
+	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
+		t.Error(err)
+	}
+}
+
 func Benchmark_loop(b *testing.B) {
 	db, err := Open(":memory:")
 	if err != nil {
@@ -533,8 +567,7 @@ func Benchmark_loop(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, err := db.ExecContext(b.Context(),
 			`WITH RECURSIVE c(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM c WHERE x < 1000000) SELECT x FROM c;`)
 		if err != nil {

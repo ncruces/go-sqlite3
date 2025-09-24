@@ -75,8 +75,7 @@ func Benchmark_memset(b *testing.B) {
 	clear(memory)
 
 	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(memset, ptr1, 3, size)
 	}
 }
@@ -86,8 +85,7 @@ func Benchmark_memcpy(b *testing.B) {
 	fill(memory[ptr2:ptr2+size], 5)
 
 	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(memcpy, ptr1, ptr2, size)
 	}
 }
@@ -97,8 +95,7 @@ func Benchmark_strlen(b *testing.B) {
 	fill(memory[ptr1:ptr1+size-1], 5)
 
 	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(strlen, ptr1)
 	}
 }
@@ -109,8 +106,7 @@ func Benchmark_memchr(b *testing.B) {
 	fill(memory[ptr1+size/2:ptr1+size], 5)
 
 	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(memchr, ptr1, 5, size)
 	}
 }
@@ -121,8 +117,7 @@ func Benchmark_strchr(b *testing.B) {
 	fill(memory[ptr1+size/2:ptr1+size-1], 5)
 
 	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(strchr, ptr1, 5)
 	}
 }
@@ -133,8 +128,7 @@ func Benchmark_strrchr(b *testing.B) {
 	fill(memory[ptr1+size/2:ptr1+size-1], 7)
 
 	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(strrchr, ptr1, 5)
 	}
 }
@@ -146,8 +140,7 @@ func Benchmark_memcmp(b *testing.B) {
 	fill(memory[ptr2+size/2:ptr2+size], 5)
 
 	b.SetBytes(size/2 + 1)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(memcmp, ptr1, ptr2, size)
 	}
 }
@@ -162,8 +155,7 @@ func Benchmark_strspn(b *testing.B) {
 	memory[ptr2+3] = 9
 
 	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(strspn, ptr1, ptr2)
 	}
 }
@@ -176,8 +168,7 @@ func Benchmark_strcspn(b *testing.B) {
 	memory[ptr2+1] = 9
 
 	b.SetBytes(size)
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		call(strcspn, ptr1, ptr2)
 	}
 }
