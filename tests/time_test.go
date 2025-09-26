@@ -133,9 +133,9 @@ func TestTimeFormat_Decode(t *testing.T) {
 
 func TestTimeFormat_Scanner(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp)
+	db, err := driver.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

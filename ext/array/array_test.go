@@ -88,9 +88,9 @@ func Example() {
 
 func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, array.Register)
+	db, err := driver.Open(dsn, array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,9 +15,9 @@ import (
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, Register)
+	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,9 +80,9 @@ func TestRegister(t *testing.T) {
 
 func TestRegister_errors(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, Register)
+	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,9 +107,9 @@ func TestRegister_errors(t *testing.T) {
 
 func TestRegister_pointer(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, Register)
+	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
 	}

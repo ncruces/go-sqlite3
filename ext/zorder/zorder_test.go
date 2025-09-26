@@ -14,9 +14,9 @@ import (
 
 func Test_zorder(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, zorder.Register)
+	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,9 +59,9 @@ func Test_zorder(t *testing.T) {
 
 func Test_unzorder(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, zorder.Register)
+	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,9 +87,9 @@ func Test_unzorder(t *testing.T) {
 
 func Test_zorder_error(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, zorder.Register)
+	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,9 +116,9 @@ func Test_zorder_error(t *testing.T) {
 
 func Test_unzorder_error(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, zorder.Register)
+	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

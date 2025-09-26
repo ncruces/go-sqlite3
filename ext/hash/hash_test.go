@@ -21,7 +21,7 @@ import (
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
 	tests := []struct {
 		name string
@@ -55,7 +55,7 @@ func TestRegister(t *testing.T) {
 		{"blake2b('', 256)", "0E5751C026E543B2E8AB2EB06099DAA1D1E5DF47778F7787FAAB45CDF12FE3A8"},
 	}
 
-	db, err := driver.Open(tmp, Register)
+	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
 	}

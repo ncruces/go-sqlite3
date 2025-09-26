@@ -12,9 +12,9 @@ import (
 
 func TestDriver(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, nil, func(c *sqlite3.Conn) error {
+	db, err := driver.Open(dsn, nil, func(c *sqlite3.Conn) error {
 		return c.Exec(`PRAGMA optimize`)
 	})
 	if err != nil {

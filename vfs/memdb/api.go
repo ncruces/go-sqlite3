@@ -10,6 +10,7 @@
 package memdb
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net/url"
 	"sync"
@@ -78,7 +79,7 @@ func Delete(name string) {
 func TestDB(tb testing.TB, params ...url.Values) string {
 	tb.Helper()
 
-	name := fmt.Sprintf("%s_%p", tb.Name(), tb)
+	name := fmt.Sprintf("%s_%s", tb.Name(), rand.Text())
 	tb.Cleanup(func() { Delete(name) })
 	Create(name, nil)
 
