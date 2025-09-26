@@ -15,9 +15,9 @@ import (
 
 func Test_writefile(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, Register)
+	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
 	}

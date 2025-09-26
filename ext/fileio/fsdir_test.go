@@ -21,9 +21,9 @@ func Test_fsdir(t *testing.T) {
 
 	for _, fsys := range []fs.FS{nil, os.DirFS(".")} {
 		t.Run("", func(t *testing.T) {
-			tmp := memdb.TestDB(t)
+			dsn := memdb.TestDB(t)
 
-			db, err := driver.Open(tmp, func(c *sqlite3.Conn) error {
+			db, err := driver.Open(dsn, func(c *sqlite3.Conn) error {
 				fileio.RegisterFS(c, fsys)
 				return nil
 			})

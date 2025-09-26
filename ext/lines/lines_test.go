@@ -67,9 +67,9 @@ func Example() {
 
 func Test_lines(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, lines.Register)
+	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,9 +98,9 @@ func Test_lines(t *testing.T) {
 
 func Test_lines_error(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, lines.Register)
+	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,9 +123,9 @@ func Test_lines_error(t *testing.T) {
 
 func Test_lines_read(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, lines.Register)
+	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -155,9 +155,9 @@ func Test_lines_read(t *testing.T) {
 
 func Test_lines_test(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, lines.Register)
+	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}

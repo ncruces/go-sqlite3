@@ -246,15 +246,15 @@ func TestConn_Transaction_interrupted(t *testing.T) {
 
 func TestConn_Transaction_busy(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db1, err := sqlite3.Open(tmp)
+	db1, err := sqlite3.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db1.Close()
 
-	db2, err := sqlite3.Open(tmp + "&_pragma=busy_timeout(10000)")
+	db2, err := sqlite3.Open(dsn + "&_pragma=busy_timeout(10000)")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -388,11 +388,11 @@ func TestConn_Trace(t *testing.T) {
 
 func TestConn_AutoVacuumPages(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_pragma": {"auto_vacuum(full)"},
 	})
 
-	db, err := sqlite3.Open(tmp)
+	db, err := sqlite3.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

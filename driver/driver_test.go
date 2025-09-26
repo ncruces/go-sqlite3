@@ -51,11 +51,11 @@ func Test_Open_dir(t *testing.T) {
 
 func Test_Open_pragma(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,11 +73,11 @@ func Test_Open_pragma(t *testing.T) {
 
 func Test_Open_pragma_invalid(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_pragma": {"busy_timeout 1000"},
 	})
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,12 +101,12 @@ func Test_Open_pragma_invalid(t *testing.T) {
 
 func Test_Open_txLock(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_txlock": {"exclusive"},
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,11 +137,11 @@ func Test_Open_txLock(t *testing.T) {
 
 func Test_Open_txLock_invalid(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_txlock": {"xclusive"},
 	})
 
-	_, err := Open(tmp)
+	_, err := Open(dsn)
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -152,12 +152,12 @@ func Test_Open_txLock_invalid(t *testing.T) {
 
 func Test_BeginTx(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t, url.Values{
+	dsn := memdb.TestDB(t, url.Values{
 		"_txlock": {"exclusive"},
 		"_pragma": {"busy_timeout(0)"},
 	})
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,9 +199,9 @@ func Test_BeginTx(t *testing.T) {
 
 func Test_nested_context(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,9 +257,9 @@ func Test_nested_context(t *testing.T) {
 
 func Test_Prepare(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,9 +298,9 @@ func Test_Prepare(t *testing.T) {
 
 func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,9 +348,9 @@ func Test_QueryRow_named(t *testing.T) {
 
 func Test_QueryRow_blob_null(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,11 +385,11 @@ func Test_time(t *testing.T) {
 
 	for _, fmt := range []string{"auto", "sqlite", "rfc3339", time.ANSIC} {
 		t.Run(fmt, func(t *testing.T) {
-			tmp := memdb.TestDB(t, url.Values{
+			dsn := memdb.TestDB(t, url.Values{
 				"_timefmt": {fmt},
 			})
 
-			db, err := Open(tmp)
+			db, err := Open(dsn)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -432,9 +432,9 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	)
 
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,9 +523,9 @@ func Test_ColumnType_ScanType(t *testing.T) {
 
 func Test_rows_ScanColumn(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := Open(tmp)
+	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

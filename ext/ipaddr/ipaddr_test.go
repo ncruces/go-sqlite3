@@ -12,9 +12,9 @@ import (
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
-	db, err := driver.Open(tmp, ipaddr.Register)
+	db, err := driver.Open(dsn, ipaddr.Register)
 	if err != nil {
 		t.Fatal(err)
 	}

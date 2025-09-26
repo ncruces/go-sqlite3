@@ -14,10 +14,10 @@ import (
 )
 
 func TestDialector(t *testing.T) {
-	tmp := memdb.TestDB(t)
+	dsn := memdb.TestDB(t)
 
 	// Custom connection with a custom function called "my_custom_function".
-	db, err := driver.Open(tmp, func(conn *sqlite3.Conn) error {
+	db, err := driver.Open(dsn, func(conn *sqlite3.Conn) error {
 		return conn.CreateFunction("my_custom_function", 0, sqlite3.DETERMINISTIC,
 			func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				ctx.ResultText("my-result")
@@ -36,14 +36,14 @@ func TestDialector(t *testing.T) {
 	}{
 		{
 			description:  "Default driver",
-			dialector:    Open(tmp),
+			dialector:    Open(dsn),
 			openSuccess:  true,
 			query:        "SELECT 1",
 			querySuccess: true,
 		},
 		{
 			description:  "Custom function",
-			dialector:    Open(tmp),
+			dialector:    Open(dsn),
 			openSuccess:  true,
 			query:        "SELECT my_custom_function()",
 			querySuccess: false,
