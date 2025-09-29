@@ -15,7 +15,7 @@ import (
 var testDB string
 
 func Example() {
-	mvcc.Create("test.db", testDB)
+	mvcc.Create("test.db", mvcc.NewSnapshot(testDB))
 
 	db, err := sql.Open("sqlite3", "file:/test.db?vfs=mvcc")
 	if err != nil {

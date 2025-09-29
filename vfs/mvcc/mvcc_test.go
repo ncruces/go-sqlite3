@@ -14,10 +14,9 @@ var walDB string
 
 func Test_wal(t *testing.T) {
 	t.Parallel()
+	dsn := TestDB(t, NewSnapshot(walDB))
 
-	Create("test.db", walDB)
-
-	db, err := sqlite3.Open("file:/test.db?vfs=mvcc")
+	db, err := sqlite3.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

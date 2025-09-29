@@ -85,16 +85,6 @@ func (m *mvccDB) release() {
 	}
 }
 
-func (m *mvccDB) fork() *mvccDB {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
-	return &mvccDB{
-		refs: 1,
-		name: m.name,
-		data: m.data,
-	}
-}
-
 type mvccFile struct {
 	*mvccDB
 	data     *wbt.Tree[int64, string]

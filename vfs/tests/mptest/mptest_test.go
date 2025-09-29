@@ -197,7 +197,7 @@ func Test_multiwrite01_memory(t *testing.T) {
 }
 
 func Test_config01_mvcc(t *testing.T) {
-	mvcc.Create("test.db", "")
+	mvcc.Create("test.db", mvcc.Snapshot{})
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
 		"--vfs", "mvcc")
@@ -213,7 +213,7 @@ func Test_crash01_mvcc(t *testing.T) {
 		t.Skip("skipping in short mode")
 	}
 
-	mvcc.Create("test.db", "")
+	mvcc.Create("test.db", mvcc.Snapshot{})
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "crash01.test",
 		"--vfs", "mvcc")
@@ -229,7 +229,7 @@ func Test_multiwrite01_mvcc(t *testing.T) {
 		t.Skip("skipping in slow CI")
 	}
 
-	mvcc.Create("test.db", "")
+	mvcc.Create("test.db", mvcc.Snapshot{})
 	ctx := util.NewContext(newContext(t))
 	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "mvcc")

@@ -107,9 +107,9 @@ func Test_mvcc(t *testing.T) {
 		iter = 5000
 	}
 
-	mvcc.Create("test.db", "")
-	name := "file:/test.db?vfs=mvcc" +
-		"&_pragma=busy_timeout(10000)"
+	name := mvcc.TestDB(t, mvcc.Snapshot{}, url.Values{
+		"_pragma": {"busy_timeout(10000)"},
+	})
 	createDB(t, name)
 	testParallel(t, name, iter)
 	testIntegrity(t, name)
@@ -330,9 +330,9 @@ func Benchmark_memdb(b *testing.B) {
 }
 
 func Benchmark_mvcc(b *testing.B) {
-	mvcc.Create("test.db", "")
-	name := "file:/test.db?vfs=mvcc" +
-		"&_pragma=busy_timeout(10000)"
+	name := mvcc.TestDB(b, mvcc.Snapshot{}, url.Values{
+		"_pragma": {"busy_timeout(10000)"},
+	})
 	createDB(b, name)
 
 	b.ResetTimer()
