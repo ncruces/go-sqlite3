@@ -88,8 +88,9 @@ type liteFile struct {
 	conn   *sqlite3.Conn
 
 	pos          ltx.Pos
+	pageSize     uint32
 	changeCtr    uint32
-	lastPolled   time.Time
+	lastPoll     time.Time
 	pollInterval time.Duration
 }
 
@@ -150,7 +151,12 @@ func (f *liteFile) Close() error {
 
 func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 	f.logger.Info("reading at", "off", off, "len", len(p))
-	pgno := uint32(off/4096) + 1
+
+	pgno := uint32(1)
+	if off > 512 {
+		pgno += uint32(off / int64(f.pageSize))
+	}
+
 	elem, ok := f.index[pgno]
 	if !ok {
 		f.logger.Error("page not found", "page", pgno)
@@ -173,9 +179,10 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 	if pgno == 1 {
 		data[18], data[19] = 0x01, 0x01
 		binary.BigEndian.PutUint32(data[24:28], f.changeCtr)
+		f.pageSize = uint32(256 * binary.LittleEndian.Uint16(data[16:18]))
 	}
 
-	n = copy(p, data[off%4096:])
+	n = copy(p, data[uint32(off)%f.pageSize:])
 	f.logger.Info("data read", "n", n, "data", len(data))
 
 	return n, nil
@@ -197,26 +204,25 @@ func (f *liteFile) Sync(flag vfs.SyncFlag) error {
 }
 
 func (f *liteFile) Size() (size int64, err error) {
-	const pageSize = 4096
+	var last uint32
 	for pgno := range f.index {
-		if int64(pgno)*pageSize > int64(size) {
-			size = int64(pgno * pageSize)
-		}
+		last = max(last, pgno)
 	}
+	size = int64(last) * int64(f.pageSize)
 	f.logger.Info("file size", "size", size)
 	return size, nil
 }
 
-func (f *liteFile) Lock(elock vfs.LockLevel) error {
-	f.logger.Info("locking file", "lock", elock)
-	if elock >= vfs.LOCK_RESERVED {
+func (f *liteFile) Lock(lock vfs.LockLevel) error {
+	f.logger.Info("locking file", "lock", lock)
+	if lock >= vfs.LOCK_RESERVED {
 		return sqlite3.IOERR_LOCK
 	}
 	return f.pollReplicaClient()
 }
 
-func (f *liteFile) Unlock(elock vfs.LockLevel) error {
-	f.logger.Info("unlocking file", "lock", elock)
+func (f *liteFile) Unlock(lock vfs.LockLevel) error {
+	f.logger.Info("unlocking file", "lock", lock)
 	return nil
 }
 
@@ -242,10 +248,10 @@ func (f *liteFile) SetDB(conn any) {
 // pollReplicaClient fetches new LTX files from the replica client and updates
 // the page index & the current position.
 func (f *liteFile) pollReplicaClient() error {
-	if time.Since(f.lastPolled) < f.pollInterval {
+	if time.Since(f.lastPoll) < f.pollInterval {
 		return nil
 	}
-	f.lastPolled = time.Now()
+	f.lastPoll = time.Now()
 
 	ctx := context.Background()
 	if f.conn != nil {
