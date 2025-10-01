@@ -801,18 +801,7 @@ func (r *rows) Next(dest []driver.Value) error {
 	}
 	for i := range dest {
 		scan := r.scanType(i)
-		switch v := dest[i].(type) {
-		case int64:
-			if scan == _BOOL {
-				switch v {
-				case 1:
-					dest[i] = true
-				case 0:
-					dest[i] = false
-				}
-				continue
-			}
-		case []byte:
+		if v, ok := dest[i].([]byte); ok {
 			if len(v) == cap(v) { // a BLOB
 				continue
 			}
@@ -827,16 +816,19 @@ func (r *rows) Next(dest []driver.Value) error {
 				}
 			}
 			dest[i] = string(v)
-		case float64:
-			break
-		default:
-			continue
 		}
-		if scan == _TIME {
+		switch scan {
+		case _TIME:
 			t, err := r.tmRead.Decode(dest[i])
 			if err == nil {
 				dest[i] = t
-				continue
+			}
+		case _BOOL:
+			switch dest[i] {
+			case int64(0):
+				dest[i] = false
+			case int64(1):
+				dest[i] = true
 			}
 		}
 	}
