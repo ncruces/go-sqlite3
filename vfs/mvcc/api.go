@@ -98,6 +98,21 @@ func TakeSnapshot(name string) Snapshot {
 // The database is automatically deleted when the test and all its subtests complete.
 // Returns a URI filename appropriate to call Open with.
 // Each subsequent call to TestDB returns a unique database.
+//
+//	func Test_something(t *testing.T) {
+//		t.Parallel()
+//		dsn := mvcc.TestDB(t, snapshot, url.Values{
+//			"_pragma": {"busy_timeout(1000)"},
+//		})
+//
+//		db, err := sql.Open("sqlite3", dsn)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//		defer db.Close()
+//
+//		// ...
+//	}
 func TestDB(tb testing.TB, snapshot Snapshot, params ...url.Values) string {
 	tb.Helper()
 
