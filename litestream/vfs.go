@@ -2,10 +2,9 @@ package litestream
 
 import (
 	"context"
-	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/benbjohnson/litestream"
@@ -41,7 +40,7 @@ func NewVFS(client litestream.ReplicaClient, logger *slog.Logger) *VFS {
 }
 
 func (fs *VFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	slog.Info("opening file", "name", name, "flags", flags)
+	fs.logger.Info("opening file", "name", name, "flags", flags)
 
 	// Temp journals, as used by the sorter, use SliceFile.
 	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
@@ -57,7 +56,6 @@ func (fs *VFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, er
 	f := liteFile{
 		client:       fs.client,
 		name:         name,
-		index:        make(map[uint32]ltx.PageIndexElem),
 		logger:       fs.logger.With("name", name),
 		pollInterval: fs.PollInterval,
 	}
@@ -82,36 +80,24 @@ func (vfs *VFS) FullPathname(name string) (string, error) {
 }
 
 type liteFile struct {
-	mu     sync.Mutex
 	client litestream.ReplicaClient
 	name   string
 
-	pos   ltx.Pos
-	index map[uint32]ltx.PageIndexElem
-
-	wg     sync.WaitGroup
-	ctx    context.Context
-	cancel context.CancelFunc
+	index  map[uint32]ltx.PageIndexElem
+	logger *slog.Logger
 	conn   *sqlite3.Conn
 
-	logger *slog.Logger
-
+	pos          ltx.Pos
+	changeCtr    uint32
+	lastPolled   time.Time
 	pollInterval time.Duration
 }
 
-// Pos returns the current position of the file.
-func (f *liteFile) Pos() ltx.Pos {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.pos
-}
-
 func (f *liteFile) Open() error {
+	ctx := context.Background()
 	f.logger.Info("opening file")
 
-	f.ctx, f.cancel = context.WithCancel(context.Background())
-
-	infos, err := litestream.CalcRestorePlan(f.ctx, f.client, 0, time.Time{}, f.logger)
+	infos, err := litestream.CalcRestorePlan(ctx, f.client, 0, time.Time{}, f.logger)
 	if err != nil {
 		f.logger.Error("cannot calc restore plan", "error", err)
 		return fmt.Errorf("cannot calc restore plan: %w", err)
@@ -128,15 +114,10 @@ func (f *liteFile) Open() error {
 	f.pos = pos
 
 	// Build the page index so we can lookup individual pages.
-	if err := f.buildIndex(f.ctx, infos); err != nil {
+	if err := f.buildIndex(ctx, infos); err != nil {
 		f.logger.Error("cannot build index", "error", err)
 		return fmt.Errorf("cannot build index: %w", err)
 	}
-
-	// Continuously monitor the replica client for new LTX files.
-	f.wg.Add(1)
-	go func() { defer f.wg.Done(); f.monitorReplicaClient(f.ctx) }()
-
 	return nil
 }
 
@@ -158,18 +139,12 @@ func (f *liteFile) buildIndex(ctx context.Context, infos []*ltx.FileInfo) error 
 			index[k] = v
 		}
 	}
-
-	f.mu.Lock()
 	f.index = index
-	f.mu.Unlock()
-
 	return nil
 }
 
 func (f *liteFile) Close() error {
 	f.logger.Info("closing file")
-	f.cancel()
-	f.wg.Wait()
 	return nil
 }
 
@@ -194,10 +169,10 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 	}
 
 	// Update the first page to pretend like we are in journal mode,
-	// and there were changes to the database.
+	// and track changes to the database.
 	if pgno == 1 {
 		data[18], data[19] = 0x01, 0x01
-		rand.Read(data[24:28])
+		binary.BigEndian.PutUint32(data[24:28], f.changeCtr)
 	}
 
 	n = copy(p, data[off%4096:])
@@ -237,7 +212,7 @@ func (f *liteFile) Lock(elock vfs.LockLevel) error {
 	if elock >= vfs.LOCK_RESERVED {
 		return sqlite3.IOERR_LOCK
 	}
-	return nil
+	return f.pollReplicaClient()
 }
 
 func (f *liteFile) Unlock(elock vfs.LockLevel) error {
@@ -264,29 +239,20 @@ func (f *liteFile) SetDB(conn any) {
 	f.conn = conn.(*sqlite3.Conn)
 }
 
-func (f *liteFile) monitorReplicaClient(ctx context.Context) {
-	ticker := time.Tick(f.pollInterval)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker:
-			if err := f.pollReplicaClient(ctx); err != nil {
-				// Don't log context cancellation errors during shutdown
-				if ctx.Err() != nil {
-					f.logger.Error("cannot fetch new ltx files", "error", err)
-				}
-			}
-		}
-	}
-}
-
 // pollReplicaClient fetches new LTX files from the replica client and updates
 // the page index & the current position.
-func (f *liteFile) pollReplicaClient(ctx context.Context) error {
-	pos := f.Pos()
-	f.logger.Debug("polling replica client", "txid", pos.TXID.String())
+func (f *liteFile) pollReplicaClient() error {
+	if time.Since(f.lastPolled) < f.pollInterval {
+		return nil
+	}
+	f.lastPolled = time.Now()
+
+	ctx := context.Background()
+	if f.conn != nil {
+		ctx = f.conn.GetInterrupt()
+	}
+
+	f.logger.Debug("polling replica client", "txid", f.pos.TXID.String())
 
 	// Start reading from the next LTX file after the current position.
 	itr, err := f.client.LTXFiles(ctx, 0, f.pos.TXID+1)
@@ -299,9 +265,7 @@ func (f *liteFile) pollReplicaClient(ctx context.Context) error {
 		info := itr.Item()
 
 		// Ensure we are fetching the next transaction from our current position.
-		f.mu.Lock()
 		isNextTXID := info.MinTXID == f.pos.TXID+1
-		f.mu.Unlock()
 		if !isNextTXID {
 			return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s", f.pos.TXID, info.MinTXID, info.MaxTXID)
 		}
@@ -315,13 +279,12 @@ func (f *liteFile) pollReplicaClient(ctx context.Context) error {
 		}
 
 		// Update the page index & current position.
-		f.mu.Lock()
 		for k, v := range idx {
 			f.logger.Debug("adding new page index", "page", k, "elem", v)
 			f.index[k] = v
 		}
 		f.pos.TXID = info.MaxTXID
-		f.mu.Unlock()
+		f.changeCtr++
 	}
 
 	return nil
