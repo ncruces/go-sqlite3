@@ -89,7 +89,8 @@ type liteFile struct {
 
 	pos          ltx.Pos
 	pageSize     uint32
-	changeCtr    uint32
+	pageCount    uint32
+	changeCount  uint32
 	lastPoll     time.Time
 	pollInterval time.Duration
 }
@@ -137,6 +138,7 @@ func (f *liteFile) buildIndex(ctx context.Context, infos []*ltx.FileInfo) error 
 		// Replace pages in overall index with new pages.
 		for k, v := range idx {
 			f.logger.Debug("adding page index", "page", k, "elem", v)
+			f.pageCount = max(f.pageCount, k)
 			index[k] = v
 		}
 	}
@@ -153,7 +155,7 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 	f.logger.Info("reading at", "off", off, "len", len(p))
 
 	pgno := uint32(1)
-	if off > 512 {
+	if off >= 512 {
 		pgno += uint32(off / int64(f.pageSize))
 	}
 
@@ -174,15 +176,17 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, sqlite3.IOERR_READ
 	}
 
-	// Update the first page to pretend like we are in journal mode,
-	// and track changes to the database.
-	if pgno == 1 {
+	// Update the first page to pretend we are in journal mode,
+	// load the page size and track changes to the database.
+	if pgno == 1 && len(data) >= 100 && (false ||
+		data[18] == 2 && data[19] == 2 ||
+		data[18] == 3 && data[19] == 3) {
 		data[18], data[19] = 0x01, 0x01
-		binary.BigEndian.PutUint32(data[24:28], f.changeCtr)
+		binary.BigEndian.PutUint32(data[24:28], f.changeCount)
 		f.pageSize = uint32(256 * binary.LittleEndian.Uint16(data[16:18]))
 	}
 
-	n = copy(p, data[uint32(off)%f.pageSize:])
+	n = copy(p, data[off%int64(len(data)):])
 	f.logger.Info("data read", "n", n, "data", len(data))
 
 	return n, nil
@@ -204,11 +208,7 @@ func (f *liteFile) Sync(flag vfs.SyncFlag) error {
 }
 
 func (f *liteFile) Size() (size int64, err error) {
-	var last uint32
-	for pgno := range f.index {
-		last = max(last, pgno)
-	}
-	size = int64(last) * int64(f.pageSize)
+	size = int64(f.pageCount) * int64(f.pageSize)
 	f.logger.Info("file size", "size", size)
 	return size, nil
 }
@@ -287,10 +287,11 @@ func (f *liteFile) pollReplicaClient() error {
 		// Update the page index & current position.
 		for k, v := range idx {
 			f.logger.Debug("adding new page index", "page", k, "elem", v)
+			f.pageCount = max(f.pageCount, k)
 			f.index[k] = v
 		}
 		f.pos.TXID = info.MaxTXID
-		f.changeCtr++
+		f.changeCount++
 	}
 
 	return nil
