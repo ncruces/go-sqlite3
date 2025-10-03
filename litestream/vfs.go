@@ -56,11 +56,15 @@ func (fs *VFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, er
 	f := liteFile{
 		client:       fs.client,
 		name:         name,
+		index:        make(map[uint32]ltx.PageIndexElem),
 		logger:       fs.logger.With("name", name),
 		pollInterval: fs.PollInterval,
 	}
-	if err := f.Open(); err != nil {
-		return nil, 0, err
+
+	// Build the page index so we can lookup individual pages.
+	if err := f.buildIndex(context.Background()); err != nil {
+		f.logger.Error("cannot build index", "error", err)
+		return nil, 0, fmt.Errorf("cannot build index: %w", err)
 	}
 	return &f, flags | vfs.OPEN_READONLY, nil
 }
@@ -93,57 +97,6 @@ type liteFile struct {
 	changeCount  uint32
 	lastPoll     time.Time
 	pollInterval time.Duration
-}
-
-func (f *liteFile) Open() error {
-	ctx := context.Background()
-	f.logger.Info("opening file")
-
-	infos, err := litestream.CalcRestorePlan(ctx, f.client, 0, time.Time{}, f.logger)
-	if err != nil {
-		f.logger.Error("cannot calc restore plan", "error", err)
-		return fmt.Errorf("cannot calc restore plan: %w", err)
-	} else if len(infos) == 0 {
-		f.logger.Error("no backup files available")
-		return fmt.Errorf("no backup files available") // TODO: Open even when no files available.
-	}
-
-	// Determine the current position based off the latest LTX file.
-	var pos ltx.Pos
-	if len(infos) > 0 {
-		pos = ltx.Pos{TXID: infos[len(infos)-1].MaxTXID}
-	}
-	f.pos = pos
-
-	// Build the page index so we can lookup individual pages.
-	if err := f.buildIndex(ctx, infos); err != nil {
-		f.logger.Error("cannot build index", "error", err)
-		return fmt.Errorf("cannot build index: %w", err)
-	}
-	return nil
-}
-
-// buildIndex constructs a lookup of pgno to LTX file offsets.
-func (f *liteFile) buildIndex(ctx context.Context, infos []*ltx.FileInfo) error {
-	index := make(map[uint32]ltx.PageIndexElem)
-	for _, info := range infos {
-		f.logger.Debug("opening page index", "level", info.Level, "min", info.MinTXID, "max", info.MaxTXID)
-
-		// Read page index.
-		idx, err := litestream.FetchPageIndex(ctx, f.client, info)
-		if err != nil {
-			return fmt.Errorf("fetch page index: %w", err)
-		}
-
-		// Replace pages in overall index with new pages.
-		for k, v := range idx {
-			f.logger.Debug("adding page index", "page", k, "elem", v)
-			f.pageCount = max(f.pageCount, k)
-			index[k] = v
-		}
-	}
-	f.index = index
-	return nil
 }
 
 func (f *liteFile) Close() error {
@@ -248,6 +201,7 @@ func (f *liteFile) SetDB(conn any) {
 // pollReplicaClient fetches new LTX files from the replica client and updates
 // the page index & the current position.
 func (f *liteFile) pollReplicaClient() error {
+	// Limit polling interval.
 	if time.Since(f.lastPoll) < f.pollInterval {
 		return nil
 	}
@@ -265,18 +219,33 @@ func (f *liteFile) pollReplicaClient() error {
 	if err != nil {
 		return fmt.Errorf("ltx files: %w", err)
 	}
+	if !itr.Next() {
+		return nil // No changes.
+	}
 
-	// Build an update across all new LTX files.
-	for itr.Next() {
-		info := itr.Item()
+	err = f.buildIndex(ctx)
+	if err == nil {
+		f.changeCount++
+	}
+	return err
+}
 
-		// Ensure we are fetching the next transaction from our current position.
-		isNextTXID := info.MinTXID == f.pos.TXID+1
-		if !isNextTXID {
-			return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s", f.pos.TXID, info.MinTXID, info.MaxTXID)
-		}
+func (f *liteFile) buildIndex(ctx context.Context) error {
+	infos, err := litestream.CalcRestorePlan(ctx, f.client, 0, time.Time{}, f.logger)
+	if err != nil {
+		return fmt.Errorf("cannot calc restore plan: %w", err)
+	} else if len(infos) == 0 {
+		return fmt.Errorf("no backup files available") // TODO: Open even when no files available.
+	}
 
-		f.logger.Debug("new ltx file", "level", info.Level, "min", info.MinTXID, "max", info.MaxTXID)
+	// Determine the current position based off the latest LTX file.
+	if len(infos) > 0 {
+		f.pos = ltx.Pos{TXID: infos[len(infos)-1].MaxTXID}
+	}
+
+	clear(f.index)
+	for _, info := range infos {
+		f.logger.Debug("opening page index", "level", info.Level, "min", info.MinTXID, "max", info.MaxTXID)
 
 		// Read page index.
 		idx, err := litestream.FetchPageIndex(ctx, f.client, info)
@@ -284,15 +253,12 @@ func (f *liteFile) pollReplicaClient() error {
 			return fmt.Errorf("fetch page index: %w", err)
 		}
 
-		// Update the page index & current position.
+		// Replace pages in overall index with new pages.
 		for k, v := range idx {
-			f.logger.Debug("adding new page index", "page", k, "elem", v)
+			f.logger.Debug("adding page index", "page", k, "elem", v)
 			f.pageCount = max(f.pageCount, k)
 			f.index[k] = v
 		}
-		f.pos.TXID = info.MaxTXID
-		f.changeCount++
 	}
-
 	return nil
 }
