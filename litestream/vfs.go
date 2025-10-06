@@ -16,11 +16,6 @@ import (
 	"github.com/superfly/ltx"
 )
 
-// The default poll interval.
-// Override it by adding _poll_interval=5s to your DSN.
-// Should be less than the shortest compaction interval used by the replica.
-const DefaultPollInterval = 1 * time.Second
-
 type liteVFS struct{}
 
 func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
@@ -236,7 +231,8 @@ func (f *liteFile) pollReplicaClient() error {
 
 				// Ensure we are fetching the next transaction from our current position.
 				if nextTXID != 1 && nextTXID != info.MinTXID {
-					return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s", nextTXID, info.MinTXID, info.MaxTXID)
+					return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s",
+						nextTXID, info.MinTXID, info.MaxTXID)
 				}
 
 				err := f.updateIndex(ctx, info)
