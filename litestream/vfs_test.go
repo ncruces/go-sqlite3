@@ -1,4 +1,4 @@
-package litestream
+package litestream_test
 
 import (
 	"log"
@@ -8,16 +8,17 @@ import (
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/vfs"
+	"github.com/ncruces/go-sqlite3/litestream"
 )
 
-func ExampleNewVFS() {
+func ExampleNewReplica() {
 	client := s3.NewReplicaClient()
 	client.Bucket = "test-bucket"
 	client.Path = "fruits.db"
-	vfs.Register("litestream", NewVFS(client, slog.Default()))
 
-	db, err := driver.Open("file:fruits.db?vfs=litestream")
+	litestream.NewReplica("fruits.db", client, slog.Default())
+
+	db, err := driver.Open("file:fruits.db?vfs=litestream&_poll_interval=5s")
 	if err != nil {
 		log.Fatalln(err)
 	}

@@ -16,30 +16,22 @@ import (
 	"github.com/superfly/ltx"
 )
 
+// The default poll interval.
+// Override it by adding _poll_interval=5s to your DSN.
+// Should be less than the shortest compaction interval used by the replica.
 const DefaultPollInterval = 1 * time.Second
 
-// VFS implements the SQLite VFS interface for Litestream.
-// It is intended to be used for read replicas that read directly from S3.
-type VFS struct {
-	// PollInterval is the interval at which to poll the replica client for new
-	// LTX files. The index will be fetched for the new files automatically.
-	PollInterval time.Duration
+type liteVFS struct{}
 
-	client litestream.ReplicaClient
-	logger *slog.Logger
-}
-
-var _ vfs.VFS = &VFS{}
-
-func NewVFS(client litestream.ReplicaClient, logger *slog.Logger) *VFS {
-	return &VFS{
-		client:       client,
-		logger:       logger.With("vfs", "true"),
-		PollInterval: DefaultPollInterval,
+func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
+	// notest // OpenFilename is called instead
+	if name == "" {
+		return liteVFS{}.OpenFilename(nil, flags)
 	}
+	return nil, flags, sqlite3.CANTOPEN
 }
 
-func (fs *VFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
+func (liteVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
 	// Temp journals, as used by the sorter, use SliceFile.
 	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
 		return &vfsutil.SliceFile{}, flags | vfs.OPEN_MEMORY, nil
@@ -49,51 +41,64 @@ func (fs *VFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, er
 		return nil, flags, sqlite3.CANTOPEN
 	}
 
-	f := liteFile{
-		client:       fs.client,
-		name:         name,
-		pages:        map[uint32]ltx.PageIndexElem{},
-		levels:       map[int]ltx.TXID{},
-		logger:       fs.logger.With("name", name),
-		pollInterval: fs.PollInterval,
-	}
+	liteMtx.RLock()
+	defer liteMtx.RUnlock()
+	if db, ok := liteDBs[name.String()]; ok {
+		f := liteFile{
+			client:       db.client,
+			pages:        map[uint32]ltx.PageIndexElem{},
+			levels:       map[int]ltx.TXID{},
+			logger:       db.logger,
+			pollInterval: DefaultPollInterval,
+		}
 
-	// Build the page index so we can lookup individual pages.
-	if err := f.buildIndex(context.Background()); err != nil {
-		f.logger.Error("build index", "error", err)
-		return nil, 0, err
+		if poll := name.URIParameter("_poll_interval"); poll != "" {
+			f.pollInterval, err = time.ParseDuration(poll)
+			if err != nil {
+				f.logger.Error("parse _poll_interval", "error", err)
+				return nil, 0, err
+			}
+		}
+
+		// Build the page index so we can lookup individual pages.
+		if err := f.buildIndex(context.Background()); err != nil {
+			f.logger.Error("build index", "error", err)
+			return nil, 0, err
+		}
+		return &f, flags | vfs.OPEN_READONLY, nil
 	}
-	return &f, flags | vfs.OPEN_READONLY, nil
+	return nil, flags, sqlite3.CANTOPEN
+
 }
 
-func (vfs *VFS) Delete(name string, dirSync bool) error {
+func (liteVFS) Delete(name string, dirSync bool) error {
 	// notest // used to delete journals
 	return sqlite3.IOERR_DELETE_NOENT
 }
 
-func (vfs *VFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
+func (liteVFS) Access(name string, flag vfs.AccessFlag) (bool, error) {
 	// notest // used to check for journals
 	return false, nil
 }
 
-func (vfs *VFS) FullPathname(name string) (string, error) {
+func (liteVFS) FullPathname(name string) (string, error) {
 	return name, nil
 }
 
 type liteFile struct {
 	client litestream.ReplicaClient
-	name   string
 
 	pages  map[uint32]ltx.PageIndexElem
 	levels map[int]ltx.TXID
 	logger *slog.Logger
 	conn   *sqlite3.Conn
 
-	pageSize     uint32
-	pageCount    uint32
-	changeCount  uint32
 	lastPoll     time.Time
 	pollInterval time.Duration
+
+	maxTXID   ltx.TXID
+	pageSize  uint32
+	pageCount uint32
 }
 
 func (f *liteFile) Close() error { return nil }
@@ -126,7 +131,7 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 		data[18] == 2 && data[19] == 2 ||
 		data[18] == 3 && data[19] == 3) {
 		data[18], data[19] = 0x01, 0x01
-		binary.BigEndian.PutUint32(data[24:28], f.changeCount)
+		binary.BigEndian.PutUint32(data[24:28], uint32(f.maxTXID))
 		f.pageSize = uint32(256 * binary.LittleEndian.Uint16(data[16:18]))
 	}
 
@@ -194,24 +199,14 @@ func (f *liteFile) buildIndex(ctx context.Context) error {
 	}
 
 	for _, info := range infos {
-		// Read page index.
-		idx, err := litestream.FetchPageIndex(ctx, f.client, info)
+		err := f.updateIndex(ctx, info)
 		if err != nil {
-			return fmt.Errorf("fetch page index: %w", err)
+			return err
 		}
-
-		// Replace pages in overall index with new pages.
-		for k, v := range idx {
-			f.pageCount = max(f.pageCount, k)
-			f.pages[k] = v
-		}
-		f.levels[info.Level] = info.MaxTXID
 	}
 	return nil
 }
 
-// pollReplicaClient fetches new LTX files from the replica client and updates
-// the page index & the current position.
 func (f *liteFile) pollReplicaClient() error {
 	// Limit polling interval.
 	if time.Since(f.lastPoll) < f.pollInterval {
@@ -244,19 +239,10 @@ func (f *liteFile) pollReplicaClient() error {
 					return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s", nextTXID, info.MinTXID, info.MaxTXID)
 				}
 
-				// Read page index.
-				idx, err := litestream.FetchPageIndex(ctx, f.client, info)
+				err := f.updateIndex(ctx, info)
 				if err != nil {
-					return fmt.Errorf("fetch page index: %w", err)
+					return err
 				}
-
-				// Update the page index & current position.
-				for k, v := range idx {
-					f.pageCount = max(f.pageCount, k)
-					f.pages[k] = v
-				}
-				f.levels[level] = info.MaxTXID
-				f.changeCount++
 			}
 
 			return itr.Close()
@@ -266,5 +252,22 @@ func (f *liteFile) pollReplicaClient() error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (f *liteFile) updateIndex(ctx context.Context, info *ltx.FileInfo) error {
+	// Read page index.
+	idx, err := litestream.FetchPageIndex(ctx, f.client, info)
+	if err != nil {
+		return fmt.Errorf("fetch page index: %w", err)
+	}
+
+	// Replace pages in overall index with new pages.
+	for k, v := range idx {
+		f.pageCount = max(f.pageCount, k)
+		f.pages[k] = v
+	}
+	f.maxTXID = max(f.maxTXID, info.MaxTXID)
+	f.levels[info.Level] = info.MaxTXID
 	return nil
 }
