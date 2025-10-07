@@ -2,7 +2,6 @@ package litestream_test
 
 import (
 	"log"
-	"log/slog"
 	"time"
 
 	"github.com/benbjohnson/litestream/s3"
@@ -16,9 +15,11 @@ func ExampleNewReplica() {
 	client.Bucket = "test-bucket"
 	client.Path = "fruits.db"
 
-	litestream.NewReplica("fruits.db", client, slog.Default())
+	litestream.NewReplica("fruits.db", client, litestream.ReplicaOptions{
+		PollInterval: 5 * time.Second,
+	})
 
-	db, err := driver.Open("file:fruits.db?vfs=litestream&_poll_interval=5s")
+	db, err := driver.Open("file:fruits.db?vfs=litestream")
 	if err != nil {
 		log.Fatalln(err)
 	}

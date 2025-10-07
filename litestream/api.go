@@ -11,8 +11,6 @@ import (
 )
 
 // The default poll interval.
-// Override it by adding _poll_interval=5s to your DSN.
-// Should be less than the shortest compaction interval used by the replica.
 const DefaultPollInterval = 1 * time.Second
 
 func init() {
@@ -27,21 +25,37 @@ var (
 
 type liteDB struct {
 	client litestream.ReplicaClient
-	logger *slog.Logger
+	opts   *ReplicaOptions
+}
+
+// ReplicaOptions represents options for [NewReplica].
+type ReplicaOptions struct {
+	// Where to log error messages. May be nil.
+	Logger *slog.Logger
+	// Minimum compaction level to track.
+	MinLevel int
+	// Replica poll interval. Must be less than the compaction interval
+	// used by the replica at MinLevel+1.
+	PollInterval time.Duration
 }
 
 // NewReplica creates a read-replica from a Litestream client.
-func NewReplica(name string, client litestream.ReplicaClient, logger *slog.Logger) {
-	if logger == nil {
-		logger = slog.New(slog.DiscardHandler)
+func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOptions) {
+	if options.Logger != nil {
+		options.Logger = options.Logger.With("name", name)
+	} else {
+		options.Logger = slog.New(slog.DiscardHandler)
 	}
-	logger = logger.With("name", name)
+	if options.PollInterval <= 0 {
+		options.PollInterval = DefaultPollInterval
+	}
+	options.MinLevel = max(0, min(options.MinLevel, litestream.SnapshotLevel))
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
 	liteDBs[name] = liteDB{
 		client: client,
-		logger: logger,
+		opts:   &options,
 	}
 }
 

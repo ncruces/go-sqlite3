@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"time"
 
 	"github.com/benbjohnson/litestream"
@@ -19,14 +18,6 @@ import (
 type liteVFS struct{}
 
 func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// notest // OpenFilename is called instead
-	if name == "" {
-		return liteVFS{}.OpenFilename(nil, flags)
-	}
-	return nil, flags, sqlite3.CANTOPEN
-}
-
-func (liteVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.File, _ vfs.OpenFlag, err error) {
 	// Temp journals, as used by the sorter, use SliceFile.
 	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
 		return &vfsutil.SliceFile{}, flags | vfs.OPEN_MEMORY, nil
@@ -38,26 +29,17 @@ func (liteVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.Fi
 
 	liteMtx.RLock()
 	defer liteMtx.RUnlock()
-	if db, ok := liteDBs[name.String()]; ok {
+	if db, ok := liteDBs[name]; ok {
 		f := liteFile{
-			client:       db.client,
-			pages:        map[uint32]ltx.PageIndexElem{},
-			levels:       map[int]ltx.TXID{},
-			logger:       db.logger,
-			pollInterval: DefaultPollInterval,
-		}
-
-		if poll := name.URIParameter("_poll_interval"); poll != "" {
-			f.pollInterval, err = time.ParseDuration(poll)
-			if err != nil {
-				f.logger.Error("parse _poll_interval", "error", err)
-				return nil, 0, err
-			}
+			client: db.client,
+			pages:  map[uint32]ltx.PageIndexElem{},
+			levels: map[int]ltx.TXID{},
+			opts:   db.opts,
 		}
 
 		// Build the page index so we can lookup individual pages.
 		if err := f.buildIndex(context.Background()); err != nil {
-			f.logger.Error("build index", "error", err)
+			f.opts.Logger.Error("build index", "error", err)
 			return nil, 0, err
 		}
 		return &f, flags | vfs.OPEN_READONLY, nil
@@ -85,12 +67,10 @@ type liteFile struct {
 
 	pages  map[uint32]ltx.PageIndexElem
 	levels map[int]ltx.TXID
-	logger *slog.Logger
+	opts   *ReplicaOptions
 	conn   *sqlite3.Conn
 
-	lastPoll     time.Time
-	pollInterval time.Duration
-
+	lastPoll  time.Time
 	maxTXID   ltx.TXID
 	pageSize  uint32
 	pageCount uint32
@@ -116,7 +96,7 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 
 	_, data, err := litestream.FetchPage(ctx, f.client, elem.Level, elem.MinTXID, elem.MaxTXID, elem.Offset, elem.Size)
 	if err != nil {
-		f.logger.Error("fetch page", "error", err)
+		f.opts.Logger.Error("fetch page", "error", err)
 		return 0, err
 	}
 
@@ -185,7 +165,7 @@ func (f *liteFile) SetDB(conn any) {
 }
 
 func (f *liteFile) buildIndex(ctx context.Context) error {
-	infos, err := litestream.CalcRestorePlan(ctx, f.client, 0, time.Time{}, f.logger)
+	infos, err := litestream.CalcRestorePlan(ctx, f.client, 0, time.Time{}, f.opts.Logger)
 	if err != nil {
 		if !errors.Is(err, litestream.ErrTxNotAvailable) {
 			return fmt.Errorf("calc restore plan: %w", err)
@@ -204,7 +184,7 @@ func (f *liteFile) buildIndex(ctx context.Context) error {
 
 func (f *liteFile) pollReplicaClient() error {
 	// Limit polling interval.
-	if time.Since(f.lastPoll) < f.pollInterval {
+	if time.Since(f.lastPoll) < f.opts.PollInterval {
 		return nil
 	}
 	f.lastPoll = time.Now()
@@ -214,7 +194,7 @@ func (f *liteFile) pollReplicaClient() error {
 		ctx = f.conn.GetInterrupt()
 	}
 
-	for level := range litestream.SnapshotLevel + 1 {
+	for level := f.opts.MinLevel; level <= litestream.SnapshotLevel; level++ {
 		err := func() error {
 			nextTXID := f.levels[level] + 1
 
@@ -240,12 +220,17 @@ func (f *liteFile) pollReplicaClient() error {
 					return err
 				}
 			}
-
+			if err := itr.Err(); err != nil {
+				return err
+			}
 			return itr.Close()
 		}()
 		if err != nil {
-			f.logger.Error("cannot poll replica", "error", err)
+			f.opts.Logger.Error("cannot poll replica", "error", err)
 			return err
+		}
+		if _, ok := f.levels[level]; !ok {
+			return nil
 		}
 	}
 	return nil
@@ -263,7 +248,7 @@ func (f *liteFile) updateIndex(ctx context.Context, info *ltx.FileInfo) error {
 		f.pageCount = max(f.pageCount, k)
 		f.pages[k] = v
 	}
+	f.levels[info.Level] = max(info.MaxTXID, f.levels[info.Level])
 	f.maxTXID = max(f.maxTXID, info.MaxTXID)
-	f.levels[info.Level] = info.MaxTXID
 	return nil
 }
