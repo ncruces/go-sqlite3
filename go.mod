@@ -16,7 +16,7 @@ require (
 	github.com/psanford/httpreadat v0.1.0 // example
 	golang.org/x/crypto v0.42.0 // vfs/adiantum vfs/xts
 	golang.org/x/sync v0.17.0 // test
-	golang.org/x/text v0.29.0 // ext/unicode
+	golang.org/x/text v0.30.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
