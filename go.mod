@@ -7,16 +7,16 @@ require (
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v0.2.0
 	github.com/tetratelabs/wazero v1.9.0
-	golang.org/x/sys v0.36.0
+	golang.org/x/sys v0.37.0
 )
 
 require (
 	github.com/dchest/siphash v1.2.3 // ext/bloom
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
-	golang.org/x/crypto v0.42.0 // vfs/adiantum vfs/xts
+	golang.org/x/crypto v0.43.0 // vfs/adiantum vfs/xts
 	golang.org/x/sync v0.17.0 // test
-	golang.org/x/text v0.29.0 // ext/unicode
+	golang.org/x/text v0.30.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
