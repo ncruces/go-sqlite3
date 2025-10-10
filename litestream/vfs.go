@@ -71,11 +71,17 @@ type liteFile struct {
 	lastPoll  time.Time
 	pageSize  uint32
 	pageCount uint32
+	lock      vfs.LockLevel
 }
 
 func (f *liteFile) Close() error { return nil }
 
 func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
+	err = f.pollReplica()
+	if err != nil {
+		return 0, err
+	}
+
 	pgno := uint32(1)
 	if off >= 512 {
 		pgno += uint32(off / int64(f.pageSize))
@@ -135,10 +141,15 @@ func (f *liteFile) Lock(lock vfs.LockLevel) error {
 	if lock >= vfs.LOCK_RESERVED {
 		return sqlite3.IOERR_LOCK
 	}
-	return f.pollReplicaClient()
+	if err := f.pollReplica(); err != nil {
+		return err
+	}
+	f.lock = max(f.lock, lock)
+	return nil
 }
 
 func (f *liteFile) Unlock(lock vfs.LockLevel) error {
+	f.lock = min(f.lock, lock)
 	return nil
 }
 
@@ -176,15 +187,21 @@ func (f *liteFile) buildIndex(ctx context.Context) error {
 			return err
 		}
 	}
+
+	f.lastPoll = time.Now()
 	return nil
 }
 
-func (f *liteFile) pollReplicaClient() error {
+func (f *liteFile) pollReplica() error {
+	// Can't poll in a transaction.
+	if f.lock > vfs.LOCK_NONE {
+		return nil
+	}
+
 	// Limit polling interval.
 	if time.Since(f.lastPoll) < f.opts.PollInterval {
 		return nil
 	}
-	f.lastPoll = time.Now()
 
 	ctx := context.Background()
 	if f.conn != nil {
@@ -231,6 +248,8 @@ func (f *liteFile) pollReplicaClient() error {
 			return err
 		}
 	}
+
+	f.lastPoll = time.Now()
 	return nil
 }
 
