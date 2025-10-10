@@ -31,10 +31,9 @@ func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, er
 	defer liteMtx.RUnlock()
 	if db, ok := liteDBs[name]; ok {
 		f := liteFile{
-			client: db.client,
+			liteDB: db,
+			txids:  new(levelTXIDs),
 			pages:  map[uint32]ltx.PageIndexElem{},
-			levels: map[int]ltx.TXID{},
-			opts:   db.opts,
 		}
 
 		// Build the page index so we can lookup individual pages.
@@ -63,15 +62,13 @@ func (liteVFS) FullPathname(name string) (string, error) {
 }
 
 type liteFile struct {
-	client litestream.ReplicaClient
+	liteDB
 
-	pages  map[uint32]ltx.PageIndexElem
-	levels map[int]ltx.TXID
-	opts   *ReplicaOptions
-	conn   *sqlite3.Conn
+	conn  *sqlite3.Conn
+	txids *levelTXIDs
+	pages map[uint32]ltx.PageIndexElem
 
 	lastPoll  time.Time
-	maxTXID   ltx.TXID
 	pageSize  uint32
 	pageCount uint32
 }
@@ -102,11 +99,11 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 
 	// Update the first page to pretend we are in journal mode,
 	// load the page size and track changes to the database.
-	if pgno == 1 && len(data) >= 100 && (false ||
-		data[18] == 2 && data[19] == 2 ||
-		data[18] == 3 && data[19] == 3) {
+	if pgno == 1 && len(data) >= 100 &&
+		data[18] >= 1 && data[19] >= 1 &&
+		data[18] <= 3 && data[19] <= 3 {
 		data[18], data[19] = 0x01, 0x01
-		binary.BigEndian.PutUint32(data[24:28], uint32(f.maxTXID))
+		binary.BigEndian.PutUint32(data[24:28], uint32(f.txids[0]))
 		f.pageSize = uint32(256 * binary.LittleEndian.Uint16(data[16:18]))
 	}
 
@@ -196,7 +193,12 @@ func (f *liteFile) pollReplicaClient() error {
 
 	for level := f.opts.MinLevel; level <= litestream.SnapshotLevel; level++ {
 		err := func() error {
-			nextTXID := f.levels[level] + 1
+			var nextTXID ltx.TXID
+			// Snapshots must start from scratch,
+			// other levels can start from where they were left.
+			if level != litestream.SnapshotLevel {
+				nextTXID = f.txids[level] + 1
+			}
 
 			// Start reading from the next LTX file after the current position.
 			itr, err := f.client.LTXFiles(ctx, level, nextTXID)
@@ -209,10 +211,9 @@ func (f *liteFile) pollReplicaClient() error {
 			for itr.Next() {
 				info := itr.Item()
 
-				// Ensure we are fetching the next transaction from our current position.
-				if nextTXID != 1 && nextTXID != info.MinTXID {
-					return fmt.Errorf("non-contiguous ltx file: current=%s, next=%s-%s",
-						nextTXID, info.MinTXID, info.MaxTXID)
+				// Skip LTX files already in the index.
+				if info.MaxTXID <= f.txids[level] {
+					continue
 				}
 
 				err := f.updateIndex(ctx, info)
@@ -228,9 +229,6 @@ func (f *liteFile) pollReplicaClient() error {
 		if err != nil {
 			f.opts.Logger.Error("cannot poll replica", "error", err)
 			return err
-		}
-		if _, ok := f.levels[level]; !ok {
-			return nil
 		}
 	}
 	return nil
@@ -248,7 +246,8 @@ func (f *liteFile) updateIndex(ctx context.Context, info *ltx.FileInfo) error {
 		f.pageCount = max(f.pageCount, k)
 		f.pages[k] = v
 	}
-	f.levels[info.Level] = max(info.MaxTXID, f.levels[info.Level])
-	f.maxTXID = max(f.maxTXID, info.MaxTXID)
+	f.txids[info.Level] = max(f.txids[info.Level], info.MaxTXID)
 	return nil
 }
+
+type levelTXIDs = [litestream.SnapshotLevel + 1]ltx.TXID
