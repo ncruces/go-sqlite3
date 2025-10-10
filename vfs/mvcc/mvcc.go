@@ -279,6 +279,9 @@ func (m *mvccFile) Unlock(lock vfs.LockLevel) error {
 			m.waiter.Broadcast()
 		}
 	}
+	if lock == vfs.LOCK_NONE {
+		m.data = nil
+	}
 	m.lock = lock
 	return nil
 }
@@ -299,6 +302,8 @@ func (m *mvccFile) CommitPhaseTwo() error {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 		m.mvccDB.data = m.data
+		m.lock = vfs.LOCK_NONE
+		m.data = nil
 	}
 	return nil
 }
