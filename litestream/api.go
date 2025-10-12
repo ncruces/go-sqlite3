@@ -19,14 +19,9 @@ func init() {
 
 var (
 	liteMtx sync.RWMutex
-	// +checklocks:memoryMtx
-	liteDBs = map[string]liteDB{}
+	// +checklocks:liteMtx
+	liteDBs = map[string]*liteDB{}
 )
-
-type liteDB struct {
-	client litestream.ReplicaClient
-	opts   *ReplicaOptions
-}
 
 // ReplicaOptions represents options for [NewReplica].
 type ReplicaOptions struct {
@@ -53,7 +48,7 @@ func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOpt
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
-	liteDBs[name] = liteDB{
+	liteDBs[name] = &liteDB{
 		client: client,
 		opts:   &options,
 	}
