@@ -59,7 +59,8 @@ func (c *cursor) Next() error {
 }
 
 func (c *cursor) RowID() (int64, error) {
-	return int64(c.rowID), nil
+	// One-based RowID for consistency with carray and other tables.
+	return int64(c.rowID) + 1, nil
 }
 
 func (c *cursor) Column(ctx sqlite3.Context, n int) error {

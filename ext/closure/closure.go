@@ -154,6 +154,7 @@ func (c *closure) BestIndex(idx *sqlite3.IndexInfo) error {
 		return sqlite3.CONSTRAINT
 	}
 
+	idx.IdxFlags = sqlite3.INDEX_SCAN_HEX
 	idx.EstimatedCost = cost
 	idx.IdxNum = plan
 	return nil

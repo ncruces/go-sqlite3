@@ -445,7 +445,8 @@ const (
 type IndexScanFlag uint32
 
 const (
-	INDEX_SCAN_UNIQUE IndexScanFlag = 1
+	INDEX_SCAN_UNIQUE IndexScanFlag = 0x00000001
+	INDEX_SCAN_HEX    IndexScanFlag = 0x00000002
 )
 
 func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module, _ ptr_t, _ int32, _, _, _ ptr_t) res_t {
