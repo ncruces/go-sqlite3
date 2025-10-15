@@ -20,7 +20,7 @@ func osWriteAt(file *os.File, p []byte, off int64) (int, error) {
 		case
 			windows.ERROR_HANDLE_DISK_FULL,
 			windows.ERROR_DISK_FULL:
-			return n, _FULL
+			return n, sysError{err, _FULL}
 		}
 	}
 	return n, err

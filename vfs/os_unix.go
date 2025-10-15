@@ -33,7 +33,7 @@ func osReadAt(file *os.File, p []byte, off int64) (int, error) {
 			unix.ERANGE,
 			unix.EIO,
 			unix.ENXIO:
-			return n, _IOERR_CORRUPTFS
+			return n, sysError{err, _IOERR_CORRUPTFS}
 		}
 	}
 	return n, err
@@ -42,7 +42,7 @@ func osReadAt(file *os.File, p []byte, off int64) (int, error) {
 func osWriteAt(file *os.File, p []byte, off int64) (int, error) {
 	n, err := file.WriteAt(p, off)
 	if errno, ok := err.(unix.Errno); ok && errno == unix.ENOSPC {
-		return n, _FULL
+		return n, sysError{err, _FULL}
 	}
 	return n, err
 }

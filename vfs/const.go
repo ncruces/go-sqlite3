@@ -20,7 +20,7 @@ type (
 type _ErrorCode uint32
 
 func (e _ErrorCode) Error() string {
-	return util.ErrorCodeString(uint32(e))
+	return util.ErrorCodeString(e)
 }
 
 const (

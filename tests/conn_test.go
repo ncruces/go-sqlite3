@@ -22,8 +22,8 @@ func TestConn_Open_dir(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error")
 	}
-	if !errors.Is(err, sqlite3.CANTOPEN) {
-		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+	if !errors.Is(err, sqlite3.CANTOPEN_ISDIR) {
+		t.Errorf("got %v, want sqlite3.CANTOPEN_ISDIR", err)
 	}
 }
 

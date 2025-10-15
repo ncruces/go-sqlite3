@@ -73,7 +73,7 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 	return rc
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, _ErrorCode) {
+func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
@@ -86,29 +86,32 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	// Check if file is big enough.
 	o, err := s.Seek(0, io.SeekEnd)
 	if err != nil {
-		return 0, _IOERR_SHMSIZE
+		return 0, sysError{err, _IOERR_SHMSIZE}
 	}
 	if n := (int64(id) + 1) * int64(size); n > o {
 		if !extend {
-			return 0, _OK
+			return 0, nil
 		}
-		if s.readOnly || osAllocate(s.File, n) != nil {
+		if s.readOnly {
 			return 0, _IOERR_SHMSIZE
+		}
+		if err := osAllocate(s.File, n); err != nil {
+			return 0, sysError{err, _IOERR_SHMSIZE}
 		}
 	}
 
 	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, s.readOnly)
 	if err != nil {
-		return 0, _IOERR_SHMMAP
+		return 0, err
 	}
 	s.regions = append(s.regions, r)
 	if s.readOnly {
 		return r.Ptr, _READONLY
 	}
-	return r.Ptr, _OK
+	return r.Ptr, nil
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
+func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 	// Argument check.
 	switch {
 	case n <= 0:
@@ -127,6 +130,10 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) _ErrorCode {
 		//
 	default:
 		panic(util.AssertErr())
+	}
+
+	if s.File == nil {
+		return _IOERR_SHMLOCK
 	}
 
 	var timeout time.Duration
