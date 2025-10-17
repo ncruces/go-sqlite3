@@ -111,15 +111,16 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 	return _OK
 }
 
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+func osCheckReservedLock(file *os.File) (bool, error) {
 	// Test the RESERVED lock.
 	rc := osLock(file, 0, _RESERVED_BYTE, 1, 0, _IOERR_CHECKRESERVEDLOCK)
 	if rc == _BUSY {
-		return true, _OK
+		return true, nil
 	}
 	if rc == _OK {
 		// Release the RESERVED lock.
 		osUnlock(file, _RESERVED_BYTE, 1)
+		return false, nil
 	}
 	return false, rc
 }

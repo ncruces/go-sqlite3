@@ -52,8 +52,8 @@ func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
 	return osUnlock(file, 0, 0)
 }
 
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+func osCheckReservedLock(file *os.File) (bool, error) {
 	// Test the RESERVED lock.
-	lock, rc := osTestLock(file, _RESERVED_BYTE, 1)
-	return lock == unix.F_WRLCK, rc
+	lock, err := osTestLock(file, _RESERVED_BYTE, 1)
+	return lock == unix.F_WRLCK, err
 }

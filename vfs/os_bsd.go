@@ -61,13 +61,13 @@ func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
 	}
 }
 
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+func osCheckReservedLock(file *os.File) (bool, error) {
 	// Test the RESERVED lock with fcntl(F_GETLK).
 	// This only works on systems where fcntl and flock are compatible.
 	// However, SQLite only calls this while holding a shared lock,
 	// so the difference is immaterial.
-	lock, rc := osTestLock(file, _RESERVED_BYTE, 1)
-	return lock == unix.F_WRLCK, rc
+	lock, err := osTestLock(file, _RESERVED_BYTE, 1)
+	return lock == unix.F_WRLCK, err
 }
 
 func osFlock(file *os.File, how int, def _ErrorCode) _ErrorCode {

@@ -47,8 +47,8 @@ func (s *vfsShm) shmOpen() error {
 	}
 
 	// Dead man's switch.
-	if lock, rc := osTestLock(s.File, _SHM_DMS, 1); rc != _OK {
-		return _IOERR_LOCK
+	if lock, err := osTestLock(s.File, _SHM_DMS, 1); err != _OK {
+		return err
 	} else if lock == unix.F_WRLCK {
 		return _BUSY
 	} else if lock == unix.F_UNLCK {

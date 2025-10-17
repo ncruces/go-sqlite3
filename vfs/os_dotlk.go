@@ -130,14 +130,11 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 	return _OK
 }
 
-func osCheckReservedLock(file *os.File) (bool, _ErrorCode) {
+func osCheckReservedLock(file *os.File) (bool, error) {
 	vfsDotLocksMtx.Lock()
 	defer vfsDotLocksMtx.Unlock()
 
 	name := file.Name()
 	locker := vfsDotLocks[name]
-	if locker == nil {
-		return false, _OK
-	}
-	return locker.reserved != nil, _OK
+	return locker != nil && locker.reserved != nil, nil
 }
