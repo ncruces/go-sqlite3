@@ -49,6 +49,7 @@ func (s *vfsShm) shmOpen() error {
 		if err != nil {
 			return sysError{err, _CANTOPEN}
 		}
+		s.fileLock = false
 		s.File = f
 	}
 
@@ -78,8 +79,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		s.free = mod.ExportedFunction("sqlite3_free")
 		s.alloc = mod.ExportedFunction("sqlite3_malloc64")
 	}
-	if rc := s.shmOpen(); rc != _OK {
-		return 0, rc
+	if err := s.shmOpen(); err != nil {
+		return 0, err
 	}
 
 	defer s.shmAcquire(&err)

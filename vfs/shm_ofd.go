@@ -42,6 +42,7 @@ func (s *vfsShm) shmOpen() error {
 		if err != nil {
 			return sysError{err, _CANTOPEN}
 		}
+		s.fileLock = false
 		s.File = f
 	}
 
