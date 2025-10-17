@@ -106,9 +106,9 @@ func (f *vfsFile) Unlock(lock LockLevel) error {
 		return rc
 
 	case LOCK_NONE:
-		rc := osReleaseLock(f.File, f.lock)
+		err := osReleaseLock(f.File, f.lock)
 		f.lock = LOCK_NONE
-		return rc
+		return err
 
 	default:
 		panic(util.AssertErr())

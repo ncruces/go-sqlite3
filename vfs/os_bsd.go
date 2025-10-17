@@ -49,14 +49,14 @@ func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
 	return _OK
 }
 
-func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
+func osReleaseLock(file *os.File, _ LockLevel) error {
 	for {
 		err := unix.Flock(int(file.Fd()), unix.LOCK_UN)
 		if err == nil {
-			return _OK
+			return nil
 		}
 		if err != unix.EINTR {
-			return _IOERR_UNLOCK
+			return sysError{err, _IOERR_UNLOCK}
 		}
 	}
 }

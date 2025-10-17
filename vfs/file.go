@@ -48,7 +48,7 @@ func (vfsOS) Delete(path string, syncDir bool) error {
 	if isUnix && syncDir {
 		f, err := os.Open(filepath.Dir(path))
 		if err != nil {
-			return _OK
+			return nil
 		}
 		defer f.Close()
 		err = osSync(f, 0, SYNC_FULL)

@@ -97,7 +97,7 @@ func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
 	return _OK
 }
 
-func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
+func osReleaseLock(file *os.File, state LockLevel) error {
 	// Release all locks, PENDING must be last.
 	if state >= LOCK_RESERVED {
 		osUnlock(file, _RESERVED_BYTE, 1)
@@ -108,7 +108,7 @@ func osReleaseLock(file *os.File, state LockLevel) _ErrorCode {
 	if state >= LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
-	return _OK
+	return nil
 }
 
 func osCheckReservedLock(file *os.File) (bool, error) {
