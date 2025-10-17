@@ -92,7 +92,7 @@ func osLock(file *os.File, typ int16, start, len int64, def _ErrorCode) _ErrorCo
 	return osLockErrorCode(err, def)
 }
 
-func osUnlock(file *os.File, start, len int64) _ErrorCode {
+func osUnlock(file *os.File, start, len int64) error {
 	lock := unix.Flock_t{
 		Type:  unix.F_UNLCK,
 		Start: start,
@@ -101,10 +101,10 @@ func osUnlock(file *os.File, start, len int64) _ErrorCode {
 	for {
 		err := unix.FcntlFlock(file.Fd(), unix.F_SETLK, &lock)
 		if err == nil {
-			return _OK
+			return nil
 		}
 		if err != unix.EINTR {
-			return _IOERR_UNLOCK
+			return sysError{err, _IOERR_UNLOCK}
 		}
 	}
 }

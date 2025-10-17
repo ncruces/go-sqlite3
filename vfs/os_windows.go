@@ -144,16 +144,16 @@ func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def 
 	return osLockErrorCode(err, def)
 }
 
-func osUnlock(file *os.File, start, len uint32) _ErrorCode {
+func osUnlock(file *os.File, start, len uint32) error {
 	err := windows.UnlockFileEx(windows.Handle(file.Fd()),
 		0, len, 0, &windows.Overlapped{Offset: start})
 	if err == windows.ERROR_NOT_LOCKED {
-		return _OK
+		return nil
 	}
 	if err != nil {
-		return _IOERR_UNLOCK
+		return sysError{err, _IOERR_UNLOCK}
 	}
-	return _OK
+	return nil
 }
 
 func osLockEx(file *os.File, flags, start, len uint32) error {

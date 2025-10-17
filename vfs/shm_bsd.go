@@ -3,6 +3,7 @@
 package vfs
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"io"
@@ -182,9 +183,9 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 	defer s.Unlock()
 
 	// Check if we can obtain/release locks locally.
-	rc := s.shmMemLock(offset, n, flags)
-	if rc != _OK {
-		return rc
+	err := s.shmMemLock(offset, n, flags)
+	if err != nil {
+		return err
 	}
 
 	// Obtain/release the appropriate file locks.
@@ -196,36 +197,39 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 		for i := begin; i < end; i++ {
 			if s.vfsShmParent.lock[i] != 0 {
 				if i > begin {
-					rc |= osUnlock(s.File, _SHM_BASE+int64(begin), int64(i-begin))
+					err = cmp.Or(err,
+						osUnlock(s.File, _SHM_BASE+int64(begin), int64(i-begin)))
 				}
 				begin = i + 1
 			}
 		}
 		if end > begin {
-			rc |= osUnlock(s.File, _SHM_BASE+int64(begin), int64(end-begin))
+			err = cmp.Or(err,
+				osUnlock(s.File, _SHM_BASE+int64(begin), int64(end-begin)))
 		}
-		return rc
+		return err
 	case flags&_SHM_SHARED != 0:
 		// Acquiring a new shared lock on the file is only necessary
 		// if there was a new shared lock in the range.
 		for i := offset; i < offset+n; i++ {
 			if s.vfsShmParent.lock[i] == 1 {
-				rc = osReadLock(s.File, _SHM_BASE+int64(offset), int64(n))
+				err = osReadLock(s.File, _SHM_BASE+int64(offset), int64(n))
 				break
 			}
 		}
 	case flags&_SHM_EXCLUSIVE != 0:
 		// Acquiring an exclusive lock on the file is always necessary.
-		rc = osWriteLock(s.File, _SHM_BASE+int64(offset), int64(n))
+		err = osWriteLock(s.File, _SHM_BASE+int64(offset), int64(n))
 	default:
 		panic(util.AssertErr())
 	}
 
-	// Release the local locks we had acquired.
-	if rc != _OK {
-		s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
+	if err == nil || err == _OK {
+		return nil
 	}
-	return rc
+	// Release the local locks we had acquired.
+	s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
+	return err
 }
 
 func (s *vfsShm) shmUnmap(delete bool) {

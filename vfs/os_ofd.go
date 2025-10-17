@@ -35,7 +35,7 @@ func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
 	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
 }
 
-func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+func osDowngradeLock(file *os.File, state LockLevel) error {
 	if state >= LOCK_EXCLUSIVE {
 		// Downgrade to a SHARED lock.
 		if rc := osReadLock(file, _SHARED_FIRST, _SHARED_SIZE, 0); rc != _OK {
@@ -47,7 +47,7 @@ func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
 	return osUnlock(file, _PENDING_BYTE, 2)
 }
 
-func osReleaseLock(file *os.File, _ LockLevel) _ErrorCode {
+func osReleaseLock(file *os.File, _ LockLevel) error {
 	// Release all locks.
 	return osUnlock(file, 0, 0)
 }
