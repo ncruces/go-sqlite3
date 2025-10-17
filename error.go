@@ -40,6 +40,10 @@ func (e *Error) Error() string {
 		b.WriteString(": ")
 		b.WriteString(e.msg)
 	}
+	if e.sys != nil {
+		b.WriteString(": ")
+		b.WriteString(e.sys.Error())
+	}
 
 	return b.String()
 }

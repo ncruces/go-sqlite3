@@ -10,7 +10,8 @@ import (
 
 // A VFS defines the interface between the SQLite core and the underlying operating system.
 //
-// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
+// Use [SystemError], sqlite3.ErrorCode, or sqlite3.ExtendedErrorCode
+// to return specific error codes to SQLite.
 //
 // https://sqlite.org/c3ref/vfs.html
 type VFS interface {
@@ -31,8 +32,9 @@ type VFSFilename interface {
 
 // A File represents an open file in the OS interface layer.
 //
-// Use sqlite3.ErrorCode or sqlite3.ExtendedErrorCode to return specific error codes to SQLite.
-// In particular, sqlite3.BUSY is necessary to correctly implement lock methods.
+// Use [SystemError], sqlite3.ErrorCode, or sqlite3.ExtendedErrorCode
+// to return specific error codes to SQLite.
+// In particular, sqlite3.BUSY is needed to correctly implement lock methods.
 //
 // https://sqlite.org/c3ref/io_methods.html
 type File interface {

@@ -32,7 +32,7 @@ const (
 // https://sqlite.org/walformat.html#the_wal_index_file_format
 
 func (s *vfsShm) shmAcquire(errp *error) {
-	if errp != nil && *errp != _OK {
+	if errp != nil && *errp != nil {
 		return
 	}
 	if len(s.ptrs) == 0 || shmEqual(s.shadow[0][:], s.shared[0][:]) {

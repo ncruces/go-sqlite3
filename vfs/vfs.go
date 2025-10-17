@@ -477,6 +477,8 @@ func vfsErrorCode(ctx context.Context, err error, code _ErrorCode) _ErrorCode {
 	return code
 }
 
+// SystemError tags an error with a given
+// sqlite3.ErrorCode or sqlite3.ExtendedErrorCode.
 func SystemError[T interface{ ~uint8 | ~uint16 }](err error, code T) error {
 	if err == nil {
 		return nil

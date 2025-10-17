@@ -132,7 +132,7 @@ func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
 			msg = strings.TrimPrefix(msg, "sqlite3: ")
 			msg = strings.TrimPrefix(msg, util.ErrorCodeString(rc)[len("sqlite3: "):])
 			msg = strings.TrimPrefix(msg, ": ")
-			if msg == "not an error" {
+			if msg == "" || msg == "not an error" {
 				msg = ""
 			}
 		}

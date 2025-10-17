@@ -59,7 +59,7 @@ func osSetMode(file *os.File, modeof string) error {
 	return nil
 }
 
-func osTestLock(file *os.File, start, len int64) (int16, _ErrorCode) {
+func osTestLock(file *os.File, start, len int64, def _ErrorCode) (int16, error) {
 	lock := unix.Flock_t{
 		Type:  unix.F_WRLCK,
 		Start: start,
@@ -68,17 +68,17 @@ func osTestLock(file *os.File, start, len int64) (int16, _ErrorCode) {
 	for {
 		err := unix.FcntlFlock(file.Fd(), unix.F_GETLK, &lock)
 		if err == nil {
-			return lock.Type, _OK
+			return lock.Type, nil
 		}
 		if err != unix.EINTR {
-			return 0, _IOERR_CHECKRESERVEDLOCK
+			return 0, sysError{err, def}
 		}
 	}
 }
 
-func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
+func osLockErrorCode(err error, def _ErrorCode) error {
 	if err == nil {
-		return _OK
+		return nil
 	}
 	if errno, ok := err.(unix.Errno); ok {
 		switch errno {
@@ -92,12 +92,12 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 			unix.ETIMEDOUT:
 			return _BUSY
 		case unix.EPERM:
-			return _PERM
+			return sysError{err, _PERM}
 		}
 		// notest // usually EWOULDBLOCK == EAGAIN
 		if errno == unix.EWOULDBLOCK && unix.EWOULDBLOCK != unix.EAGAIN {
 			return _BUSY
 		}
 	}
-	return def
+	return sysError{err, def}
 }
