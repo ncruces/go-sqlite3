@@ -40,16 +40,16 @@ func (s *vfsShm) Close() error {
 	return s.File.Close()
 }
 
-func (s *vfsShm) shmOpen() _ErrorCode {
+func (s *vfsShm) shmOpen() error {
+	if s.fileLock {
+		return nil
+	}
 	if s.File == nil {
 		f, err := os.OpenFile(s.path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
-			return _CANTOPEN
+			return sysError{err, _CANTOPEN}
 		}
 		s.File = f
-	}
-	if s.fileLock {
-		return _OK
 	}
 
 	// Dead man's switch.
@@ -57,12 +57,15 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 		err := s.Truncate(0)
 		osUnlock(s.File, _SHM_DMS, 1)
 		if err != nil {
-			return _IOERR_SHMOPEN
+			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
 	rc := osReadLock(s.File, _SHM_DMS, 1, 0)
-	s.fileLock = rc == _OK
-	return rc
+	if rc != _OK {
+		return rc
+	}
+	s.fileLock = true
+	return nil
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ ptr_t, err error) {
@@ -172,6 +175,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	// Close the file.
 	s.Close()
 	s.File = nil
+	s.fileLock = false
 	if delete {
 		os.Remove(s.path)
 	}

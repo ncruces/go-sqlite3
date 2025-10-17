@@ -68,9 +68,9 @@ func (s *vfsShm) Close() error {
 	panic(util.AssertErr())
 }
 
-func (s *vfsShm) shmOpen() (rc _ErrorCode) {
+func (s *vfsShm) shmOpen() (err error) {
 	if s.vfsShmParent != nil {
-		return _OK
+		return nil
 	}
 
 	vfsShmListMtx.Lock()
@@ -80,7 +80,7 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	// Closing it would release all POSIX locks on it.
 	fi, err := os.Stat(s.path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return _IOERR_FSTAT
+		return sysError{err, _IOERR_FSTAT}
 	}
 
 	// Find a shared file, increase the reference count.
@@ -88,7 +88,7 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 		if g != nil && os.SameFile(fi, g.info) {
 			s.vfsShmParent = g
 			g.refs++
-			return _OK
+			return nil
 		}
 	}
 
@@ -96,10 +96,10 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	f, err := os.OpenFile(s.path,
 		os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
 	if err != nil {
-		return _CANTOPEN
+		return sysError{err, _CANTOPEN}
 	}
 	defer func() {
-		if rc != _OK {
+		if err != nil {
 			f.Close()
 		}
 	}()
@@ -114,7 +114,7 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 			return rc
 		}
 		if err := f.Truncate(0); err != nil {
-			return _IOERR_SHMOPEN
+			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
 	if rc := osReadLock(f, _SHM_DMS, 1); rc != _OK {
@@ -123,7 +123,7 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 
 	fi, err = f.Stat()
 	if err != nil {
-		return _IOERR_FSTAT
+		return sysError{err, _IOERR_FSTAT}
 	}
 
 	// Add the new shared file.
@@ -134,11 +134,11 @@ func (s *vfsShm) shmOpen() (rc _ErrorCode) {
 	for i, g := range vfsShmList {
 		if g == nil {
 			vfsShmList[i] = s.vfsShmParent
-			return _OK
+			return nil
 		}
 	}
 	vfsShmList = append(vfsShmList, s.vfsShmParent)
-	return _OK
+	return nil
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
@@ -147,8 +147,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		return 0, _IOERR_SHMMAP
 	}
 
-	if rc := s.shmOpen(); rc != _OK {
-		return 0, rc
+	if err := s.shmOpen(); err != nil {
+		return 0, err
 	}
 
 	// Check if file is big enough.

@@ -27,7 +27,10 @@ type vfsShm struct {
 
 var _ blockingSharedMemory = &vfsShm{}
 
-func (s *vfsShm) shmOpen() _ErrorCode {
+func (s *vfsShm) shmOpen() error {
+	if s.fileLock {
+		return nil
+	}
 	if s.File == nil {
 		f, err := os.OpenFile(s.path,
 			os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
@@ -37,12 +40,9 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			s.readOnly = true
 		}
 		if err != nil {
-			return _CANTOPEN
+			return sysError{err, _CANTOPEN}
 		}
 		s.File = f
-	}
-	if s.fileLock {
-		return _OK
 	}
 
 	// Dead man's switch.
@@ -65,12 +65,15 @@ func (s *vfsShm) shmOpen() _ErrorCode {
 			return rc
 		}
 		if err := s.Truncate(0); err != nil {
-			return _IOERR_SHMOPEN
+			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
 	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
-	s.fileLock = rc == _OK
-	return rc
+	if rc != _OK {
+		return rc
+	}
+	s.fileLock = true
+	return nil
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
@@ -79,8 +82,8 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		return 0, _IOERR_SHMMAP
 	}
 
-	if rc := s.shmOpen(); rc != _OK {
-		return 0, rc
+	if err := s.shmOpen(); err != nil {
+		return 0, err
 	}
 
 	// Check if file is big enough.
@@ -170,6 +173,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	}
 	s.Close()
 	s.File = nil
+	s.fileLock = false
 }
 
 func (s *vfsShm) shmBarrier() {
