@@ -75,7 +75,7 @@ func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
 	return rc
 }
 
-func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
+func osDowngradeLock(file *os.File, state LockLevel) error {
 	if state >= LOCK_EXCLUSIVE {
 		// Release the EXCLUSIVE lock while holding the PENDING lock.
 		osUnlock(file, _SHARED_FIRST, _SHARED_SIZE)
@@ -94,7 +94,7 @@ func osDowngradeLock(file *os.File, state LockLevel) _ErrorCode {
 	if state >= LOCK_PENDING {
 		osUnlock(file, _PENDING_BYTE, 1)
 	}
-	return _OK
+	return nil
 }
 
 func osReleaseLock(file *os.File, state LockLevel) error {

@@ -84,7 +84,7 @@ func osGetExclusiveLock(file *os.File, _ *LockLevel) _ErrorCode {
 	return _OK
 }
 
-func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
+func osDowngradeLock(file *os.File, _ LockLevel) error {
 	vfsDotLocksMtx.Lock()
 	defer vfsDotLocksMtx.Unlock()
 
@@ -100,7 +100,7 @@ func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
 	if locker.pending == file {
 		locker.pending = nil
 	}
-	return _OK
+	return nil
 }
 
 func osReleaseLock(file *os.File, state LockLevel) error {

@@ -36,7 +36,7 @@ func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
 	return osGetReservedLock(file)
 }
 
-func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
+func osDowngradeLock(file *os.File, _ LockLevel) error {
 	rc := osFlock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_RDLOCK)
 	if rc == _BUSY {
 		// The documentation states that a lock is downgraded by
@@ -46,7 +46,7 @@ func osDowngradeLock(file *os.File, _ LockLevel) _ErrorCode {
 		// Return IOERR_RDLOCK, as BUSY would cause an assert to fail.
 		return _IOERR_RDLOCK
 	}
-	return _OK
+	return rc
 }
 
 func osReleaseLock(file *os.File, _ LockLevel) error {

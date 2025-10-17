@@ -101,9 +101,9 @@ func (f *vfsFile) Unlock(lock LockLevel) error {
 
 	switch lock {
 	case LOCK_SHARED:
-		rc := osDowngradeLock(f.File, f.lock)
+		err := osDowngradeLock(f.File, f.lock)
 		f.lock = LOCK_SHARED
-		return rc
+		return err
 
 	case LOCK_NONE:
 		err := osReleaseLock(f.File, f.lock)
