@@ -59,7 +59,7 @@ func osSetMode(file *os.File, modeof string) error {
 	return nil
 }
 
-func osTestLock(file *os.File, start, len int64) (int16, error) {
+func osTestLock(file *os.File, start, len int64, def _ErrorCode) (int16, error) {
 	lock := unix.Flock_t{
 		Type:  unix.F_WRLCK,
 		Start: start,
@@ -71,7 +71,7 @@ func osTestLock(file *os.File, start, len int64) (int16, error) {
 			return lock.Type, nil
 		}
 		if err != unix.EINTR {
-			return 0, sysError{err, _IOERR_CHECKRESERVEDLOCK}
+			return 0, sysError{err, def}
 		}
 	}
 }

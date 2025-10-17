@@ -11,7 +11,7 @@ import (
 
 func osGetSharedLock(file *os.File) error {
 	// Test the PENDING lock before acquiring a new SHARED lock.
-	if lock, _ := osTestLock(file, _PENDING_BYTE, 1); lock == unix.F_WRLCK {
+	if lock, _ := osTestLock(file, _PENDING_BYTE, 1, _IOERR); lock == unix.F_WRLCK {
 		return _BUSY
 	}
 	// Acquire the SHARED lock.
@@ -54,6 +54,6 @@ func osReleaseLock(file *os.File, _ LockLevel) error {
 
 func osCheckReservedLock(file *os.File) (bool, error) {
 	// Test the RESERVED lock.
-	lock, err := osTestLock(file, _RESERVED_BYTE, 1)
+	lock, err := osTestLock(file, _RESERVED_BYTE, 1, _IOERR_CHECKRESERVEDLOCK)
 	return lock == unix.F_WRLCK, err
 }
