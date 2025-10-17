@@ -48,6 +48,5 @@ func (s *vfsShm) shmMemLock(offset, n int32, flags _ShmFlag) error {
 	default:
 		panic(util.AssertErr())
 	}
-
 	return nil
 }

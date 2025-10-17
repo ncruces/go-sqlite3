@@ -47,7 +47,7 @@ func (s *vfsShm) shmOpen() error {
 	}
 
 	// Dead man's switch.
-	if lock, err := osTestLock(s.File, _SHM_DMS, 1); err != _OK {
+	if lock, err := osTestLock(s.File, _SHM_DMS, 1); err != nil {
 		return err
 	} else if lock == unix.F_WRLCK {
 		return _BUSY
@@ -62,19 +62,16 @@ func (s *vfsShm) shmOpen() error {
 		// but only downgrade it to a shared lock.
 		// So no point in blocking here.
 		// The call below to obtain the shared DMS lock may use a blocking lock.
-		if rc := osWriteLock(s.File, _SHM_DMS, 1, 0); rc != _OK {
-			return rc
+		if err := osWriteLock(s.File, _SHM_DMS, 1, 0); err != nil {
+			return err
 		}
 		if err := s.Truncate(0); err != nil {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
-	rc := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
-	if rc != _OK {
-		return rc
-	}
-	s.fileLock = true
-	return nil
+	err := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	s.fileLock = err == nil
+	return err
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {

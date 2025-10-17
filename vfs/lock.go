@@ -51,8 +51,8 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock != LOCK_NONE {
 			panic(util.AssertErr())
 		}
-		if rc := osGetSharedLock(f.File); rc != _OK {
-			return rc
+		if err := osGetSharedLock(f.File); err != nil {
+			return err
 		}
 		f.lock = LOCK_SHARED
 		return nil
@@ -62,8 +62,8 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock != LOCK_SHARED {
 			panic(util.AssertErr())
 		}
-		if rc := osGetReservedLock(f.File); rc != _OK {
-			return rc
+		if err := osGetReservedLock(f.File); err != nil {
+			return err
 		}
 		f.lock = LOCK_RESERVED
 		return nil
@@ -73,8 +73,8 @@ func (f *vfsFile) Lock(lock LockLevel) error {
 		if f.lock <= LOCK_NONE || f.lock >= LOCK_EXCLUSIVE {
 			panic(util.AssertErr())
 		}
-		if rc := osGetExclusiveLock(f.File, &f.lock); rc != _OK {
-			return rc
+		if err := osGetExclusiveLock(f.File, &f.lock); err != nil {
+			return err
 		}
 		f.lock = LOCK_EXCLUSIVE
 		return nil

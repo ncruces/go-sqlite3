@@ -75,15 +75,15 @@ func osAllocate(file *os.File, size int64) error {
 	return file.Truncate(size)
 }
 
-func osReadLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
+func osReadLock(file *os.File, start, len int64, timeout time.Duration) error {
 	return osLock(file, unix.F_RDLCK, start, len, timeout, _IOERR_RDLOCK)
 }
 
-func osWriteLock(file *os.File, start, len int64, timeout time.Duration) _ErrorCode {
+func osWriteLock(file *os.File, start, len int64, timeout time.Duration) error {
 	return osLock(file, unix.F_WRLCK, start, len, timeout, _IOERR_LOCK)
 }
 
-func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, def _ErrorCode) _ErrorCode {
+func osLock(file *os.File, typ int16, start, len int64, timeout time.Duration, def _ErrorCode) error {
 	lock := &flocktimeout_t{fl: unix.Flock_t{
 		Type:  typ,
 		Start: start,

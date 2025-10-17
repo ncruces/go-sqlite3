@@ -54,19 +54,16 @@ func (s *vfsShm) shmOpen() error {
 	}
 
 	// Dead man's switch.
-	if rc := osWriteLock(s.File, _SHM_DMS, 1, 0); rc == _OK {
+	if osWriteLock(s.File, _SHM_DMS, 1, 0) == nil {
 		err := s.Truncate(0)
 		osUnlock(s.File, _SHM_DMS, 1)
 		if err != nil {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
-	rc := osReadLock(s.File, _SHM_DMS, 1, 0)
-	if rc != _OK {
-		return rc
-	}
-	s.fileLock = true
-	return nil
+	err := osReadLock(s.File, _SHM_DMS, 1, 0)
+	s.fileLock = err == nil
+	return err
 }
 
 func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ ptr_t, err error) {

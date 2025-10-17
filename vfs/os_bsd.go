@@ -8,13 +8,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func osGetSharedLock(file *os.File) _ErrorCode {
+func osGetSharedLock(file *os.File) error {
 	return osFlock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_RDLOCK)
 }
 
-func osGetReservedLock(file *os.File) _ErrorCode {
-	rc := osFlock(file, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK)
-	if rc == _BUSY {
+func osGetReservedLock(file *os.File) error {
+	err := osFlock(file, unix.LOCK_EX|unix.LOCK_NB, _IOERR_LOCK)
+	if err == _BUSY {
 		// The documentation states that a lock is upgraded by
 		// releasing the previous lock, then acquiring the new lock.
 		// Going over the source code of various BSDs, though,
@@ -26,19 +26,19 @@ func osGetReservedLock(file *os.File) _ErrorCode {
 		// and invoke the busy handler if appropriate.
 		return _BUSY_SNAPSHOT
 	}
-	return rc
+	return err
 }
 
-func osGetExclusiveLock(file *os.File, state *LockLevel) _ErrorCode {
+func osGetExclusiveLock(file *os.File, state *LockLevel) error {
 	if *state >= LOCK_RESERVED {
-		return _OK
+		return nil
 	}
 	return osGetReservedLock(file)
 }
 
 func osDowngradeLock(file *os.File, _ LockLevel) error {
-	rc := osFlock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_RDLOCK)
-	if rc == _BUSY {
+	err := osFlock(file, unix.LOCK_SH|unix.LOCK_NB, _IOERR_RDLOCK)
+	if err == _BUSY {
 		// The documentation states that a lock is downgraded by
 		// releasing the previous lock then acquiring the new lock.
 		// Going over the source code of various BSDs, though,
@@ -46,7 +46,7 @@ func osDowngradeLock(file *os.File, _ LockLevel) error {
 		// Return IOERR_RDLOCK, as BUSY would cause an assert to fail.
 		return _IOERR_RDLOCK
 	}
-	return rc
+	return err
 }
 
 func osReleaseLock(file *os.File, _ LockLevel) error {
@@ -70,20 +70,20 @@ func osCheckReservedLock(file *os.File) (bool, error) {
 	return lock == unix.F_WRLCK, err
 }
 
-func osFlock(file *os.File, how int, def _ErrorCode) _ErrorCode {
+func osFlock(file *os.File, how int, def _ErrorCode) error {
 	err := unix.Flock(int(file.Fd()), how)
 	return osLockErrorCode(err, def)
 }
 
-func osReadLock(file *os.File, start, len int64) _ErrorCode {
+func osReadLock(file *os.File, start, len int64) error {
 	return osLock(file, unix.F_RDLCK, start, len, _IOERR_RDLOCK)
 }
 
-func osWriteLock(file *os.File, start, len int64) _ErrorCode {
+func osWriteLock(file *os.File, start, len int64) error {
 	return osLock(file, unix.F_WRLCK, start, len, _IOERR_LOCK)
 }
 
-func osLock(file *os.File, typ int16, start, len int64, def _ErrorCode) _ErrorCode {
+func osLock(file *os.File, typ int16, start, len int64, def _ErrorCode) error {
 	err := unix.FcntlFlock(file.Fd(), unix.F_SETLK, &unix.Flock_t{
 		Type:  typ,
 		Start: start,

@@ -76,9 +76,9 @@ func osTestLock(file *os.File, start, len int64) (int16, error) {
 	}
 }
 
-func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
+func osLockErrorCode(err error, def _ErrorCode) error {
 	if err == nil {
-		return _OK
+		return nil
 	}
 	if errno, ok := err.(unix.Errno); ok {
 		switch errno {
@@ -92,12 +92,12 @@ func osLockErrorCode(err error, def _ErrorCode) _ErrorCode {
 			unix.ETIMEDOUT:
 			return _BUSY
 		case unix.EPERM:
-			return _PERM
+			return sysError{err, _PERM}
 		}
 		// notest // usually EWOULDBLOCK == EAGAIN
 		if errno == unix.EWOULDBLOCK && unix.EWOULDBLOCK != unix.EAGAIN {
 			return _BUSY
 		}
 	}
-	return def
+	return sysError{err, def}
 }

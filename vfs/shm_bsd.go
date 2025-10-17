@@ -111,15 +111,15 @@ func (s *vfsShm) shmOpen() (err error) {
 	} else if lock == unix.F_WRLCK {
 		return _BUSY
 	} else if lock == unix.F_UNLCK {
-		if rc := osWriteLock(f, _SHM_DMS, 1); rc != _OK {
-			return rc
+		if err := osWriteLock(f, _SHM_DMS, 1); err != nil {
+			return err
 		}
 		if err := f.Truncate(0); err != nil {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
-	if rc := osReadLock(f, _SHM_DMS, 1); rc != _OK {
-		return rc
+	if err := osReadLock(f, _SHM_DMS, 1); err != nil {
+		return err
 	}
 
 	fi, err = f.Stat()
@@ -224,11 +224,10 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 		panic(util.AssertErr())
 	}
 
-	if err == nil || err == _OK {
-		return nil
+	if err != nil {
+		// Release the local locks we had acquired.
+		s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
 	}
-	// Release the local locks we had acquired.
-	s.shmMemLock(offset, n, flags^(_SHM_UNLOCK|_SHM_LOCK))
 	return err
 }
 
