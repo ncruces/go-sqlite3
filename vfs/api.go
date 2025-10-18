@@ -207,6 +207,10 @@ type blockingSharedMemory interface {
 	shmEnableBlocking(block bool)
 }
 
+// FileControl makes it easy to forward all fileControl methods,
+// which we want to do for the checksum VFS.
+// However, this is not a safe default, and other VFSes
+// should explicitly wrap the methods they want to wrap.
 type fileControl interface {
 	File
 	fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg ptr_t) _ErrorCode

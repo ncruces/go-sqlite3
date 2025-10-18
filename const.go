@@ -234,7 +234,8 @@ const (
 	DBSTATUS_DEFERRED_FKS        DBStatus = 10
 	DBSTATUS_CACHE_USED_SHARED   DBStatus = 11
 	DBSTATUS_CACHE_SPILL         DBStatus = 12
-	// DBSTATUS_MAX              DBStatus = 12
+	DBSTATUS_TEMPBUF_SPILL       DBStatus = 13
+	// DBSTATUS_MAX              DBStatus = 13
 )
 
 // DBConfig are the available database connection configuration options.

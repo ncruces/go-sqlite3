@@ -15,9 +15,9 @@ cp "$ROOT"/sqlite3/*.[ch] build/
 cp "$ROOT"/sqlite3/*.patch build/
 cd sqlite/
 
-# https://sqlite.org/src/info/ba2174bdca7d1d1a
-curl -#L https://github.com/sqlite/sqlite/archive/b46738f.tar.gz | tar xz --strip-components=1
-# curl -#L https://sqlite.org/src/tarball/sqlite.tar.gz?r=ba2174bdca | tar xz --strip-components=1
+# https://sqlite.org/src/info/0e862bc9ed7aa9ae
+curl -#L https://github.com/sqlite/sqlite/archive/0b99392.tar.gz | tar xz --strip-components=1
+# curl -#L https://sqlite.org/src/tarball/sqlite.tar.gz?r=0e862bc9ed | tar xz --strip-components=1
 
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
 	MSYS_NO_PATHCONV=1 nmake /f makefile.msc sqlite3.c "OPTS=-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_ENABLE_ORDERED_SET_AGGREGATES"

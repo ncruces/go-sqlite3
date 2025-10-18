@@ -55,7 +55,7 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 
 	if cipher == nil {
 		file.Close()
-		return nil, flags, sqlite3.CANTOPEN
+		return nil, flags, sqlite3.IOERR_BADKEY
 	}
 	return &xtsFile{File: file, cipher: cipher, init: x.init}, flags, nil
 }
@@ -103,7 +103,7 @@ func (x *xtsFile) Pragma(name string, value string) (string, error) {
 	if x.cipher = x.init.XTS(key); x.cipher != nil {
 		return "ok", nil
 	}
-	return "", sqlite3.CANTOPEN
+	return "", sqlite3.IOERR_BADKEY
 }
 
 func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
