@@ -26,11 +26,16 @@ func NewContext(ctx context.Context) context.Context {
 }
 
 func GetSystemError(ctx context.Context) error {
-	s := ctx.Value(moduleKey{}).(*moduleState)
-	return s.sysError
+	// Test needed to simplify testing.
+	s, ok := ctx.Value(moduleKey{}).(*moduleState)
+	if ok {
+		return s.sysError
+	}
+	return nil
 }
 
 func SetSystemError(ctx context.Context, err error) {
+	// Test needed to simplify testing.
 	s, ok := ctx.Value(moduleKey{}).(*moduleState)
 	if ok {
 		s.sysError = err

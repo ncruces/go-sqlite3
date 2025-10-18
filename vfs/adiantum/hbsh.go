@@ -56,7 +56,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 
 	if hbsh == nil {
 		file.Close()
-		return nil, flags, sqlite3.CANTOPEN
+		return nil, flags, sqlite3.IOERR_BADKEY
 	}
 	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
 }
@@ -108,7 +108,7 @@ func (h *hbshFile) Pragma(name string, value string) (string, error) {
 	if h.hbsh = h.init.HBSH(key); h.hbsh != nil {
 		return "ok", nil
 	}
-	return "", sqlite3.CANTOPEN
+	return "", sqlite3.IOERR_BADKEY
 }
 
 func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
