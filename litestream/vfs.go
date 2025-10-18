@@ -238,7 +238,7 @@ func (f *liteDB) updateLevel(ctx context.Context, level int) error {
 	}
 
 	// Start reading from the next LTX file after the current position.
-	itr, err := f.client.LTXFiles(ctx, level, nextTXID)
+	itr, err := f.client.LTXFiles(ctx, level, nextTXID, false)
 	if err != nil {
 		return fmt.Errorf("ltx files: %w", err)
 	}
