@@ -339,7 +339,7 @@ func (m _Migrator) GetIndexes(value interface{}) ([]gorm.Index, error) {
 	indexes := make([]gorm.Index, 0)
 	err := m.RunWithValue(value, func(stmt *gorm.Statement) error {
 		rst := make([]*_Index, 0)
-		if err := m.DB.Debug().Raw("SELECT * FROM PRAGMA_index_list(?)", stmt.Table).Scan(&rst).Error; err != nil { // alias `PRAGMA index_list(?)`
+		if err := m.DB.Raw("SELECT * FROM PRAGMA_index_list(?)", stmt.Table).Scan(&rst).Error; err != nil { // alias `PRAGMA index_list(?)`
 			return err
 		}
 		for _, index := range rst {
