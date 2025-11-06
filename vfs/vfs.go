@@ -470,6 +470,8 @@ func vfsErrorCode(ctx context.Context, err error, code _ErrorCode) _ErrorCode {
 		switch v := reflect.ValueOf(err); v.Kind() {
 		case reflect.Uint8, reflect.Uint16:
 			code = _ErrorCode(v.Uint())
+		default:
+			sys = err
 		}
 	}
 

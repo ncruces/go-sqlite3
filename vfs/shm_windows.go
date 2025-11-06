@@ -98,7 +98,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 
 	// Maps regions into memory.
 	for int(id) >= len(s.shared) {
-		r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size)
+		r, err := util.MapRegion(s.File, int64(id)*int64(size), size)
 		if err != nil {
 			return 0, err
 		}
