@@ -2,7 +2,7 @@ module modernc.org/sqlite
 
 go 1.24.0
 
-require github.com/ncruces/go-sqlite3 v0.30.0
+require github.com/ncruces/go-sqlite3 v0.30.1
 
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect

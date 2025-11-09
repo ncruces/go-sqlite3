@@ -234,3 +234,15 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+  test-winarm:
+    runs-on: windows-11-arm
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-go@v6
+      with: { go-version: stable }
+
+    - name: Test
+      run: go test -v ./...
