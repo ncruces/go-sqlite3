@@ -5,12 +5,14 @@ import (
 	"context"
 	"math/bits"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"unsafe"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -79,7 +81,9 @@ func compileSQLite() {
 		return
 	}
 
-	instance.compiled, instance.err = instance.runtime.CompileModule(ctx, bin)
+	instance.compiled, instance.err = instance.runtime.CompileModule(
+		experimental.WithCompilationWorkers(ctx, runtime.GOMAXPROCS(0)/4),
+		bin)
 }
 
 type sqlite struct {
