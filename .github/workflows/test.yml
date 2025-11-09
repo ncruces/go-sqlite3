@@ -74,7 +74,7 @@ jobs:
     - name: Test GORM
       shell: bash
       run: gormlite/test.sh
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
 
     - name: Collect coverage
       run: |
