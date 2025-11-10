@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo 'set -eu' > test.sh
+echo 'set -eux' > test.sh
 
 for p in $(go list ./...); do
   dir=".${p#github.com/ncruces/go-sqlite3}"
