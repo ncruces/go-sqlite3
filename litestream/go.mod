@@ -12,7 +12,7 @@ require (
 // github.com/ncruces/go-sqlite3
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect
-	github.com/tetratelabs/wazero v1.10.0 // indirect
+	github.com/tetratelabs/wazero v1.10.1 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/psanford/sqlite3vfs v0.0.0-20240315230605-24e1d98cf361 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/crypto v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	modernc.org/sqlite v1.40.0 // indirect
 )
