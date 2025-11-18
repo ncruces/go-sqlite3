@@ -58,6 +58,7 @@ cd ~-
 	-Wl,--initial-memory=327680 \
 	-D_HAVE_SQLITE_CONFIG_H \
 	-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT \
+	-DSQLITE_ENABLE_ORDERED_SET_AGGREGATES \
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' ../exports.txt)
 
