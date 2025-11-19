@@ -1,47 +1,33 @@
-package litestream_test
+package litestream
 
 import (
-	"log"
-	"time"
+	"slices"
+	"strconv"
+	"testing"
 
-	"github.com/benbjohnson/litestream/s3"
-	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/benbjohnson/litestream"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/litestream"
 )
 
-func ExampleNewReplica() {
-	client := s3.NewReplicaClient()
-	client.Bucket = "test-bucket"
-	client.Path = "fruits.db"
-
-	litestream.NewReplica("fruits.db", client, litestream.ReplicaOptions{
-		PollInterval: 5 * time.Second,
-	})
-
-	db, err := driver.Open("file:fruits.db?vfs=litestream")
-	if err != nil {
-		log.Fatalln(err)
+func Test_pollLevels(t *testing.T) {
+	tests := []struct {
+		minLevel int
+		want     []int
+	}{
+		{minLevel: -1, want: []int{0, 1, litestream.SnapshotLevel}},
+		{minLevel: 0, want: []int{0, 1, litestream.SnapshotLevel}},
+		{minLevel: 1, want: []int{1, litestream.SnapshotLevel}},
+		{minLevel: 2, want: []int{2, litestream.SnapshotLevel}},
+		{minLevel: 3, want: []int{3, litestream.SnapshotLevel}},
+		{minLevel: litestream.SnapshotLevel, want: []int{litestream.SnapshotLevel}},
+		{minLevel: litestream.SnapshotLevel + 1, want: []int{litestream.SnapshotLevel}},
 	}
-	defer db.Close()
-
-	for {
-		time.Sleep(time.Second)
-		rows, err := db.Query("SELECT * FROM fruits")
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		for rows.Next() {
-			var name, color string
-			err := rows.Scan(&name, &color)
-			if err != nil {
-				log.Fatalln(err)
+	for _, tt := range tests {
+		t.Run(strconv.Itoa(tt.minLevel), func(t *testing.T) {
+			got := pollLevels(tt.minLevel)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("pollLevels() = %v, want %v", got, tt.want)
 			}
-			log.Println(name, color)
-		}
-
-		log.Println("===")
-		rows.Close()
+		})
 	}
 }

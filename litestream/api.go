@@ -44,7 +44,6 @@ func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOpt
 	if options.PollInterval <= 0 {
 		options.PollInterval = DefaultPollInterval
 	}
-	options.MinLevel = max(0, min(options.MinLevel, litestream.SnapshotLevel))
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
