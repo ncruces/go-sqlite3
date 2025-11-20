@@ -10,8 +10,13 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
-// The default poll interval.
-const DefaultPollInterval = 1 * time.Second
+const (
+	// The default poll interval.
+	DefaultPollInterval = 1 * time.Second
+
+	// The default cache size: 10 MiB.
+	DefaultCacheSize = 10 * 1024 * 1024
+)
 
 func init() {
 	vfs.Register("litestream", liteVFS{})
@@ -27,11 +32,18 @@ var (
 type ReplicaOptions struct {
 	// Where to log error messages. May be nil.
 	Logger *slog.Logger
-	// Minimum compaction level to track.
-	MinLevel int
-	// Replica poll interval. Must be less than the compaction interval
+
+	// Replica poll interval.
+	// Should be less than the compaction interval
 	// used by the replica at MinLevel+1.
 	PollInterval time.Duration
+
+	// Minimum compaction level to track.
+	MinLevel int
+
+	// CacheSize is the maximum size of the page cache in bytes.
+	// Zero means DefaultCacheSize, negative disables caching.
+	CacheSize int
 }
 
 // NewReplica creates a read-replica from a Litestream client.
@@ -44,12 +56,16 @@ func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOpt
 	if options.PollInterval <= 0 {
 		options.PollInterval = DefaultPollInterval
 	}
+	if options.CacheSize == 0 {
+		options.CacheSize = DefaultCacheSize
+	}
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
 	liteDBs[name] = &liteDB{
 		client: client,
-		opts:   &options,
+		opts:   options,
+		cache:  pageCache{size: options.CacheSize},
 	}
 }
 

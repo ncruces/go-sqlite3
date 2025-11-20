@@ -86,7 +86,10 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	_, data, err := litestream.FetchPage(ctx, f.db.client, elem.Level, elem.MinTXID, elem.MaxTXID, elem.Offset, elem.Size)
+	data, err := f.db.cache.getOrFetch(pgno, elem.MaxTXID, func() (any, error) {
+		_, data, err := litestream.FetchPage(ctx, f.db.client, elem.Level, elem.MinTXID, elem.MaxTXID, elem.Offset, elem.Size)
+		return data, err
+	})
 	if err != nil {
 		f.db.opts.Logger.Error("fetch page", "error", err)
 		return 0, err
@@ -169,7 +172,8 @@ func (f *liteFile) context() context.Context {
 
 type liteDB struct {
 	client   litestream.ReplicaClient
-	opts     *ReplicaOptions
+	opts     ReplicaOptions
+	cache    pageCache
 	pages    *pageIndex // +checklocks:mtx
 	lastPoll time.Time  // +checklocks:mtx
 	txids    levelTXIDs // +checklocks:mtx
