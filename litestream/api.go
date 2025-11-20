@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/litestream"
+
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 

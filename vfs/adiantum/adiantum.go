@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 
 	"golang.org/x/crypto/argon2"
+
 	"lukechampine.com/adiantum"
 	"lukechampine.com/adiantum/hbsh"
 )

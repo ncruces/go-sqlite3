@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/benbjohnson/litestream"
+
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
 

@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/benbjohnson/litestream"
+	"github.com/superfly/ltx"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/wbt"
-	"github.com/superfly/ltx"
 )
 
 type liteVFS struct{}

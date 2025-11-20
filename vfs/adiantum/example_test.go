@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"golang.org/x/crypto/argon2"
+
 	"lukechampine.com/adiantum/hbsh"
 	"lukechampine.com/adiantum/hpolyc"
 

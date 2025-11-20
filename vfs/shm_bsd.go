@@ -11,8 +11,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/tetratelabs/wazero/api"
 	"golang.org/x/sys/unix"
+
+	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
