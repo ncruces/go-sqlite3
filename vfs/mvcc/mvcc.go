@@ -90,7 +90,7 @@ type mvccFile struct {
 	data     *wbt.Tree[int64, string]
 	lock     vfs.LockLevel
 	readOnly bool
-	pragma   byte
+	wrflag   bool
 }
 
 var (
@@ -214,8 +214,9 @@ func (m *mvccFile) Truncate(size int64) error {
 }
 
 func (m *mvccFile) Pragma(name, value string) (string, error) {
+	// notest // https://sqlite.org/forum/forumpost/c4ca8e7f4a887aa4
 	if name == "experimental_pragma_20251114" {
-		m.pragma = value[0]
+		m.wrflag = true
 	}
 	return "", sqlite3.NOTFOUND
 }
@@ -233,13 +234,10 @@ func (m *mvccFile) Lock(lock vfs.LockLevel) error {
 	defer m.mtx.Unlock()
 
 	// Take a snapshot of the database.
-	if lock == vfs.LOCK_SHARED {
-		if m.pragma != '1' {
-			m.data = m.mvccDB.data
-			m.lock = lock
-			return nil
-		}
-		lock = vfs.LOCK_RESERVED
+	if lock == vfs.LOCK_SHARED && !m.wrflag {
+		m.data = m.mvccDB.data
+		m.lock = lock
+		return nil
 	}
 	// We are the owners.
 	if m.owner == m {
@@ -264,16 +262,16 @@ func (m *mvccFile) Lock(lock vfs.LockLevel) error {
 			m.waiter.Wait()
 		}
 	}
-	// Our snapshot is invalid.
-	if m.data != nil && m.data != m.mvccDB.data {
+	switch {
+	case m.data == nil:
+		m.data = m.mvccDB.data
+	case m.data != m.mvccDB.data:
+		// Our snapshot is invalid.
 		return sqlite3.BUSY_SNAPSHOT
 	}
 	// Take ownership.
-	if m.data == nil {
-		m.data = m.mvccDB.data
-	}
+	m.wrflag = false
 	m.lock = lock
-	m.pragma = 0
 	m.owner = m
 	return nil
 }
