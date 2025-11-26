@@ -7,6 +7,7 @@ require (
 	github.com/ncruces/go-sqlite3 v0.30.1
 	github.com/ncruces/wbt v0.2.0
 	github.com/superfly/ltx v0.5.0
+	golang.org/x/sync v0.18.0
 )
 
 // github.com/ncruces/go-sqlite3
@@ -28,7 +29,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.3 // indirect
+	github.com/prometheus/common v0.67.4 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/psanford/sqlite3vfs v0.0.0-20240315230605-24e1d98cf361 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
@@ -60,4 +61,4 @@ require (
 	github.com/aws/smithy-go v1.22.5 // indirect
 )
 
-replace modernc.org/sqlite => github.com/ncruces/go-sqlite3/litestream/modernc v0.0.0-20251109124432-99b097de3b79
+replace modernc.org/sqlite => github.com/ncruces/go-sqlite3/litestream/modernc v0.30.1
