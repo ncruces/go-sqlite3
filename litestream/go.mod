@@ -3,8 +3,8 @@ module github.com/ncruces/go-sqlite3/litestream
 go 1.24.4
 
 require (
-	github.com/benbjohnson/litestream v0.5.2
-	github.com/ncruces/go-sqlite3 v0.30.1
+	github.com/benbjohnson/litestream v0.5.3-0.20251109214555-48dc960260f0
+	github.com/ncruces/go-sqlite3 v0.30.2
 	github.com/ncruces/wbt v0.2.0
 	github.com/superfly/ltx v0.5.0
 	golang.org/x/sync v0.18.0

@@ -49,7 +49,7 @@ type ReplicaOptions struct {
 }
 
 // NewReplica creates a read-replica from a Litestream client.
-func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOptions) {
+func NewReplica(name string, client ReplicaClient, options ReplicaOptions) {
 	if options.Logger != nil {
 		options.Logger = options.Logger.With("name", name)
 	} else {
@@ -61,6 +61,7 @@ func NewReplica(name string, client litestream.ReplicaClient, options ReplicaOpt
 	if options.CacheSize == 0 {
 		options.CacheSize = DefaultCacheSize
 	}
+	options.MinLevel = max(0, min(options.MinLevel, litestream.SnapshotLevel))
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
@@ -78,9 +79,9 @@ func RemoveReplica(name string) {
 	delete(liteDBs, name)
 }
 
-// NewPrimary creates a new primary that replicates through a client.
+// NewPrimary creates a new primary that replicates through client.
 // If restore is not nil, the database is first restored.
-func NewPrimary(ctx context.Context, path string, client litestream.ReplicaClient, restore *litestream.RestoreOptions) (*litestream.DB, error) {
+func NewPrimary(ctx context.Context, path string, client ReplicaClient, restore *RestoreOptions) (*litestream.DB, error) {
 	lsdb := litestream.NewDB(path)
 	lsdb.Replica = litestream.NewReplicaWithClient(lsdb, client)
 
@@ -97,3 +98,8 @@ func NewPrimary(ctx context.Context, path string, client litestream.ReplicaClien
 	}
 	return lsdb, nil
 }
+
+type (
+	ReplicaClient  = litestream.ReplicaClient
+	RestoreOptions = litestream.RestoreOptions
+)

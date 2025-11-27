@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 	"time"
 
@@ -160,6 +161,34 @@ func (f *liteFile) DeviceCharacteristics() vfs.DeviceCharacteristic {
 	return 0
 }
 
+func (f *liteFile) Pragma(name, value string) (string, error) {
+	switch name {
+	case "litestream_txid":
+		txid := f.txid
+		if txid == 0 {
+			// Outside transaction.
+			f.db.mtx.Lock()
+			txid = f.db.txids[f.db.opts.MinLevel]
+			f.db.mtx.Unlock()
+		}
+		return txid.String(), nil
+
+	case "litestream_lag":
+		f.db.mtx.Lock()
+		lastPoll := f.db.lastPoll
+		f.db.mtx.Unlock()
+
+		if lastPoll.IsZero() {
+			// Never polled successfully.
+			return "-1", nil
+		}
+		lag := time.Since(lastPoll) / time.Second
+		return strconv.FormatInt(int64(lag), 10), nil
+	}
+
+	return "", sqlite3.NOTFOUND
+}
+
 func (f *liteFile) SetDB(conn any) {
 	f.conn = conn.(*sqlite3.Conn)
 }
@@ -216,7 +245,7 @@ func (f *liteDB) pollReplica(ctx context.Context) (*pageIndex, ltx.TXID, error) 
 
 	// Limit polling interval.
 	if time.Since(f.lastPoll) < f.opts.PollInterval {
-		return f.pages, f.txids[0], nil
+		return f.pages, f.txids[f.opts.MinLevel], nil
 	}
 
 	for level := range pollLevels(f.opts.MinLevel) {
@@ -227,7 +256,7 @@ func (f *liteDB) pollReplica(ctx context.Context) (*pageIndex, ltx.TXID, error) 
 	}
 
 	f.lastPoll = time.Now()
-	return f.pages, f.txids[0], nil
+	return f.pages, f.txids[f.opts.MinLevel], nil
 }
 
 // +checklocks:f.mtx
