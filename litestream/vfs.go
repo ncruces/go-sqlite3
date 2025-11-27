@@ -168,7 +168,7 @@ func (f *liteFile) Pragma(name, value string) (string, error) {
 		if txid == 0 {
 			// Outside transaction.
 			f.db.mtx.Lock()
-			txid = f.db.txids[f.db.opts.MinLevel]
+			txid = f.db.txids[0]
 			f.db.mtx.Unlock()
 		}
 		return txid.String(), nil
@@ -245,10 +245,10 @@ func (f *liteDB) pollReplica(ctx context.Context) (*pageIndex, ltx.TXID, error) 
 
 	// Limit polling interval.
 	if time.Since(f.lastPoll) < f.opts.PollInterval {
-		return f.pages, f.txids[f.opts.MinLevel], nil
+		return f.pages, f.txids[0], nil
 	}
 
-	for level := range pollLevels(f.opts.MinLevel) {
+	for level := range []int{0, 1, litestream.SnapshotLevel} {
 		if err := f.updateLevel(ctx, level); err != nil {
 			f.opts.Logger.Error("cannot poll replica", "error", err)
 			return nil, 0, err
@@ -256,7 +256,7 @@ func (f *liteDB) pollReplica(ctx context.Context) (*pageIndex, ltx.TXID, error) 
 	}
 
 	f.lastPoll = time.Now()
-	return f.pages, f.txids[f.opts.MinLevel], nil
+	return f.pages, f.txids[0], nil
 }
 
 // +checklocks:f.mtx
@@ -313,24 +313,8 @@ func (f *liteDB) updateInfo(ctx context.Context, info *ltx.FileInfo) error {
 	// Track the MaxTXID for each level.
 	maxTXID := &f.txids[info.Level]
 	*maxTXID = max(*maxTXID, info.MaxTXID)
+	f.txids[0] = max(f.txids[0], *maxTXID)
 	return nil
-}
-
-func pollLevels(minLevel int) (r []int) {
-	// Updating from lower to upper levels is non-racy,
-	// since LTX files are compacted into higher levels
-	// before the lower level LTX files are deleted.
-
-	// Also, only level 0 compactions and snapshots delete files,
-	// so the intermediate levels never need to be updated.
-
-	if minLevel <= 0 {
-		return append(r, 0, 1, litestream.SnapshotLevel)
-	}
-	if minLevel >= litestream.SnapshotLevel {
-		return append(r, litestream.SnapshotLevel)
-	}
-	return append(r, minLevel, litestream.SnapshotLevel)
 }
 
 // Type aliases; these are a mouthful.

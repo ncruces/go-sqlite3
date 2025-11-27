@@ -9,8 +9,7 @@ The `"litestream"` SQLite VFS implements Litestream
 
 See the [example](example_test.go) for how to use.
 
-To improve performance,
-increase `PollInterval` (and `MinLevel`) as much as you can,
+To improve performance, increase `PollInterval` as much as you can,
 and set [`PRAGMA cache_size=N`](https://www.sqlite.org/pragma.html#pragma_cache_size)
 (or use `_pragma=cache_size(N)`).
 

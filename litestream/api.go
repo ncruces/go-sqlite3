@@ -40,9 +40,6 @@ type ReplicaOptions struct {
 	// used by the replica at MinLevel+1.
 	PollInterval time.Duration
 
-	// Minimum compaction level to track.
-	MinLevel int
-
 	// CacheSize is the maximum size of the page cache in bytes.
 	// Zero means DefaultCacheSize, negative disables caching.
 	CacheSize int
@@ -61,7 +58,6 @@ func NewReplica(name string, client ReplicaClient, options ReplicaOptions) {
 	if options.CacheSize == 0 {
 		options.CacheSize = DefaultCacheSize
 	}
-	options.MinLevel = max(0, min(options.MinLevel, litestream.SnapshotLevel))
 
 	liteMtx.Lock()
 	defer liteMtx.Unlock()
