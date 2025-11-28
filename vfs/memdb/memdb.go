@@ -223,7 +223,7 @@ func (m *memFile) Lock(lock vfs.LockLevel) error {
 		m.reserved = true
 
 	case vfs.LOCK_EXCLUSIVE:
-		if m.lock < vfs.LOCK_PENDING {
+		if m.lock == vfs.LOCK_RESERVED {
 			m.lock = vfs.LOCK_PENDING
 			m.pending = true
 		}

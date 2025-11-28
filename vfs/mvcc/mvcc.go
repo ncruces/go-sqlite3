@@ -252,9 +252,8 @@ func (m *mvccFile) Lock(lock vfs.LockLevel) error {
 		}
 		defer time.AfterFunc(time.Millisecond, m.waiter.Broadcast).Stop()
 		for m.owner != nil {
-			// Our snapshot is invalid.
 			if m.data != nil && m.data != m.mvccDB.data {
-				return sqlite3.BUSY_SNAPSHOT
+				return sqlite3.BUSY_SNAPSHOT // Our snapshot is invalid.
 			}
 			if time.Since(before) > time.Millisecond {
 				return sqlite3.BUSY
@@ -266,17 +265,16 @@ func (m *mvccFile) Lock(lock vfs.LockLevel) error {
 	case m.data == nil:
 		m.data = m.mvccDB.data
 	case m.data != m.mvccDB.data:
-		// Our snapshot is invalid.
-		return sqlite3.BUSY_SNAPSHOT
+		return sqlite3.BUSY_SNAPSHOT // Our snapshot is invalid.
 	}
 	// Take ownership.
-	m.wrflag = false
 	m.lock = lock
 	m.owner = m
 	return nil
 }
 
 func (m *mvccFile) Unlock(lock vfs.LockLevel) error {
+	m.wrflag = false // SQLite calls unlock even if locking is unsuccessful.
 	if m.lock <= lock {
 		return nil
 	}
@@ -287,7 +285,9 @@ func (m *mvccFile) Unlock(lock vfs.LockLevel) error {
 	// Relase ownership, commit changes.
 	if m.owner == m {
 		m.owner = nil
-		m.mvccDB.data = m.data
+		if m.lock == vfs.LOCK_EXCLUSIVE {
+			m.mvccDB.data = m.data
+		}
 		if m.waiter != nil {
 			m.waiter.Broadcast()
 		}
