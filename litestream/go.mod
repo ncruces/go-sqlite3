@@ -31,7 +31,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.4 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
-	github.com/psanford/sqlite3vfs v0.0.0-20240315230605-24e1d98cf361 // indirect
+	github.com/psanford/sqlite3vfs v0.0.0-20251127171934-4e34e03a991a // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect

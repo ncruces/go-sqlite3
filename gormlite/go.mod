@@ -3,7 +3,7 @@ module github.com/ncruces/go-sqlite3/gormlite
 go 1.24.0
 
 require (
-	github.com/ncruces/go-sqlite3 v0.30.1
+	github.com/ncruces/go-sqlite3 v0.30.2
 	gorm.io/gorm v1.31.1
 )
 

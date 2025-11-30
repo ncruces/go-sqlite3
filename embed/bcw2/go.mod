@@ -2,7 +2,7 @@ module github.com/ncruces/go-sqlite3/embed/bcw2
 
 go 1.24.0
 
-require github.com/ncruces/go-sqlite3 v0.30.1
+require github.com/ncruces/go-sqlite3 v0.30.2
 
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect
