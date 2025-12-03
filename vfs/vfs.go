@@ -329,9 +329,9 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 
 	case _FCNTL_PRAGMA:
 		if file, ok := file.(FilePragma); ok {
+			var value string
 			ptr := util.Read32[ptr_t](mod, pArg+1*ptrlen)
 			name := util.ReadString(mod, ptr, _MAX_SQL_LENGTH)
-			var value string
 			if ptr := util.Read32[ptr_t](mod, pArg+2*ptrlen); ptr != 0 {
 				value = util.ReadString(mod, ptr, _MAX_SQL_LENGTH)
 			}
