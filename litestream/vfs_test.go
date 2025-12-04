@@ -23,12 +23,9 @@ func Test_integration(t *testing.T) {
 	defer db.Close()
 
 	client := file.NewReplicaClient(backup)
+	setupReplication(t, dbpath, client)
+
 	NewReplica("test.db", client, ReplicaOptions{})
-
-	if err := setupPrimary(t, dbpath, client); err != nil {
-		t.Fatal(err)
-	}
-
 	replica, err := driver.Open("file:test.db?vfs=litestream")
 	if err != nil {
 		t.Fatal(err)
@@ -114,10 +111,13 @@ func Test_integration(t *testing.T) {
 	}
 }
 
-func setupPrimary(tb testing.TB, path string, client ReplicaClient) error {
-	db, err := NewPrimary(tb.Context(), path, client, nil)
-	if err == nil {
-		tb.Cleanup(func() { db.Close(tb.Context()) })
+func setupReplication(tb testing.TB, path string, client ReplicaClient) {
+	lsdb := litestream.NewDB(path)
+	lsdb.Replica = litestream.NewReplicaWithClient(lsdb, client)
+
+	err := lsdb.Open()
+	if err != nil {
+		tb.Fatal(err)
 	}
-	return err
+	tb.Cleanup(func() { lsdb.Close(tb.Context()) })
 }

@@ -2,7 +2,6 @@
 package litestream
 
 import (
-	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -75,27 +74,4 @@ func RemoveReplica(name string) {
 	delete(liteDBs, name)
 }
 
-// NewPrimary creates a new primary that replicates through client.
-// If restore is not nil, the database is first restored.
-func NewPrimary(ctx context.Context, path string, client ReplicaClient, restore *RestoreOptions) (*litestream.DB, error) {
-	lsdb := litestream.NewDB(path)
-	lsdb.Replica = litestream.NewReplicaWithClient(lsdb, client)
-
-	if restore != nil {
-		err := lsdb.Replica.Restore(ctx, *restore)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err := lsdb.Open()
-	if err != nil {
-		return nil, err
-	}
-	return lsdb, nil
-}
-
-type (
-	ReplicaClient  = litestream.ReplicaClient
-	RestoreOptions = litestream.RestoreOptions
-)
+type ReplicaClient = litestream.ReplicaClient
