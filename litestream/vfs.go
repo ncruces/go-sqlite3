@@ -15,6 +15,7 @@ import (
 	"github.com/superfly/ltx"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/wbt"
@@ -212,7 +213,7 @@ func (f *liteFile) Pragma(name, value string) (string, error) {
 			return syncTime.Format(time.RFC3339Nano), nil
 		}
 
-		if !f.locked {
+		if f.locked {
 			return "", sqlite3.MISUSE
 		}
 
@@ -222,12 +223,17 @@ func (f *liteFile) Pragma(name, value string) (string, error) {
 			return "", nil
 		}
 
-		syncTime, err := sqlite3.TimeFormatAuto.Decode(value)
-		if err != nil {
-			return "", err
+		var syncTime time.Time
+		if years, months, days, duration, ok := sql3util.ParseTimeShift(value); ok {
+			syncTime = time.Now().AddDate(years, months, days).Add(duration)
+		} else {
+			syncTime, _ = sqlite3.TimeFormatAuto.Decode(value)
+		}
+		if syncTime.IsZero() {
+			return "", sqlite3.MISUSE
 		}
 
-		err = f.buildIndex(f.context(), syncTime)
+		err := f.buildIndex(f.context(), syncTime)
 		if err != nil {
 			f.db.opts.Logger.Error("build index", "error", err)
 		}
@@ -251,11 +257,8 @@ func (f *liteFile) context() context.Context {
 func (f *liteFile) buildIndex(ctx context.Context, syncTime time.Time) error {
 	// Build the index from scratch from a Litestream restore plan.
 	infos, err := litestream.CalcRestorePlan(ctx, f.db.client, 0, syncTime, f.db.opts.Logger)
-	if err != nil {
-		if !errors.Is(err, litestream.ErrTxNotAvailable) {
-			return fmt.Errorf("calc restore plan: %w", err)
-		}
-		return nil
+	if err != nil && !errors.Is(err, litestream.ErrTxNotAvailable) {
+		return fmt.Errorf("calc restore plan: %w", err)
 	}
 
 	var txid ltx.TXID
@@ -295,11 +298,8 @@ func (d *liteDB) buildIndex(ctx context.Context) error {
 
 	// Build the index from scratch from a Litestream restore plan.
 	infos, err := litestream.CalcRestorePlan(ctx, d.client, 0, time.Time{}, d.opts.Logger)
-	if err != nil {
-		if !errors.Is(err, litestream.ErrTxNotAvailable) {
-			return fmt.Errorf("calc restore plan: %w", err)
-		}
-		return nil
+	if err != nil && !errors.Is(err, litestream.ErrTxNotAvailable) {
+		return fmt.Errorf("calc restore plan: %w", err)
 	}
 
 	for _, info := range infos {
