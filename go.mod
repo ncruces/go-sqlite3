@@ -7,7 +7,7 @@ require (
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v0.2.0
 	github.com/tetratelabs/wazero v1.10.1
-	golang.org/x/sys v0.38.0
+	golang.org/x/sys v0.39.0
 )
 
 require (
