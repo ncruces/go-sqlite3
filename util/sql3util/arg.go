@@ -97,13 +97,13 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 		if ok = sign && len(s) >= 10 && s[7] == '-'; !ok {
 			return // !ok
 		}
-		if years, ok = parseInt(s[0:4]); !ok {
+		if years, ok = parseInt(s[0:4], 0); !ok {
 			return // !ok
 		}
-		if months, ok = parseInt(s[5:7]); !ok {
+		if months, ok = parseInt(s[5:7], 12); !ok {
 			return // !ok
 		}
-		if days, ok = parseInt(s[8:10]); !ok {
+		if days, ok = parseInt(s[8:10], 31); !ok {
 			return // !ok
 		}
 		if len(s) == 10 {
@@ -121,10 +121,10 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 	}
 
 	var hours, minutes int
-	if hours, ok = parseInt(s[0:2]); !ok {
+	if hours, ok = parseInt(s[0:2], 24); !ok {
 		return
 	}
-	if minutes, ok = parseInt(s[3:5]); !ok {
+	if minutes, ok = parseInt(s[3:5], 60); !ok {
 		return
 	}
 	duration = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute
@@ -138,7 +138,7 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 
 	// Seconds part: HH:MM:SS
 	var seconds int
-	if seconds, ok = parseInt(s[6:8]); !ok {
+	if seconds, ok = parseInt(s[6:8], 60); !ok {
 		return
 	}
 	duration += time.Duration(seconds) * time.Second
@@ -153,7 +153,7 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 
 	// Nanosecond part: HH:MM:SS.SSS
 	var nanos int
-	if nanos, ok = parseInt(s[0:min(9, len(s))]); !ok {
+	if nanos, ok = parseInt(s[0:min(9, len(s))], 0); !ok {
 		return
 	}
 	for i := len(s); i < 9; i++ {
@@ -163,12 +163,12 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 
 	// Subnanosecond part.
 	if len(s) > 9 {
-		_, ok = parseInt(s[9:])
+		_, ok = parseInt(s[9:], 0)
 	}
 	return
 }
 
-func parseInt(s string) (i int, _ bool) {
+func parseInt(s string, max int) (i int, _ bool) {
 	for _, r := range []byte(s) {
 		r -= '0'
 		if r > 9 {
@@ -176,5 +176,5 @@ func parseInt(s string) (i int, _ bool) {
 		}
 		i = i*10 + int(r)
 	}
-	return i, true
+	return i, max == 0 || i < max
 }
