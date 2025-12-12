@@ -1,6 +1,7 @@
 package sql3util
 
 import (
+	"strconv"
 	"strings"
 	"time"
 )
@@ -65,6 +66,15 @@ func ParseBool(s string) (b, ok bool) {
 		return false, true
 	}
 	return false, false
+}
+
+// ParseFloat parses a decimal floating point number.
+func ParseFloat(s string) (f float64, ok bool) {
+	if strings.TrimLeft(s, "+-.0123456789Ee") != "" {
+		return
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	return f, err == nil
 }
 
 // ParseTimeShift parses a time shift modifier,

@@ -15,7 +15,6 @@ import (
 	"github.com/superfly/ltx"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/wbt"
@@ -224,7 +223,7 @@ func (f *liteFile) Pragma(name, value string) (string, error) {
 		}
 
 		var syncTime time.Time
-		if years, months, days, duration, ok := sql3util.ParseTimeShift(value); ok {
+		if years, months, days, duration, ok := parseTimeDelta(value); ok {
 			syncTime = time.Now().AddDate(years, months, days).Add(duration)
 		} else {
 			syncTime, _ = sqlite3.TimeFormatAuto.Decode(value)

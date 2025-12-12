@@ -91,7 +91,17 @@ func Test_integration(t *testing.T) {
 		t.Errorf("got %q", txid)
 	}
 
-	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='00:01'`)
+	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-1.5h'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-00:01'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-2.5 years'`)
 	if err != nil {
 		t.Fatal(err)
 	}

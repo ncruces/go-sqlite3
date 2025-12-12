@@ -16,6 +16,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 // Register registers the bloom_filter virtual table:
@@ -55,11 +56,9 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 	}
 
 	if len(arg) > 1 {
-		b.prob, err = strconv.ParseFloat(arg[1], 64)
-		if err != nil {
-			return nil, err
-		}
-		if b.prob <= 0 || b.prob >= 1 {
+		var ok bool
+		b.prob, ok = sql3util.ParseFloat(arg[1])
+		if !ok || b.prob <= 0 || b.prob >= 1 {
 			return nil, util.ErrorString("bloom: probability must be in the range (0,1)")
 		}
 	} else {
