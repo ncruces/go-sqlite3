@@ -98,12 +98,12 @@ jobs:
       matrix:
         os:
           - name: freebsd
-            version: '14.3'
+            version: '15.0'
           - name: netbsd
             version: '10.1'
           - name: freebsd
             arch: arm64
-            version: '14.3'
+            version: '15.0'
             tflags: '-test.short'
           - name: netbsd
             arch: arm64
@@ -126,7 +126,7 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.30.0
+      uses: cross-platform-actions/action@v0.31.0
       with:
         operating_system: ${{ matrix.os.name }}
         architecture: ${{ matrix.os.arch }}
