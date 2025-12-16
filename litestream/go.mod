@@ -4,10 +4,9 @@ go 1.24.4
 
 require (
 	github.com/benbjohnson/litestream v0.5.3
-	github.com/ncruces/go-sqlite3 v0.30.3
+	github.com/ncruces/go-sqlite3 v0.30.4-0.20251216123455-0b46e74ea69b
 	github.com/ncruces/wbt v0.2.0
 	github.com/superfly/ltx v0.5.0
-	golang.org/x/sync v0.19.0
 )
 
 // github.com/ncruces/go-sqlite3
@@ -34,7 +33,6 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 

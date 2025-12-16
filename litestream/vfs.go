@@ -92,10 +92,7 @@ func (f *liteFile) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	data, err := f.db.cache.getOrFetch(pgno, elem.MaxTXID, func() (any, error) {
-		_, data, err := litestream.FetchPage(ctx, f.db.client, elem.Level, elem.MinTXID, elem.MaxTXID, elem.Offset, elem.Size)
-		return data, err
-	})
+	data, err := f.db.cache.getOrFetch(ctx, f.db.client, pgno, elem)
 	if err != nil {
 		f.db.opts.Logger.Error("fetch page", "error", err)
 		return 0, err
@@ -291,7 +288,7 @@ func (d *liteDB) buildIndex(ctx context.Context) error {
 	defer d.mtx.Unlock()
 
 	// Skip if we already have an index.
-	if d.pages != nil {
+	if !d.lastPoll.IsZero() {
 		return nil
 	}
 

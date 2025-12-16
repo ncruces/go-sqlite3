@@ -1,19 +1,18 @@
 package litestream
 
 import (
-	"encoding/binary"
+	"context"
+	"fmt"
 	"sync"
 
-	"golang.org/x/sync/singleflight"
-
+	"github.com/benbjohnson/litestream"
 	"github.com/superfly/ltx"
 )
 
 type pageCache struct {
-	single singleflight.Group
-	pages  map[uint32]cachedPage // +checklocks:mtx
-	size   int
-	mtx    sync.Mutex
+	pages map[uint32]cachedPage // +checklocks:mtx
+	size  int
+	mtx   sync.Mutex
 }
 
 type cachedPage struct {
@@ -21,37 +20,36 @@ type cachedPage struct {
 	txid ltx.TXID
 }
 
-func (c *pageCache) getOrFetch(pgno uint32, maxTXID ltx.TXID, fetch func() (any, error)) ([]byte, error) {
-	if c.size >= 0 {
+func (c *pageCache) getOrFetch(ctx context.Context, client ReplicaClient, pgno uint32, elem ltx.PageIndexElem) ([]byte, error) {
+	if c.size > 0 {
 		c.mtx.Lock()
-		if c.pages == nil {
-			c.pages = map[uint32]cachedPage{}
-		}
 		page := c.pages[pgno]
 		c.mtx.Unlock()
 
-		if page.txid == maxTXID {
+		if page.txid == elem.MaxTXID {
 			return page.data, nil
 		}
 	}
 
-	var key [12]byte
-	binary.LittleEndian.PutUint32(key[0:], pgno)
-	binary.LittleEndian.PutUint64(key[4:], uint64(maxTXID))
-	v, err, _ := c.single.Do(string(key[:]), fetch)
-
+	h, data, err := litestream.FetchPage(ctx, client, elem.Level, elem.MinTXID, elem.MaxTXID, elem.Offset, elem.Size)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch page: %w", err)
+	}
+	if pgno != h.Pgno {
+		return nil, fmt.Errorf("fetch page: want %d, got %d", pgno, h.Pgno)
 	}
 
-	page := cachedPage{v.([]byte), maxTXID}
-	if c.size >= 0 {
+	if c.size > 0 {
 		c.mtx.Lock()
-		c.evict(len(page.data))
-		c.pages[pgno] = page
+		if c.pages != nil {
+			c.evict(len(data))
+		} else {
+			c.pages = map[uint32]cachedPage{}
+		}
+		c.pages[pgno] = cachedPage{data, elem.MaxTXID}
 		c.mtx.Unlock()
 	}
-	return page.data, nil
+	return data, nil
 }
 
 // +checklocks:c.mtx
