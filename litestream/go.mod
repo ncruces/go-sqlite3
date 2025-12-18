@@ -3,16 +3,16 @@ module github.com/ncruces/go-sqlite3/litestream
 go 1.24.4
 
 require (
-	github.com/benbjohnson/litestream v0.5.3
+	github.com/benbjohnson/litestream v0.5.5
 	github.com/ncruces/go-sqlite3 v0.30.4-0.20251216123455-0b46e74ea69b
 	github.com/ncruces/wbt v0.2.0
-	github.com/superfly/ltx v0.5.0
+	github.com/superfly/ltx v0.5.1
 )
 
 // github.com/ncruces/go-sqlite3
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect
-	github.com/tetratelabs/wazero v1.10.1 // indirect
+	github.com/tetratelabs/wazero v1.11.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 )
 
@@ -59,4 +59,4 @@ require (
 	github.com/aws/smithy-go v1.22.5 // indirect
 )
 
-replace github.com/benbjohnson/litestream => github.com/ncruces/litestream v0.5.3
+replace github.com/benbjohnson/litestream => github.com/ncruces/litestream v0.5.5
