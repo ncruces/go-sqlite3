@@ -50,8 +50,7 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 }
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName ptr_t) uint32 {
-	name := util.ReadString(mod, zVfsName, _MAX_NAME)
-	if vfs := Find(name); vfs != nil && vfs != (vfsOS{}) {
+	if find(util.ReadString(mod, zVfsName, _MAX_NAME)) != nil {
 		return 1
 	}
 	return 0

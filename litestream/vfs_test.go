@@ -90,35 +90,6 @@ func Test_integration(t *testing.T) {
 	if txid != "0000000000000001" {
 		t.Errorf("got %q", txid)
 	}
-
-	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-1.5h'`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-00:01'`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='-2.5 years'`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = replica.ExecContext(t.Context(), `PRAGMA litestream_time='1970-01-01'`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var sync time.Time
-	err = replica.QueryRowContext(t.Context(), `PRAGMA litestream_time`).Scan(&sync)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !sync.Equal(time.Unix(0, 0)) {
-		t.Errorf("got %v", sync)
-	}
 }
 
 func setupReplication(tb testing.TB, path string, client ReplicaClient) {

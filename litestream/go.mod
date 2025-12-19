@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/benbjohnson/litestream v0.5.5
-	github.com/ncruces/go-sqlite3 v0.30.4-0.20251216123455-0b46e74ea69b
+	github.com/ncruces/go-sqlite3 v0.30.4
 	github.com/ncruces/wbt v0.2.0
 	github.com/superfly/ltx v0.5.1
 )

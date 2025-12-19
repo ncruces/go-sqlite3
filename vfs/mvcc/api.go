@@ -35,13 +35,12 @@ var (
 // using a snapshot as its initial contents.
 func Create(name string, snapshot Snapshot) {
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
-
 	memoryDBs[name] = &mvccDB{
 		refs: 1,
 		name: name,
 		data: snapshot.Tree,
 	}
+	memoryMtx.Unlock()
 }
 
 // Delete deletes a shared memory database.
@@ -49,8 +48,8 @@ func Delete(name string) {
 	name = getName(name)
 
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
 	delete(memoryDBs, name)
+	memoryMtx.Unlock()
 }
 
 // Snapshot represents a database snapshot.
@@ -83,8 +82,9 @@ func TakeSnapshot(name string) Snapshot {
 	name = getName(name)
 
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
 	db := memoryDBs[name]
+	memoryMtx.Unlock()
+
 	if db == nil {
 		return Snapshot{}
 	}

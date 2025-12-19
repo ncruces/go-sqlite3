@@ -30,13 +30,13 @@ var (
 // otherwise SQLite might return incorrect query results and/or [sqlite3.CORRUPT] errors.
 func Create(name string, reader ioutil.SizeReaderAt) {
 	readerMtx.Lock()
-	defer readerMtx.Unlock()
 	readerDBs[name] = reader
+	readerMtx.Unlock()
 }
 
 // Delete deletes a shared memory database.
 func Delete(name string) {
 	readerMtx.Lock()
-	defer readerMtx.Unlock()
 	delete(readerDBs, name)
+	readerMtx.Unlock()
 }

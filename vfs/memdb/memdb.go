@@ -92,10 +92,10 @@ type memDB struct {
 
 func (m *memDB) release() {
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
 	if m.refs--; m.refs == 0 && m == memoryDBs[m.name] {
 		delete(memoryDBs, m.name)
 	}
+	memoryMtx.Unlock()
 }
 
 type memFile struct {

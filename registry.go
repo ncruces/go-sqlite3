@@ -14,8 +14,8 @@ var (
 // https://sqlite.org/c3ref/auto_extension.html
 func AutoExtension(entryPoint func(*Conn) error) {
 	extRegistryMtx.Lock()
-	defer extRegistryMtx.Unlock()
 	extRegistry = append(extRegistry, entryPoint)
+	extRegistryMtx.Unlock()
 }
 
 func initExtensions(c *Conn) error {

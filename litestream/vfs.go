@@ -3,7 +3,6 @@ package litestream
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 	"github.com/superfly/ltx"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/wbt"
 )
@@ -23,9 +21,9 @@ import (
 type liteVFS struct{}
 
 func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// Temp journals, as used by the sorter, use SliceFile.
+	// Temp journals, as used by the sorter, use a temporary file.
 	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
-		return &vfsutil.SliceFile{}, flags | vfs.OPEN_MEMORY, nil
+		return vfs.Find("").Open(name, flags)
 	}
 	// Refuse to open all other file types.
 	if flags&vfs.OPEN_MAIN_DB == 0 {
@@ -33,16 +31,19 @@ func (liteVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, er
 	}
 
 	liteMtx.RLock()
-	defer liteMtx.RUnlock()
-	if db, ok := liteDBs[name]; ok {
-		// Build the page index so we can lookup individual pages.
-		if err := db.buildIndex(context.Background()); err != nil {
-			db.opts.Logger.Error("build index", "error", err)
-			return nil, 0, err
-		}
-		return &liteFile{db: db}, flags | vfs.OPEN_READONLY, nil
+	db := liteDBs[name]
+	liteMtx.RUnlock()
+
+	if db == nil {
+		return nil, flags, sqlite3.CANTOPEN
 	}
-	return nil, flags, sqlite3.CANTOPEN
+
+	// Build the page index so we can lookup individual pages.
+	if err := db.buildIndex(context.Background()); err != nil {
+		db.opts.Logger.Error("build index", "error", err)
+		return nil, 0, err
+	}
+	return &liteFile{db: db}, flags | vfs.OPEN_READONLY, nil
 }
 
 func (liteVFS) Delete(name string, dirSync bool) error {
@@ -253,16 +254,20 @@ func (f *liteFile) context() context.Context {
 func (f *liteFile) buildIndex(ctx context.Context, syncTime time.Time) error {
 	// Build the index from scratch from a Litestream restore plan.
 	infos, err := litestream.CalcRestorePlan(ctx, f.db.client, 0, syncTime, f.db.opts.Logger)
-	if err != nil && !errors.Is(err, litestream.ErrTxNotAvailable) {
+	if err != nil {
 		return fmt.Errorf("calc restore plan: %w", err)
 	}
 
 	var txid ltx.TXID
 	var pages *pageIndex
+	syncTime = time.Time{}
 	for _, info := range infos {
 		pages, err = fetchPageIndex(ctx, pages, f.db.client, info)
 		if err != nil {
 			return err
+		}
+		if syncTime.Before(info.CreatedAt) {
+			syncTime = info.CreatedAt
 		}
 		txid = max(txid, info.MaxTXID)
 	}
@@ -294,7 +299,7 @@ func (d *liteDB) buildIndex(ctx context.Context) error {
 
 	// Build the index from scratch from a Litestream restore plan.
 	infos, err := litestream.CalcRestorePlan(ctx, d.client, 0, time.Time{}, d.opts.Logger)
-	if err != nil && !errors.Is(err, litestream.ErrTxNotAvailable) {
+	if err != nil {
 		return fmt.Errorf("calc restore plan: %w", err)
 	}
 

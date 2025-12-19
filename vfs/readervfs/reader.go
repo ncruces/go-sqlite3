@@ -3,16 +3,15 @@ package readervfs
 import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
-	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 type readerVFS struct{}
 
 func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// Temp journals, as used by the sorter, use SliceFile.
+	// Temp journals, as used by the sorter, use a temporary file.
 	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
-		return &vfsutil.SliceFile{}, flags | vfs.OPEN_MEMORY, nil
+		return vfs.Find("").Open(name, flags)
 	}
 	// Refuse to open all other file types.
 	if flags&vfs.OPEN_MAIN_DB == 0 {

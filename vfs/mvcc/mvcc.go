@@ -79,10 +79,10 @@ type mvccDB struct {
 
 func (m *mvccDB) release() {
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
 	if m.refs--; m.refs == 0 && m == memoryDBs[m.name] {
 		delete(memoryDBs, m.name)
 	}
+	memoryMtx.Unlock()
 }
 
 type mvccFile struct {
@@ -105,10 +105,10 @@ func (m *mvccFile) Close() error {
 	m.data = nil
 	m.lock = vfs.LOCK_NONE
 	m.mtx.Lock()
-	defer m.mtx.Unlock()
 	if m.owner == m {
 		m.owner = nil
 	}
+	m.mtx.Unlock()
 	return nil
 }
 
@@ -313,10 +313,10 @@ func (m *mvccFile) CommitPhaseTwo() error {
 	// Modified without lock, commit changes.
 	if m.lock > vfs.LOCK_EXCLUSIVE {
 		m.mtx.Lock()
-		defer m.mtx.Unlock()
 		m.mvccDB.data = m.data
 		m.lock = vfs.LOCK_NONE
 		m.data = nil
+		m.mtx.Unlock()
 	}
 	return nil
 }

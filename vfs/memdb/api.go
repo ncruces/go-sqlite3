@@ -34,9 +34,6 @@ var (
 // The new database takes ownership of data,
 // and the caller should not use data after this call.
 func Create(name string, data []byte) {
-	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
-
 	db := &memDB{
 		refs: 1,
 		name: name,
@@ -63,14 +60,16 @@ func Create(name string, data []byte) {
 		}
 	}
 
+	memoryMtx.Lock()
 	memoryDBs[name] = db
+	memoryMtx.Unlock()
 }
 
 // Delete deletes a shared memory database.
 func Delete(name string) {
 	memoryMtx.Lock()
-	defer memoryMtx.Unlock()
 	delete(memoryDBs, name)
+	memoryMtx.Unlock()
 }
 
 // TestDB creates an empty shared memory database for the test to use.

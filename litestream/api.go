@@ -59,19 +59,19 @@ func NewReplica(name string, client ReplicaClient, options ReplicaOptions) {
 	}
 
 	liteMtx.Lock()
-	defer liteMtx.Unlock()
 	liteDBs[name] = &liteDB{
 		client: client,
 		opts:   options,
 		cache:  pageCache{size: options.CacheSize},
 	}
+	liteMtx.Unlock()
 }
 
 // RemoveReplica removes a replica by name.
 func RemoveReplica(name string) {
 	liteMtx.Lock()
-	defer liteMtx.Unlock()
 	delete(liteDBs, name)
+	liteMtx.Unlock()
 }
 
 type ReplicaClient = litestream.ReplicaClient
