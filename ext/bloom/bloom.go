@@ -35,6 +35,8 @@ type bloom struct {
 	hashes  int
 }
 
+const vtab = `CREATE TABLE x(present, word TEXT HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`
+
 func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom, err error) {
 	b := bloom{
 		db:      db,
@@ -79,8 +81,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 
 	b.bytes = numBytes(nelem, b.prob)
 
-	err = db.DeclareVTab(
-		`CREATE TABLE x(present, word HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`)
+	err = db.DeclareVTab(vtab)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +115,7 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 		storage: table + "_storage",
 	}
 
-	err = db.DeclareVTab(
-		`CREATE TABLE x(present, word HIDDEN NOT NULL PRIMARY KEY) WITHOUT ROWID`)
+	err = db.DeclareVTab(vtab)
 	if err != nil {
 		return nil, err
 	}

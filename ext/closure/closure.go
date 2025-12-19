@@ -56,7 +56,7 @@ func Register(db *sqlite3.Conn) error {
 				done.Add(key)
 			}
 
-			err := db.DeclareVTab(`CREATE TABLE x(id,depth,root HIDDEN,tablename HIDDEN,idcolumn HIDDEN,parentcolumn HIDDEN)`)
+			err := db.DeclareVTab(`CREATE TABLE x(id INT,depth INT,root HIDDEN,tablename TEXT HIDDEN,idcolumn TEXT HIDDEN,parentcolumn TEXT HIDDEN)`)
 			if err != nil {
 				return nil, err
 			}

@@ -698,17 +698,23 @@ func (r *rows) loadColumnMetadata() {
 		types := make([]string, count)
 		scans := make([]scantype, count)
 		for i := range types {
-			var notnull bool
-			if col := r.Stmt.ColumnOriginName(i); col != "" {
-				types[i], _, notnull, _, _, _ = c.TableColumnMetadata(
+			var declType string
+			var notNull, autoInc bool
+			if column := r.Stmt.ColumnOriginName(i); column != "" {
+				declType, _, notNull, _, autoInc, _ = c.TableColumnMetadata(
 					r.Stmt.ColumnDatabaseName(i),
 					r.Stmt.ColumnTableName(i),
-					col)
-				types[i] = strings.ToUpper(types[i])
-				scans[i] = scanFromDecl(types[i])
-				if notnull {
-					scans[i] |= _NOT_NULL
-				}
+					column)
+			} else {
+				declType = r.Stmt.ColumnDeclType(i)
+			}
+			if declType != "" {
+				declType = strings.ToUpper(declType)
+				scans[i] = scanFromDecl(declType)
+				types[i] = declType
+			}
+			if notNull || autoInc {
+				scans[i] |= _NOT_NULL
 			}
 		}
 		r.types = types

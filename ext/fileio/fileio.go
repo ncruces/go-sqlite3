@@ -30,7 +30,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 		db.CreateFunction("readfile", 1, sqlite3.DIRECTONLY, readfile(fsys)),
 		db.CreateFunction("lsmode", 1, sqlite3.DETERMINISTIC, lsmode),
 		sqlite3.CreateModule(db, "fsdir", nil, func(db *sqlite3.Conn, _, _, _ string, _ ...string) (fsdir, error) {
-			err := db.DeclareVTab(`CREATE TABLE x(name,mode,mtime TIMESTAMP,data,path HIDDEN,dir HIDDEN)`)
+			err := db.DeclareVTab(`CREATE TABLE x(name TEXT,mode INT,mtime TIMESTAMP,data BLOB,path HIDDEN,dir HIDDEN)`)
 			if err == nil {
 				err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
 			}

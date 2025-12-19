@@ -55,6 +55,8 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 		t.keys[i] = name
 		create.WriteString(sep)
 		create.WriteString(name)
+		create.WriteString(" ")
+		create.WriteString(stmt.ColumnDeclType(i))
 		sep = ","
 	}
 	stmt.Close()
@@ -71,8 +73,11 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	for stmt.Step() {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnText(1))
 		t.cols = append(t.cols, stmt.ColumnValue(0).Dup())
-		create.WriteString(",")
+		create.WriteString(sep)
 		create.WriteString(name)
+		create.WriteString(" ")
+		create.WriteString(stmt.ColumnDeclType(1))
+		sep = ","
 	}
 	stmt.Close()
 
