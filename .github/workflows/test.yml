@@ -93,7 +93,7 @@ jobs:
         github.event_name == 'push' &&
         matrix.os == 'ubuntu-latest'
 
-  test-bsd:
+  test-cross:
     strategy:
       matrix:
         os:
@@ -101,6 +101,12 @@ jobs:
             version: '15.0'
           - name: netbsd
             version: '10.1'
+          - name: illumos
+            action: omnios
+            version: 'r151056'
+          - name: openbsd
+            version: '7.8'
+            tflags: '-test.short'
           - name: freebsd
             arch: arm64
             version: '15.0'
@@ -108,9 +114,6 @@ jobs:
           - name: netbsd
             arch: arm64
             version: '10.1'
-            tflags: '-test.short'
-          - name: openbsd
-            version: '7.8'
             tflags: '-test.short'
     runs-on: ubuntu-latest
     needs: test
@@ -126,9 +129,9 @@ jobs:
       run: .github/workflows/build-test.sh
 
     - name: Test
-      uses: cross-platform-actions/action@v0.31.0
+      uses: cross-platform-actions/action@v0.32.0
       with:
-        operating_system: ${{ matrix.os.name }}
+        operating_system: ${{ matrix.os.action || matrix.os.name }}
         architecture: ${{ matrix.os.arch }}
         version: ${{ matrix.os.version }}
         shell: bash
@@ -142,7 +145,7 @@ jobs:
           - name: dragonfly
             action: 'vmactions/dragonflybsd-vm@v1'
           - name: illumos
-            action: 'vmactions/omnios-vm@v1'
+            action: 'vmactions/openindiana-vm@v0'
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
             bflags: '-tags sqlite3_dotlk'
