@@ -9,8 +9,8 @@ import (
 type readerVFS struct{}
 
 func (readerVFS) Open(name string, flags vfs.OpenFlag) (vfs.File, vfs.OpenFlag, error) {
-	// Temp journals, as used by the sorter, use a temporary file.
-	if flags&vfs.OPEN_TEMP_JOURNAL != 0 {
+	// Temporary files use the default VFS.
+	if name == "" || flags&vfs.OPEN_DELETEONCLOSE != 0 {
 		return vfs.Find("").Open(name, flags)
 	}
 	// Refuse to open all other file types.
