@@ -125,5 +125,5 @@ The VFS can be customized with a few build tags:
   wraps a VFS to offer encryption at rest.
 - [`github.com/ncruces/go-sqlite3/vfs/xts`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs/xts)
   wraps a VFS to offer encryption at rest.
-- [`github.com/ncruces/go-sqlite3/litestream`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/litestream)
+- [`github.com/ncruces/litestream`](https://pkg.go.dev/github.com/ncruces/litestream)
   implements Litestream [lightweight read-replicas](https://fly.io/blog/litestream-revamped/#lightweight-read-replicas).

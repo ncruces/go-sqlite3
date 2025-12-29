@@ -68,8 +68,8 @@ jobs:
       shell: bash
       run: |
         go work init .
-        go work use -r embed/bcw2 gormlite litestream
-        go test ./embed/bcw2 ./gormlite ./litestream
+        go work use -r embed/bcw2 gormlite
+        go test ./embed/bcw2 ./gormlite
 
     - name: Test GORM
       shell: bash
