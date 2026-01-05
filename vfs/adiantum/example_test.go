@@ -1,5 +1,3 @@
-//go:build linux || darwin || windows || freebsd || openbsd || netbsd || dragonfly || illumos || sqlite3_flock || sqlite3_dotlk
-
 package adiantum_test
 
 import (
@@ -17,7 +15,7 @@ import (
 	"github.com/ncruces/go-sqlite3/vfs/adiantum"
 )
 
-func ExampleRegister_hpolyc() {
+func Example_hPolyC() {
 	vfs.Register("hpolyc", adiantum.Wrap(vfs.Find(""), hpolycCreator{}))
 
 	db, err := sqlite3.Open("file:demo.db?vfs=hpolyc" +
