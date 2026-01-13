@@ -39,12 +39,10 @@ EOF
 	-Wl,--export=strcspn \
 	-Wl,--export=strlen \
 	-Wl,--export=strrchr \
-	-Wl,--export=strspn \
-	-Wl,--export=qsort
+	-Wl,--export=strspn
 
 "$BINARYEN/wasm-ctor-eval" -g -c _initialize libc.wasm -o libc.tmp
-"$BINARYEN/wasm-opt" -g libc.tmp -o libc.wasm \
-	--low-memory-unused --generate-global-effects --converge -O3 \
+"$BINARYEN/wasm-opt" -g libc.tmp -o libc.wasm --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \

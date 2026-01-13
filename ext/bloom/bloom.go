@@ -120,9 +120,10 @@ func connect(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom
 		return nil, err
 	}
 
-	load, _, err := db.Prepare(fmt.Sprintf(
+	load, _, err := db.PrepareFlags(fmt.Sprintf(
 		`SELECT m/8, p, k FROM %s.%s WHERE rowid = 1`,
-		sqlite3.QuoteIdentifier(b.schema), sqlite3.QuoteIdentifier(b.storage)))
+		sqlite3.QuoteIdentifier(b.schema), sqlite3.QuoteIdentifier(b.storage)),
+		sqlite3.PREPARE_DONT_LOG)
 	if err != nil {
 		return nil, err
 	}
@@ -165,9 +166,10 @@ func (t *bloom) ShadowTables() {
 }
 
 func (t *bloom) Integrity(schema, table string, flags int) error {
-	load, _, err := t.db.Prepare(fmt.Sprintf(
+	load, _, err := t.db.PrepareFlags(fmt.Sprintf(
 		`SELECT typeof(data), length(data), p, n, m, k FROM %s.%s WHERE rowid = 1`,
-		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)))
+		sqlite3.QuoteIdentifier(t.schema), sqlite3.QuoteIdentifier(t.storage)),
+		sqlite3.PREPARE_DONT_LOG)
 	if err != nil {
 		return fmt.Errorf("bloom: %v", err) // can't wrap!
 	}

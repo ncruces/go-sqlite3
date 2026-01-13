@@ -125,6 +125,8 @@ type Column struct {
 	DefaultExpr           string
 	CollateName           string
 	ForeignKeyClause      *ForeignKey
+	GeneratedExpr         string
+	GeneratedType         GenType
 }
 
 func (c *Column) load(mod api.Module, ptr uint32, sql string) {
@@ -152,6 +154,9 @@ func (c *Column) load(mod api.Module, ptr uint32, sql string) {
 		c.ForeignKeyClause = &ForeignKey{}
 		c.ForeignKeyClause.load(mod, ptr, sql)
 	}
+
+	c.GeneratedExpr = loadString(mod, ptr+88, sql)
+	c.GeneratedType = loadEnum[GenType](mod, ptr+96)
 }
 
 type ForeignKey struct {

@@ -47,10 +47,10 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	if tail != "" {
 		return nil, util.TailErr
 	}
-	defer stmt.Close()
 
 	t.keys = make([]string, stmt.ColumnCount())
 	for i := range t.keys {
@@ -196,7 +196,9 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return err
 	}
 
-	c.scan, _, err = c.table.db.PrepareFlags(idxStr, sqlite3.PREPARE_FROM_DDL)
+	const prepflags = sqlite3.PREPARE_DONT_LOG | sqlite3.PREPARE_FROM_DDL
+
+	c.scan, _, err = c.table.db.PrepareFlags(idxStr, prepflags)
 	if err != nil {
 		return err
 	}
@@ -208,7 +210,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	}
 
 	if c.cell == nil {
-		c.cell, _, err = c.table.db.PrepareFlags(c.table.cell, sqlite3.PREPARE_PERSISTENT|sqlite3.PREPARE_FROM_DDL)
+		c.cell, _, err = c.table.db.PrepareFlags(c.table.cell, prepflags)
 		if err != nil {
 			return err
 		}

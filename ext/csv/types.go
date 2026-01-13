@@ -3,6 +3,8 @@ package csv
 import (
 	"strings"
 
+	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
@@ -16,7 +18,17 @@ const (
 	real    affinity = 4
 )
 
-func getColumnAffinities(schema string) ([]affinity, error) {
+func getColumnAffinities(db *sqlite3.Conn, schema string) ([]affinity, error) {
+	stmt, tail, err := db.PrepareFlags(schema,
+		sqlite3.PREPARE_DONT_LOG|sqlite3.PREPARE_NO_VTAB|sqlite3.PREPARE_FROM_DDL)
+	if err != nil {
+		return nil, err
+	}
+	stmt.Close()
+	if tail != "" {
+		return nil, util.TailErr
+	}
+
 	tab, err := sql3util.ParseTable(schema)
 	if err != nil {
 		return nil, err

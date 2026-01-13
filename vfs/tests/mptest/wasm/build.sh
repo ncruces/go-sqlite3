@@ -27,7 +27,7 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
 "$BINARYEN/wasm-opt" -g mptest.wasm -o mptest.tmp \
-	--low-memory-unused --gufa --generate-global-effects --converge -O3 \
+	--gufa --generate-global-effects --low-memory-unused --converge -O3 \
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \

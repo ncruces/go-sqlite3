@@ -59,3 +59,11 @@ const (
 	ALTER_ADD_COLUMN
 	ALTER_DROP_COLUMN
 )
+
+type GenType uint32
+
+const (
+	GENTYPE_NONE GenType = iota
+	GENTYPE_STORED
+	GENTYPE_VIRTUA
+)

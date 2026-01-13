@@ -100,7 +100,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			}
 			schema = getSchema(header, columns, row)
 		} else {
-			t.typs, err = getColumnAffinities(schema)
+			t.typs, err = getColumnAffinities(db, schema)
 			if err != nil {
 				return nil, err
 			}

@@ -202,7 +202,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		sqlite3.QuoteIdentifier(column),
 		sqlite3.QuoteIdentifier(parent),
 	)
-	stmt, _, err := c.db.Prepare(sql)
+	stmt, _, err := c.db.PrepareFlags(sql, sqlite3.PREPARE_DONT_LOG)
 	if err != nil {
 		return err
 	}
