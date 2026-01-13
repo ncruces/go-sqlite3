@@ -239,6 +239,7 @@ const (
 	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
 	_FCNTL_NULL_IO               _FcntlOpcode = 43
 	_FCNTL_BLOCK_ON_CONNECT      _FcntlOpcode = 44
+	_FCNTL_FILESTAT              _FcntlOpcode = 45
 )
 
 // https://sqlite.org/c3ref/c_shm_exclusive.html

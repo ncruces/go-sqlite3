@@ -157,16 +157,20 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			stk_t(op), stk_t(ptr)))
 		ret = util.Read32[vfs.LockLevel](c.mod, ptr)
 
-	case FCNTL_VFS_POINTER:
+	case FCNTL_VFSNAME, FCNTL_VFS_POINTER:
 		rc = res_t(c.call("sqlite3_file_control",
 			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+			stk_t(FCNTL_VFS_POINTER), stk_t(ptr)))
 		if rc == _OK {
 			const zNameOffset = 16
 			ptr = util.Read32[ptr_t](c.mod, ptr)
 			ptr = util.Read32[ptr_t](c.mod, ptr+zNameOffset)
 			name := util.ReadString(c.mod, ptr, _MAX_NAME)
-			ret = vfs.Find(name)
+			if op == FCNTL_VFS_POINTER {
+				ret = vfs.Find(name)
+			} else {
+				ret = name
+			}
 		}
 
 	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:

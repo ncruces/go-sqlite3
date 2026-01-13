@@ -173,7 +173,7 @@ const (
 
 // PrepareFlag is a flag that can be passed to [Conn.PrepareFlags].
 //
-// https://sqlite.org/c3ref/c_prepare_normalize.html
+// https://sqlite.org/c3ref/c_prepare_dont_log.html
 type PrepareFlag uint32
 
 const (
@@ -181,6 +181,7 @@ const (
 	PREPARE_NORMALIZE  PrepareFlag = 0x02
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
 	PREPARE_DONT_LOG   PrepareFlag = 0x10
+	PREPARE_FROM_DDL   PrepareFlag = 0x20
 )
 
 // FunctionFlag is a flag that can be passed to
@@ -280,6 +281,7 @@ const (
 	FCNTL_CHUNK_SIZE          FcntlOpcode = 6
 	FCNTL_FILE_POINTER        FcntlOpcode = 7
 	FCNTL_PERSIST_WAL         FcntlOpcode = 10
+	FCNTL_VFSNAME             FcntlOpcode = 12
 	FCNTL_POWERSAFE_OVERWRITE FcntlOpcode = 13
 	FCNTL_VFS_POINTER         FcntlOpcode = 27
 	FCNTL_JOURNAL_POINTER     FcntlOpcode = 28
@@ -307,6 +309,7 @@ const (
 	LIMIT_VARIABLE_NUMBER     LimitCategory = 9
 	LIMIT_TRIGGER_DEPTH       LimitCategory = 10
 	LIMIT_WORKER_THREADS      LimitCategory = 11
+	LIMIT_PARSER_DEPTH        LimitCategory = 12
 )
 
 // AuthorizerActionCode are the integer action codes

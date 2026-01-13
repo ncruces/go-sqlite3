@@ -43,9 +43,12 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 
 	// Row key query.
 	t.scan = "SELECT * FROM\n" + arg[0]
-	stmt, _, err := db.Prepare(t.scan)
+	stmt, tail, err := db.PrepareFlags(t.scan, sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
+	}
+	if tail != "" {
+		return nil, util.TailErr
 	}
 	defer stmt.Close()
 
@@ -62,9 +65,12 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	stmt.Close()
 
 	// Column definition query.
-	stmt, _, err = db.Prepare("SELECT * FROM\n" + arg[1])
+	stmt, tail, err = db.PrepareFlags("SELECT * FROM\n"+arg[1], sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
+	}
+	if tail != "" {
+		return nil, util.TailErr
 	}
 
 	if stmt.ColumnCount() != 2 {
@@ -83,9 +89,12 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 
 	// Pivot cell query.
 	t.cell = "SELECT * FROM\n" + arg[2]
-	stmt, _, err = db.Prepare(t.cell)
+	stmt, tail, err = db.PrepareFlags(t.cell, sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
+	}
+	if tail != "" {
+		return nil, util.TailErr
 	}
 
 	if stmt.ColumnCount() != 1 {
@@ -187,7 +196,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return err
 	}
 
-	c.scan, _, err = c.table.db.Prepare(idxStr)
+	c.scan, _, err = c.table.db.PrepareFlags(idxStr, sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return err
 	}
@@ -199,7 +208,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	}
 
 	if c.cell == nil {
-		c.cell, _, err = c.table.db.Prepare(c.table.cell)
+		c.cell, _, err = c.table.db.PrepareFlags(c.table.cell, sqlite3.PREPARE_PERSISTENT|sqlite3.PREPARE_FROM_DDL)
 		if err != nil {
 			return err
 		}

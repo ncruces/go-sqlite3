@@ -189,13 +189,23 @@ func TestConn_FileControl(t *testing.T) {
 		}
 	})
 
+	t.Run("FCNTL_VFSNAME", func(t *testing.T) {
+		o, err := db.FileControl("", sqlite3.FCNTL_VFSNAME)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o != "os" {
+			t.Errorf(`got %q, want "os"`, o)
+		}
+	})
+
 	t.Run("FCNTL_VFS_POINTER", func(t *testing.T) {
 		o, err := db.FileControl("", sqlite3.FCNTL_VFS_POINTER)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if o != vfs.Find("os") {
-			t.Errorf("got %v, want os", o)
+			t.Errorf(`got %v, want "os"`, o)
 		}
 	})
 
