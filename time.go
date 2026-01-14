@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
 	"github.com/ncruces/julianday"
 )
 
@@ -160,7 +159,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 		if s, ok := v.(string); ok {
 			if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 				v = i
-			} else if f, ok := sql3util.ParseFloat(s); ok {
+			} else if f, ok := util.ParseFloat(s); ok {
 				v = f
 			} else {
 				return time.Time{}, util.TimeErr
@@ -237,7 +236,7 @@ func (f TimeFormat) Decode(v any) (time.Time, error) {
 				v = i
 				break
 			}
-			f, ok := sql3util.ParseFloat(s)
+			f, ok := util.ParseFloat(s)
 			if ok {
 				v = f
 				break

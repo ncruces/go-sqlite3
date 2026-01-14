@@ -1,4 +1,4 @@
-package sql3util_test
+package util_test
 
 import (
 	"testing"
@@ -6,31 +6,8 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
-
-func TestUnquote(t *testing.T) {
-	tests := []struct {
-		val  string
-		want string
-	}{
-		{"a", "a"},
-		{"abc", "abc"},
-		{"abba", "abba"},
-		{"`ab``c`", "ab`c"},
-		{"'ab''c'", "ab'c"},
-		{"'ab``c'", "ab``c"},
-		{"[ab``c]", "ab``c"},
-		{`"ab""c"`, `ab"c`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.val, func(t *testing.T) {
-			if got := sql3util.Unquote(tt.val); got != tt.want {
-				t.Errorf("Unquote(%s) = %s, want %s", tt.val, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestParseBool(t *testing.T) {
 	tests := []struct {
@@ -49,7 +26,7 @@ func TestParseBool(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.str, func(t *testing.T) {
-			gotVal, gotOK := sql3util.ParseBool(tt.str)
+			gotVal, gotOK := util.ParseBool(tt.str)
 			if gotVal != tt.val || gotOK != tt.ok {
 				t.Errorf("ParseBool(%q) = (%v, %v) want (%v, %v)", tt.str, gotVal, gotOK, tt.val, tt.ok)
 			}
@@ -88,7 +65,7 @@ func TestParseTimeShift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.str, func(t *testing.T) {
-			years, months, days, duration, gotOK := sql3util.ParseTimeShift(tt.str)
+			years, months, days, duration, gotOK := util.ParseTimeShift(tt.str)
 			gotVal := epoch.AddDate(years, months, days).Add(duration)
 			if !gotVal.Equal(tt.val) || gotOK != tt.ok {
 				t.Errorf("ParseTimeShift(%q) = (%v, %v) want (%v, %v)", tt.str, gotVal, gotOK, tt.val, tt.ok)
@@ -136,7 +113,7 @@ func FuzzParseTimeShift(f *testing.F) {
 	epoch := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	f.Fuzz(func(t *testing.T, str string) {
-		years, months, days, duration, ok := sql3util.ParseTimeShift(str)
+		years, months, days, duration, ok := util.ParseTimeShift(str)
 
 		// Account for a full 400 year cycle.
 		if years < -200 || years > +200 {

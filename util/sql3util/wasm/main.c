@@ -11,6 +11,8 @@ static_assert(offsetof(sql3table, is_withoutrowid) == 26, "Unexpected offset");
 static_assert(offsetof(sql3table, is_strict) == 27, "Unexpected offset");
 static_assert(offsetof(sql3table, num_columns) == 28, "Unexpected offset");
 static_assert(offsetof(sql3table, columns) == 32, "Unexpected offset");
+static_assert(offsetof(sql3table, num_constraint) == 36, "Unexpected offset");
+static_assert(offsetof(sql3table, constraints) == 40, "Unexpected offset");
 static_assert(offsetof(sql3table, type) == 44, "Unexpected offset");
 static_assert(offsetof(sql3table, current_name) == 48, "Unexpected offset");
 static_assert(offsetof(sql3table, new_name) == 56, "Unexpected offset");
@@ -42,3 +44,19 @@ static_assert(offsetof(sql3foreignkey, on_delete) == 16, "Unexpected offset");
 static_assert(offsetof(sql3foreignkey, on_update) == 20, "Unexpected offset");
 static_assert(offsetof(sql3foreignkey, match) == 24, "Unexpected offset");
 static_assert(offsetof(sql3foreignkey, deferrable) == 32, "Unexpected offset");
+
+static_assert(offsetof(sql3tableconstraint, type) == 0, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, name) == 4, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, num_indexed) == 12, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, indexed_columns) == 16, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, conflict_clause) == 20, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, is_autoincrement) == 24, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, check_expr) == 12, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, foreignkey_num) == 12, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, foreignkey_name) == 16, "Unexpected offset");
+static_assert(offsetof(sql3tableconstraint, foreignkey_clause) == 20, "Unexpected offset");
+
+static_assert(offsetof(sql3idxcolumn, name) == 0, "Unexpected offset");
+static_assert(offsetof(sql3idxcolumn, collate_name) == 8, "Unexpected offset");
+static_assert(offsetof(sql3idxcolumn, order) == 16, "Unexpected offset");
+static_assert(sizeof(sql3idxcolumn) == 20, "Unexpected size");

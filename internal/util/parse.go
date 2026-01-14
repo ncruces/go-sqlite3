@@ -1,4 +1,4 @@
-package sql3util
+package util
 
 import (
 	"strconv"
@@ -6,49 +6,6 @@ import (
 	"time"
 )
 
-// NamedArg splits an named arg into a key and value,
-// around an equals sign.
-// Spaces are trimmed around both key and value.
-func NamedArg(arg string) (key, val string) {
-	key, val, _ = strings.Cut(arg, "=")
-	key = strings.TrimSpace(key)
-	val = strings.TrimSpace(val)
-	return
-}
-
-// Unquote unquotes a string.
-//
-// https://sqlite.org/lang_keywords.html
-func Unquote(val string) string {
-	if len(val) < 2 {
-		return val
-	}
-	fst := val[0]
-	lst := val[len(val)-1]
-	rst := val[1 : len(val)-1]
-	if fst == '[' && lst == ']' {
-		return rst
-	}
-	if fst != lst {
-		return val
-	}
-	var old, new string
-	switch fst {
-	default:
-		return val
-	case '`':
-		old, new = "``", "`"
-	case '"':
-		old, new = `""`, `"`
-	case '\'':
-		old, new = `''`, `'`
-	}
-	return strings.ReplaceAll(rst, old, new)
-}
-
-// ParseBool parses a boolean.
-//
-// https://sqlite.org/pragma.html#syntax
 func ParseBool(s string) (b, ok bool) {
 	if len(s) == 0 {
 		return false, false
@@ -68,7 +25,6 @@ func ParseBool(s string) (b, ok bool) {
 	return false, false
 }
 
-// ParseFloat parses a decimal floating point number.
 func ParseFloat(s string) (f float64, ok bool) {
 	if strings.TrimLeft(s, "+-.0123456789Ee") != "" {
 		return
@@ -77,10 +33,6 @@ func ParseFloat(s string) (f float64, ok bool) {
 	return f, err == nil
 }
 
-// ParseTimeShift parses a time shift modifier,
-// also the output of timediff.
-//
-// https://sqlite.org/lang_datefunc.html
 func ParseTimeShift(s string) (years, months, days int, duration time.Duration, ok bool) {
 	// Sign part: ±
 	neg := strings.HasPrefix(s, "-")

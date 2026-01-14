@@ -12,7 +12,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
 	"github.com/ncruces/julianday"
 )
 
@@ -137,7 +136,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile ptr_t, flag
 	}
 
 	if file, ok := file.(FilePowersafeOverwrite); ok {
-		if b, ok := sql3util.ParseBool(name.URIParameter("psow")); ok {
+		if b, ok := util.ParseBool(name.URIParameter("psow")); ok {
 			file.SetPowersafeOverwrite(b)
 		}
 	}

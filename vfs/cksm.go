@@ -9,7 +9,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
 func cksmWrapFile(file File, flags OpenFlag) File {
@@ -35,7 +34,7 @@ func (c *cksmFile) ReadAt(p []byte, off int64) (n int, err error) {
 	}
 
 	// Verify checksums.
-	if c.verifyCksm && sql3util.ValidPageSize(len(p)) {
+	if c.verifyCksm && util.ValidPageSize(len(p)) {
 		cksm1 := cksmCompute(p[:len(p)-8])
 		cksm2 := *(*[8]byte)(p[len(p)-8:])
 		if cksm1 != cksm2 {
@@ -51,7 +50,7 @@ func (c *cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
 	}
 
 	// Compute checksums.
-	if c.computeCksm && sql3util.ValidPageSize(len(p)) {
+	if c.computeCksm && util.ValidPageSize(len(p)) {
 		*(*[8]byte)(p[len(p)-8:]) = cksmCompute(p[:len(p)-8])
 	}
 
@@ -61,7 +60,7 @@ func (c *cksmFile) WriteAt(p []byte, off int64) (n int, err error) {
 func (c *cksmFile) Pragma(name string, value string) (string, error) {
 	switch name {
 	case "checksum_verification":
-		b, ok := sql3util.ParseBool(value)
+		b, ok := util.ParseBool(value)
 		if ok {
 			c.verifyCksm = b && c.computeCksm
 		}

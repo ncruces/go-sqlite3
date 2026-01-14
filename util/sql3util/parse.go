@@ -8,6 +8,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
+	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -29,6 +30,10 @@ var (
 // [CREATE]: https://sqlite.org/lang_createtable.html
 // [ALTER TABLE]: https://sqlite.org/lang_altertable.html
 func ParseTable(sql string) (_ *Table, err error) {
+	if len(sql) > 8192 {
+		return nil, sqlite3.TOOBIG
+	}
+
 	once.Do(func() {
 		ctx := context.Background()
 		cfg := wazero.NewRuntimeConfigInterpreter()
@@ -81,6 +86,7 @@ type Table struct {
 	IsWithoutRowID bool
 	IsStrict       bool
 	Columns        []Column
+	Constraints    []TableConstraint
 	Type           StatementType
 	CurrentName    string
 	NewName        string
@@ -96,9 +102,16 @@ func (t *Table) load(mod api.Module, ptr uint32, sql string) {
 	t.IsWithoutRowID = loadBool(mod, ptr+26)
 	t.IsStrict = loadBool(mod, ptr+27)
 
-	t.Columns = loadSlice(mod, ptr+28, func(ptr uint32, ret *Column) {
+	t.Columns = loadSlice(mod, ptr+28, func(ptr uint32, ret *Column) uint32 {
 		p, _ := mod.Memory().ReadUint32Le(ptr)
 		ret.load(mod, p, sql)
+		return 4
+	})
+
+	t.Constraints = loadSlice(mod, ptr+36, func(ptr uint32, ret *TableConstraint) uint32 {
+		p, _ := mod.Memory().ReadUint32Le(ptr)
+		ret.load(mod, p, sql)
+		return 4
 	})
 
 	t.Type = loadEnum[StatementType](mod, ptr+44)
@@ -159,6 +172,47 @@ func (c *Column) load(mod api.Module, ptr uint32, sql string) {
 	c.GeneratedType = loadEnum[GenType](mod, ptr+96)
 }
 
+// TableConstraint holds metadata about a table key constraint.
+type TableConstraint struct {
+	Type ConstraintType
+	Name string
+	// Type is TABLECONSTRAINT_PRIMARYKEY or TABLECONSTRAINT_UNIQUE
+	IndexedColumns  []IdxColumn
+	ConflictClause  ConflictClause
+	IsAutoIncrement bool
+	// Type is TABLECONSTRAINT_CHECK
+	Expr string
+	// Type is TABLECONSTRAINT_FOREIGNKEY
+	ForeignKeyNames  []string
+	ForeignKeyClause *ForeignKey
+}
+
+func (c *TableConstraint) load(mod api.Module, ptr uint32, sql string) {
+	c.Type = loadEnum[ConstraintType](mod, ptr+0)
+	c.Name = loadString(mod, ptr+4, sql)
+	switch c.Type {
+	case TABLECONSTRAINT_PRIMARYKEY, TABLECONSTRAINT_UNIQUE:
+		c.IndexedColumns = loadSlice(mod, ptr+12, func(ptr uint32, ret *IdxColumn) uint32 {
+			ret.load(mod, ptr, sql)
+			return 20
+		})
+		c.ConflictClause = loadEnum[ConflictClause](mod, ptr+20)
+		c.IsAutoIncrement = loadBool(mod, ptr+24)
+	case TABLECONSTRAINT_CHECK:
+		c.Expr = loadString(mod, ptr+12, sql)
+	case TABLECONSTRAINT_FOREIGNKEY:
+		c.ForeignKeyNames = loadSlice(mod, ptr+12, func(ptr uint32, ret *string) uint32 {
+			*ret = loadString(mod, ptr, sql)
+			return 8
+		})
+		if ptr, _ := mod.Memory().ReadUint32Le(ptr + 20); ptr != 0 {
+			c.ForeignKeyClause = &ForeignKey{}
+			c.ForeignKeyClause.load(mod, ptr, sql)
+		}
+	}
+}
+
+// ForeignKey holds metadata about a foreign key constraint.
 type ForeignKey struct {
 	Table      string
 	Columns    []string
@@ -171,14 +225,28 @@ type ForeignKey struct {
 func (f *ForeignKey) load(mod api.Module, ptr uint32, sql string) {
 	f.Table = loadString(mod, ptr+0, sql)
 
-	f.Columns = loadSlice(mod, ptr+8, func(ptr uint32, ret *string) {
+	f.Columns = loadSlice(mod, ptr+8, func(ptr uint32, ret *string) uint32 {
 		*ret = loadString(mod, ptr, sql)
+		return 8
 	})
 
 	f.OnDelete = loadEnum[FKAction](mod, ptr+16)
 	f.OnUpdate = loadEnum[FKAction](mod, ptr+20)
 	f.Match = loadString(mod, ptr+24, sql)
 	f.Deferrable = loadEnum[FKDefType](mod, ptr+32)
+}
+
+// IdxColumn holds metadata about an indexed column.
+type IdxColumn struct {
+	Name        string
+	CollateName string
+	Order       OrderClause
+}
+
+func (c *IdxColumn) load(mod api.Module, ptr uint32, sql string) {
+	c.Name = loadString(mod, ptr+0, sql)
+	c.CollateName = loadString(mod, ptr+8, sql)
+	c.Order = loadEnum[OrderClause](mod, ptr+16)
 }
 
 func loadString(mod api.Module, ptr uint32, sql string) string {
@@ -190,7 +258,7 @@ func loadString(mod api.Module, ptr uint32, sql string) string {
 	return sql[off-sqlp : off+len-sqlp]
 }
 
-func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T)) []T {
+func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T) uint32) []T {
 	ref, _ := mod.Memory().ReadUint32Le(ptr + 4)
 	if ref == 0 {
 		return nil
@@ -198,8 +266,7 @@ func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T)) []T {
 	len, _ := mod.Memory().ReadUint32Le(ptr + 0)
 	ret := make([]T, len)
 	for i := range ret {
-		fn(ref, &ret[i])
-		ref += 4
+		ref += fn(ref, &ret[i])
 	}
 	return ret
 }
