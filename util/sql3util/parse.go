@@ -3,6 +3,7 @@ package sql3util
 import (
 	"context"
 	_ "embed"
+	"strings"
 	"sync"
 
 	"github.com/tetratelabs/wazero"
@@ -93,8 +94,8 @@ type Table struct {
 }
 
 func (t *Table) load(mod api.Module, ptr uint32, sql string) {
-	t.Name = loadString(mod, ptr+0, sql)
-	t.Schema = loadString(mod, ptr+8, sql)
+	t.Name = loadIdentifier(mod, ptr+0, sql)
+	t.Schema = loadIdentifier(mod, ptr+8, sql)
 	t.Comment = loadString(mod, ptr+16, sql)
 
 	t.IsTemporary = loadBool(mod, ptr+24)
@@ -115,8 +116,8 @@ func (t *Table) load(mod api.Module, ptr uint32, sql string) {
 	})
 
 	t.Type = loadEnum[StatementType](mod, ptr+44)
-	t.CurrentName = loadString(mod, ptr+48, sql)
-	t.NewName = loadString(mod, ptr+56, sql)
+	t.CurrentName = loadIdentifier(mod, ptr+48, sql)
+	t.NewName = loadIdentifier(mod, ptr+56, sql)
 }
 
 // Column holds metadata about a column.
@@ -143,10 +144,10 @@ type Column struct {
 }
 
 func (c *Column) load(mod api.Module, ptr uint32, sql string) {
-	c.Name = loadString(mod, ptr+0, sql)
+	c.Name = loadIdentifier(mod, ptr+0, sql)
 	c.Type = loadString(mod, ptr+8, sql)
 	c.Length = loadString(mod, ptr+16, sql)
-	c.ConstraintName = loadString(mod, ptr+24, sql)
+	c.ConstraintName = loadIdentifier(mod, ptr+24, sql)
 	c.Comment = loadString(mod, ptr+32, sql)
 
 	c.IsPrimaryKey = loadBool(mod, ptr+40)
@@ -161,7 +162,7 @@ func (c *Column) load(mod api.Module, ptr uint32, sql string) {
 
 	c.CheckExpr = loadString(mod, ptr+60, sql)
 	c.DefaultExpr = loadString(mod, ptr+68, sql)
-	c.CollateName = loadString(mod, ptr+76, sql)
+	c.CollateName = loadIdentifier(mod, ptr+76, sql)
 
 	if ptr, _ := mod.Memory().ReadUint32Le(ptr + 84); ptr != 0 {
 		c.ForeignKeyClause = &ForeignKey{}
@@ -181,7 +182,7 @@ type TableConstraint struct {
 	ConflictClause  ConflictClause
 	IsAutoIncrement bool
 	// Type is TABLECONSTRAINT_CHECK
-	Expr string
+	CheckExpr string
 	// Type is TABLECONSTRAINT_FOREIGNKEY
 	ForeignKeyNames  []string
 	ForeignKeyClause *ForeignKey
@@ -189,7 +190,7 @@ type TableConstraint struct {
 
 func (c *TableConstraint) load(mod api.Module, ptr uint32, sql string) {
 	c.Type = loadEnum[ConstraintType](mod, ptr+0)
-	c.Name = loadString(mod, ptr+4, sql)
+	c.Name = loadIdentifier(mod, ptr+4, sql)
 	switch c.Type {
 	case TABLECONSTRAINT_PRIMARYKEY, TABLECONSTRAINT_UNIQUE:
 		c.IndexedColumns = loadSlice(mod, ptr+12, func(ptr uint32, ret *IdxColumn) uint32 {
@@ -199,10 +200,10 @@ func (c *TableConstraint) load(mod api.Module, ptr uint32, sql string) {
 		c.ConflictClause = loadEnum[ConflictClause](mod, ptr+20)
 		c.IsAutoIncrement = loadBool(mod, ptr+24)
 	case TABLECONSTRAINT_CHECK:
-		c.Expr = loadString(mod, ptr+12, sql)
+		c.CheckExpr = loadString(mod, ptr+12, sql)
 	case TABLECONSTRAINT_FOREIGNKEY:
 		c.ForeignKeyNames = loadSlice(mod, ptr+12, func(ptr uint32, ret *string) uint32 {
-			*ret = loadString(mod, ptr, sql)
+			*ret = loadIdentifier(mod, ptr, sql)
 			return 8
 		})
 		if ptr, _ := mod.Memory().ReadUint32Le(ptr + 20); ptr != 0 {
@@ -214,25 +215,25 @@ func (c *TableConstraint) load(mod api.Module, ptr uint32, sql string) {
 
 // ForeignKey holds metadata about a foreign key constraint.
 type ForeignKey struct {
-	Table      string
-	Columns    []string
-	OnDelete   FKAction
-	OnUpdate   FKAction
-	Match      string
-	Deferrable FKDefType
+	Table       string
+	ColumnNames []string
+	OnDelete    FKAction
+	OnUpdate    FKAction
+	Match       string
+	Deferrable  FKDefType
 }
 
 func (f *ForeignKey) load(mod api.Module, ptr uint32, sql string) {
-	f.Table = loadString(mod, ptr+0, sql)
+	f.Table = loadIdentifier(mod, ptr+0, sql)
 
-	f.Columns = loadSlice(mod, ptr+8, func(ptr uint32, ret *string) uint32 {
-		*ret = loadString(mod, ptr, sql)
+	f.ColumnNames = loadSlice(mod, ptr+8, func(ptr uint32, ret *string) uint32 {
+		*ret = loadIdentifier(mod, ptr, sql)
 		return 8
 	})
 
 	f.OnDelete = loadEnum[FKAction](mod, ptr+16)
 	f.OnUpdate = loadEnum[FKAction](mod, ptr+20)
-	f.Match = loadString(mod, ptr+24, sql)
+	f.Match = loadIdentifier(mod, ptr+24, sql)
 	f.Deferrable = loadEnum[FKDefType](mod, ptr+32)
 }
 
@@ -244,8 +245,8 @@ type IdxColumn struct {
 }
 
 func (c *IdxColumn) load(mod api.Module, ptr uint32, sql string) {
-	c.Name = loadString(mod, ptr+0, sql)
-	c.CollateName = loadString(mod, ptr+8, sql)
+	c.Name = loadIdentifier(mod, ptr+0, sql)
+	c.CollateName = loadIdentifier(mod, ptr+8, sql)
 	c.Order = loadEnum[OrderClause](mod, ptr+16)
 }
 
@@ -256,6 +257,27 @@ func loadString(mod api.Module, ptr uint32, sql string) string {
 	}
 	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
 	return sql[off-sqlp : off+len-sqlp]
+}
+
+func loadIdentifier(mod api.Module, ptr uint32, sql string) string {
+	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
+	if off == 0 {
+		return ""
+	}
+	var old, new string
+	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
+	str := sql[off-sqlp : off+len-sqlp]
+	switch sql[off-sqlp-1] {
+	default:
+		return str
+	case '`':
+		old, new = "``", "`"
+	case '"':
+		old, new = `""`, `"`
+	case '\'':
+		old, new = `''`, `'`
+	}
+	return strings.ReplaceAll(str, old, new)
 }
 
 func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T) uint32) []T {

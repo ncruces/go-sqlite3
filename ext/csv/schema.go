@@ -9,31 +9,31 @@ import (
 
 func getSchema(header bool, columns int, row []string) string {
 	var sep string
-	var str strings.Builder
-	str.WriteString("CREATE TABLE x(")
+	var buf strings.Builder
+	buf.WriteString("CREATE TABLE x(")
 
 	if 0 <= columns && columns < len(row) {
 		row = row[:columns]
 	}
 	for i, f := range row {
-		str.WriteString(sep)
+		buf.WriteString(sep)
 		if header && f != "" {
-			str.WriteString(sqlite3.QuoteIdentifier(f))
+			buf.WriteString(sqlite3.QuoteIdentifier(f))
 		} else {
-			str.WriteString("c")
-			str.WriteString(strconv.Itoa(i + 1))
+			buf.WriteString("c")
+			buf.WriteString(strconv.Itoa(i + 1))
 		}
-		str.WriteString(" TEXT")
+		buf.WriteString(" TEXT")
 		sep = ","
 	}
 	for i := len(row); i < columns; i++ {
-		str.WriteString(sep)
-		str.WriteString("c")
-		str.WriteString(strconv.Itoa(i + 1))
-		str.WriteString(" TEXT")
+		buf.WriteString(sep)
+		buf.WriteString("c")
+		buf.WriteString(strconv.Itoa(i + 1))
+		buf.WriteString(" TEXT")
 		sep = ","
 	}
-	str.WriteByte(')')
+	buf.WriteByte(')')
 
-	return str.String()
+	return buf.String()
 }

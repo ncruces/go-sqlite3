@@ -7,7 +7,7 @@ import (
 )
 
 func TestParse_references(t *testing.T) {
-	tab, err := sql3util.ParseTable(`CREATE TABLE child(x REFERENCES parent)`)
+	tab, err := sql3util.ParseTable("CREATE TABLE child(`x` INT REFERENCES parent)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,6 +23,9 @@ func TestParse_references(t *testing.T) {
 	if got := col.Name; got != "x" {
 		t.Errorf("got %s, want x", got)
 	}
+	if got := col.Type; got != "INT" {
+		t.Errorf("got %s, want INT", got)
+	}
 
 	fk := col.ForeignKeyClause
 	if got := fk.Table; got != "parent" {
@@ -31,7 +34,7 @@ func TestParse_references(t *testing.T) {
 }
 
 func TestParse_constraint(t *testing.T) {
-	tab, err := sql3util.ParseTable(`CREATE TABLE child(x, y, PRIMARY KEY(x, y))`)
+	tab, err := sql3util.ParseTable(`CREATE TABLE child('x', 'y', PRIMARY KEY('x', 'y'))`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +71,7 @@ func TestParse_constraint(t *testing.T) {
 }
 
 func TestParse_foreign(t *testing.T) {
-	tab, err := sql3util.ParseTable(`CREATE TABLE child(x, y, FOREIGN KEY (x, y) REFERENCES parent)`)
+	tab, err := sql3util.ParseTable(`CREATE TABLE child(x, y, FOREIGN KEY (x, y) REFERENCES "parent")`)
 	if err != nil {
 		t.Fatal(err)
 	}

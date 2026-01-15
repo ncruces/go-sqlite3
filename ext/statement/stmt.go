@@ -46,34 +46,34 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	}
 
 	var sep string
-	var str strings.Builder
-	str.WriteString("CREATE TABLE x(")
+	var buf strings.Builder
+	buf.WriteString("CREATE TABLE x(")
 	outputs := stmt.ColumnCount()
 	for i := range outputs {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnName(i))
-		str.WriteString(sep)
-		str.WriteString(name)
-		str.WriteString(" ")
-		str.WriteString(stmt.ColumnDeclType(i))
+		buf.WriteString(sep)
+		buf.WriteString(name)
+		buf.WriteString(" ")
+		buf.WriteString(stmt.ColumnDeclType(i))
 		sep = ","
 	}
 	inputs := stmt.BindCount()
 	for i := 1; i <= inputs; i++ {
-		str.WriteString(sep)
+		buf.WriteString(sep)
 		name := stmt.BindName(i)
 		if name == "" {
-			str.WriteString("[")
-			str.WriteString(strconv.Itoa(i))
-			str.WriteString("] HIDDEN")
+			buf.WriteString("[")
+			buf.WriteString(strconv.Itoa(i))
+			buf.WriteString("] HIDDEN")
 		} else {
-			str.WriteString(sqlite3.QuoteIdentifier(name[1:]))
-			str.WriteString(" HIDDEN")
+			buf.WriteString(sqlite3.QuoteIdentifier(name[1:]))
+			buf.WriteString(" HIDDEN")
 		}
 		sep = ","
 	}
-	str.WriteByte(')')
+	buf.WriteByte(')')
 
-	err = db.DeclareVTab(str.String())
+	err = db.DeclareVTab(buf.String())
 	if err != nil {
 		stmt.Close()
 		return nil, err
