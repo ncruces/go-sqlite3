@@ -74,3 +74,39 @@ func ParseTimeShift(s string) (years, months, days int, duration time.Duration, 
 func ValidPageSize(s int) bool {
 	return util.ValidPageSize(s)
 }
+
+// Affinity is the type affinity of a column.
+//
+// https://sqlite.org/datatype3.html#type_affinity
+type Affinity byte
+
+const (
+	TEXT Affinity = iota
+	NUMERIC
+	INTEGER
+	REAL
+	BLOB
+)
+
+// GetAffinity determines the affinity of a column by the declared type of the column.
+//
+// https://sqlite.org/datatype3.html#determination_of_column_affinity
+func GetAffinity(declType string) Affinity {
+	if declType == "" {
+		return BLOB
+	}
+	name := strings.ToUpper(declType)
+	if strings.Contains(name, "INT") {
+		return INTEGER
+	}
+	if strings.Contains(name, "CHAR") || strings.Contains(name, "CLOB") || strings.Contains(name, "TEXT") {
+		return TEXT
+	}
+	if strings.Contains(name, "BLOB") {
+		return BLOB
+	}
+	if strings.Contains(name, "REAL") || strings.Contains(name, "FLOA") || strings.Contains(name, "DOUB") {
+		return REAL
+	}
+	return NUMERIC
+}

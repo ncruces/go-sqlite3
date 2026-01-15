@@ -85,7 +85,8 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			header:  header,
 		}
 
-		if schema == "" {
+		hadSchema := schema != ""
+		if !hadSchema {
 			var row []string
 			if header || columns < 0 {
 				csv, c, err := t.newReader()
@@ -99,16 +100,13 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 				}
 			}
 			schema = getSchema(header, columns, row)
-		} else {
-			t.typs, err = getColumnAffinities(db, schema)
-			if err != nil {
-				return nil, err
-			}
 		}
-
 		err = db.DeclareVTab(schema)
 		if err == nil {
 			err = db.VTabConfig(sqlite3.VTAB_DIRECTONLY)
+		}
+		if err == nil && hadSchema {
+			t.typs, err = getColumnAffinities(schema)
 		}
 		if err != nil {
 			return nil, err
@@ -123,7 +121,7 @@ type table struct {
 	fsys    fs.FS
 	name    string
 	data    string
-	typs    []affinity
+	typs    []sql3util.Affinity
 	comma   rune
 	comment rune
 	header  bool
@@ -242,24 +240,24 @@ func (c *cursor) RowID() (int64, error) {
 
 func (c *cursor) Column(ctx sqlite3.Context, col int) error {
 	if col < len(c.row) {
-		typ := text
+		typ := sql3util.TEXT
 		if col < len(c.table.typs) {
 			typ = c.table.typs[col]
 		}
 
 		txt := c.row[col]
-		if txt == "" && typ != text {
+		if txt == "" && typ != sql3util.TEXT {
 			return nil
 		}
 
 		switch typ {
-		case numeric, integer:
+		case sql3util.NUMERIC, sql3util.INTEGER:
 			if i, err := strconv.ParseInt(txt, 10, 64); err == nil {
 				ctx.ResultInt64(i)
 				return nil
 			}
 			fallthrough
-		case real:
+		case sql3util.REAL:
 			if f, ok := sql3util.ParseFloat(txt); ok {
 				ctx.ResultFloat(f)
 				return nil
