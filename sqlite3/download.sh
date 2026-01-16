@@ -3,11 +3,11 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-curl -#OL "https://sqlite.org/2025/sqlite-autoconf-3510100.tar.gz"
+curl -#OL "https://sqlite.org/2026/sqlite-autoconf-3510200.tar.gz"
 
 # Verify download.
 if hash=$(openssl dgst -sha3-256 sqlite-autoconf-*.tar.gz); then
-  if ! [[ $hash =~ 9b2b1e73f577def1d5b75c5541555a7f42e6e073ad19f7a9118478389c9bbd9b ]]; then
+  if ! [[ $hash =~ e0f7ae1c28c4fa551a2ffe8bdfafafa90613dabcef9553050892d02240b44f1d ]]; then
     echo $hash
     exit 1
   fi
@@ -23,7 +23,7 @@ mv sqlite-*/sqlite3.h .
 mv sqlite-*/sqlite3ext.h .
 rm -r sqlite-*
 
-GITHUB_TAG="https://github.com/sqlite/sqlite/raw/version-3.51.1"
+GITHUB_TAG="https://github.com/sqlite/sqlite/raw/version-3.51.2"
 
 mkdir -p ext/
 cd ext/
