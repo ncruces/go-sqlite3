@@ -91,13 +91,7 @@ func (ctx Context) ResultText(value string) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultRawText(value []byte) {
-	if len(value) == 0 {
-		ctx.ResultText("")
-		return
-	}
-	ptr := ctx.c.newBytes(value)
-	ctx.c.call("sqlite3_result_text_go",
-		stk_t(ctx.handle), stk_t(ptr), stk_t(len(value)))
+	ctx.ResultText(string(value)) // does not escape
 }
 
 // ResultBlob sets the result of the function to a []byte.
@@ -151,11 +145,11 @@ func (ctx Context) ResultTime(value time.Time, format TimeFormat) {
 }
 
 func (ctx Context) resultRFC3339Nano(value time.Time) {
-	const maxlen = int64(len(time.RFC3339Nano)) + 5
-
+	const maxlen = 48
 	ptr := ctx.c.new(maxlen)
 	buf := util.View(ctx.c.mod, ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
+	_ = append(buf, 0)
 
 	ctx.c.call("sqlite3_result_text_go",
 		stk_t(ctx.handle), stk_t(ptr), stk_t(len(buf)))

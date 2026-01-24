@@ -20,6 +20,10 @@ func JSON(value any) any {
 
 // ResultJSON sets the result of the function to the JSON encoding of value.
 //
+// If you return JSON from application-defined functions,
+// consider registering those functions with [RESULT_SUBTYPE]
+// and calling [Context.ResultSubtype] with 'J'.
+//
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultJSON(value any) {
 	err := json.NewEncoder(callbackWriter(func(p []byte) (int, error) {

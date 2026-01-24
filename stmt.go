@@ -262,17 +262,7 @@ func (s *Stmt) BindText(param int, value string) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindRawText(param int, value []byte) error {
-	if len(value) > _MAX_LENGTH {
-		return TOOBIG
-	}
-	if len(value) == 0 {
-		return s.BindText(param, "")
-	}
-	ptr := s.c.newBytes(value)
-	rc := res_t(s.c.call("sqlite3_bind_text_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(ptr), stk_t(len(value))))
-	return s.c.error(rc)
+	return s.BindText(param, string(value)) // does not escape
 }
 
 // BindBlob binds a []byte to the prepared statement.
@@ -335,11 +325,11 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 }
 
 func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
-	const maxlen = int64(len(time.RFC3339Nano)) + 5
-
+	const maxlen = 48
 	ptr := s.c.new(maxlen)
 	buf := util.View(s.c.mod, ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
+	_ = append(buf, 0)
 
 	rc := res_t(s.c.call("sqlite3_bind_text_go",
 		stk_t(s.handle), stk_t(param),

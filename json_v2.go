@@ -40,7 +40,7 @@ func (s *Stmt) BindJSON(param int, value any) error {
 	w := bytesWriter{sqlite: s.c.sqlite}
 	if err := json.MarshalWrite(&w, value); err != nil {
 		s.c.free(w.ptr)
-		return err
+		return err // notest
 	}
 	rc := res_t(s.c.call("sqlite3_bind_text_go",
 		stk_t(s.handle), stk_t(param),
@@ -100,8 +100,8 @@ type bytesWriter struct {
 }
 
 func (b *bytesWriter) Write(p []byte) (n int, err error) {
-	if len(p) > cap(b.buf)-len(b.buf) {
-		want := int64(len(b.buf)) + int64(len(p))
+	if len(p) > cap(b.buf)-len(b.buf)-1 {
+		want := int64(len(b.buf)) + int64(len(p)) + 1
 		grow := int64(cap(b.buf))
 		grow += grow >> 1
 		want = max(want, grow)
@@ -109,5 +109,6 @@ func (b *bytesWriter) Write(p []byte) (n int, err error) {
 		b.buf = util.View(b.mod, b.ptr, want)[:len(b.buf)]
 	}
 	b.buf = append(b.buf, p...)
+	_ = append(b.buf, 0)
 	return len(p), nil
 }
