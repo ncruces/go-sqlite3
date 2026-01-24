@@ -46,6 +46,7 @@ EOF
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \
+	--disable-extended-const \
 	--strip --strip-debug --strip-producers
 
 "$BINARYEN/wasm-dis" -o libc.wat libc.wasm

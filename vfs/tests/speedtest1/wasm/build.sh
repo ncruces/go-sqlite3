@@ -26,5 +26,6 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \
+	--disable-extended-const \
 	--strip --strip-producers
 mv speedtest1.tmp speedtest1.wasm

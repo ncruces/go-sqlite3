@@ -33,4 +33,5 @@ trap 'rm -f sqlite3.tmp' EXIT
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \
+	--disable-extended-const \
 	--strip --strip-producers

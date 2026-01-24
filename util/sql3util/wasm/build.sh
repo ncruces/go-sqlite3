@@ -29,4 +29,5 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 	--enable-mutable-globals --enable-nontrapping-float-to-int \
 	--enable-simd --enable-bulk-memory --enable-sign-ext \
 	--enable-reference-types --enable-multivalue \
+	--disable-extended-const \
 	--strip --strip-producers
