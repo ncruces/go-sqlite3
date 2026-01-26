@@ -73,7 +73,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 	}
 
 	var tab Table
-	tab.load(mod, uint32(stack[0]), sql)
+	tab.load(mod.Memory(), uint32(stack[0]), sql)
 	return &tab, nil
 }
 
@@ -93,84 +93,32 @@ type Table struct {
 	NewName        string
 }
 
-func (t *Table) load(mod api.Module, ptr uint32, sql string) {
-	t.Name = loadIdentifier(mod, ptr+0, sql)
-	t.Schema = loadIdentifier(mod, ptr+8, sql)
-	t.Comment = loadString(mod, ptr+16, sql)
+func (t *Table) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	t.Name = loadIdentifier(mem, ptr+0, sql)
+	t.Schema = loadIdentifier(mem, ptr+8, sql)
+	t.Comment = loadString(mem, ptr+16, sql)
 
-	t.IsTemporary = loadBool(mod, ptr+24)
-	t.IsIfNotExists = loadBool(mod, ptr+25)
-	t.IsWithoutRowID = loadBool(mod, ptr+26)
-	t.IsStrict = loadBool(mod, ptr+27)
+	t.IsTemporary = loadBool(mem, ptr+24)
+	t.IsIfNotExists = loadBool(mem, ptr+25)
+	t.IsWithoutRowID = loadBool(mem, ptr+26)
+	t.IsStrict = loadBool(mem, ptr+27)
 
-	t.Columns = loadSlice(mod, ptr+28, func(ptr uint32, ret *Column) uint32 {
-		p, _ := mod.Memory().ReadUint32Le(ptr)
-		ret.load(mod, p, sql)
+	t.Columns = loadSlice(mem, ptr+28, func(ptr uint32, ret *Column) uint32 {
+		p, _ := mem.ReadUint32Le(ptr)
+		ret.load(mem, p, sql)
 		return 4
 	})
 
-	t.Constraints = loadSlice(mod, ptr+36, func(ptr uint32, ret *TableConstraint) uint32 {
-		p, _ := mod.Memory().ReadUint32Le(ptr)
-		ret.load(mod, p, sql)
+	t.Constraints = loadSlice(mem, ptr+36, func(ptr uint32, ret *TableConstraint) uint32 {
+		p, _ := mem.ReadUint32Le(ptr)
+		ret.load(mem, p, sql)
 		return 4
 	})
 
-	t.Type = loadEnum[StatementType](mod, ptr+44)
-	t.CurrentName = loadIdentifier(mod, ptr+48, sql)
-	t.NewName = loadIdentifier(mod, ptr+56, sql)
-}
-
-// Column holds metadata about a column.
-type Column struct {
-	Name                  string
-	Type                  string
-	Length                string
-	ConstraintName        string
-	Comment               string
-	IsPrimaryKey          bool
-	IsAutoIncrement       bool
-	IsNotNull             bool
-	IsUnique              bool
-	PKOrder               OrderClause
-	PKConflictClause      ConflictClause
-	NotNullConflictClause ConflictClause
-	UniqueConflictClause  ConflictClause
-	CheckExpr             string
-	DefaultExpr           string
-	CollateName           string
-	ForeignKeyClause      *ForeignKey
-	GeneratedExpr         string
-	GeneratedType         GenType
-}
-
-func (c *Column) load(mod api.Module, ptr uint32, sql string) {
-	c.Name = loadIdentifier(mod, ptr+0, sql)
-	c.Type = loadString(mod, ptr+8, sql)
-	c.Length = loadString(mod, ptr+16, sql)
-	c.ConstraintName = loadIdentifier(mod, ptr+24, sql)
-	c.Comment = loadString(mod, ptr+32, sql)
-
-	c.IsPrimaryKey = loadBool(mod, ptr+40)
-	c.IsAutoIncrement = loadBool(mod, ptr+41)
-	c.IsNotNull = loadBool(mod, ptr+42)
-	c.IsUnique = loadBool(mod, ptr+43)
-
-	c.PKOrder = loadEnum[OrderClause](mod, ptr+44)
-	c.PKConflictClause = loadEnum[ConflictClause](mod, ptr+48)
-	c.NotNullConflictClause = loadEnum[ConflictClause](mod, ptr+52)
-	c.UniqueConflictClause = loadEnum[ConflictClause](mod, ptr+56)
-
-	c.CheckExpr = loadString(mod, ptr+60, sql)
-	c.DefaultExpr = loadString(mod, ptr+68, sql)
-	c.CollateName = loadIdentifier(mod, ptr+76, sql)
-
-	if ptr, _ := mod.Memory().ReadUint32Le(ptr + 84); ptr != 0 {
-		c.ForeignKeyClause = &ForeignKey{}
-		c.ForeignKeyClause.load(mod, ptr, sql)
-	}
-
-	c.GeneratedExpr = loadString(mod, ptr+88, sql)
-	c.GeneratedType = loadEnum[GenType](mod, ptr+96)
+	t.Type = loadEnum[StatementType](mem, ptr+44)
+	t.CurrentName = loadIdentifier(mem, ptr+48, sql)
+	t.NewName = loadIdentifier(mem, ptr+56, sql)
+	return 64
 }
 
 // TableConstraint holds metadata about a table key constraint.
@@ -188,29 +136,113 @@ type TableConstraint struct {
 	ForeignKeyClause *ForeignKey
 }
 
-func (c *TableConstraint) load(mod api.Module, ptr uint32, sql string) {
-	c.Type = loadEnum[ConstraintType](mod, ptr+0)
-	c.Name = loadIdentifier(mod, ptr+4, sql)
+func (c *TableConstraint) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	c.Type = loadEnum[ConstraintType](mem, ptr+0)
+	c.Name = loadIdentifier(mem, ptr+4, sql)
 	switch c.Type {
 	case TABLECONSTRAINT_PRIMARYKEY, TABLECONSTRAINT_UNIQUE:
-		c.IndexedColumns = loadSlice(mod, ptr+12, func(ptr uint32, ret *IdxColumn) uint32 {
-			ret.load(mod, ptr, sql)
-			return 20
+		c.IndexedColumns = loadSlice(mem, ptr+12, func(ptr uint32, ret *IdxColumn) uint32 {
+			return ret.load(mem, ptr, sql)
 		})
-		c.ConflictClause = loadEnum[ConflictClause](mod, ptr+20)
-		c.IsAutoIncrement = loadBool(mod, ptr+24)
+		c.ConflictClause = loadEnum[ConflictClause](mem, ptr+20)
+		c.IsAutoIncrement = loadBool(mem, ptr+24)
 	case TABLECONSTRAINT_CHECK:
-		c.CheckExpr = loadString(mod, ptr+12, sql)
+		c.CheckExpr = loadString(mem, ptr+12, sql)
 	case TABLECONSTRAINT_FOREIGNKEY:
-		c.ForeignKeyNames = loadSlice(mod, ptr+12, func(ptr uint32, ret *string) uint32 {
-			*ret = loadIdentifier(mod, ptr, sql)
+		c.ForeignKeyNames = loadSlice(mem, ptr+12, func(ptr uint32, ret *string) uint32 {
+			*ret = loadIdentifier(mem, ptr, sql)
 			return 8
 		})
-		if ptr, _ := mod.Memory().ReadUint32Le(ptr + 20); ptr != 0 {
+		if ptr, _ := mem.ReadUint32Le(ptr + 20); ptr != 0 {
 			c.ForeignKeyClause = &ForeignKey{}
-			c.ForeignKeyClause.load(mod, ptr, sql)
+			c.ForeignKeyClause.load(mem, ptr, sql)
 		}
 	}
+	return 28
+}
+
+// Column holds metadata about a column.
+type Column struct {
+	Name                     string
+	Type                     string
+	Length                   string
+	Comment                  string
+	IsPrimaryKey             bool
+	IsAutoIncrement          bool
+	IsNotNull                bool
+	IsUnique                 bool
+	PKConstraintName         string
+	PKOrder                  OrderClause
+	PKConflictClause         ConflictClause
+	NotNullConstraintName    string
+	NotNullConflictClause    ConflictClause
+	UniqueConstraintName     string
+	UniqueConflictClause     ConflictClause
+	CheckConstraints         []CheckConstraint
+	DefaultConstraintName    string
+	DefaultExpr              string
+	CollateConstraintName    string
+	CollateName              string
+	ForeignKeyConstraintName string
+	ForeignKeyClause         *ForeignKey
+	GeneratedConstraintName  string
+	GeneratedExpr            string
+	GeneratedType            GenType
+}
+
+func (c *Column) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sql)
+	c.Type = loadString(mem, ptr+8, sql)
+	c.Length = loadString(mem, ptr+16, sql)
+	c.Comment = loadString(mem, ptr+24, sql)
+
+	c.IsPrimaryKey = loadBool(mem, ptr+32)
+	c.IsAutoIncrement = loadBool(mem, ptr+33)
+	c.IsNotNull = loadBool(mem, ptr+34)
+	c.IsUnique = loadBool(mem, ptr+35)
+
+	c.PKConstraintName = loadIdentifier(mem, ptr+36, sql)
+	c.PKOrder = loadEnum[OrderClause](mem, ptr+44)
+	c.PKConflictClause = loadEnum[ConflictClause](mem, ptr+48)
+
+	c.NotNullConstraintName = loadIdentifier(mem, ptr+52, sql)
+	c.NotNullConflictClause = loadEnum[ConflictClause](mem, ptr+60)
+
+	c.UniqueConstraintName = loadIdentifier(mem, ptr+64, sql)
+	c.UniqueConflictClause = loadEnum[ConflictClause](mem, ptr+72)
+
+	c.CheckConstraints = loadSlice(mem, ptr+76, func(ptr uint32, ret *CheckConstraint) uint32 {
+		return ret.load(mem, ptr, sql)
+	})
+
+	c.DefaultConstraintName = loadIdentifier(mem, ptr+84, sql)
+	c.DefaultExpr = loadString(mem, ptr+92, sql)
+
+	c.CollateConstraintName = loadIdentifier(mem, ptr+100, sql)
+	c.CollateName = loadIdentifier(mem, ptr+108, sql)
+
+	c.ForeignKeyConstraintName = loadIdentifier(mem, ptr+116, sql)
+	if p, _ := mem.ReadUint32Le(ptr + 124); p != 0 {
+		c.ForeignKeyClause = &ForeignKey{}
+		c.ForeignKeyClause.load(mem, p, sql)
+	}
+
+	c.GeneratedConstraintName = loadIdentifier(mem, ptr+128, sql)
+	c.GeneratedExpr = loadString(mem, ptr+136, sql)
+	c.GeneratedType = loadEnum[GenType](mem, ptr+144)
+	return 148
+}
+
+// CheckConstraint holds metadata about a check constraint.
+type CheckConstraint struct {
+	Name string
+	Expr string
+}
+
+func (c *CheckConstraint) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sql)
+	c.Expr = loadString(mem, ptr+8, sql)
+	return 16
 }
 
 // ForeignKey holds metadata about a foreign key constraint.
@@ -223,18 +255,19 @@ type ForeignKey struct {
 	Deferrable  FKDefType
 }
 
-func (f *ForeignKey) load(mod api.Module, ptr uint32, sql string) {
-	f.Table = loadIdentifier(mod, ptr+0, sql)
+func (f *ForeignKey) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	f.Table = loadIdentifier(mem, ptr+0, sql)
 
-	f.ColumnNames = loadSlice(mod, ptr+8, func(ptr uint32, ret *string) uint32 {
-		*ret = loadIdentifier(mod, ptr, sql)
+	f.ColumnNames = loadSlice(mem, ptr+8, func(ptr uint32, ret *string) uint32 {
+		*ret = loadIdentifier(mem, ptr, sql)
 		return 8
 	})
 
-	f.OnDelete = loadEnum[FKAction](mod, ptr+16)
-	f.OnUpdate = loadEnum[FKAction](mod, ptr+20)
-	f.Match = loadIdentifier(mod, ptr+24, sql)
-	f.Deferrable = loadEnum[FKDefType](mod, ptr+32)
+	f.OnDelete = loadEnum[FKAction](mem, ptr+16)
+	f.OnUpdate = loadEnum[FKAction](mem, ptr+20)
+	f.Match = loadIdentifier(mem, ptr+24, sql)
+	f.Deferrable = loadEnum[FKDefType](mem, ptr+32)
+	return 36
 }
 
 // IdxColumn holds metadata about an indexed column.
@@ -244,29 +277,42 @@ type IdxColumn struct {
 	Order       OrderClause
 }
 
-func (c *IdxColumn) load(mod api.Module, ptr uint32, sql string) {
-	c.Name = loadIdentifier(mod, ptr+0, sql)
-	c.CollateName = loadIdentifier(mod, ptr+8, sql)
-	c.Order = loadEnum[OrderClause](mod, ptr+16)
+func (c *IdxColumn) load(mem api.Memory, ptr uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sql)
+	c.CollateName = loadIdentifier(mem, ptr+8, sql)
+	c.Order = loadEnum[OrderClause](mem, ptr+16)
+	return 20
 }
 
-func loadString(mod api.Module, ptr uint32, sql string) string {
-	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
+func loadString(mem api.Memory, ptr uint32, sql string) string {
+	off, _ := mem.ReadUint32Le(ptr + 0)
 	if off == 0 {
 		return ""
 	}
-	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
-	return sql[off-sqlp : off+len-sqlp]
+	cnt, _ := mem.ReadUint32Le(ptr + 4)
+
+	if int(off+cnt-sqlp) >= len(sql) {
+		val, _ := mem.Read(off, cnt)
+		return string(val)
+	}
+
+	return sql[off-sqlp : off+cnt-sqlp]
 }
 
-func loadIdentifier(mod api.Module, ptr uint32, sql string) string {
-	off, _ := mod.Memory().ReadUint32Le(ptr + 0)
+func loadIdentifier(mem api.Memory, ptr uint32, sql string) string {
+	off, _ := mem.ReadUint32Le(ptr + 0)
 	if off == 0 {
 		return ""
 	}
+	cnt, _ := mem.ReadUint32Le(ptr + 4)
+
+	if int(off+cnt-sqlp) >= len(sql) {
+		val, _ := mem.Read(off, cnt)
+		return string(val)
+	}
+
 	var old, new string
-	len, _ := mod.Memory().ReadUint32Le(ptr + 4)
-	str := sql[off-sqlp : off+len-sqlp]
+	str := sql[off-sqlp : off+cnt-sqlp]
 	switch sql[off-sqlp-1] {
 	default:
 		return str
@@ -280,25 +326,25 @@ func loadIdentifier(mod api.Module, ptr uint32, sql string) string {
 	return strings.ReplaceAll(str, old, new)
 }
 
-func loadSlice[T any](mod api.Module, ptr uint32, fn func(uint32, *T) uint32) []T {
-	ref, _ := mod.Memory().ReadUint32Le(ptr + 4)
+func loadSlice[T any](mem api.Memory, ptr uint32, fn func(uint32, *T) uint32) []T {
+	ref, _ := mem.ReadUint32Le(ptr + 4)
 	if ref == 0 {
 		return nil
 	}
-	len, _ := mod.Memory().ReadUint32Le(ptr + 0)
-	ret := make([]T, len)
+	cnt, _ := mem.ReadUint32Le(ptr + 0)
+	ret := make([]T, cnt)
 	for i := range ret {
 		ref += fn(ref, &ret[i])
 	}
 	return ret
 }
 
-func loadEnum[T ~uint32](mod api.Module, ptr uint32) T {
-	val, _ := mod.Memory().ReadUint32Le(ptr)
+func loadEnum[T ~uint32](mem api.Memory, ptr uint32) T {
+	val, _ := mem.ReadUint32Le(ptr)
 	return T(val)
 }
 
-func loadBool(mod api.Module, ptr uint32) bool {
-	val, _ := mod.Memory().ReadByte(ptr)
+func loadBool(mem api.Memory, ptr uint32) bool {
+	val, _ := mem.ReadByte(ptr)
 	return val != 0
 }
