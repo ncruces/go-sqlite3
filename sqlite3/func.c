@@ -4,22 +4,22 @@
 #include "include.h"
 #include "sqlite3.h"
 
-void go_collation_needed(void *, sqlite3 *, int, const char *);
+void go_collation_needed(void*, sqlite3*, int, const char*);
 
-int go_compare(go_handle, int, const void *, int, const void *);
+int go_compare(go_handle, int, const void*, int, const void*);
 
-void go_func(sqlite3_context *, go_handle, int, sqlite3_value **);
+void go_func(sqlite3_context*, go_handle, int, sqlite3_value**);
 
-void go_step(sqlite3_context *, go_handle *, go_handle, int, sqlite3_value **);
-void go_value(sqlite3_context *, go_handle *, go_handle, bool);
-void go_inverse(sqlite3_context *, go_handle, int, sqlite3_value **);
+void go_step(sqlite3_context*, go_handle*, go_handle, int, sqlite3_value**);
+void go_value(sqlite3_context*, go_handle*, go_handle, bool);
+void go_inverse(sqlite3_context*, go_handle, int, sqlite3_value**);
 
-void go_func_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
+void go_func_wrapper(sqlite3_context* ctx, int nArg, sqlite3_value** pArg) {
   go_func(ctx, sqlite3_user_data(ctx), nArg, pArg);
 }
 
-void go_step_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 4);
+void go_step_wrapper(sqlite3_context* ctx, int nArg, sqlite3_value** pArg) {
+  go_handle* agg = sqlite3_aggregate_context(ctx, 4);
   go_handle data = NULL;
   if (agg == NULL || *agg == NULL) {
     data = sqlite3_user_data(ctx);
@@ -27,8 +27,8 @@ void go_step_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
   go_step(ctx, agg, data, nArg, pArg);
 }
 
-void go_value_wrapper(sqlite3_context *ctx) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 4);
+void go_value_wrapper(sqlite3_context* ctx) {
+  go_handle* agg = sqlite3_aggregate_context(ctx, 4);
   go_handle data = NULL;
   if (agg == NULL || *agg == NULL) {
     data = sqlite3_user_data(ctx);
@@ -36,8 +36,8 @@ void go_value_wrapper(sqlite3_context *ctx) {
   go_value(ctx, agg, data, /*final=*/false);
 }
 
-void go_final_wrapper(sqlite3_context *ctx) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 0);
+void go_final_wrapper(sqlite3_context* ctx) {
+  go_handle* agg = sqlite3_aggregate_context(ctx, 0);
   go_handle data = NULL;
   if (agg == NULL || *agg == NULL) {
     data = sqlite3_user_data(ctx);
@@ -45,17 +45,17 @@ void go_final_wrapper(sqlite3_context *ctx) {
   go_value(ctx, agg, data, /*final=*/true);
 }
 
-void go_inverse_wrapper(sqlite3_context *ctx, int nArg, sqlite3_value **pArg) {
-  go_handle *agg = sqlite3_aggregate_context(ctx, 0);
+void go_inverse_wrapper(sqlite3_context* ctx, int nArg, sqlite3_value** pArg) {
+  go_handle* agg = sqlite3_aggregate_context(ctx, 0);
   go_inverse(ctx, *agg, nArg, pArg);
 }
 
-int sqlite3_collation_needed_go(sqlite3 *db, bool enable) {
+int sqlite3_collation_needed_go(sqlite3* db, bool enable) {
   return sqlite3_collation_needed(db, /*arg=*/NULL,
                                   enable ? go_collation_needed : NULL);
 }
 
-int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {
+int sqlite3_create_collation_go(sqlite3* db, const char* name, go_handle app) {
   if (app == NULL) {
     return sqlite3_create_collation_v2(db, name, SQLITE_UTF8, NULL, NULL, NULL);
   }
@@ -65,7 +65,7 @@ int sqlite3_create_collation_go(sqlite3 *db, const char *name, go_handle app) {
   return rc;
 }
 
-int sqlite3_create_function_go(sqlite3 *db, const char *name, int argc,
+int sqlite3_create_function_go(sqlite3* db, const char* name, int argc,
                                int flags, go_handle app) {
   if (app == NULL) {
     return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, NULL,
@@ -76,7 +76,7 @@ int sqlite3_create_function_go(sqlite3 *db, const char *name, int argc,
                                     /*final=*/NULL, go_destroy);
 }
 
-int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *name,
+int sqlite3_create_aggregate_function_go(sqlite3* db, const char* name,
                                          int argc, int flags, go_handle app) {
   if (app == NULL) {
     return sqlite3_create_function_v2(db, name, argc, SQLITE_UTF8 | flags, NULL,
@@ -87,7 +87,7 @@ int sqlite3_create_aggregate_function_go(sqlite3 *db, const char *name,
                                     go_final_wrapper, go_destroy);
 }
 
-int sqlite3_create_window_function_go(sqlite3 *db, const char *name, int argc,
+int sqlite3_create_window_function_go(sqlite3* db, const char* name, int argc,
                                       int flags, go_handle app) {
   if (app == NULL) {
     return sqlite3_create_window_function(db, name, argc, SQLITE_UTF8 | flags,
@@ -98,6 +98,6 @@ int sqlite3_create_window_function_go(sqlite3 *db, const char *name, int argc,
       go_final_wrapper, go_value_wrapper, go_inverse_wrapper, go_destroy);
 }
 
-void sqlite3_set_auxdata_go(sqlite3_context *ctx, int i, go_handle aux) {
+void sqlite3_set_auxdata_go(sqlite3_context* ctx, int i, go_handle aux) {
   sqlite3_set_auxdata(ctx, i, aux, go_destroy);
 }

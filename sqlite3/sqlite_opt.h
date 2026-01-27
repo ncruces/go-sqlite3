@@ -9,7 +9,6 @@
 #define SQLITE_OMIT_SHARED_CACHE
 #define SQLITE_OMIT_AUTOINIT
 
-// We need these:
 // #define SQLITE_DEFAULT_MEMSTATUS 0
 // #define SQLITE_MAX_EXPR_DEPTH 0
 // #define SQLITE_USE_ALLOCA
@@ -28,11 +27,8 @@
 #define SQLITE_ENABLE_SETLK_TIMEOUT 2
 #define SQLITE_ENABLE_STAT4 1
 
-// We have our own memdb VFS.
-// To avoid interactions between the two,
-// omit sqlite3_serialize/sqlite3_deserialize,
-// which we also don't wrap.
 #define SQLITE_OMIT_DESERIALIZE
+#define SQLITE_OMIT_LOAD_EXTENSION
 
 // Amalgamated Extensions
 

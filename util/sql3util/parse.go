@@ -52,7 +52,8 @@ func ParseTable(sql string) (_ *Table, err error) {
 	}
 	defer mod.Close(ctx)
 
-	if buf, ok := mod.Memory().Read(sqlp, uint32(len(sql))); ok {
+	mem := mod.Memory()
+	if buf, ok := mem.Read(sqlp, uint32(len(sql))); ok {
 		copy(buf, sql)
 	}
 
@@ -62,7 +63,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 		return nil, err
 	}
 
-	c, _ := mod.Memory().ReadUint32Le(errp)
+	c, _ := mem.ReadUint32Le(errp)
 	switch c {
 	case _MEMORY:
 		panic(util.OOMErr)
@@ -73,7 +74,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 	}
 
 	var tab Table
-	tab.load(mod.Memory(), uint32(stack[0]), sql)
+	tab.load(mem, uint32(stack[0]), sql)
 	return &tab, nil
 }
 

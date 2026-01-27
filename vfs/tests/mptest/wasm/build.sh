@@ -17,11 +17,10 @@ WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 	-fno-stack-protector \
 	-Wl,--stack-first \
 	-Wl,--import-undefined \
-	-D_HAVE_SQLITE_CONFIG_H -DSQLITE_USE_URI \
+	-DHAVE_USLEEP -D_HAVE_SQLITE_CONFIG_H -DSQLITE_USE_URI \
 	-DSQLITE_DEFAULT_SYNCHRONOUS=0 \
 	-DSQLITE_DEFAULT_LOCKING_MODE=0 \
 	-DSQLITE_NO_SYNC -DSQLITE_THREADSAFE=0 \
-	-DSQLITE_OMIT_LOAD_EXTENSION -DHAVE_USLEEP \
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	-D_WASI_EMULATED_GETPID -lwasi-emulated-getpid \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)

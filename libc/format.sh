@@ -6,5 +6,4 @@ cd -P -- "$(dirname -- "$0")"
 ROOT=../
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
-shopt -s extglob
-"$WASI_SDK/clang-format" --style=Google -i !(sqlite3*).@(c|h)
+"$WASI_SDK/clang-format" --style=Google -i *.c *.h

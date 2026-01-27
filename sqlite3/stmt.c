@@ -2,7 +2,7 @@
 
 #include "sqlite3.h"
 
-int sqlite3_exec_go(sqlite3_stmt *stmt) {
+int sqlite3_exec_go(sqlite3_stmt* stmt) {
   while (sqlite3_step(stmt) == SQLITE_ROW);
   return sqlite3_reset(stmt);
 }
@@ -11,19 +11,19 @@ union sqlite3_data {
   sqlite3_int64 i;
   double d;
   struct {
-    const void *ptr;
+    const void* ptr;
     int len;
   };
 };
 
-int sqlite3_columns_go(sqlite3_stmt *stmt, int nCol, char *aType,
-                       union sqlite3_data *aData) {
+int sqlite3_columns_go(sqlite3_stmt* stmt, int nCol, char* aType,
+                       union sqlite3_data* aData) {
   if (nCol != sqlite3_column_count(stmt)) {
     return SQLITE_MISUSE;
   }
   bool check = false;
   for (int i = 0; i < nCol; ++i) {
-    const void *ptr = NULL;
+    const void* ptr = NULL;
     switch (aType[i] = sqlite3_column_type(stmt, i)) {
       default:  // SQLITE_NULL
         aData[i] = (union sqlite3_data){};

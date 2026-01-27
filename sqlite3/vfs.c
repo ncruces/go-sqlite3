@@ -5,40 +5,40 @@
 #include "include.h"
 #include "sqlite3.h"
 
-int go_vfs_find(const char *zVfsName);
-int go_localtime(struct tm *, sqlite3_int64);
+int go_vfs_find(const char* zVfsName);
+int go_localtime(struct tm*, sqlite3_int64);
 
-int go_randomness(sqlite3_vfs *, int nByte, char *zOut);
-int go_sleep(sqlite3_vfs *, int microseconds);
-int go_current_time_64(sqlite3_vfs *, sqlite3_int64 *);
+int go_randomness(sqlite3_vfs*, int nByte, char* zOut);
+int go_sleep(sqlite3_vfs*, int microseconds);
+int go_current_time_64(sqlite3_vfs*, sqlite3_int64*);
 
-int go_open(sqlite3_vfs *, sqlite3_filename zName, sqlite3_file *, int flags,
-            int *pOutFlags, int *pOutVFS);
-int go_delete(sqlite3_vfs *, const char *zName, int syncDir);
-int go_access(sqlite3_vfs *, const char *zName, int flags, int *pResOut);
-int go_full_pathname(sqlite3_vfs *, const char *zName, int nOut, char *zOut);
+int go_open(sqlite3_vfs*, sqlite3_filename zName, sqlite3_file*, int flags,
+            int* pOutFlags, int* pOutVFS);
+int go_delete(sqlite3_vfs*, const char* zName, int syncDir);
+int go_access(sqlite3_vfs*, const char* zName, int flags, int* pResOut);
+int go_full_pathname(sqlite3_vfs*, const char* zName, int nOut, char* zOut);
 
-int go_close(sqlite3_file *);
-int go_read(sqlite3_file *, void *, int iAmt, sqlite3_int64 iOfst);
-int go_write(sqlite3_file *, const void *, int iAmt, sqlite3_int64 iOfst);
-int go_truncate(sqlite3_file *, sqlite3_int64 size);
-int go_sync(sqlite3_file *, int flags);
-int go_file_size(sqlite3_file *, sqlite3_int64 *pSize);
-int go_file_control(sqlite3_file *, int op, void *pArg);
-int go_sector_size(sqlite3_file *file);
-int go_device_characteristics(sqlite3_file *file);
+int go_close(sqlite3_file*);
+int go_read(sqlite3_file*, void*, int iAmt, sqlite3_int64 iOfst);
+int go_write(sqlite3_file*, const void*, int iAmt, sqlite3_int64 iOfst);
+int go_truncate(sqlite3_file*, sqlite3_int64 size);
+int go_sync(sqlite3_file*, int flags);
+int go_file_size(sqlite3_file*, sqlite3_int64* pSize);
+int go_file_control(sqlite3_file*, int op, void* pArg);
+int go_sector_size(sqlite3_file* file);
+int go_device_characteristics(sqlite3_file* file);
 
-int go_lock(sqlite3_file *, int eLock);
-int go_unlock(sqlite3_file *, int eLock);
-int go_check_reserved_lock(sqlite3_file *, int *pResOut);
+int go_lock(sqlite3_file*, int eLock);
+int go_unlock(sqlite3_file*, int eLock);
+int go_check_reserved_lock(sqlite3_file*, int* pResOut);
 
-int go_shm_map(sqlite3_file *, int iPg, int pgsz, int, void volatile **);
-int go_shm_lock(sqlite3_file *, int offset, int n, int flags);
-int go_shm_unmap(sqlite3_file *, int deleteFlag);
-void go_shm_barrier(sqlite3_file *);
+int go_shm_map(sqlite3_file*, int iPg, int pgsz, int, void volatile**);
+int go_shm_lock(sqlite3_file*, int offset, int n, int flags);
+int go_shm_unmap(sqlite3_file*, int deleteFlag);
+void go_shm_barrier(sqlite3_file*);
 
-static int go_open_wrapper(sqlite3_vfs *vfs, sqlite3_filename zName,
-                           sqlite3_file *file, int flags, int *pOutFlags) {
+static int go_open_wrapper(sqlite3_vfs* vfs, sqlite3_filename zName,
+                           sqlite3_file* file, int flags, int* pOutFlags) {
   static const sqlite3_io_methods go_io[2] = {
       {
           .iVersion = 1,
@@ -89,7 +89,7 @@ struct go_file {
   go_handle handle;
 };
 
-sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
+sqlite3_vfs* sqlite3_vfs_find(const char* zVfsName) {
   // The default VFS.
   if (!zVfsName || !strcmp(zVfsName, "os")) {
     static sqlite3_vfs os_vfs = {
@@ -115,18 +115,18 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
     return NULL;
   }
 
-  static sqlite3_vfs *go_vfs_list;
+  static sqlite3_vfs* go_vfs_list;
 
   // Do we already have a C wrapper for the Go VFS?
-  for (sqlite3_vfs *it = go_vfs_list; it; it = it->pNext) {
+  for (sqlite3_vfs* it = go_vfs_list; it; it = it->pNext) {
     if (!strcmp(zVfsName, it->zName)) {
       return it;
     }
   }
 
   // Delete C wrappers that are no longer needed.
-  for (sqlite3_vfs **ptr = &go_vfs_list; *ptr;) {
-    sqlite3_vfs *it = *ptr;
+  for (sqlite3_vfs** ptr = &go_vfs_list; *ptr;) {
+    sqlite3_vfs* it = *ptr;
     if (go_vfs_find(it->zName)) {
       ptr = &it->pNext;
     } else {
@@ -136,10 +136,10 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
   }
 
   // Create a new C wrapper.
-  sqlite3_vfs *head = go_vfs_list;
+  sqlite3_vfs* head = go_vfs_list;
   size_t vfsNameLen = strlen(zVfsName);
   go_vfs_list = malloc(sizeof(sqlite3_vfs) + vfsNameLen + 1);
-  char *name = (char *)(go_vfs_list + 1);
+  char* name = (char*)(go_vfs_list + 1);
   memcpy(name, zVfsName, vfsNameLen + 1);
   *go_vfs_list = (sqlite3_vfs){
       .iVersion = 2,
@@ -160,15 +160,15 @@ sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName) {
   return go_vfs_list;
 }
 
-int localtime_s(struct tm *const pTm, time_t const *const pTime) {
+int localtime_s(struct tm* const pTm, time_t const* const pTime) {
   return go_localtime(pTm, (sqlite3_int64)*pTime);
 }
 
 int sqlite3_os_init() { return SQLITE_OK; }
 
 int sqlite3_invoke_busy_handler_go(sqlite3_int64 token) {
-  void **ap = (void **)&token;
-  return ((int (*)(void *))(ap[0]))(ap[1]);
+  void** ap = (void**)&token;
+  return ((int (*)(void*))(ap[0]))(ap[1]);
 }
 
 static_assert(offsetof(sqlite3_vfs, zName) == 16, "Unexpected offset");
