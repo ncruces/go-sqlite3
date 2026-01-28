@@ -11,7 +11,8 @@ trap 'rm -f sql3parse_table.tmp' EXIT
 
 "$WASI_SDK/clang" --target=wasm32 -nostdlib -std=c23 -g0 -Oz \
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
-	-o sql3parse_table.tmp main.c -I"$ROOT/libc" \
+	-o sql3parse_table.tmp main.c \
+	-I"$ROOT/sqlite3/libc" \
 	-mexec-model=reactor \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
