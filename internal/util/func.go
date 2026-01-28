@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"math"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -184,5 +185,31 @@ func ExportFuncIIJ[TR, T0 i32, T1 i64](mod wazero.HostModuleBuilder, name string
 	mod.NewFunctionBuilder().
 		WithGoModuleFunction(funcIIJ[TR, T0, T1](fn),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI64}, []api.ValueType{api.ValueTypeI32}).
+		Export(name)
+}
+
+type funcDD func(float64) float64
+
+func (fn funcDD) Call(ctx context.Context, mod api.Module, stack []uint64) {
+	stack[0] = math.Float64bits(fn(math.Float64frombits(stack[0])))
+}
+
+func ExportFuncDD(mod wazero.HostModuleBuilder, name string, fn func(float64) float64) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(funcDD(fn),
+			[]api.ValueType{api.ValueTypeF64}, []api.ValueType{api.ValueTypeF64}).
+		Export(name)
+}
+
+type funcDDD func(float64, float64) float64
+
+func (fn funcDDD) Call(ctx context.Context, mod api.Module, stack []uint64) {
+	stack[0] = math.Float64bits(fn(math.Float64frombits(stack[0]), math.Float64frombits(stack[1])))
+}
+
+func ExportFuncDDD(mod wazero.HostModuleBuilder, name string, fn func(float64, float64) float64) {
+	mod.NewFunctionBuilder().
+		WithGoModuleFunction(funcDDD(fn),
+			[]api.ValueType{api.ValueTypeF64, api.ValueTypeF64}, []api.ValueType{api.ValueTypeF64}).
 		Export(name)
 }

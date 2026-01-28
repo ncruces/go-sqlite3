@@ -8,8 +8,7 @@ BINARYEN="$ROOT/tools/binaryen/bin"
 WASI_SDK="$ROOT/tools/wasi-sdk/bin"
 
 "$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
-	-o speedtest1.wasm main.c \
-	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
+	-o speedtest1.wasm main.c -I"$ROOT/sqlite3" \
 	-mmutable-globals -mnontrapping-fptoint \
 	-msimd128 -mbulk-memory -msign-ext \
 	-mreference-types -mmultivalue \
