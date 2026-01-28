@@ -40,7 +40,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // RegisterLike must be set to false to not register a Unicode aware LIKE operator.
@@ -192,7 +192,7 @@ func normalize(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		case "NFKD":
 			form = norm.NFKD
 		default:
-			ctx.ResultError(util.ErrorString("unicode: invalid form"))
+			ctx.ResultError(errutil.ErrorString("unicode: invalid form"))
 			return
 		}
 	}
@@ -228,7 +228,7 @@ func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		b := arg[2].RawText()
 		escape, size = utf8.DecodeRune(b)
 		if size != len(b) {
-			ctx.ResultError(util.ErrorString("ESCAPE expression must be a single character"))
+			ctx.ResultError(errutil.ErrorString("ESCAPE expression must be a single character"))
 			return
 		}
 	}

@@ -24,14 +24,14 @@ import (
 	"errors"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers cryptographic hash functions for a database connection.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
 
-	var errs util.ErrorJoiner
+	var errs errutil.ErrorJoiner
 	if crypto.MD4.Available() {
 		errs.Join(
 			db.CreateFunction("md4", 1, flags, md4Func))

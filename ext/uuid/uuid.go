@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers the SQL functions:
@@ -89,12 +89,12 @@ func generate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		case domain == uuid.Group:
 			u, err = uuid.NewDCEGroup()
 		default:
-			err = util.ErrorString("missing id")
+			err = errutil.ErrorString("missing id")
 		}
 
 	case 3, 5:
 		if len(arg) < 2 {
-			err = util.ErrorString("missing data")
+			err = errutil.ErrorString("missing data")
 			break
 		}
 		ns, err := fromValue(arg[1])

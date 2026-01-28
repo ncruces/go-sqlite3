@@ -5,14 +5,14 @@ import (
 	"io/fs"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // ParseFileMode parses a file mode as returned by
 // [fs.FileMode.String].
 func ParseFileMode(str string) (fs.FileMode, error) {
 	var mode fs.FileMode
-	err := util.ErrorString("invalid mode: " + str)
+	err := errutil.ErrorString("invalid mode: " + str)
 
 	if len(str) < 10 {
 		return 0, err

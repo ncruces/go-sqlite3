@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -163,7 +161,7 @@ func Test_BeginTx(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.BeginTx(t.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err.Error() != string(util.IsolationErr) {
+	if err.Error() != string(errutil.IsolationErr) {
 		t.Error("want isolationErr")
 	}
 
@@ -285,12 +283,12 @@ func Test_Prepare(t *testing.T) {
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT`)
-	if err.Error() != string(util.TailErr) {
+	if err.Error() != string(errutil.TailErr) {
 		t.Error("want tailErr")
 	}
 
 	_, err = db.Prepare(`SELECT 1; SELECT 2`)
-	if err.Error() != string(util.TailErr) {
+	if err.Error() != string(errutil.TailErr) {
 		t.Error("want tailErr")
 	}
 }

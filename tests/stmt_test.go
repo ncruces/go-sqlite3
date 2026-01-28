@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func TestStmt(t *testing.T) {

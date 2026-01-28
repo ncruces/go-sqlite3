@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -66,7 +67,7 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 	case FLOAT:
 		data = util.AppendNumber(nil, s.ColumnFloat(col))
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return json.Unmarshal(data, ptr)
 }
@@ -87,7 +88,7 @@ func (v Value) JSON(ptr any) error {
 	case FLOAT:
 		data = util.AppendNumber(nil, v.Float())
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return json.Unmarshal(data, ptr)
 }

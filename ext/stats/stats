@@ -1,0 +1,13 @@
+goos: linux
+goarch: amd64
+pkg: github.com/ncruces/go-sqlite3/ext/stats
+cpu: Intel(R) Xeon(R) W-2135 CPU @ 3.70GHz
+              │    before    │                after                │             after-unsafe             │
+              │    sec/op    │   sec/op     vs base                │    sec/op     vs base                │
+_average-12     128.5n ± 12%   183.6n ± 9%  +42.88% (p=0.000 n=20)   139.2n ±  8%        ~ (p=0.056 n=20)
+_variance-12    323.6n ± 11%   248.7n ± 9%  -23.16% (p=0.000 n=20)   194.4n ± 12%  -39.93% (p=0.000 n=20)
+_math/sqrt-12   169.3n ± 17%   286.6n ± 6%  +69.21% (p=0.000 n=20)   185.5n ±  5%        ~ (p=0.072 n=20)
+_math/tan-12    207.8n ±  6%   302.7n ± 4%  +45.69% (p=0.000 n=20)   207.9n ±  4%        ~ (p=0.533 n=20)
+_math/cot-12    465.1n ±  9%   365.0n ± 3%  -21.51% (p=0.000 n=20)   260.8n ±  5%  -43.93% (p=0.000 n=20)
+_math/cbrt-12   434.8n ± 10%   344.4n ± 4%  -20.79% (p=0.000 n=20)   262.9n ±  6%  -39.55% (p=0.000 n=20)
+geomean         258.1n         281.5n        +9.06%                  203.7n        -21.08%

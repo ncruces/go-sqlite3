@@ -1,13 +1,14 @@
 package sql3util
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/binary"
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
-	parser "github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
+	parser "github.com/ncruces/go-sqlite3-wasm/parser"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 const (
@@ -31,11 +32,11 @@ func ParseTable(sql string) (_ *Table, err error) {
 	c := binary.LittleEndian.Uint32(mod.Memory[errp:])
 	switch c {
 	case _MEMORY:
-		panic(util.OOMErr)
+		panic(errutil.OOMErr)
 	case _SYNTAX:
-		return nil, util.ErrorString("sql3parse: invalid syntax")
+		return nil, errutil.ErrorString("sql3parse: invalid syntax")
 	case _UNSUPPORTEDSQL:
-		return nil, util.ErrorString("sql3parse: unsupported SQL")
+		return nil, errutil.ErrorString("sql3parse: unsupported SQL")
 	}
 
 	var tab Table
@@ -311,4 +312,12 @@ func loadEnum[T ~uint32](mem []byte, ptr uint32) T {
 func loadBool(mem []byte, ptr uint32) bool {
 	val := mem[ptr]
 	return val != 0
+}
+
+type libc struct{ *parser.Module }
+
+func (l *libc) Init(m *parser.Module) { l.Module = m }
+
+func (l *libc) Xstrlen(v0 int32) int32 {
+	return int32(bytes.IndexByte(l.Memory[v0:], 0))
 }

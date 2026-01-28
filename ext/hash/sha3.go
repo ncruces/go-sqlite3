@@ -4,7 +4,7 @@ import (
 	"crypto"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 func sha3Func(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -23,6 +23,6 @@ func sha3Func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case 512:
 		hashFunc(ctx, arg[0], crypto.SHA3_512)
 	default:
-		ctx.ResultError(util.ErrorString("sha3: size must be 224, 256, 384, 512"))
+		ctx.ResultError(errutil.ErrorString("sha3: size must be 224, 256, 384, 512"))
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/osutil"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
@@ -73,7 +74,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 		}
 
 		if (filename == "") == (data == "") {
-			return nil, util.ErrorString(`csv: must specify either "filename" or "data" but not both`)
+			return nil, errutil.ErrorString(`csv: must specify either "filename" or "data" but not both`)
 		}
 
 		t := &table{

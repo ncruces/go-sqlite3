@@ -4,7 +4,7 @@ import (
 	"crypto"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 func blake2sFunc(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -25,6 +25,6 @@ func blake2bFunc(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case 512:
 		hashFunc(ctx, arg[0], crypto.BLAKE2b_512)
 	default:
-		ctx.ResultError(util.ErrorString("blake2b: size must be 256, 384, 512"))
+		ctx.ResultError(errutil.ErrorString("blake2b: size must be 256, 384, 512"))
 	}
 }

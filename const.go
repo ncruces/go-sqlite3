@@ -3,7 +3,7 @@ package sqlite3
 import (
 	"strconv"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 const (
@@ -15,14 +15,13 @@ const (
 	_MAX_LENGTH     = 1e9
 	_MAX_SQL_LENGTH = 1e9
 
-	ptrlen = util.PtrLen
-	intlen = util.IntLen
+	ptrlen = sqlite3_wrap.PtrLen
+	intlen = sqlite3_wrap.IntLen
 )
 
 type (
-	stk_t = util.Stk_t
-	ptr_t = util.Ptr_t
-	res_t = util.Res_t
+	ptr_t = sqlite3_wrap.Ptr_t
+	res_t = sqlite3_wrap.Res_t
 )
 
 // ErrorCode is a result code that [Error.Code] might return.

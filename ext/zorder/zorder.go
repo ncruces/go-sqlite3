@@ -7,7 +7,7 @@ import (
 	"errors"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers the zorder and unzorder SQL functions.
@@ -21,7 +21,7 @@ func Register(db *sqlite3.Conn) error {
 func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	var x [24]int64
 	if n := len(arg); n < 2 || n > 24 {
-		ctx.ResultError(util.ErrorString("zorder: needs between 2 and 24 dimensions"))
+		ctx.ResultError(errutil.ErrorString("zorder: needs between 2 and 24 dimensions"))
 		return
 	}
 	for i := range arg {
@@ -37,7 +37,7 @@ func zorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 
 	for i := range arg {
 		if x[i] != 0 {
-			ctx.ResultError(util.ErrorString("zorder: argument out of range"))
+			ctx.ResultError(errutil.ErrorString("zorder: argument out of range"))
 			return
 		}
 	}
@@ -50,15 +50,15 @@ func unzorder(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	z := arg[0].Int64()
 
 	if n < 2 || n > 24 {
-		ctx.ResultError(util.ErrorString("unzorder: needs between 2 and 24 dimensions"))
+		ctx.ResultError(errutil.ErrorString("unzorder: needs between 2 and 24 dimensions"))
 		return
 	}
 	if i < 0 || i >= n {
-		ctx.ResultError(util.ErrorString("unzorder: index out of range"))
+		ctx.ResultError(errutil.ErrorString("unzorder: index out of range"))
 		return
 	}
 	if z < 0 {
-		ctx.ResultError(util.ErrorString("unzorder: argument out of range"))
+		ctx.ResultError(errutil.ErrorString("unzorder: argument out of range"))
 		return
 	}
 

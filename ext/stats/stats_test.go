@@ -6,9 +6,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/stats"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func TestMain(m *testing.M) {

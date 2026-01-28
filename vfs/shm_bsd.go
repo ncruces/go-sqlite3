@@ -4,7 +4,6 @@ package vfs
 
 import (
 	"cmp"
-	"context"
 	"errors"
 	"io"
 	"io/fs"
@@ -13,9 +12,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/tetratelabs/wazero/api"
-
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 type vfsShmParent struct {
@@ -38,7 +36,7 @@ type vfsShm struct {
 	*vfsShmParent
 	path    string
 	lock    [_SHM_NLOCK]bool
-	regions []*util.MappedRegion
+	regions []*sqlite3_wrap.MappedRegion
 }
 
 func (s *vfsShm) Close() error {
@@ -67,7 +65,7 @@ func (s *vfsShm) Close() error {
 			return err
 		}
 	}
-	panic(util.AssertErr())
+	panic(errutil.AssertErr())
 }
 
 func (s *vfsShm) shmOpen() (err error) {
@@ -143,7 +141,7 @@ func (s *vfsShm) shmOpen() (err error) {
 	return nil
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
+func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) (ptr_t, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
@@ -167,7 +165,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, false)
+	r, err := wrp.MapRegion(s.File, int64(id)*int64(size), size, false)
 	if err != nil {
 		return 0, err
 	}
@@ -222,7 +220,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 		// Acquiring an exclusive lock on the file is always necessary.
 		err = osWriteLock(s.File, _SHM_BASE+int64(offset), int64(n))
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 
 	if err != nil {
