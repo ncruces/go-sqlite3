@@ -2,6 +2,7 @@
 
 #include "sql3parse_table.c"
 #include "libc.c"
+#include "malloc_bump.c"
 
 static_assert(sizeof(sql3table) == 64, "Unexpected size");
 static_assert(offsetof(sql3table, name) == 0, "Unexpected offset");
