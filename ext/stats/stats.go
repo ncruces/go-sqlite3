@@ -168,7 +168,7 @@ func (fn *variance) Value(ctx sqlite3.Context) {
 func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		fn.enqueue(f)
 	}
 }
@@ -176,7 +176,7 @@ func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (fn *variance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		fn.dequeue(f)
 	}
 }
@@ -241,8 +241,8 @@ func (fn *covariance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	fa := a.Float()
 	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.NumericType() != sqlite3.NULL) &&
-		(fb != 0.0 || b.NumericType() != sqlite3.NULL) {
+		(fa != 0.0 || a.NumericType() < sqlite3.TEXT) &&
+		(fb != 0.0 || b.NumericType() < sqlite3.TEXT) {
 		fn.enqueue(fa, fb)
 	}
 }
@@ -252,8 +252,8 @@ func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	fa := a.Float()
 	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.NumericType() != sqlite3.NULL) &&
-		(fb != 0.0 || b.NumericType() != sqlite3.NULL) {
+		(fa != 0.0 || a.NumericType() < sqlite3.TEXT) &&
+		(fb != 0.0 || b.NumericType() < sqlite3.TEXT) {
 		fn.dequeue(fa, fb)
 	}
 }
@@ -293,7 +293,7 @@ func (fn *momentfn) Value(ctx sqlite3.Context) {
 func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		fn.enqueue(f)
 	}
 }
@@ -301,7 +301,7 @@ func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (fn *momentfn) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		fn.dequeue(f)
 	}
 }

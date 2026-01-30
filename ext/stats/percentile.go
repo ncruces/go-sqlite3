@@ -34,7 +34,7 @@ type percentile struct {
 func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		q.nums = append(q.nums, f)
 	}
 	if q.kind != median && q.arg1 == nil {
@@ -45,7 +45,7 @@ func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (q *percentile) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.NumericType() < sqlite3.TEXT {
 		i := slices.Index(q.nums, f)
 		l := len(q.nums) - 1
 		q.nums[i] = q.nums[l]
