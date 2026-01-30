@@ -91,7 +91,9 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("percentile_disc", 2, order, newPercentile(percentile_disc)),
 		db.CreateWindowFunction("every", 1, flags, newBoolean(every)),
 		db.CreateWindowFunction("some", 1, flags, newBoolean(some)),
-		db.CreateWindowFunction("mode", 1, order, newMode))
+		db.CreateWindowFunction("mode", 1, order, newMode),
+		db.CreateFunction("cbrt", 1, flags, cbrt),
+		db.CreateFunction("cot", 1, flags, cot))
 }
 
 const (
@@ -168,7 +170,7 @@ func (fn *variance) Value(ctx sqlite3.Context) {
 func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		fn.enqueue(f)
 	}
 }
@@ -176,7 +178,7 @@ func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (fn *variance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		fn.dequeue(f)
 	}
 }
@@ -241,8 +243,8 @@ func (fn *covariance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	fa := a.Float()
 	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.NumericType() != sqlite3.NULL) &&
-		(fb != 0.0 || b.NumericType() != sqlite3.NULL) {
+		(fa != 0.0 || a.Type() != sqlite3.NULL) &&
+		(fb != 0.0 || b.Type() != sqlite3.NULL) {
 		fn.enqueue(fa, fb)
 	}
 }
@@ -252,8 +254,8 @@ func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	fa := a.Float()
 	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.NumericType() != sqlite3.NULL) &&
-		(fb != 0.0 || b.NumericType() != sqlite3.NULL) {
+		(fa != 0.0 || a.Type() != sqlite3.NULL) &&
+		(fb != 0.0 || b.Type() != sqlite3.NULL) {
 		fn.dequeue(fa, fb)
 	}
 }
@@ -293,7 +295,7 @@ func (fn *momentfn) Value(ctx sqlite3.Context) {
 func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		fn.enqueue(f)
 	}
 }
@@ -301,7 +303,7 @@ func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (fn *momentfn) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		fn.dequeue(f)
 	}
 }

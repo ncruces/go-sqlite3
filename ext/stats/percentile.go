@@ -34,7 +34,7 @@ type percentile struct {
 func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		q.nums = append(q.nums, f)
 	}
 	if q.kind != median && q.arg1 == nil {
@@ -45,7 +45,7 @@ func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 func (q *percentile) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	a := arg[0]
 	f := a.Float()
-	if f != 0.0 || a.NumericType() != sqlite3.NULL {
+	if f != 0.0 || a.Type() != sqlite3.NULL {
 		i := slices.Index(q.nums, f)
 		l := len(q.nums) - 1
 		q.nums[i] = q.nums[l]
@@ -66,12 +66,12 @@ func (q *percentile) Value(ctx sqlite3.Context) {
 	if q.kind == median {
 		float, err = q.at(0.5)
 		ctx.ResultFloat(float)
-	} else if err = json.Unmarshal(q.arg1, &float); err == nil {
-		float, err = q.at(float)
-		ctx.ResultFloat(float)
 	} else if err = json.Unmarshal(q.arg1, &floats); err == nil {
 		err = q.atMore(floats)
 		ctx.ResultJSON(floats)
+	} else if err = json.Unmarshal(q.arg1, &float); err == nil {
+		float, err = q.at(float)
+		ctx.ResultFloat(float)
 	}
 	if err != nil {
 		ctx.ResultError(fmt.Errorf("percentile: %w", err)) // notest

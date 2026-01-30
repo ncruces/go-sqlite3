@@ -233,9 +233,6 @@ func TestRegister_covariance(t *testing.T) {
 }
 
 func Benchmark_average(b *testing.B) {
-	sqlite3.Initialize()
-	b.ResetTimer()
-
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		b.Fatal(err)
@@ -253,6 +250,7 @@ func Benchmark_average(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	b.ResetTimer()
 	if !stmt.Step() {
 		b.Fatal(stmt.Err())
 	} else {
@@ -269,9 +267,6 @@ func Benchmark_average(b *testing.B) {
 }
 
 func Benchmark_variance(b *testing.B) {
-	sqlite3.Initialize()
-	b.ResetTimer()
-
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
 		b.Fatal(err)
@@ -289,6 +284,7 @@ func Benchmark_variance(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	b.ResetTimer()
 	if !stmt.Step() {
 		b.Fatal(stmt.Err())
 	} else if b.N > 100 {
@@ -301,5 +297,36 @@ func Benchmark_variance(b *testing.B) {
 	err = stmt.Err()
 	if err != nil {
 		b.Error(err)
+	}
+}
+
+func Benchmark_math(b *testing.B) {
+	benchmarks := []string{"sqrt", "tan", "cot", "cbrt"}
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer db.Close()
+
+	for _, bm := range benchmarks {
+		b.Run(bm, func(b *testing.B) {
+			stmt, _, err := db.Prepare(`SELECT ` + bm + `(value) FROM generate_series(0, ?)`)
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer stmt.Close()
+
+			err = stmt.BindInt(1, b.N)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			b.ResetTimer()
+			err = stmt.Exec()
+			if err != nil {
+				b.Fatal(err)
+			}
+		})
 	}
 }

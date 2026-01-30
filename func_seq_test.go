@@ -31,8 +31,11 @@ func ExampleConn_CreateAggregateFunction() {
 			count := 0
 			total := 0.0
 			for arg := range seq {
-				total += arg[0].Float()
-				count++
+				switch arg[0].NumericType() {
+				case sqlite3.FLOAT, sqlite3.INTEGER:
+					total += arg[0].Float()
+					count++
+				}
 			}
 			ctx.ResultFloat(total / float64(count))
 		})
