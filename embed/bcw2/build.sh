@@ -44,7 +44,7 @@ cd build
 cat *.patch | patch -p0 --no-backup-if-mismatch
 cd ~-
 
-"$WASI_SDK/clang" --target=wasm32-wasi -std=c23 -g0 -O2 \
+"$WASI_SDK/clang" --target=wasm32 -nostdlib -std=c23 -g0 -O2 \
 	-Wall -Wextra -Wno-unused-parameter -Wno-unused-function \
 	-o bcw2.wasm build/main.c \
 	-I"$ROOT/sqlite3/libc" -I"build" \

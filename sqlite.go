@@ -3,6 +3,7 @@ package sqlite3
 
 import (
 	"context"
+	"math"
 	"math/bits"
 	"os"
 	"runtime"
@@ -351,5 +352,25 @@ func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
 	util.ExportFuncII(env, "go_cur_eof", cursorEOFCallback)
 	util.ExportFuncIIII(env, "go_cur_column", cursorColumnCallback)
 	util.ExportFuncIII(env, "go_cur_rowid", cursorRowIDCallback)
+	// Math functions.
+	util.ExportFuncDD(env, "exp", math.Exp)
+	util.ExportFuncDD(env, "log", math.Log)
+	util.ExportFuncDD(env, "log2", math.Log2)
+	util.ExportFuncDD(env, "log10", math.Log10)
+	util.ExportFuncDD(env, "cos", math.Cos)
+	util.ExportFuncDD(env, "cosh", math.Cosh)
+	util.ExportFuncDD(env, "sin", math.Sin)
+	util.ExportFuncDD(env, "sinh", math.Sinh)
+	util.ExportFuncDD(env, "tan", math.Tan)
+	util.ExportFuncDD(env, "tanh", math.Tanh)
+	util.ExportFuncDD(env, "acos", math.Acos)
+	util.ExportFuncDD(env, "acosh", math.Acosh)
+	util.ExportFuncDD(env, "asin", math.Asin)
+	util.ExportFuncDD(env, "asinh", math.Asinh)
+	util.ExportFuncDD(env, "atan", math.Atan)
+	util.ExportFuncDD(env, "atanh", math.Atanh)
+	util.ExportFuncDDD(env, "atan2", math.Atan2)
+	util.ExportFuncDDD(env, "fmod", math.Mod)
+	util.ExportFuncDDD(env, "pow", math.Pow)
 	return env
 }
