@@ -26,14 +26,15 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   fi
 fi
 
-WASI_SDK="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-29/wasi-sdk-29.0-$WASI_SDK.tar.gz"
+WASI_SDK="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-30/wasi-sdk-30.0-$WASI_SDK.tar.gz"
 BINARYEN="https://github.com/WebAssembly/binaryen/releases/download/version_125/binaryen-version_125-$BINARYEN.tar.gz"
 
 # Download tools
+rm -rf "$ROOT/tools"
 mkdir -p "$ROOT/tools"
-[ -d "$ROOT/tools/wasi-sdk" ] || curl -#L "$WASI_SDK" | tar xzC "$ROOT/tools" &
-[ -d "$ROOT/tools/binaryen" ] || curl -#L "$BINARYEN" | tar xzC "$ROOT/tools" &
+curl -#L "$WASI_SDK" | tar xzC "$ROOT/tools" &
+curl -#L "$BINARYEN" | tar xzC "$ROOT/tools" &
 wait
 
-[ -d "$ROOT/tools/wasi-sdk" ] || mv "$ROOT/tools/wasi-sdk"* "$ROOT/tools/wasi-sdk"
-[ -d "$ROOT/tools/binaryen" ] || mv "$ROOT/tools/binaryen"* "$ROOT/tools/binaryen"
+mv "$ROOT/tools/wasi-sdk"* "$ROOT/tools/wasi-sdk"
+mv "$ROOT/tools/binaryen"* "$ROOT/tools/binaryen"
