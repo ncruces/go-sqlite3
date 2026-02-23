@@ -1,7 +1,6 @@
 #include <stddef.h>
 
 #include "sql3parse_table.c"
-#include "libc.c"
 #include "malloc_bump.c"
 
 static_assert(sizeof(sql3table) == 64, "Unexpected size");

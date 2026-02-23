@@ -1,29 +1,18 @@
 package sql3util
 
 import (
-	"context"
 	_ "embed"
+	"encoding/binary"
 	"strings"
-	"sync"
-
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
 )
 
 const (
 	errp = 4
 	sqlp = 8
-)
-
-var (
-	//go:embed wasm/sql3parse_table.wasm
-	binary   []byte
-	once     sync.Once
-	runtime  wazero.Runtime
-	compiled wazero.CompiledModule
 )
 
 // ParseTable parses a [CREATE] or [ALTER TABLE] command.
@@ -35,35 +24,11 @@ func ParseTable(sql string) (_ *Table, err error) {
 		return nil, sqlite3.TOOBIG
 	}
 
-	once.Do(func() {
-		ctx := context.Background()
-		cfg := wazero.NewRuntimeConfigInterpreter()
-		runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
-		compiled, err = runtime.CompileModule(ctx, binary)
-	})
-	if err != nil {
-		return nil, err
-	}
+	mod := parser.New(parser.LibC{})
+	copy(mod.Memory[sqlp:], sql)
+	res := mod.Xsql3parse_table(sqlp, int32(len(sql)), errp)
 
-	ctx := context.Background()
-	mod, err := runtime.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithName(""))
-	if err != nil {
-		return nil, err
-	}
-	defer mod.Close(ctx)
-
-	mem := mod.Memory()
-	if buf, ok := mem.Read(sqlp, uint32(len(sql))); ok {
-		copy(buf, sql)
-	}
-
-	stack := [...]util.Stk_t{sqlp, util.Stk_t(len(sql)), errp}
-	err = mod.ExportedFunction("sql3parse_table").CallWithStack(ctx, stack[:])
-	if err != nil {
-		return nil, err
-	}
-
-	c, _ := mem.ReadUint32Le(errp)
+	c := binary.LittleEndian.Uint32(mod.Memory[errp:])
 	switch c {
 	case _MEMORY:
 		panic(util.OOMErr)
@@ -74,7 +39,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 	}
 
 	var tab Table
-	tab.load(mem, uint32(stack[0]), sql)
+	tab.load(mod.Memory, uint32(res), sql)
 	return &tab, nil
 }
 
@@ -94,7 +59,7 @@ type Table struct {
 	NewName        string
 }
 
-func (t *Table) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (t *Table) load(mem []byte, ptr uint32, sql string) uint32 {
 	t.Name = loadIdentifier(mem, ptr+0, sql)
 	t.Schema = loadIdentifier(mem, ptr+8, sql)
 	t.Comment = loadString(mem, ptr+16, sql)
@@ -105,13 +70,13 @@ func (t *Table) load(mem api.Memory, ptr uint32, sql string) uint32 {
 	t.IsStrict = loadBool(mem, ptr+27)
 
 	t.Columns = loadSlice(mem, ptr+28, func(ptr uint32, ret *Column) uint32 {
-		p, _ := mem.ReadUint32Le(ptr)
+		p := binary.LittleEndian.Uint32(mem[ptr:])
 		ret.load(mem, p, sql)
 		return 4
 	})
 
 	t.Constraints = loadSlice(mem, ptr+36, func(ptr uint32, ret *TableConstraint) uint32 {
-		p, _ := mem.ReadUint32Le(ptr)
+		p := binary.LittleEndian.Uint32(mem[ptr:])
 		ret.load(mem, p, sql)
 		return 4
 	})
@@ -137,7 +102,7 @@ type TableConstraint struct {
 	ForeignKeyClause *ForeignKey
 }
 
-func (c *TableConstraint) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (c *TableConstraint) load(mem []byte, ptr uint32, sql string) uint32 {
 	c.Type = loadEnum[ConstraintType](mem, ptr+0)
 	c.Name = loadIdentifier(mem, ptr+4, sql)
 	switch c.Type {
@@ -154,7 +119,7 @@ func (c *TableConstraint) load(mem api.Memory, ptr uint32, sql string) uint32 {
 			*ret = loadIdentifier(mem, ptr, sql)
 			return 8
 		})
-		if ptr, _ := mem.ReadUint32Le(ptr + 20); ptr != 0 {
+		if ptr := binary.LittleEndian.Uint32(mem[ptr+20:]); ptr != 0 {
 			c.ForeignKeyClause = &ForeignKey{}
 			c.ForeignKeyClause.load(mem, ptr, sql)
 		}
@@ -191,7 +156,7 @@ type Column struct {
 	GeneratedType            GenType
 }
 
-func (c *Column) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (c *Column) load(mem []byte, ptr uint32, sql string) uint32 {
 	c.Name = loadIdentifier(mem, ptr+0, sql)
 	c.Type = loadString(mem, ptr+8, sql)
 	c.Length = loadString(mem, ptr+16, sql)
@@ -223,7 +188,7 @@ func (c *Column) load(mem api.Memory, ptr uint32, sql string) uint32 {
 	c.CollateName = loadIdentifier(mem, ptr+108, sql)
 
 	c.ForeignKeyConstraintName = loadIdentifier(mem, ptr+116, sql)
-	if p, _ := mem.ReadUint32Le(ptr + 124); p != 0 {
+	if p := binary.LittleEndian.Uint32(mem[ptr+124:]); p != 0 {
 		c.ForeignKeyClause = &ForeignKey{}
 		c.ForeignKeyClause.load(mem, p, sql)
 	}
@@ -240,7 +205,7 @@ type CheckConstraint struct {
 	Expr string
 }
 
-func (c *CheckConstraint) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (c *CheckConstraint) load(mem []byte, ptr uint32, sql string) uint32 {
 	c.Name = loadIdentifier(mem, ptr+0, sql)
 	c.Expr = loadString(mem, ptr+8, sql)
 	return 16
@@ -256,7 +221,7 @@ type ForeignKey struct {
 	Deferrable  FKDefType
 }
 
-func (f *ForeignKey) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (f *ForeignKey) load(mem []byte, ptr uint32, sql string) uint32 {
 	f.Table = loadIdentifier(mem, ptr+0, sql)
 
 	f.ColumnNames = loadSlice(mem, ptr+8, func(ptr uint32, ret *string) uint32 {
@@ -278,38 +243,36 @@ type IdxColumn struct {
 	Order       OrderClause
 }
 
-func (c *IdxColumn) load(mem api.Memory, ptr uint32, sql string) uint32 {
+func (c *IdxColumn) load(mem []byte, ptr uint32, sql string) uint32 {
 	c.Name = loadIdentifier(mem, ptr+0, sql)
 	c.CollateName = loadIdentifier(mem, ptr+8, sql)
 	c.Order = loadEnum[OrderClause](mem, ptr+16)
 	return 20
 }
 
-func loadString(mem api.Memory, ptr uint32, sql string) string {
-	off, _ := mem.ReadUint32Le(ptr + 0)
+func loadString(mem []byte, ptr uint32, sql string) string {
+	off := binary.LittleEndian.Uint32(mem[ptr+0:])
 	if off == 0 {
 		return ""
 	}
-	cnt, _ := mem.ReadUint32Le(ptr + 4)
+	cnt := binary.LittleEndian.Uint32(mem[ptr+4:])
 
 	if int(off+cnt-sqlp) >= len(sql) {
-		val, _ := mem.Read(off, cnt)
-		return string(val)
+		return string(mem[off : off+cnt])
 	}
 
 	return sql[off-sqlp : off+cnt-sqlp]
 }
 
-func loadIdentifier(mem api.Memory, ptr uint32, sql string) string {
-	off, _ := mem.ReadUint32Le(ptr + 0)
+func loadIdentifier(mem []byte, ptr uint32, sql string) string {
+	off := binary.LittleEndian.Uint32(mem[ptr+0:])
 	if off == 0 {
 		return ""
 	}
-	cnt, _ := mem.ReadUint32Le(ptr + 4)
+	cnt := binary.LittleEndian.Uint32(mem[ptr+4:])
 
 	if int(off+cnt-sqlp) >= len(sql) {
-		val, _ := mem.Read(off, cnt)
-		return string(val)
+		return string(mem[off : off+cnt])
 	}
 
 	var old, new string
@@ -327,12 +290,12 @@ func loadIdentifier(mem api.Memory, ptr uint32, sql string) string {
 	return strings.ReplaceAll(str, old, new)
 }
 
-func loadSlice[T any](mem api.Memory, ptr uint32, fn func(uint32, *T) uint32) []T {
-	ref, _ := mem.ReadUint32Le(ptr + 4)
+func loadSlice[T any](mem []byte, ptr uint32, fn func(uint32, *T) uint32) []T {
+	ref := binary.LittleEndian.Uint32(mem[ptr+4:])
 	if ref == 0 {
 		return nil
 	}
-	cnt, _ := mem.ReadUint32Le(ptr + 0)
+	cnt := binary.LittleEndian.Uint32(mem[ptr+0:])
 	ret := make([]T, cnt)
 	for i := range ret {
 		ref += fn(ref, &ret[i])
@@ -340,12 +303,12 @@ func loadSlice[T any](mem api.Memory, ptr uint32, fn func(uint32, *T) uint32) []
 	return ret
 }
 
-func loadEnum[T ~uint32](mem api.Memory, ptr uint32) T {
-	val, _ := mem.ReadUint32Le(ptr)
+func loadEnum[T ~uint32](mem []byte, ptr uint32) T {
+	val := binary.LittleEndian.Uint32(mem[ptr:])
 	return T(val)
 }
 
-func loadBool(mem api.Memory, ptr uint32) bool {
-	val, _ := mem.ReadByte(ptr)
+func loadBool(mem []byte, ptr uint32) bool {
+	val := mem[ptr]
 	return val != 0
 }
