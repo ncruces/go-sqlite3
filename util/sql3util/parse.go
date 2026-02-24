@@ -7,7 +7,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
+	parser "github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
 )
 
 const (
@@ -24,7 +24,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 		return nil, sqlite3.TOOBIG
 	}
 
-	mod := parser.New(parser.LibC{})
+	mod := parser.New(&parser.LibC{})
 	copy(mod.Memory[sqlp:], sql)
 	res := mod.Xsql3parse_table(sqlp, int32(len(sql)), errp)
 
