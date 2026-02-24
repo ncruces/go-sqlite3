@@ -1,3 +1,5 @@
+#ifdef __wasm_simd128__
+
 #include <stdint.h>
 #include <string.h>
 #include <wasm_simd128.h>
@@ -336,3 +338,13 @@ size_t strcspn(const char* s, const char* c) {
     addr += sizeof(v128_t);
   }
 }
+
+#else
+
+size_t strlen(const char* s) {
+  const char* a = s;
+  for (; *s; s++);
+  return s - a;
+}
+
+#endif

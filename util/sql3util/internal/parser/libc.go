@@ -5,13 +5,15 @@ import (
 	"unicode"
 )
 
-type LibC struct{}
+type LibC struct{ mod *Module }
 
-func (LibC) Istrlen(m *Module, v0 int32) int32 {
-	return int32(bytes.IndexByte(m.Memory[v0:], 0))
+func (l *LibC) Init(m *Module) { l.mod = m }
+
+func (l *LibC) Xstrlen(v0 int32) int32 {
+	return int32(bytes.IndexByte(l.mod.Memory[v0:], 0))
 }
 
-func (LibC) Itolower(m *Module, v0 int32) int32 {
+func (LibC) Xtolower(v0 int32) int32 {
 	if v0 > unicode.MaxASCII {
 		return v0
 	}

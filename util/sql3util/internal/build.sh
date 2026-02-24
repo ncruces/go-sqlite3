@@ -17,10 +17,9 @@ trap 'rm -f sql3parse_table.*' EXIT
 	-o sql3parse_table.tmp main.c \
 	-I"$ROOT/sqlite3/libc" \
 	-mexec-model=reactor \
-	-mmutable-globals -mnontrapping-fptoint \
-	-mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
-	-mno-extended-const \
+	-mmutable-globals -mbulk-memory -mmultivalue \
+	-msign-ext -mnontrapping-fptoint \
+	-mno-simd128 -mno-extended-const \
 	-fno-stack-protector \
 	-Wl,--no-entry \
 	-Wl,--stack-first \
@@ -29,10 +28,9 @@ trap 'rm -f sql3parse_table.*' EXIT
 
 "$BINARYEN/wasm-opt" -g sql3parse_table.tmp -o sql3parse_table.wasm \
 	--gufa --generate-global-effects --converge -Oz \
-	--enable-mutable-globals --enable-nontrapping-float-to-int \
-	--disable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue \
-	--disable-extended-const \
+	--enable-mutable-globals --enable-bulk-memory --enable-multivalue \
+	--enable-sign-ext --enable-nontrapping-float-to-int \
+	--disable-simd --disable-extended-const \
 	--strip --strip-producers
 
-go run github.com/ncruces/wasm2go@latest parser < sql3parse_table.wasm > parser/parser.go
+wasm2go parser < sql3parse_table.wasm > parser/parser.go
