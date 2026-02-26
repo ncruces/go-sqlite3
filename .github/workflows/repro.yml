@@ -23,7 +23,7 @@ jobs:
       shell: bash
       run: .github/workflows/repro.sh
 
-    - uses: actions/attest-build-provenance@v3
+    - uses: actions/attest-build-provenance@v4
       if: matrix.os == 'ubuntu-latest'
       with:
         subject-path: |
