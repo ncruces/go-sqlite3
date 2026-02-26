@@ -8,10 +8,6 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-func init() {
-	Path = "./embed/sqlite3.wasm"
-}
-
 func Test_sqlite_error_OOM(t *testing.T) {
 	t.Parallel()
 
@@ -23,20 +19,6 @@ func Test_sqlite_error_OOM(t *testing.T) {
 
 	defer func() { _ = recover() }()
 	sqlite.error(res_t(NOMEM), 0)
-	t.Error("want panic")
-}
-
-func Test_sqlite_call_closed(t *testing.T) {
-	t.Parallel()
-
-	sqlite, err := instantiateSQLite()
-	if err != nil {
-		t.Fatal(err)
-	}
-	sqlite.close()
-
-	defer func() { _ = recover() }()
-	sqlite.call("sqlite3_free")
 	t.Error("want panic")
 }
 
@@ -73,7 +55,7 @@ func Test_sqlite_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := util.ReadString(sqlite.mod, ptr, math.MaxInt); got != title {
+	if got := util.ReadString(sqlite.mem, ptr, math.MaxInt); got != title {
 		t.Errorf("got %q, want %q", got, title)
 	}
 
@@ -82,7 +64,7 @@ func Test_sqlite_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := util.ReadString(sqlite.mod, ptr, math.MaxInt); got != body {
+	if got := util.ReadString(sqlite.mem, ptr, math.MaxInt); got != body {
 		t.Errorf("got %q, want %q", got, body)
 	}
 
@@ -94,7 +76,7 @@ func Test_sqlite_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := util.View(sqlite.mod, ptr, int64(len(title))); string(got) != title {
+	if got := util.View(sqlite.mem, ptr, int64(len(title))); string(got) != title {
 		t.Errorf("got %q, want %q", got, title)
 	}
 
@@ -122,7 +104,7 @@ func Test_sqlite_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := util.View(sqlite.mod, ptr, int64(len(want))); !bytes.Equal(got, want) {
+	if got := util.View(sqlite.mem, ptr, int64(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -148,7 +130,7 @@ func Test_sqlite_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := util.View(sqlite.mod, ptr, int64(len(want))); string(got) != want {
+	if got := util.View(sqlite.mem, ptr, int64(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -174,22 +156,22 @@ func Test_sqlite_getString(t *testing.T) {
 	}
 
 	want := "sqlite3"
-	if got := util.ReadString(sqlite.mod, ptr, math.MaxInt); got != want {
+	if got := util.ReadString(sqlite.mem, ptr, math.MaxInt); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
-	if got := util.ReadString(sqlite.mod, ptr, 0); got != "" {
+	if got := util.ReadString(sqlite.mem, ptr, 0); got != "" {
 		t.Errorf("got %q, want empty", got)
 	}
 
 	func() {
 		defer func() { _ = recover() }()
-		util.ReadString(sqlite.mod, ptr, int64(len(want))/2)
+		util.ReadString(sqlite.mem, ptr, int64(len(want))/2)
 		t.Error("want panic")
 	}()
 
 	func() {
 		defer func() { _ = recover() }()
-		util.ReadString(sqlite.mod, 0, math.MaxInt)
+		util.ReadString(sqlite.mem, 0, math.MaxInt)
 		t.Error("want panic")
 	}()
 }

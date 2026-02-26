@@ -4,7 +4,6 @@
 // You may also need to import package embed.
 //
 //	import _ "github.com/ncruces/go-sqlite3/driver"
-//	import _ "github.com/ncruces/go-sqlite3/embed"
 //
 // The data source name for "sqlite3" databases can be a filename or a "file:" [URI].
 //

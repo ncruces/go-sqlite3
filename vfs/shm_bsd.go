@@ -13,8 +13,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -143,7 +142,7 @@ func (s *vfsShm) shmOpen() (err error) {
 	return nil
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
+func (s *vfsShm) shmMap(ctx context.Context, mod *sqlite3_wasm.Module, id, size int32, extend bool) (ptr_t, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
@@ -175,7 +174,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 	return r.Ptr, nil
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
+func (s *vfsShm) shmLock(offset, n int32, flags ShmFlag) error {
 	if s.vfsShmParent == nil {
 		return _IOERR_SHMLOCK
 	}

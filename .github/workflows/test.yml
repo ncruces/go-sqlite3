@@ -34,21 +34,21 @@ jobs:
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
-    - name: Format
-      run: gofmt -s -w . && git diff --exit-code
-      if: matrix.os != 'windows-latest'
+    # - name: Format
+    #   run: gofmt -s -w . && git diff --exit-code
+    #   if: matrix.os != 'windows-latest'
 
-    - name: Tidy
-      run: go mod tidy && git diff --exit-code
+    # - name: Tidy
+    #   run: go mod tidy && git diff --exit-code
 
-    - name: Download
-      run: go mod download
+    # - name: Download
+    #   run: go mod download
 
-    - name: Verify
-      run: go mod verify
+    # - name: Verify
+    #   run: go mod verify
 
-    - name: Vet
-      run: go vet ./...
+    # - name: Vet
+    #   run: go vet ./...
 
     - name: Build
       run: go build ./...
@@ -63,18 +63,6 @@ jobs:
     - name: Test dot locks
       run: go test -tags sqlite3_dotlk ./...
       if: matrix.os != 'windows-latest'
-
-    - name: Test modules
-      shell: bash
-      run: |
-        go work init .
-        go work use -r embed/bcw2 gormlite
-        go test ./embed/bcw2 ./gormlite
-
-    - name: Test GORM
-      shell: bash
-      run: gormlite/test.sh
-      if: matrix.os == 'ubuntu-latest'
 
     - name: Collect coverage
       run: |

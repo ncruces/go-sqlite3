@@ -1,5 +1,0 @@
-aligned_alloc
-sqlite3_database_file_object
-sqlite3_free
-sqlite3_malloc64
-sqlite3_uri_key

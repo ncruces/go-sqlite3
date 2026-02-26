@@ -2,23 +2,28 @@
 
 package alloc
 
-import "github.com/tetratelabs/wazero/experimental"
-
-func NewMemory(cap, max uint64) experimental.LinearMemory {
-	return &sliceMemory{make([]byte, 0, cap)}
+type Memory struct {
+	Buf []byte
+	Max int32
 }
 
-type sliceMemory struct {
-	buf []byte
+func (m *Memory) Data() *[]byte {
+	return &m.Buf
 }
 
-func (b *sliceMemory) Free() {}
-
-func (b *sliceMemory) Reallocate(size uint64) []byte {
-	if cap := uint64(cap(b.buf)); size > cap {
-		b.buf = append(b.buf[:cap], make([]byte, size-cap)...)
-	} else {
-		b.buf = b.buf[:size]
+func (m *Memory) Grow(delta, _ int32) int32 {
+	len := len(m.Buf)
+	old := int32(len >> 16)
+	if delta == 0 {
+		return old
 	}
-	return b.buf
+	new := old + delta
+	add := int(new)<<16 - len
+	if new > m.Max || add < 0 {
+		return -1
+	}
+	m.Buf = append(m.Buf, make([]byte, add)...)
+	return old
 }
+
+func (m Memory) Free() {}

@@ -6,8 +6,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -86,7 +85,7 @@ func (c *cksmFile) DeviceCharacteristics() DeviceCharacteristic {
 	return ret
 }
 
-func (c *cksmFile) fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
+func (c *cksmFile) fileControl(ctx context.Context, mod *sqlite3_wasm.Module, op FcntlOpcode, pArg ptr_t) _ErrorCode {
 	if op == _FCNTL_PRAGMA {
 		rc := vfsFileControlImpl(ctx, mod, c, op, pArg)
 		if rc != _NOTFOUND {

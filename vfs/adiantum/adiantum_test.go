@@ -8,8 +8,6 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/go-sqlite3/vfs/adiantum"
@@ -53,7 +51,6 @@ func Test_fileformat(t *testing.T) {
 
 func Benchmark_nokey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1")
@@ -66,7 +63,6 @@ func Benchmark_nokey(b *testing.B) {
 
 func Benchmark_hexkey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
@@ -80,7 +76,6 @@ func Benchmark_hexkey(b *testing.B) {
 
 func Benchmark_textkey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
 		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +

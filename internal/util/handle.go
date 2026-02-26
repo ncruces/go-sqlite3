@@ -10,7 +10,7 @@ type handleState struct {
 	holes   int
 }
 
-func (s *handleState) CloseNotify(ctx context.Context, exitCode uint32) {
+func (s *handleState) Close() {
 	for _, h := range s.handles {
 		if c, ok := h.(io.Closer); ok {
 			c.Close()
