@@ -1,12 +1,9 @@
 package sqlite3
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"sync/atomic"
-
-	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -44,8 +41,8 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 	util.Write32(c.mod, argsPtr+0*ptrlen, flag)
 	util.Write32(c.mod, argsPtr+1*ptrlen, argsPtr)
 
-	rc := res_t(c.call("sqlite3_db_config", stk_t(c.handle),
-		stk_t(op), stk_t(argsPtr)))
+	rc := res_t(c.mod.Xsqlite3_db_config(int32(c.handle),
+		int32(op), int32(argsPtr)))
 	return util.ReadBool(c.mod, argsPtr), c.error(rc)
 }
 
@@ -66,7 +63,7 @@ func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	if cb != nil {
 		enable = 1
 	}
-	rc := res_t(c.call("sqlite3_config_log_go", stk_t(enable)))
+	rc := res_t(c.mod.Xsqlite3_config_log_go(enable))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -74,9 +71,9 @@ func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	return nil
 }
 
-func logCallback(ctx context.Context, mod api.Module, _ ptr_t, iCode res_t, zMsg ptr_t) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.log != nil {
-		msg := util.ReadString(mod, zMsg, _MAX_LENGTH)
+func (sqlt *sqlite) Xgo_log(_, iCode, zMsg int32) {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.log != nil {
+		msg := util.ReadString(sqlt.mod, ptr_t(zMsg), _MAX_LENGTH)
 		c.log(xErrorCode(iCode), msg)
 	}
 }
@@ -110,9 +107,9 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 		return nil, MISUSE
 
 	case FCNTL_RESET_CACHE, FCNTL_NULL_IO:
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), 0))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), 0))
 
 	case FCNTL_PERSIST_WAL, FCNTL_POWERSAFE_OVERWRITE:
 		var flag int32
@@ -123,16 +120,16 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			flag = 1
 		}
 		util.Write32(c.mod, ptr, flag)
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 		ret = util.ReadBool(c.mod, ptr)
 
 	case FCNTL_CHUNK_SIZE:
 		util.Write32(c.mod, ptr, int32(arg[0].(int)))
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 
 	case FCNTL_RESERVE_BYTES:
 		bytes := -1
@@ -140,27 +137,27 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 			bytes = arg[0].(int)
 		}
 		util.Write32(c.mod, ptr, int32(bytes))
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 		ret = int(util.Read32[int32](c.mod, ptr))
 
 	case FCNTL_DATA_VERSION:
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 		ret = util.Read32[uint32](c.mod, ptr)
 
 	case FCNTL_LOCKSTATE:
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 		ret = util.Read32[vfs.LockLevel](c.mod, ptr)
 
 	case FCNTL_VFSNAME, FCNTL_VFS_POINTER:
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(FCNTL_VFS_POINTER), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(FCNTL_VFS_POINTER), int32(ptr)))
 		if rc == _OK {
 			const zNameOffset = 16
 			ptr = util.Read32[ptr_t](c.mod, ptr)
@@ -174,9 +171,9 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 		}
 
 	case FCNTL_FILE_POINTER, FCNTL_JOURNAL_POINTER:
-		rc = res_t(c.call("sqlite3_file_control",
-			stk_t(c.handle), stk_t(schemaPtr),
-			stk_t(op), stk_t(ptr)))
+		rc = res_t(c.mod.Xsqlite3_file_control(
+			int32(c.handle), int32(schemaPtr),
+			int32(op), int32(ptr)))
 		if rc == _OK {
 			const fileHandleOffset = 4
 			ptr = util.Read32[ptr_t](c.mod, ptr)
@@ -196,7 +193,7 @@ func (c *Conn) FileControl(schema string, op FcntlOpcode, arg ...any) (any, erro
 //
 // https://sqlite.org/c3ref/limit.html
 func (c *Conn) Limit(id LimitCategory, value int) int {
-	v := int32(c.call("sqlite3_limit", stk_t(c.handle), stk_t(id), stk_t(value)))
+	v := int32(c.mod.Xsqlite3_limit(int32(c.handle), int32(id), int32(value)))
 	return int(v)
 }
 
@@ -208,40 +205,39 @@ func (c *Conn) SetAuthorizer(cb func(action AuthorizerActionCode, name3rd, name4
 	if cb != nil {
 		enable = 1
 	}
-	rc := res_t(c.call("sqlite3_set_authorizer_go", stk_t(c.handle), stk_t(enable)))
+	rc := res_t(c.mod.Xsqlite3_set_authorizer_go(int32(c.handle), enable))
 	if err := c.error(rc); err != nil {
 		return err
 	}
 	c.authorizer = cb
 	return nil
-
 }
 
-func authorizerCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zName3rd, zName4th, zSchema, zInner ptr_t) (rc AuthorizerReturnCode) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.authorizer != nil {
+func (sqlt *sqlite) Xgo_authorizer(pDB, action, zName3rd, zName4th, zSchema, zInner int32) (rc int32) {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.authorizer != nil {
 		var name3rd, name4th, schema, inner string
 		if zName3rd != 0 {
-			name3rd = util.ReadString(mod, zName3rd, _MAX_NAME)
+			name3rd = util.ReadString(sqlt.mod, ptr_t(zName3rd), _MAX_NAME)
 		}
 		if zName4th != 0 {
-			name4th = util.ReadString(mod, zName4th, _MAX_NAME)
+			name4th = util.ReadString(sqlt.mod, ptr_t(zName4th), _MAX_NAME)
 		}
 		if zSchema != 0 {
-			schema = util.ReadString(mod, zSchema, _MAX_NAME)
+			schema = util.ReadString(sqlt.mod, ptr_t(zSchema), _MAX_NAME)
 		}
 		if zInner != 0 {
-			inner = util.ReadString(mod, zInner, _MAX_NAME)
+			inner = util.ReadString(sqlt.mod, ptr_t(zInner), _MAX_NAME)
 		}
-		rc = c.authorizer(action, name3rd, name4th, schema, inner)
+		return int32(c.authorizer(AuthorizerActionCode(action), name3rd, name4th, schema, inner))
 	}
-	return rc
+	return _OK
 }
 
 // Trace registers a trace callback function against the database connection.
 //
 // https://sqlite.org/c3ref/trace_v2.html
 func (c *Conn) Trace(mask TraceEvent, cb func(evt TraceEvent, arg1 any, arg2 any) error) error {
-	rc := res_t(c.call("sqlite3_trace_go", stk_t(c.handle), stk_t(mask)))
+	rc := res_t(c.mod.Xsqlite3_trace_go(int32(c.handle), int32(mask)))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -249,30 +245,30 @@ func (c *Conn) Trace(mask TraceEvent, cb func(evt TraceEvent, arg1 any, arg2 any
 	return nil
 }
 
-func traceCallback(ctx context.Context, mod api.Module, evt TraceEvent, pDB, pArg1, pArg2 ptr_t) (rc res_t) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.trace != nil {
+func (sqlt *sqlite) Xgo_trace(evt, pDB, pArg1, pArg2 int32) int32 {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.trace != nil {
 		var arg1, arg2 any
-		if evt == TRACE_CLOSE {
+		if TraceEvent(evt) == TRACE_CLOSE {
 			arg1 = c
 		} else {
 			for _, s := range c.stmts {
-				if pArg1 == s.handle {
+				if ptr_t(pArg1) == s.handle {
 					arg1 = s
-					switch evt {
+					switch TraceEvent(evt) {
 					case TRACE_STMT:
 						arg2 = s.SQL()
 					case TRACE_PROFILE:
-						arg2 = util.Read64[int64](mod, pArg2)
+						arg2 = util.Read64[int64](sqlt.mod, ptr_t(pArg2))
 					}
 					break
 				}
 			}
 		}
 		if arg1 != nil {
-			_ = c.trace(evt, arg1, arg2)
+			_ = c.trace(TraceEvent(evt), arg1, arg2)
 		}
 	}
-	return rc
+	return _OK
 }
 
 // WALCheckpoint checkpoints a WAL database.
@@ -287,9 +283,9 @@ func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt in
 	nLogPtr := c.arena.new(ptrlen)
 	nCkptPtr := c.arena.new(ptrlen)
 	schemaPtr := c.arena.string(schema)
-	rc := res_t(c.call("sqlite3_wal_checkpoint_v2",
-		stk_t(c.handle), stk_t(schemaPtr), stk_t(mode),
-		stk_t(nLogPtr), stk_t(nCkptPtr)))
+	rc := res_t(c.mod.Xsqlite3_wal_checkpoint_v2(
+		int32(c.handle), int32(schemaPtr), int32(mode),
+		int32(nLogPtr), int32(nCkptPtr)))
 	nLog = int(util.Read32[int32](c.mod, nLogPtr))
 	nCkpt = int(util.Read32[int32](c.mod, nCkptPtr))
 	return nLog, nCkpt, c.error(rc)
@@ -299,7 +295,7 @@ func (c *Conn) WALCheckpoint(schema string, mode CheckpointMode) (nLog, nCkpt in
 //
 // https://sqlite.org/c3ref/wal_autocheckpoint.html
 func (c *Conn) WALAutoCheckpoint(pages int) error {
-	rc := res_t(c.call("sqlite3_wal_autocheckpoint", stk_t(c.handle), stk_t(pages)))
+	rc := res_t(c.mod.Xsqlite3_wal_autocheckpoint(int32(c.handle), int32(pages)))
 	return c.error(rc)
 }
 
@@ -312,17 +308,18 @@ func (c *Conn) WALHook(cb func(db *Conn, schema string, pages int) error) {
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_wal_hook_go", stk_t(c.handle), stk_t(enable))
+	c.mod.Xsqlite3_wal_hook_go(int32(c.handle), enable)
 	c.wal = cb
 }
 
-func walCallback(ctx context.Context, mod api.Module, _, pDB, zSchema ptr_t, pages int32) (rc res_t) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.wal != nil {
-		schema := util.ReadString(mod, zSchema, _MAX_NAME)
+func (sqlt *sqlite) Xgo_wal_hook(_, pDB, zSchema, pages int32) int32 {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.wal != nil {
+		schema := util.ReadString(sqlt.mod, ptr_t(zSchema), _MAX_NAME)
 		err := c.wal(c, schema, int(pages))
-		_, rc = errorCode(err, ERROR)
+		_, rc := errorCode(err, ERROR)
+		return int32(rc)
 	}
-	return rc
+	return _OK
 }
 
 // AutoVacuumPages registers a autovacuum compaction amount callback.
@@ -333,28 +330,28 @@ func (c *Conn) AutoVacuumPages(cb func(schema string, dbPages, freePages, bytesP
 	if cb != nil {
 		funcPtr = util.AddHandle(c.ctx, cb)
 	}
-	rc := res_t(c.call("sqlite3_autovacuum_pages_go", stk_t(c.handle), stk_t(funcPtr)))
+	rc := res_t(c.mod.Xsqlite3_autovacuum_pages_go(int32(c.handle), int32(funcPtr)))
 	return c.error(rc)
 }
 
-func autoVacuumCallback(ctx context.Context, mod api.Module, pApp, zSchema ptr_t, nDbPage, nFreePage, nBytePerPage uint32) uint32 {
-	fn := util.GetHandle(ctx, pApp).(func(schema string, dbPages, freePages, bytesPerPage uint) uint)
-	schema := util.ReadString(mod, zSchema, _MAX_NAME)
-	return uint32(fn(schema, uint(nDbPage), uint(nFreePage), uint(nBytePerPage)))
+func (sqlt *sqlite) Xgo_autovacuum_pages(pApp, zSchema, nDbPage, nFreePage, nBytePerPage int32) int32 {
+	fn := util.GetHandle(sqlt.ctx, ptr_t(pApp)).(func(schema string, dbPages, freePages, bytesPerPage uint) uint)
+	schema := util.ReadString(sqlt.mod, ptr_t(zSchema), _MAX_NAME)
+	return int32(fn(schema, uint(uint32(nDbPage)), uint(uint32(nFreePage)), uint(uint32(nBytePerPage))))
 }
 
 // SoftHeapLimit imposes a soft limit on heap size.
 //
 // https://sqlite.org/c3ref/hard_heap_limit64.html
 func (c *Conn) SoftHeapLimit(n int64) int64 {
-	return int64(c.call("sqlite3_soft_heap_limit64", stk_t(n)))
+	return c.mod.Xsqlite3_soft_heap_limit64(n)
 }
 
 // HardHeapLimit imposes a hard limit on heap size.
 //
 // https://sqlite.org/c3ref/hard_heap_limit64.html
 func (c *Conn) HardHeapLimit(n int64) int64 {
-	return int64(c.call("sqlite3_hard_heap_limit64", stk_t(n)))
+	return c.mod.Xsqlite3_hard_heap_limit64(n)
 }
 
 // EnableChecksums enables checksums on a database.

@@ -7,9 +7,7 @@ import (
 	"regexp"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/unicode"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func ExampleConn_CreateCollation() {

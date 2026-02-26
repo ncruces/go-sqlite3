@@ -28,8 +28,8 @@ func (ctx Context) ResultJSON(value any) {
 		ctx.ResultError(err)
 		return // notest
 	}
-	ctx.c.call("sqlite3_result_text_go",
-		stk_t(ctx.handle), stk_t(w.ptr), stk_t(len(w.buf)))
+	ctx.c.mod.Xsqlite3_result_text_go(
+		int32(ctx.handle), int32(w.ptr), int32(len(w.buf)))
 }
 
 // BindJSON binds the JSON encoding of value to the prepared statement.
@@ -42,9 +42,9 @@ func (s *Stmt) BindJSON(param int, value any) error {
 		s.c.free(w.ptr)
 		return err // notest
 	}
-	rc := res_t(s.c.call("sqlite3_bind_text_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(w.ptr), stk_t(len(w.buf))))
+	rc := res_t(s.c.mod.Xsqlite3_bind_text_go(
+		int32(s.handle), int32(param),
+		int32(w.ptr), int32(len(w.buf))))
 	return s.c.error(rc)
 }
 

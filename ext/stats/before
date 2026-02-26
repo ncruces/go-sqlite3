@@ -1,0 +1,66 @@
+goos: linux
+goarch: amd64
+pkg: github.com/ncruces/go-sqlite3/ext/stats
+cpu: Intel(R) Xeon(R) W-2135 CPU @ 3.70GHz
+Benchmark_average-12     	 1000000	       119.6 ns/op
+Benchmark_average-12     	 1000000	       103.9 ns/op
+Benchmark_average-12     	 1000000	       131.2 ns/op
+Benchmark_average-12     	 1000000	       112.3 ns/op
+Benchmark_average-12     	 1000000	       110.3 ns/op
+Benchmark_average-12     	 1000000	        89.35 ns/op
+Benchmark_average-12     	 1000000	       117.6 ns/op
+Benchmark_average-12     	 1000000	       121.9 ns/op
+Benchmark_average-12     	 1000000	       119.7 ns/op
+Benchmark_average-12     	 1000000	       113.5 ns/op
+Benchmark_variance-12    	 1000000	       257.3 ns/op
+Benchmark_variance-12    	 1000000	       240.1 ns/op
+Benchmark_variance-12    	 1000000	       291.2 ns/op
+Benchmark_variance-12    	 1000000	       284.0 ns/op
+Benchmark_variance-12    	 1000000	       260.1 ns/op
+Benchmark_variance-12    	 1000000	       269.7 ns/op
+Benchmark_variance-12    	 1000000	       269.4 ns/op
+Benchmark_variance-12    	 1000000	       299.7 ns/op
+Benchmark_variance-12    	 1000000	       279.3 ns/op
+Benchmark_variance-12    	 1000000	       291.9 ns/op
+Benchmark_math/sqrt-12   	 1000000	       183.2 ns/op
+Benchmark_math/sqrt-12   	 1000000	       152.7 ns/op
+Benchmark_math/sqrt-12   	 1000000	       179.0 ns/op
+Benchmark_math/sqrt-12   	 1000000	       203.8 ns/op
+Benchmark_math/sqrt-12   	 1000000	       171.2 ns/op
+Benchmark_math/sqrt-12   	 1000000	       158.4 ns/op
+Benchmark_math/sqrt-12   	 1000000	       154.8 ns/op
+Benchmark_math/sqrt-12   	 1000000	       212.5 ns/op
+Benchmark_math/sqrt-12   	 1000000	       154.6 ns/op
+Benchmark_math/sqrt-12   	 1000000	       133.5 ns/op
+Benchmark_math/tan-12    	 1000000	       201.7 ns/op
+Benchmark_math/tan-12    	 1000000	       193.6 ns/op
+Benchmark_math/tan-12    	 1000000	       178.7 ns/op
+Benchmark_math/tan-12    	 1000000	       204.2 ns/op
+Benchmark_math/tan-12    	 1000000	       214.2 ns/op
+Benchmark_math/tan-12    	 1000000	       176.2 ns/op
+Benchmark_math/tan-12    	 1000000	       205.2 ns/op
+Benchmark_math/tan-12    	 1000000	       222.8 ns/op
+Benchmark_math/tan-12    	 1000000	       197.4 ns/op
+Benchmark_math/tan-12    	 1000000	       198.5 ns/op
+Benchmark_math/cot-12    	 1000000	       413.8 ns/op
+Benchmark_math/cot-12    	 1000000	       362.8 ns/op
+Benchmark_math/cot-12    	 1000000	       413.5 ns/op
+Benchmark_math/cot-12    	 1000000	       435.4 ns/op
+Benchmark_math/cot-12    	 1000000	       406.2 ns/op
+Benchmark_math/cot-12    	 1000000	       408.9 ns/op
+Benchmark_math/cot-12    	 1000000	       399.6 ns/op
+Benchmark_math/cot-12    	 1000000	       401.0 ns/op
+Benchmark_math/cot-12    	 1000000	       388.8 ns/op
+Benchmark_math/cot-12    	 1000000	       408.2 ns/op
+Benchmark_math/cbrt-12   	 1000000	       384.5 ns/op
+Benchmark_math/cbrt-12   	 1000000	       406.2 ns/op
+Benchmark_math/cbrt-12   	 1000000	       393.2 ns/op
+Benchmark_math/cbrt-12   	 1000000	       374.6 ns/op
+Benchmark_math/cbrt-12   	 1000000	       433.8 ns/op
+Benchmark_math/cbrt-12   	 1000000	       397.5 ns/op
+Benchmark_math/cbrt-12   	 1000000	       369.3 ns/op
+Benchmark_math/cbrt-12   	 1000000	       403.0 ns/op
+Benchmark_math/cbrt-12   	 1000000	       404.4 ns/op
+Benchmark_math/cbrt-12   	 1000000	       391.7 ns/op
+PASS
+ok  	github.com/ncruces/go-sqlite3/ext/stats	16.268s

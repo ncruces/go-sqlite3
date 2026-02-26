@@ -6,7 +6,6 @@ require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v1.0.0
-	github.com/tetratelabs/wazero v1.11.0
 	golang.org/x/sys v0.41.0
 )
 

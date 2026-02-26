@@ -3,7 +3,6 @@ package sql3util_test
 import (
 	"testing"
 
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 

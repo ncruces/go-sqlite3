@@ -4,9 +4,6 @@ import (
 	"database/sql/driver"
 	"slices"
 	"testing"
-
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func Test_namedValues(t *testing.T) {

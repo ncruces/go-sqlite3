@@ -14,8 +14,6 @@ import (
 	_ "golang.org/x/crypto/ripemd160"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 

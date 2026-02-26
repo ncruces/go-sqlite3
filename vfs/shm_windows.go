@@ -10,22 +10,18 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 type vfsShm struct {
 	*os.File
-	mod      api.Module
-	alloc    api.Function
-	free     api.Function
+	mod      *sqlite3_wasm.Module
 	path     string
 	regions  []*util.MappedRegion
 	shared   [][]byte
 	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []ptr_t
-	stack    [1]stk_t
 	fileLock bool
 	sync.Mutex
 }
@@ -67,15 +63,13 @@ func (s *vfsShm) shmOpen() error {
 	return err
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (_ ptr_t, err error) {
+func (s *vfsShm) shmMap(ctx context.Context, mod *sqlite3_wasm.Module, id, size int32, extend bool) (_ ptr_t, err error) {
 	// Ensure size is a multiple of the OS page size.
 	if size != _WALINDEX_PGSZ || (windows.Getpagesize()-1)&_WALINDEX_PGSZ != 0 {
 		return 0, _IOERR_SHMMAP
 	}
 	if s.mod == nil {
 		s.mod = mod
-		s.free = mod.ExportedFunction("sqlite3_free")
-		s.alloc = mod.ExportedFunction("sqlite3_malloc64")
 	}
 	if err := s.shmOpen(); err != nil {
 		return 0, err
@@ -114,22 +108,19 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 
 	// Allocate local memory.
 	for int(id) >= len(s.ptrs) {
-		s.stack[0] = stk_t(size)
-		if err := s.alloc.CallWithStack(ctx, s.stack[:]); err != nil {
-			panic(err)
-		}
-		if s.stack[0] == 0 {
+		ptr := mod.Xsqlite3_malloc64(int64(size))
+		if ptr == 0 {
 			panic(util.OOMErr)
 		}
-		clear(util.View(s.mod, ptr_t(s.stack[0]), _WALINDEX_PGSZ))
-		s.ptrs = append(s.ptrs, ptr_t(s.stack[0]))
+		clear(util.View(s.mod, ptr_t(ptr), _WALINDEX_PGSZ))
+		s.ptrs = append(s.ptrs, ptr_t(ptr))
 	}
 
 	s.shadow[0][4] = 1
 	return s.ptrs[id], nil
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
+func (s *vfsShm) shmLock(offset, n int32, flags ShmFlag) (err error) {
 	if s.File == nil {
 		return _IOERR_SHMLOCK
 	}
@@ -162,10 +153,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 
 	// Free local memory.
 	for _, p := range s.ptrs {
-		s.stack[0] = stk_t(p)
-		if err := s.free.CallWithStack(context.Background(), s.stack[:]); err != nil {
-			panic(err)
-		}
+		s.mod.Xsqlite3_free(int32(p))
 	}
 	s.ptrs = nil
 	s.shadow = nil

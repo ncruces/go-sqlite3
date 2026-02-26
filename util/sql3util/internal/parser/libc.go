@@ -1,4 +1,4 @@
-package parser
+package sql3parse_table_wasm
 
 import (
 	"bytes"

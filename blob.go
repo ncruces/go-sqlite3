@@ -46,9 +46,9 @@ func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob,
 		flags = 1
 	}
 
-	rc := res_t(c.call("sqlite3_blob_open", stk_t(c.handle),
-		stk_t(dbPtr), stk_t(tablePtr), stk_t(columnPtr),
-		stk_t(row), stk_t(flags), stk_t(blobPtr)))
+	rc := res_t(c.mod.Xsqlite3_blob_open(int32(c.handle),
+		int32(dbPtr), int32(tablePtr), int32(columnPtr),
+		row, flags, int32(blobPtr)))
 
 	if err := c.error(rc); err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (c *Conn) OpenBlob(db, table, column string, row int64, write bool) (*Blob,
 
 	blob := Blob{c: c}
 	blob.handle = util.Read32[ptr_t](c.mod, blobPtr)
-	blob.bytes = int64(int32(c.call("sqlite3_blob_bytes", stk_t(blob.handle))))
+	blob.bytes = int64(c.mod.Xsqlite3_blob_bytes(int32(blob.handle)))
 	return &blob, nil
 }
 
@@ -70,7 +70,7 @@ func (b *Blob) Close() error {
 		return nil
 	}
 
-	rc := res_t(b.c.call("sqlite3_blob_close", stk_t(b.handle)))
+	rc := res_t(b.c.mod.Xsqlite3_blob_close(int32(b.handle)))
 	b.c.free(b.bufptr)
 	b.handle = 0
 	return b.c.error(rc)
@@ -101,8 +101,8 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		b.buflen = want
 	}
 
-	rc := res_t(b.c.call("sqlite3_blob_read", stk_t(b.handle),
-		stk_t(b.bufptr), stk_t(want), stk_t(b.offset)))
+	rc := res_t(b.c.mod.Xsqlite3_blob_read(int32(b.handle),
+		int32(b.bufptr), int32(want), int32(b.offset)))
 	err = b.c.error(rc)
 	if err != nil {
 		return 0, err
@@ -135,8 +135,8 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 	}
 
 	for want > 0 {
-		rc := res_t(b.c.call("sqlite3_blob_read", stk_t(b.handle),
-			stk_t(b.bufptr), stk_t(want), stk_t(b.offset)))
+		rc := res_t(b.c.mod.Xsqlite3_blob_read(int32(b.handle),
+			int32(b.bufptr), int32(want), int32(b.offset)))
 		err = b.c.error(rc)
 		if err != nil {
 			return n, err
@@ -173,8 +173,8 @@ func (b *Blob) Write(p []byte) (n int, err error) {
 	}
 	util.WriteBytes(b.c.mod, b.bufptr, p)
 
-	rc := res_t(b.c.call("sqlite3_blob_write", stk_t(b.handle),
-		stk_t(b.bufptr), stk_t(want), stk_t(b.offset)))
+	rc := res_t(b.c.mod.Xsqlite3_blob_write(int32(b.handle),
+		int32(b.bufptr), int32(want), int32(b.offset)))
 	err = b.c.error(rc)
 	if err != nil {
 		return 0, err
@@ -207,8 +207,8 @@ func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
 		mem := util.View(b.c.mod, b.bufptr, want)
 		m, err := r.Read(mem[:want])
 		if m > 0 {
-			rc := res_t(b.c.call("sqlite3_blob_write", stk_t(b.handle),
-				stk_t(b.bufptr), stk_t(m), stk_t(b.offset)))
+			rc := res_t(b.c.mod.Xsqlite3_blob_write(int32(b.handle),
+				int32(b.bufptr), int32(m), int32(b.offset)))
 			err := b.c.error(rc)
 			if err != nil {
 				return n, err
@@ -259,8 +259,8 @@ func (b *Blob) Reopen(row int64) error {
 	if b.c.interrupt.Err() != nil {
 		return INTERRUPT
 	}
-	err := b.c.error(res_t(b.c.call("sqlite3_blob_reopen", stk_t(b.handle), stk_t(row))))
-	b.bytes = int64(int32(b.c.call("sqlite3_blob_bytes", stk_t(b.handle))))
+	err := b.c.error(res_t(b.c.mod.Xsqlite3_blob_reopen(int32(b.handle), row)))
+	b.bytes = int64(b.c.mod.Xsqlite3_blob_bytes(int32(b.handle)))
 	b.offset = 0
 	return err
 }

@@ -1,11 +1,8 @@
 package sqlite3
 
 import (
-	"context"
 	"errors"
 	"reflect"
-
-	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
@@ -65,8 +62,8 @@ func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor
 	if connect != nil {
 		modulePtr = util.AddHandle(db.ctx, module[T]{create, connect})
 	}
-	rc := res_t(db.call("sqlite3_create_module_go", stk_t(db.handle),
-		stk_t(namePtr), stk_t(flags), stk_t(modulePtr)))
+	rc := res_t(db.mod.Xsqlite3_create_module_go(int32(db.handle),
+		int32(namePtr), int32(flags), int32(modulePtr)))
 	return db.error(rc)
 }
 
@@ -84,7 +81,7 @@ func (c *Conn) DeclareVTab(sql string) error {
 	}
 	defer c.arena.mark()()
 	textPtr := c.arena.string(sql)
-	rc := res_t(c.call("sqlite3_declare_vtab", stk_t(c.handle), stk_t(textPtr)))
+	rc := res_t(c.mod.Xsqlite3_declare_vtab(int32(c.handle), int32(textPtr)))
 	return c.error(rc)
 }
 
@@ -105,7 +102,7 @@ const (
 //
 // https://sqlite.org/c3ref/vtab_on_conflict.html
 func (c *Conn) VTabOnConflict() VTabConflictMode {
-	return VTabConflictMode(c.call("sqlite3_vtab_on_conflict", stk_t(c.handle)))
+	return VTabConflictMode(c.mod.Xsqlite3_vtab_on_conflict(int32(c.handle)))
 }
 
 // VTabConfigOption is a virtual table configuration option.
@@ -130,7 +127,7 @@ func (c *Conn) VTabConfig(op VTabConfigOption, args ...any) error {
 			i = 1
 		}
 	}
-	rc := res_t(c.call("sqlite3_vtab_config_go", stk_t(c.handle), stk_t(op), stk_t(i)))
+	rc := res_t(c.mod.Xsqlite3_vtab_config_go(int32(c.handle), int32(op), i))
 	return c.error(rc)
 }
 
@@ -314,8 +311,8 @@ type IndexConstraintUsage struct {
 func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 	defer idx.c.arena.mark()()
 	valPtr := idx.c.arena.new(ptrlen)
-	rc := res_t(idx.c.call("sqlite3_vtab_rhs_value", stk_t(idx.handle),
-		stk_t(column), stk_t(valPtr)))
+	rc := res_t(idx.c.mod.Xsqlite3_vtab_rhs_value(int32(idx.handle),
+		int32(column), int32(valPtr)))
 	if err := idx.c.error(rc); err != nil {
 		return Value{}, err
 	}
@@ -329,8 +326,8 @@ func (idx *IndexInfo) RHSValue(column int) (Value, error) {
 //
 // https://sqlite.org/c3ref/vtab_collation.html
 func (idx *IndexInfo) Collation(column int) string {
-	ptr := ptr_t(idx.c.call("sqlite3_vtab_collation", stk_t(idx.handle),
-		stk_t(column)))
+	ptr := ptr_t(idx.c.mod.Xsqlite3_vtab_collation(int32(idx.handle),
+		int32(column)))
 	return util.ReadString(idx.c.mod, ptr, _MAX_NAME)
 }
 
@@ -338,7 +335,7 @@ func (idx *IndexInfo) Collation(column int) string {
 //
 // https://sqlite.org/c3ref/vtab_distinct.html
 func (idx *IndexInfo) Distinct() int {
-	i := int32(idx.c.call("sqlite3_vtab_distinct", stk_t(idx.handle)))
+	i := int32(idx.c.mod.Xsqlite3_vtab_distinct(int32(idx.handle)))
 	return int(i)
 }
 
@@ -346,8 +343,8 @@ func (idx *IndexInfo) Distinct() int {
 //
 // https://sqlite.org/c3ref/vtab_in.html
 func (idx *IndexInfo) In(column, handle int) bool {
-	b := int32(idx.c.call("sqlite3_vtab_in", stk_t(idx.handle),
-		stk_t(column), stk_t(handle)))
+	b := int32(idx.c.mod.Xsqlite3_vtab_in(int32(idx.handle),
+		int32(column), int32(handle)))
 	return b != 0
 }
 
@@ -449,198 +446,204 @@ const (
 	INDEX_SCAN_HEX    IndexScanFlag = 0x00000002
 )
 
-func vtabModuleCallback(i vtabConstructor) func(_ context.Context, _ api.Module, _ ptr_t, _ int32, _, _, _ ptr_t) res_t {
-	return func(ctx context.Context, mod api.Module, pMod ptr_t, nArg int32, pArg, ppVTab, pzErr ptr_t) res_t {
-		arg := make([]reflect.Value, 1+nArg)
-		arg[0] = reflect.ValueOf(ctx.Value(connKey{}))
+func (sqlt *sqlite) vtabModuleCallback(kind vtabConstructor, pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+	arg := make([]reflect.Value, 1+nArg)
+	arg[0] = reflect.ValueOf(sqlt.ctx.Value(connKey{}))
 
-		for i := range nArg {
-			ptr := util.Read32[ptr_t](mod, pArg+ptr_t(i)*ptrlen)
-			arg[i+1] = reflect.ValueOf(util.ReadString(mod, ptr, _MAX_SQL_LENGTH))
-		}
-
-		module := vtabGetHandle(ctx, mod, pMod)
-		val := reflect.ValueOf(module).Index(int(i)).Call(arg)
-		err, _ := val[1].Interface().(error)
-		if err == nil {
-			vtabPutHandle(ctx, mod, ppVTab, val[0].Interface())
-		}
-
-		return vtabError(ctx, mod, pzErr, _PTR_ERROR, err, ERROR)
+	for i := range nArg {
+		ptr := util.Read32[ptr_t](sqlt.mod, ptr_t(pArg+i*ptrlen))
+		arg[i+1] = reflect.ValueOf(util.ReadString(sqlt.mod, ptr, _MAX_SQL_LENGTH))
 	}
+
+	module := sqlt.vtabGetHandle(pMod)
+	val := reflect.ValueOf(module).Index(int(kind)).Call(arg)
+	err, _ := val[1].Interface().(error)
+	if err == nil {
+		sqlt.vtabPutHandle(ppVTab, val[0].Interface())
+	}
+
+	return sqlt.vtabError(pzErr, _PTR_ERROR, err, ERROR)
 }
 
-func vtabDisconnectCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	err := vtabDelHandle(ctx, mod, pVTab)
-	return vtabError(ctx, mod, 0, _PTR_ERROR, err, ERROR)
+func (sqlt *sqlite) Xgo_vtab_create(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+	return sqlt.vtabModuleCallback(xCreate, pMod, nArg, pArg, ppVTab, pzErr)
 }
 
-func vtabDestroyCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabDestroyer)
-	err := errors.Join(vtab.Destroy(), vtabDelHandle(ctx, mod, pVTab))
-	return vtabError(ctx, mod, 0, _PTR_ERROR, err, ERROR)
+func (sqlt *sqlite) Xgo_vtab_connect(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+	return sqlt.vtabModuleCallback(xConnect, pMod, nArg, pArg, ppVTab, pzErr)
 }
 
-func vtabBestIndexCallback(ctx context.Context, mod api.Module, pVTab, pIdxInfo ptr_t) res_t {
+func (sqlt *sqlite) Xgo_vtab_disconnect(pVTab int32) int32 {
+	err := sqlt.vtabDelHandle(pVTab)
+	return sqlt.vtabError(0, _PTR_ERROR, err, ERROR)
+}
+
+func (sqlt *sqlite) Xgo_vtab_destroy(pVTab int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabDestroyer)
+	err := errors.Join(vtab.Destroy(), sqlt.vtabDelHandle(pVTab))
+	return sqlt.vtabError(0, _PTR_ERROR, err, ERROR)
+}
+
+func (sqlt *sqlite) Xgo_vtab_best_index(pVTab, pIdxInfo int32) int32 {
 	var info IndexInfo
-	info.handle = pIdxInfo
-	info.c = ctx.Value(connKey{}).(*Conn)
+	info.handle = ptr_t(pIdxInfo)
+	info.c = sqlt.ctx.Value(connKey{}).(*Conn)
 	info.load()
 
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
+	vtab := sqlt.vtabGetHandle(pVTab).(VTab)
 	err := vtab.BestIndex(&info)
 
 	info.save()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabUpdateCallback(ctx context.Context, mod api.Module, pVTab ptr_t, nArg int32, pArg, pRowID ptr_t) res_t {
-	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, nArg, pArg)
+func (sqlt *sqlite) Xgo_vtab_update(pVTab, nArg, pArg, pRowID int32) int32 {
+	db := sqlt.ctx.Value(connKey{}).(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
 
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabUpdater)
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabUpdater)
 	rowID, err := vtab.Update(*args...)
 	if err == nil {
-		util.Write64(mod, pRowID, rowID)
+		util.Write64(sqlt.mod, ptr_t(pRowID), rowID)
 	}
 
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabRenameCallback(ctx context.Context, mod api.Module, pVTab, zNew ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabRenamer)
-	err := vtab.Rename(util.ReadString(mod, zNew, _MAX_NAME))
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+func (sqlt *sqlite) Xgo_vtab_rename(pVTab, zNew int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabRenamer)
+	err := vtab.Rename(util.ReadString(sqlt.mod, ptr_t(zNew), _MAX_NAME))
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabFindFuncCallback(ctx context.Context, mod api.Module, pVTab ptr_t, nArg int32, zName, pxFunc ptr_t) int32 {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabOverloader)
-	f, op := vtab.FindFunction(int(nArg), util.ReadString(mod, zName, _MAX_NAME))
+func (sqlt *sqlite) Xgo_vtab_find_function(pVTab, nArg, zName, pxFunc int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabOverloader)
+	f, op := vtab.FindFunction(int(nArg), util.ReadString(sqlt.mod, ptr_t(zName), _MAX_NAME))
 	if op != 0 {
 		var wrapper ptr_t
-		wrapper = util.AddHandle(ctx, func(c Context, arg ...Value) {
-			defer util.DelHandle(ctx, wrapper)
+		wrapper = util.AddHandle(sqlt.ctx, func(c Context, arg ...Value) {
+			defer util.DelHandle(sqlt.ctx, wrapper)
 			f(c, arg...)
 		})
-		util.Write32(mod, pxFunc, wrapper)
+		util.Write32(sqlt.mod, ptr_t(pxFunc), wrapper)
 	}
 	return int32(op)
 }
 
-func vtabIntegrityCallback(ctx context.Context, mod api.Module, pVTab, zSchema, zTabName ptr_t, mFlags uint32, pzErr ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabChecker)
-	schema := util.ReadString(mod, zSchema, _MAX_NAME)
-	table := util.ReadString(mod, zTabName, _MAX_NAME)
-	err := vtab.Integrity(schema, table, int(mFlags))
+func (sqlt *sqlite) Xgo_vtab_integrity(pVTab, zSchema, zTabName, mFlags, pzErr int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabChecker)
+	schema := util.ReadString(sqlt.mod, ptr_t(zSchema), _MAX_NAME)
+	table := util.ReadString(sqlt.mod, ptr_t(zTabName), _MAX_NAME)
+	err := vtab.Integrity(schema, table, int(uint32(mFlags)))
 	// xIntegrity should return OK - even if it finds problems in the content of the virtual table.
 	// https://sqlite.org/vtab.html#xintegrity
-	return vtabError(ctx, mod, pzErr, _PTR_ERROR, err, _OK)
+	return sqlt.vtabError(pzErr, _PTR_ERROR, err, _OK)
 }
 
-func vtabBeginCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
+func (sqlt *sqlite) Xgo_vtab_begin(pVTab int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Begin()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabSyncCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
+func (sqlt *sqlite) Xgo_vtab_sync(pVTab int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Sync()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabCommitCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
+func (sqlt *sqlite) Xgo_vtab_commit(pVTab int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Commit()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabRollbackCallback(ctx context.Context, mod api.Module, pVTab ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabTxn)
+func (sqlt *sqlite) Xgo_vtab_rollback(pVTab int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Rollback()
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabSavepointCallback(ctx context.Context, mod api.Module, pVTab ptr_t, id int32) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+func (sqlt *sqlite) Xgo_vtab_savepoint(pVTab, id int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.Savepoint(int(id))
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabReleaseCallback(ctx context.Context, mod api.Module, pVTab ptr_t, id int32) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+func (sqlt *sqlite) Xgo_vtab_release(pVTab, id int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.Release(int(id))
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func vtabRollbackToCallback(ctx context.Context, mod api.Module, pVTab ptr_t, id int32) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTabSavepointer)
+func (sqlt *sqlite) Xgo_vtab_rollback_to(pVTab, id int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.RollbackTo(int(id))
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func cursorOpenCallback(ctx context.Context, mod api.Module, pVTab, ppCur ptr_t) res_t {
-	vtab := vtabGetHandle(ctx, mod, pVTab).(VTab)
+func (sqlt *sqlite) Xgo_cur_open(pVTab, ppCur int32) int32 {
+	vtab := sqlt.vtabGetHandle(pVTab).(VTab)
 
 	cursor, err := vtab.Open()
 	if err == nil {
-		vtabPutHandle(ctx, mod, ppCur, cursor)
+		sqlt.vtabPutHandle(ppCur, cursor)
 	}
 
-	return vtabError(ctx, mod, pVTab, _VTAB_ERROR, err, ERROR)
+	return sqlt.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func cursorCloseCallback(ctx context.Context, mod api.Module, pCur ptr_t) res_t {
-	err := vtabDelHandle(ctx, mod, pCur)
-	return vtabError(ctx, mod, 0, _PTR_ERROR, err, ERROR)
+func (sqlt *sqlite) Xgo_cur_close(pCur int32) int32 {
+	err := sqlt.vtabDelHandle(pCur)
+	return sqlt.vtabError(0, _PTR_ERROR, err, ERROR)
 }
 
-func cursorFilterCallback(ctx context.Context, mod api.Module, pCur ptr_t, idxNum int32, idxStr ptr_t, nArg int32, pArg ptr_t) res_t {
-	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, nArg, pArg)
+func (sqlt *sqlite) Xgo_cur_filter(pCur, idxNum, idxStr, nArg, pArg int32) int32 {
+	db := sqlt.ctx.Value(connKey{}).(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
 
 	var idxName string
 	if idxStr != 0 {
-		idxName = util.ReadString(mod, idxStr, _MAX_LENGTH)
+		idxName = util.ReadString(sqlt.mod, ptr_t(idxStr), _MAX_LENGTH)
 	}
 
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
+	cursor := sqlt.vtabGetHandle(pCur).(VTabCursor)
 	err := cursor.Filter(int(idxNum), idxName, *args...)
-	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err, ERROR)
+	return sqlt.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func cursorEOFCallback(ctx context.Context, mod api.Module, pCur ptr_t) int32 {
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
+func (sqlt *sqlite) Xgo_cur_eof(pCur int32) int32 {
+	cursor := sqlt.vtabGetHandle(pCur).(VTabCursor)
 	if cursor.EOF() {
 		return 1
 	}
 	return 0
 }
 
-func cursorNextCallback(ctx context.Context, mod api.Module, pCur ptr_t) res_t {
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
+func (sqlt *sqlite) Xgo_cur_next(pCur int32) int32 {
+	cursor := sqlt.vtabGetHandle(pCur).(VTabCursor)
 	err := cursor.Next()
-	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err, ERROR)
+	return sqlt.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func cursorColumnCallback(ctx context.Context, mod api.Module, pCur, pCtx ptr_t, n int32) res_t {
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
-	db := ctx.Value(connKey{}).(*Conn)
-	err := cursor.Column(Context{db, pCtx}, int(n))
-	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err, ERROR)
+func (sqlt *sqlite) Xgo_cur_column(pCur, pCtx, n int32) int32 {
+	cursor := sqlt.vtabGetHandle(pCur).(VTabCursor)
+	db := sqlt.ctx.Value(connKey{}).(*Conn)
+	err := cursor.Column(Context{db, ptr_t(pCtx)}, int(n))
+	return sqlt.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func cursorRowIDCallback(ctx context.Context, mod api.Module, pCur, pRowID ptr_t) res_t {
-	cursor := vtabGetHandle(ctx, mod, pCur).(VTabCursor)
+func (sqlt *sqlite) Xgo_cur_rowid(pCur, pRowID int32) int32 {
+	cursor := sqlt.vtabGetHandle(pCur).(VTabCursor)
 
 	rowID, err := cursor.RowID()
 	if err == nil {
-		util.Write64(mod, pRowID, rowID)
+		util.Write64(sqlt.mod, ptr_t(pRowID), rowID)
 	}
 
-	return vtabError(ctx, mod, pCur, _CURSOR_ERROR, err, ERROR)
+	return sqlt.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
 const (
@@ -649,7 +652,7 @@ const (
 	_CURSOR_ERROR
 )
 
-func vtabError(ctx context.Context, mod api.Module, ptr ptr_t, kind uint32, err error, def ErrorCode) res_t {
+func (sqlt *sqlite) vtabError(ptr int32, kind uint32, err error, def ErrorCode) int32 {
 	const zErrMsgOffset = 8
 	msg, code := errorCode(err, def)
 	if ptr != 0 && msg != "" {
@@ -657,32 +660,32 @@ func vtabError(ctx context.Context, mod api.Module, ptr ptr_t, kind uint32, err 
 		case _VTAB_ERROR:
 			ptr = ptr + zErrMsgOffset // zErrMsg
 		case _CURSOR_ERROR:
-			ptr = util.Read32[ptr_t](mod, ptr) + zErrMsgOffset // pVTab->zErrMsg
+			ptr = int32(util.Read32[ptr_t](sqlt.mod, ptr_t(ptr))) + zErrMsgOffset // pVTab->zErrMsg
 		}
-		db := ctx.Value(connKey{}).(*Conn)
-		if ptr := util.Read32[ptr_t](mod, ptr); ptr != 0 {
+		db := sqlt.ctx.Value(connKey{}).(*Conn)
+		if ptr := util.Read32[ptr_t](sqlt.mod, ptr_t(ptr)); ptr != 0 {
 			db.free(ptr)
 		}
-		util.Write32(mod, ptr, db.newString(msg))
+		util.Write32(sqlt.mod, ptr_t(ptr), db.newString(msg))
 	}
-	return code
+	return int32(code)
 }
 
-func vtabGetHandle(ctx context.Context, mod api.Module, ptr ptr_t) any {
+func (sqlt *sqlite) vtabGetHandle(ptr int32) any {
 	const handleOffset = 4
-	handle := util.Read32[ptr_t](mod, ptr-handleOffset)
-	return util.GetHandle(ctx, handle)
+	handle := util.Read32[ptr_t](sqlt.mod, ptr_t(ptr)-handleOffset)
+	return util.GetHandle(sqlt.ctx, handle)
 }
 
-func vtabDelHandle(ctx context.Context, mod api.Module, ptr ptr_t) error {
+func (sqlt *sqlite) vtabDelHandle(ptr int32) error {
 	const handleOffset = 4
-	handle := util.Read32[ptr_t](mod, ptr-handleOffset)
-	return util.DelHandle(ctx, handle)
+	handle := util.Read32[ptr_t](sqlt.mod, ptr_t(ptr)-handleOffset)
+	return util.DelHandle(sqlt.ctx, handle)
 }
 
-func vtabPutHandle(ctx context.Context, mod api.Module, pptr ptr_t, val any) {
+func (sqlt *sqlite) vtabPutHandle(pptr int32, val any) {
 	const handleOffset = 4
-	handle := util.AddHandle(ctx, val)
-	ptr := util.Read32[ptr_t](mod, pptr)
-	util.Write32(mod, ptr-handleOffset, handle)
+	handle := util.AddHandle(sqlt.ctx, val)
+	ptr := util.Read32[ptr_t](sqlt.mod, ptr_t(pptr))
+	util.Write32(sqlt.mod, ptr-handleOffset, handle)
 }

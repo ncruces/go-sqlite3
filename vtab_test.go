@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 func ExampleCreateModule() {

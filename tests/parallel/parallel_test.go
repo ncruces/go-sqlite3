@@ -13,8 +13,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -23,7 +21,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	sqlite3.Initialize()
 	sqlite3.ConfigLog(func(code sqlite3.ExtendedErrorCode, msg string) {
 		switch code {
 		case sqlite3.NOTICE_RECOVER_WAL:
@@ -228,6 +225,9 @@ func Test_ChildProcess_rollback(t *testing.T) {
 func Test_MultiProcess_wal(t *testing.T) {
 	if !vfs.SupportsFileLocking {
 		t.Skip("skipping without locks")
+	}
+	if !vfs.SupportsSharedMemory {
+		t.Skip("skipping without shared memory")
 	}
 	if testing.Short() {
 		t.Skip("skipping in short mode")

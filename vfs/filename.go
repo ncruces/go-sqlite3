@@ -4,8 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -15,14 +14,13 @@ import (
 // https://sqlite.org/c3ref/filename.html
 type Filename struct {
 	ctx   context.Context
-	mod   api.Module
+	mod   *sqlite3_wasm.Module
 	zPath ptr_t
 	flags OpenFlag
-	stack [2]stk_t
 }
 
 // GetFilename is an internal API users should not call directly.
-func GetFilename(ctx context.Context, mod api.Module, id ptr_t, flags OpenFlag) *Filename {
+func GetFilename(ctx context.Context, mod *sqlite3_wasm.Module, id ptr_t, flags OpenFlag) *Filename {
 	if id == 0 {
 		return nil
 	}
@@ -46,37 +44,38 @@ func (n *Filename) String() string {
 //
 // https://sqlite.org/c3ref/filename_database.html
 func (n *Filename) Database() string {
-	return n.path("sqlite3_filename_database")
+	if n == nil || n.zPath == 0 {
+		return ""
+	}
+	return n.path(n.mod.Xsqlite3_filename_database)
 }
 
 // Journal returns the name of the corresponding rollback journal file.
 //
 // https://sqlite.org/c3ref/filename_database.html
 func (n *Filename) Journal() string {
-	return n.path("sqlite3_filename_journal")
+	if n == nil || n.zPath == 0 {
+		return ""
+	}
+	return n.path(n.mod.Xsqlite3_filename_journal)
 }
 
 // WAL returns the name of the corresponding WAL file.
 //
 // https://sqlite.org/c3ref/filename_database.html
 func (n *Filename) WAL() string {
-	return n.path("sqlite3_filename_wal")
-}
-
-func (n *Filename) path(method string) string {
 	if n == nil || n.zPath == 0 {
 		return ""
 	}
+	return n.path(n.mod.Xsqlite3_filename_wal)
+}
+
+func (n *Filename) path(fn func(int32) int32) string {
 	if n.flags&(OPEN_MAIN_DB|OPEN_MAIN_JOURNAL|OPEN_WAL) == 0 {
 		return ""
 	}
-
-	n.stack[0] = stk_t(n.zPath)
-	fn := n.mod.ExportedFunction(method)
-	if err := fn.CallWithStack(n.ctx, n.stack[:]); err != nil {
-		panic(err)
-	}
-	return util.ReadString(n.mod, ptr_t(n.stack[0]), _MAX_PATHNAME)
+	name := ptr_t(fn(int32(n.zPath)))
+	return util.ReadString(n.mod, name, _MAX_PATHNAME)
 }
 
 // DatabaseFile returns the main database [File] corresponding to a journal.
@@ -90,12 +89,8 @@ func (n *Filename) DatabaseFile() File {
 		return nil
 	}
 
-	n.stack[0] = stk_t(n.zPath)
-	fn := n.mod.ExportedFunction("sqlite3_database_file_object")
-	if err := fn.CallWithStack(n.ctx, n.stack[:]); err != nil {
-		panic(err)
-	}
-	file, _ := vfsFileGet(n.ctx, n.mod, ptr_t(n.stack[0])).(File)
+	pFile := ptr_t(n.mod.Xsqlite3_database_file_object(int32(n.zPath)))
+	file, _ := vfsFileGet(n.ctx, n.mod, ptr_t(pFile)).(File)
 	return file
 }
 
@@ -107,14 +102,7 @@ func (n *Filename) URIParameter(key string) string {
 		return ""
 	}
 
-	uriKey := n.mod.ExportedFunction("sqlite3_uri_key")
-	n.stack[0] = stk_t(n.zPath)
-	n.stack[1] = stk_t(0)
-	if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
-		panic(err)
-	}
-
-	ptr := ptr_t(n.stack[0])
+	ptr := ptr_t(n.mod.Xsqlite3_uri_key(int32(n.zPath), 0))
 	if ptr == 0 {
 		return ""
 	}
@@ -145,14 +133,7 @@ func (n *Filename) URIParameters() url.Values {
 		return nil
 	}
 
-	uriKey := n.mod.ExportedFunction("sqlite3_uri_key")
-	n.stack[0] = stk_t(n.zPath)
-	n.stack[1] = stk_t(0)
-	if err := uriKey.CallWithStack(n.ctx, n.stack[:]); err != nil {
-		panic(err)
-	}
-
-	ptr := ptr_t(n.stack[0])
+	ptr := ptr_t(n.mod.Xsqlite3_uri_key(int32(n.zPath), 0))
 	if ptr == 0 {
 		return nil
 	}

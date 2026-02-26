@@ -7,7 +7,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
+	parser "github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
 )
 
 const (

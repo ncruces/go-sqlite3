@@ -7,16 +7,15 @@ import (
 	"os"
 	"unsafe"
 
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"golang.org/x/sys/unix"
-
-	"github.com/tetratelabs/wazero/api"
 )
 
 type mmapState struct {
 	regions []*MappedRegion
 }
 
-func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *MappedRegion {
+func (s *mmapState) new(_ context.Context, mod *sqlite3_wasm.Module, size int32) *MappedRegion {
 	// Find unused region.
 	for _, r := range s.regions {
 		if !r.used && r.size == size {
@@ -25,20 +24,12 @@ func (s *mmapState) new(ctx context.Context, mod api.Module, size int32) *Mapped
 	}
 
 	// Allocate page aligned memmory.
-	alloc := mod.ExportedFunction("aligned_alloc")
-	stack := [...]Stk_t{
-		Stk_t(unix.Getpagesize()),
-		Stk_t(size),
-	}
-	if err := alloc.CallWithStack(ctx, stack[:]); err != nil {
-		panic(err)
-	}
-	if stack[0] == 0 {
+	ptr := Ptr_t(mod.Xaligned_alloc(int32(unix.Getpagesize()), size))
+	if ptr == 0 {
 		panic(OOMErr)
 	}
 
 	// Save the newly allocated region.
-	ptr := Ptr_t(stack[0])
 	buf := View(mod, ptr, int64(size))
 	ret := &MappedRegion{
 		Ptr:  ptr,
@@ -56,7 +47,7 @@ type MappedRegion struct {
 	used bool
 }
 
-func MapRegion(ctx context.Context, mod api.Module, f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
+func MapRegion(ctx context.Context, mod *sqlite3_wasm.Module, f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
 	s := ctx.Value(moduleKey{}).(*moduleState)
 	r := s.new(ctx, mod, size)
 	err := r.mmap(f, offset, readOnly)

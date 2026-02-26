@@ -14,12 +14,12 @@ trap 'rm -f sqlite3.tmp' EXIT
 	-o sqlite3.wasm "$ROOT/sqlite3/main.c" \
 	-I"$ROOT/sqlite3/libc" -I"$ROOT/sqlite3" \
 	-mexec-model=reactor \
-	-mmutable-globals -mnontrapping-fptoint \
-	-msimd128 -mbulk-memory -msign-ext \
-	-mreference-types -mmultivalue \
-	-mno-extended-const \
+	-mmutable-globals -mbulk-memory -mmultivalue \
+	-msign-ext -mnontrapping-fptoint \
+	-mno-simd128 -mno-extended-const \
 	-fno-stack-protector \
 	-Wl,--stack-first \
+	-Wl,--import-memory \
 	-Wl,--import-undefined \
 	-Wl,--initial-memory=327680 \
 	-D_HAVE_SQLITE_CONFIG_H \
@@ -27,11 +27,11 @@ trap 'rm -f sqlite3.tmp' EXIT
 	-DSQLITE_CUSTOM_INCLUDE=sqlite_opt.h \
 	$(awk '{print "-Wl,--export="$0}' exports.txt)
 
-"$BINARYEN/wasm-ctor-eval" -g -c _initialize sqlite3.wasm -o sqlite3.tmp
+mv sqlite3.wasm sqlite3.tmp
+
 "$BINARYEN/wasm-opt" -g sqlite3.tmp -o sqlite3.wasm \
 	--gufa --generate-global-effects --low-memory-unused --converge -O3 \
-	--enable-mutable-globals --enable-nontrapping-float-to-int \
-	--enable-simd --enable-bulk-memory --enable-sign-ext \
-	--enable-reference-types --enable-multivalue \
-	--disable-extended-const \
+	--enable-mutable-globals --enable-bulk-memory --enable-multivalue \
+	--enable-sign-ext --enable-nontrapping-float-to-int \
+	--disable-simd --disable-extended-const \
 	--strip --strip-producers

@@ -2,9 +2,10 @@ package util
 
 import (
 	"bytes"
+	"encoding/binary"
 	"math"
 
-	"github.com/tetratelabs/wazero/api"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 )
 
 const (
@@ -17,101 +18,72 @@ type (
 	i32 = interface{ ~int32 | ~uint32 }
 	i64 = interface{ ~int64 | ~uint64 }
 
-	Stk_t = uint64
 	Ptr_t uint32
 	Res_t int32
 )
 
-func View(mod api.Module, ptr Ptr_t, size int64) []byte {
+func View(mod *sqlite3_wasm.Module, ptr Ptr_t, size int64) []byte {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	if uint64(size) > math.MaxUint32 {
-		panic(RangeErr)
-	}
-	buf, ok := mod.Memory().Read(uint32(ptr), uint32(size))
-	if !ok {
-		panic(RangeErr)
-	}
-	return buf
+	return mod.Data[ptr:][:size:size]
 }
 
-func Read[T i8](mod api.Module, ptr Ptr_t) T {
+func Read[T i8](mod *sqlite3_wasm.Module, ptr Ptr_t) T {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	v, ok := mod.Memory().ReadByte(uint32(ptr))
-	if !ok {
-		panic(RangeErr)
-	}
-	return T(v)
+	return T(mod.Data[ptr])
 }
 
-func Write[T i8](mod api.Module, ptr Ptr_t, v T) {
+func Write[T i8](mod *sqlite3_wasm.Module, ptr Ptr_t, v T) {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	ok := mod.Memory().WriteByte(uint32(ptr), uint8(v))
-	if !ok {
-		panic(RangeErr)
-	}
+	mod.Data[ptr] = uint8(v)
 }
 
-func Read32[T i32](mod api.Module, ptr Ptr_t) T {
+func Read32[T i32](mod *sqlite3_wasm.Module, ptr Ptr_t) T {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	v, ok := mod.Memory().ReadUint32Le(uint32(ptr))
-	if !ok {
-		panic(RangeErr)
-	}
-	return T(v)
+	return T(binary.LittleEndian.Uint32(mod.Data[ptr:]))
 }
 
-func Write32[T i32](mod api.Module, ptr Ptr_t, v T) {
+func Write32[T i32](mod *sqlite3_wasm.Module, ptr Ptr_t, v T) {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	ok := mod.Memory().WriteUint32Le(uint32(ptr), uint32(v))
-	if !ok {
-		panic(RangeErr)
-	}
+	binary.LittleEndian.PutUint32(mod.Data[ptr:], uint32(v))
 }
 
-func Read64[T i64](mod api.Module, ptr Ptr_t) T {
+func Read64[T i64](mod *sqlite3_wasm.Module, ptr Ptr_t) T {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	v, ok := mod.Memory().ReadUint64Le(uint32(ptr))
-	if !ok {
-		panic(RangeErr)
-	}
-	return T(v)
+	return T(binary.LittleEndian.Uint64(mod.Data[ptr:]))
 }
 
-func Write64[T i64](mod api.Module, ptr Ptr_t, v T) {
+func Write64[T i64](mod *sqlite3_wasm.Module, ptr Ptr_t, v T) {
 	if ptr == 0 {
 		panic(NilErr)
 	}
-	ok := mod.Memory().WriteUint64Le(uint32(ptr), uint64(v))
-	if !ok {
-		panic(RangeErr)
-	}
+	binary.LittleEndian.PutUint64(mod.Data[ptr:], uint64(v))
 }
 
-func ReadFloat64(mod api.Module, ptr Ptr_t) float64 {
+func ReadFloat64(mod *sqlite3_wasm.Module, ptr Ptr_t) float64 {
 	return math.Float64frombits(Read64[uint64](mod, ptr))
 }
 
-func WriteFloat64(mod api.Module, ptr Ptr_t, v float64) {
+func WriteFloat64(mod *sqlite3_wasm.Module, ptr Ptr_t, v float64) {
 	Write64(mod, ptr, math.Float64bits(v))
 }
 
-func ReadBool(mod api.Module, ptr Ptr_t) bool {
+func ReadBool(mod *sqlite3_wasm.Module, ptr Ptr_t) bool {
 	return Read32[int32](mod, ptr) != 0
 }
 
-func WriteBool(mod api.Module, ptr Ptr_t, v bool) {
+func WriteBool(mod *sqlite3_wasm.Module, ptr Ptr_t, v bool) {
 	var i int32
 	if v {
 		i = 1
@@ -119,21 +91,16 @@ func WriteBool(mod api.Module, ptr Ptr_t, v bool) {
 	Write32(mod, ptr, i)
 }
 
-func ReadString(mod api.Module, ptr Ptr_t, maxlen int64) string {
+func ReadString(mod *sqlite3_wasm.Module, ptr Ptr_t, maxlen int64) string {
 	if ptr == 0 {
 		panic(NilErr)
 	}
 	if maxlen <= 0 {
 		return ""
 	}
-	mem := mod.Memory()
-	maxlen = min(maxlen, math.MaxInt32-1) + 1
-	buf, ok := mem.Read(uint32(ptr), uint32(maxlen))
-	if !ok {
-		buf, ok = mem.Read(uint32(ptr), mem.Size()-uint32(ptr))
-		if !ok {
-			panic(RangeErr)
-		}
+	buf := mod.Data[ptr:]
+	if int64(len(buf)) > maxlen {
+		buf = buf[:maxlen]
 	}
 	if i := bytes.IndexByte(buf, 0); i >= 0 {
 		return string(buf[:i])
@@ -141,12 +108,12 @@ func ReadString(mod api.Module, ptr Ptr_t, maxlen int64) string {
 	panic(NoNulErr)
 }
 
-func WriteBytes(mod api.Module, ptr Ptr_t, b []byte) {
+func WriteBytes(mod *sqlite3_wasm.Module, ptr Ptr_t, b []byte) {
 	buf := View(mod, ptr, int64(len(b)))
 	copy(buf, b)
 }
 
-func WriteString(mod api.Module, ptr Ptr_t, s string) {
+func WriteString(mod *sqlite3_wasm.Module, ptr Ptr_t, s string) {
 	buf := View(mod, ptr, int64(len(s))+1)
 	buf[len(s)] = 0
 	copy(buf, s)

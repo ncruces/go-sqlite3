@@ -20,7 +20,6 @@ const (
 )
 
 type (
-	stk_t = util.Stk_t
 	ptr_t = util.Ptr_t
 	res_t = util.Res_t
 )

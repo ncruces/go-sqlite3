@@ -1,12 +1,6 @@
 package util
 
-import (
-	"context"
-
-	"github.com/tetratelabs/wazero/experimental"
-
-	"github.com/ncruces/go-sqlite3/internal/alloc"
-)
+import "context"
 
 type ConnKey struct{}
 
@@ -17,12 +11,10 @@ type moduleState struct {
 	handleState
 }
 
-func NewContext(ctx context.Context) context.Context {
+func NewContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	state := new(moduleState)
-	ctx = experimental.WithMemoryAllocator(ctx, experimental.MemoryAllocatorFunc(alloc.NewMemory))
-	ctx = experimental.WithCloseNotifier(ctx, state)
 	ctx = context.WithValue(ctx, moduleKey{}, state)
-	return ctx
+	return ctx, state.Close
 }
 
 func GetSystemError(ctx context.Context) error {

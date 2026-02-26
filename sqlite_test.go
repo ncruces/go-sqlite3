@@ -8,10 +8,6 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-func init() {
-	Path = "./embed/sqlite3.wasm"
-}
-
 func Test_sqlite_error_OOM(t *testing.T) {
 	t.Parallel()
 
@@ -23,20 +19,6 @@ func Test_sqlite_error_OOM(t *testing.T) {
 
 	defer func() { _ = recover() }()
 	sqlite.error(res_t(NOMEM), 0)
-	t.Error("want panic")
-}
-
-func Test_sqlite_call_closed(t *testing.T) {
-	t.Parallel()
-
-	sqlite, err := instantiateSQLite()
-	if err != nil {
-		t.Fatal(err)
-	}
-	sqlite.close()
-
-	defer func() { _ = recover() }()
-	sqlite.call("sqlite3_free")
 	t.Error("want panic")
 }
 

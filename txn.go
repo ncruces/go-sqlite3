@@ -1,13 +1,10 @@
 package sqlite3
 
 import (
-	"context"
 	"math/rand"
 	"runtime"
 	"strconv"
 	"strings"
-
-	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
@@ -226,7 +223,7 @@ func (c *Conn) TxnState(schema string) TxnState {
 		defer c.arena.mark()()
 		ptr = c.arena.string(schema)
 	}
-	return TxnState(c.call("sqlite3_txn_state", stk_t(c.handle), stk_t(ptr)))
+	return TxnState(c.mod.Xsqlite3_txn_state(int32(c.handle), int32(ptr)))
 }
 
 // CommitHook registers a callback function to be invoked
@@ -239,7 +236,7 @@ func (c *Conn) CommitHook(cb func() (ok bool)) {
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_commit_hook_go", stk_t(c.handle), stk_t(enable))
+	c.mod.Xsqlite3_commit_hook_go(int32(c.handle), enable)
 	c.commit = cb
 }
 
@@ -252,7 +249,7 @@ func (c *Conn) RollbackHook(cb func()) {
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_rollback_hook_go", stk_t(c.handle), stk_t(enable))
+	c.mod.Xsqlite3_rollback_hook_go(int32(c.handle), enable)
 	c.rollback = cb
 }
 
@@ -265,12 +262,12 @@ func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table str
 	if cb != nil {
 		enable = 1
 	}
-	c.call("sqlite3_update_hook_go", stk_t(c.handle), stk_t(enable))
+	c.mod.Xsqlite3_update_hook_go(int32(c.handle), enable)
 	c.update = cb
 }
 
-func commitCallback(ctx context.Context, mod api.Module, pDB ptr_t) (rollback int32) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.commit != nil {
+func (sqlt *sqlite) Xgo_commit_hook(pDB int32) (rollback int32) {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.commit != nil {
 		if !c.commit() {
 			rollback = 1
 		}
@@ -278,17 +275,17 @@ func commitCallback(ctx context.Context, mod api.Module, pDB ptr_t) (rollback in
 	return rollback
 }
 
-func rollbackCallback(ctx context.Context, mod api.Module, pDB ptr_t) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.rollback != nil {
+func (sqlt *sqlite) Xgo_rollback_hook(pDB int32) {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.rollback != nil {
 		c.rollback()
 	}
 }
 
-func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action AuthorizerActionCode, zSchema, zTabName ptr_t, rowid int64) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.update != nil {
-		schema := util.ReadString(mod, zSchema, _MAX_NAME)
-		table := util.ReadString(mod, zTabName, _MAX_NAME)
-		c.update(action, schema, table, rowid)
+func (sqlt *sqlite) Xgo_update_hook(pDB, action, zSchema, zTabName int32, rowid int64) {
+	if c, ok := sqlt.ctx.Value(connKey{}).(*Conn); ok && c.handle == ptr_t(pDB) && c.update != nil {
+		schema := util.ReadString(sqlt.mod, ptr_t(zSchema), _MAX_NAME)
+		table := util.ReadString(sqlt.mod, ptr_t(zTabName), _MAX_NAME)
+		c.update(AuthorizerActionCode(action), schema, table, rowid)
 	}
 }
 
@@ -296,6 +293,6 @@ func updateCallback(ctx context.Context, mod api.Module, pDB ptr_t, action Autho
 //
 // https://sqlite.org/c3ref/db_cacheflush.html
 func (c *Conn) CacheFlush() error {
-	rc := res_t(c.call("sqlite3_db_cacheflush", stk_t(c.handle)))
+	rc := res_t(c.mod.Xsqlite3_db_cacheflush(int32(c.handle)))
 	return c.error(rc)
 }

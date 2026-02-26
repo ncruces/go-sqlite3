@@ -2,123 +2,44 @@
 package sqlite3
 
 import (
+	"bytes"
 	"context"
 	"math"
 	"math/bits"
-	"os"
-	"runtime"
 	"strings"
-	"sync"
-	"unsafe"
 
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental"
-
+	"github.com/ncruces/go-sqlite3/internal/alloc"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
-// Configure SQLite Wasm.
-//
-// Importing package embed initializes [Binary]
-// with an appropriate build of SQLite:
-//
-//	import _ "github.com/ncruces/go-sqlite3/embed"
-var (
-	Binary []byte // Wasm binary to load.
-	Path   string // Path to load the binary from.
-
-	RuntimeConfig wazero.RuntimeConfig
-)
-
-// Initialize decodes and compiles the SQLite Wasm binary.
-// This is called implicitly when the first connection is openned,
-// but is potentially slow, so you may want to call it at a more convenient time.
-func Initialize() error {
-	instance.once.Do(compileSQLite)
-	return instance.err
-}
-
-var instance struct {
-	runtime  wazero.Runtime
-	compiled wazero.CompiledModule
-	err      error
-	once     sync.Once
-}
-
-func compileSQLite() {
-	ctx := context.Background()
-	cfg := RuntimeConfig
-	if cfg == nil {
-		cfg = wazero.NewRuntimeConfig()
-		if bits.UintSize < 64 {
-			cfg = cfg.WithMemoryLimitPages(512) // 32MB
-		} else {
-			cfg = cfg.WithMemoryLimitPages(4096) // 256MB
-		}
-		cfg = cfg.WithCoreFeatures(api.CoreFeaturesV2)
-	}
-
-	instance.runtime = wazero.NewRuntimeWithConfig(ctx, cfg)
-
-	env := instance.runtime.NewHostModuleBuilder("env")
-	env = vfs.ExportHostFunctions(env)
-	env = exportCallbacks(env)
-	_, instance.err = env.Instantiate(ctx)
-	if instance.err != nil {
-		return
-	}
-
-	bin := Binary
-	if bin == nil && Path != "" {
-		bin, instance.err = os.ReadFile(Path)
-		if instance.err != nil {
-			return
-		}
-	}
-	if bin == nil {
-		instance.err = util.NoBinaryErr
-		return
-	}
-
-	instance.compiled, instance.err = instance.runtime.CompileModule(
-		experimental.WithCompilationWorkers(ctx, runtime.GOMAXPROCS(0)/4),
-		bin)
-}
-
 type sqlite struct {
-	ctx   context.Context
-	mod   api.Module
-	funcs struct {
-		fn   [32]api.Function
-		id   [32]*byte
-		mask uint32
-	}
-	stack [9]stk_t
+	ctx context.Context
+	cfn context.CancelFunc
+	mem *alloc.Memory
+	mod *sqlite3_wasm.Module
 }
 
 func instantiateSQLite() (sqlt *sqlite, err error) {
-	if err := Initialize(); err != nil {
-		return nil, err
-	}
-
 	sqlt = new(sqlite)
-	sqlt.ctx = util.NewContext(context.Background())
-
-	sqlt.mod, err = instance.runtime.InstantiateModule(sqlt.ctx,
-		instance.compiled, wazero.NewModuleConfig().WithName(""))
-	if err != nil {
-		return nil, err
+	sqlt.mem = &alloc.Memory{Max: 4096} // 256MB
+	if bits.UintSize < 64 {
+		sqlt.mem.Max = 512 // 32MB
 	}
-	if sqlt.getfn("sqlite3_progress_handler_go") == nil {
-		return nil, util.BadBinaryErr
-	}
+	sqlt.ctx, sqlt.cfn = util.NewContext(context.Background())
+	sqlite3_wasm.New(&sqlite3_wasm.Memory{Grow: sqlt.mem.Grow}, sqlt)
+	sqlt.mod.X_initialize()
 	return sqlt, nil
 }
 
+func (sqlt *sqlite) Init(mod *sqlite3_wasm.Module) { sqlt.mod = mod }
+
 func (sqlt *sqlite) close() error {
-	return sqlt.mod.Close(sqlt.ctx)
+	sqlt.cfn()
+	sqlt.mem.Free()
+	sqlt.mod = nil
+	return nil
 }
 
 func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
@@ -132,7 +53,7 @@ func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
 
 	var msg, query string
 	if handle != 0 {
-		if ptr := ptr_t(sqlt.call("sqlite3_errmsg", stk_t(handle))); ptr != 0 {
+		if ptr := ptr_t(sqlt.mod.Xsqlite3_errmsg(int32(handle))); ptr != 0 {
 			msg = util.ReadString(sqlt.mod, ptr, _MAX_LENGTH)
 			msg = strings.TrimPrefix(msg, "sqlite3: ")
 			msg = strings.TrimPrefix(msg, util.ErrorCodeString(rc)[len("sqlite3: "):])
@@ -143,7 +64,7 @@ func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
 		}
 
 		if len(sql) != 0 {
-			if i := int32(sqlt.call("sqlite3_error_offset", stk_t(handle))); i != -1 {
+			if i := int32(sqlt.mod.Xsqlite3_error_offset(int32(handle))); i != -1 {
 				query = sql[0][i:]
 			}
 		}
@@ -161,54 +82,15 @@ func (sqlt *sqlite) error(rc res_t, handle ptr_t, sql ...string) error {
 	return xErrorCode(rc)
 }
 
-func (sqlt *sqlite) getfn(name string) api.Function {
-	c := &sqlt.funcs
-	p := unsafe.StringData(name)
-	for i := range c.id {
-		if c.id[i] == p {
-			c.id[i] = nil
-			c.mask &^= uint32(1) << i
-			return c.fn[i]
-		}
-	}
-	return sqlt.mod.ExportedFunction(name)
-}
-
-func (sqlt *sqlite) putfn(name string, fn api.Function) {
-	c := &sqlt.funcs
-	p := unsafe.StringData(name)
-	i := bits.TrailingZeros32(^c.mask)
-	if i < 32 {
-		c.id[i] = p
-		c.fn[i] = fn
-		c.mask |= uint32(1) << i
-	} else {
-		c.id[0] = p
-		c.fn[0] = fn
-		c.mask = uint32(1)
-	}
-}
-
-func (sqlt *sqlite) call(name string, params ...stk_t) stk_t {
-	copy(sqlt.stack[:], params)
-	fn := sqlt.getfn(name)
-	err := fn.CallWithStack(sqlt.ctx, sqlt.stack[:])
-	if err != nil {
-		panic(err)
-	}
-	sqlt.putfn(name, fn)
-	return stk_t(sqlt.stack[0])
-}
-
 func (sqlt *sqlite) free(ptr ptr_t) {
 	if ptr == 0 {
 		return
 	}
-	sqlt.call("sqlite3_free", stk_t(ptr))
+	sqlt.mod.Xsqlite3_free(int32(ptr))
 }
 
 func (sqlt *sqlite) new(size int64) ptr_t {
-	ptr := ptr_t(sqlt.call("sqlite3_malloc64", stk_t(size)))
+	ptr := ptr_t(sqlt.mod.Xsqlite3_malloc64(size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
@@ -216,7 +98,7 @@ func (sqlt *sqlite) new(size int64) ptr_t {
 }
 
 func (sqlt *sqlite) realloc(ptr ptr_t, size int64) ptr_t {
-	ptr = ptr_t(sqlt.call("sqlite3_realloc64", stk_t(ptr), stk_t(size)))
+	ptr = ptr_t(sqlt.mod.Xsqlite3_realloc64(int32(ptr), size))
 	if ptr == 0 && size != 0 {
 		panic(util.OOMErr)
 	}
@@ -310,67 +192,231 @@ func (a *arena) string(s string) ptr_t {
 	return ptr
 }
 
-func exportCallbacks(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.ExportFuncII(env, "go_progress_handler", progressCallback)
-	util.ExportFuncIII(env, "go_busy_timeout", timeoutCallback)
-	util.ExportFuncIII(env, "go_busy_handler", busyCallback)
-	util.ExportFuncII(env, "go_commit_hook", commitCallback)
-	util.ExportFuncVI(env, "go_rollback_hook", rollbackCallback)
-	util.ExportFuncVIIIIJ(env, "go_update_hook", updateCallback)
-	util.ExportFuncIIIII(env, "go_wal_hook", walCallback)
-	util.ExportFuncIIIII(env, "go_trace", traceCallback)
-	util.ExportFuncIIIIII(env, "go_autovacuum_pages", autoVacuumCallback)
-	util.ExportFuncIIIIIII(env, "go_authorizer", authorizerCallback)
-	util.ExportFuncVIII(env, "go_log", logCallback)
-	util.ExportFuncVI(env, "go_destroy", destroyCallback)
-	util.ExportFuncVIIII(env, "go_func", funcCallback)
-	util.ExportFuncVIIIII(env, "go_step", stepCallback)
-	util.ExportFuncVIIII(env, "go_value", valueCallback)
-	util.ExportFuncVIIII(env, "go_inverse", inverseCallback)
-	util.ExportFuncVIIII(env, "go_collation_needed", collationCallback)
-	util.ExportFuncIIIIII(env, "go_compare", compareCallback)
-	util.ExportFuncIIIIII(env, "go_vtab_create", vtabModuleCallback(xCreate))
-	util.ExportFuncIIIIII(env, "go_vtab_connect", vtabModuleCallback(xConnect))
-	util.ExportFuncII(env, "go_vtab_disconnect", vtabDisconnectCallback)
-	util.ExportFuncII(env, "go_vtab_destroy", vtabDestroyCallback)
-	util.ExportFuncIII(env, "go_vtab_best_index", vtabBestIndexCallback)
-	util.ExportFuncIIIII(env, "go_vtab_update", vtabUpdateCallback)
-	util.ExportFuncIII(env, "go_vtab_rename", vtabRenameCallback)
-	util.ExportFuncIIIII(env, "go_vtab_find_function", vtabFindFuncCallback)
-	util.ExportFuncII(env, "go_vtab_begin", vtabBeginCallback)
-	util.ExportFuncII(env, "go_vtab_sync", vtabSyncCallback)
-	util.ExportFuncII(env, "go_vtab_commit", vtabCommitCallback)
-	util.ExportFuncII(env, "go_vtab_rollback", vtabRollbackCallback)
-	util.ExportFuncIII(env, "go_vtab_savepoint", vtabSavepointCallback)
-	util.ExportFuncIII(env, "go_vtab_release", vtabReleaseCallback)
-	util.ExportFuncIII(env, "go_vtab_rollback_to", vtabRollbackToCallback)
-	util.ExportFuncIIIIII(env, "go_vtab_integrity", vtabIntegrityCallback)
-	util.ExportFuncIII(env, "go_cur_open", cursorOpenCallback)
-	util.ExportFuncII(env, "go_cur_close", cursorCloseCallback)
-	util.ExportFuncIIIIII(env, "go_cur_filter", cursorFilterCallback)
-	util.ExportFuncII(env, "go_cur_next", cursorNextCallback)
-	util.ExportFuncII(env, "go_cur_eof", cursorEOFCallback)
-	util.ExportFuncIIII(env, "go_cur_column", cursorColumnCallback)
-	util.ExportFuncIII(env, "go_cur_rowid", cursorRowIDCallback)
-	// Math functions.
-	util.ExportFuncDD(env, "exp", math.Exp)
-	util.ExportFuncDD(env, "log", math.Log)
-	util.ExportFuncDD(env, "log2", math.Log2)
-	util.ExportFuncDD(env, "log10", math.Log10)
-	util.ExportFuncDD(env, "cos", math.Cos)
-	util.ExportFuncDD(env, "cosh", math.Cosh)
-	util.ExportFuncDD(env, "sin", math.Sin)
-	util.ExportFuncDD(env, "sinh", math.Sinh)
-	util.ExportFuncDD(env, "tan", math.Tan)
-	util.ExportFuncDD(env, "tanh", math.Tanh)
-	util.ExportFuncDD(env, "acos", math.Acos)
-	util.ExportFuncDD(env, "acosh", math.Acosh)
-	util.ExportFuncDD(env, "asin", math.Asin)
-	util.ExportFuncDD(env, "asinh", math.Asinh)
-	util.ExportFuncDD(env, "atan", math.Atan)
-	util.ExportFuncDD(env, "atanh", math.Atanh)
-	util.ExportFuncDDD(env, "atan2", math.Atan2)
-	util.ExportFuncDDD(env, "fmod", math.Mod)
-	util.ExportFuncDDD(env, "pow", math.Pow)
-	return env
+// Math functions.
+func (sqlt *sqlite) Xacos(x float64) float64     { return math.Acos(x) }
+func (sqlt *sqlite) Xacosh(x float64) float64    { return math.Acosh(x) }
+func (sqlt *sqlite) Xasin(x float64) float64     { return math.Asin(x) }
+func (sqlt *sqlite) Xasinh(x float64) float64    { return math.Asinh(x) }
+func (sqlt *sqlite) Xatan(x float64) float64     { return math.Atan(x) }
+func (sqlt *sqlite) Xatan2(y, x float64) float64 { return math.Atan2(y, x) }
+func (sqlt *sqlite) Xatanh(x float64) float64    { return math.Atanh(x) }
+func (sqlt *sqlite) Xcos(x float64) float64      { return math.Cos(x) }
+func (sqlt *sqlite) Xcosh(x float64) float64     { return math.Cosh(x) }
+func (sqlt *sqlite) Xexp(x float64) float64      { return math.Exp(x) }
+func (sqlt *sqlite) Xfmod(x, y float64) float64  { return math.Mod(x, y) }
+func (sqlt *sqlite) Xlog(x float64) float64      { return math.Log(x) }
+func (sqlt *sqlite) Xlog10(x float64) float64    { return math.Log10(x) }
+func (sqlt *sqlite) Xlog2(x float64) float64     { return math.Log2(x) }
+func (sqlt *sqlite) Xpow(x, y float64) float64   { return math.Pow(x, y) }
+func (sqlt *sqlite) Xsin(x float64) float64      { return math.Sin(x) }
+func (sqlt *sqlite) Xsinh(x float64) float64     { return math.Sinh(x) }
+func (sqlt *sqlite) Xtan(x float64) float64      { return math.Tan(x) }
+func (sqlt *sqlite) Xtanh(x float64) float64     { return math.Tanh(x) }
+
+// String functions.
+
+func (sqlt *sqlite) Xstrlen(s int32) int32 {
+	return int32(bytes.IndexByte(sqlt.mod.Data[s:], 0))
+}
+
+func (sqlt *sqlite) Xmemchr(s, c, n int32) int32 {
+	m := sqlt.mod.Data[s:]
+	if len(m) > int(n) {
+		m = m[:n]
+	}
+	if i := bytes.IndexByte(m, byte(c)); i >= 0 {
+		return s + int32(i)
+	}
+	return 0
+}
+
+func (sqlt *sqlite) Xmemcmp(s1, s2, n int32) int32 {
+	e1, e2 := s1+n, s2+n
+	m1 := sqlt.mod.Data[s1:e1]
+	m2 := sqlt.mod.Data[s2:e2]
+	return int32(bytes.Compare(m1, m2))
+}
+
+func (sqlt *sqlite) Xstrchr(s, c int32) int32 {
+	s = sqlt.Xstrchrnul(s, c)
+	if sqlt.mod.Data[s] == byte(c) {
+		return s
+	}
+	return 0
+}
+
+func (sqlt *sqlite) Xstrchrnul(s, c int32) int32 {
+	m := sqlt.mod.Data[s:]
+	m = m[:bytes.IndexByte(m, 0)]
+	b := byte(c)
+	l := len(m)
+	if c != 0 {
+		i := bytes.IndexByte(m, b)
+		if i >= 0 {
+			l = i
+		}
+	}
+	return s + int32(l)
+}
+
+func (sqlt *sqlite) Xstrrchr(s, c int32) int32 {
+	m := sqlt.mod.Data[s:]
+	m = m[:bytes.IndexByte(m, 0)+1]
+	if i := bytes.LastIndexByte(m, byte(c)); i >= 0 {
+		return s + int32(i)
+	}
+	return 0
+}
+
+func (sqlt *sqlite) Xstrcmp(s1, s2 int32) int32 {
+	m1 := sqlt.mod.Data[s1:]
+	m2 := sqlt.mod.Data[s2:]
+	m1 = m1[:bytes.IndexByte(m1, 0)]
+	m2 = m2[:bytes.IndexByte(m2, 0)]
+	return int32(bytes.Compare(m1, m2))
+}
+
+func (sqlt *sqlite) Xstrncmp(s1, s2, n int32) int32 {
+	m1 := sqlt.mod.Data[s1:]
+	m2 := sqlt.mod.Data[s2:]
+	m1 = m1[:bytes.IndexByte(m1, 0)]
+	m2 = m2[:bytes.IndexByte(m2, 0)]
+	if len(m1) > int(n) {
+		m1 = m1[:n]
+	}
+	if len(m2) > int(n) {
+		m2 = m2[:n]
+	}
+	return int32(bytes.Compare(m1, m2))
+}
+
+func (sqlt *sqlite) Xstrspn(s, accept int32) int32 {
+	m := sqlt.mod.Data[s:]
+	a := sqlt.mod.Data[accept:]
+	a = a[:bytes.IndexByte(a, 0)]
+
+	i := int32(0)
+	for _, b := range m {
+		if bytes.IndexByte(a, b) == -1 {
+			break
+		}
+		i++
+	}
+	return i
+}
+
+func (sqlt *sqlite) Xstrcspn(s, reject int32) int32 {
+	m := sqlt.mod.Data[s:]
+	r := sqlt.mod.Data[reject:]
+	r = r[:bytes.IndexByte(r, 0)]
+
+	i := int32(0)
+	for _, b := range m {
+		if b == 0 || bytes.IndexByte(r, b) != -1 {
+			break
+		}
+		i++
+	}
+	return i
+}
+
+// VFS functions.
+
+func (sqlt *sqlite) Xgo_vfs_find(v0 int32) int32 {
+	return int32(vfs.VfsFind(sqlt.ctx, sqlt.mod, ptr_t(v0)))
+}
+
+func (sqlt *sqlite) Xgo_localtime(v0 int32, v1 int64) int32 {
+	return int32(vfs.VfsLocaltime(sqlt.ctx, sqlt.mod, ptr_t(v0), v1))
+}
+
+func (sqlt *sqlite) Xgo_randomness(v0, v1, v2 int32) int32 {
+	return int32(vfs.VfsRandomness(sqlt.ctx, sqlt.mod, ptr_t(v0), v1, ptr_t(v2)))
+}
+
+func (sqlt *sqlite) Xgo_sleep(v0, v1 int32) int32 {
+	return int32(vfs.VfsSleep(sqlt.ctx, sqlt.mod, ptr_t(v0), v1))
+}
+
+func (sqlt *sqlite) Xgo_current_time_64(v0, v1 int32) int32 {
+	return int32(vfs.VfsCurrentTime64(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1)))
+}
+
+func (sqlt *sqlite) Xgo_full_pathname(v0, v1, v2, v3 int32) int32 {
+	return int32(vfs.VfsFullPathname(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), v2, ptr_t(v3)))
+}
+
+func (sqlt *sqlite) Xgo_delete(v0, v1, v2 int32) int32 {
+	return int32(vfs.VfsDelete(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), v2))
+}
+func (sqlt *sqlite) Xgo_access(v0, v1, v2, v3 int32) int32 {
+	return int32(vfs.VfsAccess(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), vfs.AccessFlag(v2), ptr_t(v3)))
+}
+
+func (sqlt *sqlite) Xgo_open(v0, v1, v2, v3, v4, v5 int32) int32 {
+	return int32(vfs.VfsOpen(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), ptr_t(v2), vfs.OpenFlag(v3), ptr_t(v4), ptr_t(v5)))
+}
+
+func (sqlt *sqlite) Xgo_close(v0 int32) int32 {
+	return int32(vfs.VfsClose(sqlt.ctx, sqlt.mod, ptr_t(v0)))
+}
+
+func (sqlt *sqlite) Xgo_read(v0, v1, v2 int32, v3 int64) int32 {
+	return int32(vfs.VfsRead(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), v2, v3))
+}
+
+func (sqlt *sqlite) Xgo_write(v0, v1, v2 int32, v3 int64) int32 {
+	return int32(vfs.VfsWrite(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1), v2, v3))
+}
+
+func (sqlt *sqlite) Xgo_truncate(v0 int32, v1 int64) int32 {
+	return int32(vfs.VfsTruncate(sqlt.ctx, sqlt.mod, ptr_t(v0), v1))
+}
+
+func (sqlt *sqlite) Xgo_sync(v0, v1 int32) int32 {
+	return int32(vfs.VfsSync(sqlt.ctx, sqlt.mod, ptr_t(v0), vfs.SyncFlag(v1)))
+}
+
+func (sqlt *sqlite) Xgo_file_size(v0, v1 int32) int32 {
+	return int32(vfs.VfsFileSize(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1)))
+}
+
+func (sqlt *sqlite) Xgo_lock(v0 int32, v1 int32) int32 {
+	return int32(vfs.VfsLock(sqlt.ctx, sqlt.mod, ptr_t(v0), vfs.LockLevel(v1)))
+}
+
+func (sqlt *sqlite) Xgo_unlock(v0, v1 int32) int32 {
+	return int32(vfs.VfsUnlock(sqlt.ctx, sqlt.mod, ptr_t(v0), vfs.LockLevel(v1)))
+}
+
+func (sqlt *sqlite) Xgo_check_reserved_lock(v0, v1 int32) int32 {
+	return int32(vfs.VfsCheckReservedLock(sqlt.ctx, sqlt.mod, ptr_t(v0), ptr_t(v1)))
+}
+
+func (sqlt *sqlite) Xgo_file_control(v0, v1, v2 int32) int32 {
+	return int32(vfs.VfsFileControl(sqlt.ctx, sqlt.mod, ptr_t(v0), vfs.FcntlOpcode(v1), ptr_t(v2)))
+}
+
+func (sqlt *sqlite) Xgo_sector_size(v0 int32) int32 {
+	return int32(vfs.VfsSectorSize(sqlt.ctx, sqlt.mod, ptr_t(v0)))
+}
+
+func (sqlt *sqlite) Xgo_device_characteristics(v0 int32) int32 {
+	return int32(vfs.VfsDeviceCharacteristics(sqlt.ctx, sqlt.mod, ptr_t(v0)))
+}
+
+func (sqlt *sqlite) Xgo_shm_barrier(v0 int32) {
+	vfs.VfsShmBarrier(sqlt.ctx, sqlt.mod, ptr_t(v0))
+}
+
+func (sqlt *sqlite) Xgo_shm_map(v0, v1, v2, v3, v4 int32) int32 {
+	return int32(vfs.VfsShmMap(sqlt.ctx, sqlt.mod, ptr_t(v0), v1, v2, v3, ptr_t(v4)))
+}
+
+func (sqlt *sqlite) Xgo_shm_lock(v0, v1, v2, v3 int32) int32 {
+	return int32(vfs.VfsShmLock(sqlt.ctx, sqlt.mod, ptr_t(v0), v1, v2, vfs.ShmFlag(v3)))
+}
+
+func (sqlt *sqlite) Xgo_shm_unmap(v0, v1 int32) int32 {
+	return int32(vfs.VfsShmUnmap(sqlt.ctx, sqlt.mod, ptr_t(v0), v1))
 }

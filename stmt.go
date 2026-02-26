@@ -1,7 +1,6 @@
 package sqlite3
 
 import (
-	"math"
 	"time"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -27,7 +26,7 @@ func (s *Stmt) Close() error {
 		return nil
 	}
 
-	rc := res_t(s.c.call("sqlite3_finalize", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_finalize(int32(s.handle)))
 	stmts := s.c.stmts
 	for i := range stmts {
 		if s == stmts[i] {
@@ -62,7 +61,7 @@ func (s *Stmt) SQL() string {
 //
 // https://sqlite.org/c3ref/expanded_sql.html
 func (s *Stmt) ExpandedSQL() string {
-	ptr := ptr_t(s.c.call("sqlite3_expanded_sql", stk_t(s.handle)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_expanded_sql(int32(s.handle)))
 	sql := util.ReadString(s.c.mod, ptr, _MAX_SQL_LENGTH)
 	s.c.free(ptr)
 	return sql
@@ -73,7 +72,7 @@ func (s *Stmt) ExpandedSQL() string {
 //
 // https://sqlite.org/c3ref/stmt_readonly.html
 func (s *Stmt) ReadOnly() bool {
-	b := int32(s.c.call("sqlite3_stmt_readonly", stk_t(s.handle)))
+	b := int32(s.c.mod.Xsqlite3_stmt_readonly(int32(s.handle)))
 	return b != 0
 }
 
@@ -81,7 +80,7 @@ func (s *Stmt) ReadOnly() bool {
 //
 // https://sqlite.org/c3ref/reset.html
 func (s *Stmt) Reset() error {
-	rc := res_t(s.c.call("sqlite3_reset", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_reset(int32(s.handle)))
 	s.err = nil
 	return s.c.error(rc)
 }
@@ -90,7 +89,7 @@ func (s *Stmt) Reset() error {
 //
 // https://sqlite.org/c3ref/stmt_busy.html
 func (s *Stmt) Busy() bool {
-	rc := res_t(s.c.call("sqlite3_stmt_busy", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_stmt_busy(int32(s.handle)))
 	return rc != 0
 }
 
@@ -109,7 +108,7 @@ func (s *Stmt) Step() bool {
 		return false
 	}
 
-	rc := res_t(s.c.call("sqlite3_step", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_step(int32(s.handle)))
 	switch rc {
 	case _ROW:
 		s.err = nil
@@ -136,7 +135,7 @@ func (s *Stmt) Exec() error {
 	if s.c.interrupt.Err() != nil {
 		return INTERRUPT
 	}
-	rc := res_t(s.c.call("sqlite3_exec_go", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_exec_go(int32(s.handle)))
 	s.err = nil
 	return s.c.error(rc)
 }
@@ -152,8 +151,8 @@ func (s *Stmt) Status(op StmtStatus, reset bool) int {
 	if reset {
 		i = 1
 	}
-	n := int32(s.c.call("sqlite3_stmt_status", stk_t(s.handle),
-		stk_t(op), stk_t(i)))
+	n := int32(s.c.mod.Xsqlite3_stmt_status(int32(s.handle),
+		int32(op), i))
 	return int(n)
 }
 
@@ -161,7 +160,7 @@ func (s *Stmt) Status(op StmtStatus, reset bool) int {
 //
 // https://sqlite.org/c3ref/clear_bindings.html
 func (s *Stmt) ClearBindings() error {
-	rc := res_t(s.c.call("sqlite3_clear_bindings", stk_t(s.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_clear_bindings(int32(s.handle)))
 	return s.c.error(rc)
 }
 
@@ -169,8 +168,8 @@ func (s *Stmt) ClearBindings() error {
 //
 // https://sqlite.org/c3ref/bind_parameter_count.html
 func (s *Stmt) BindCount() int {
-	n := int32(s.c.call("sqlite3_bind_parameter_count",
-		stk_t(s.handle)))
+	n := int32(s.c.mod.Xsqlite3_bind_parameter_count(
+		int32(s.handle)))
 	return int(n)
 }
 
@@ -181,8 +180,8 @@ func (s *Stmt) BindCount() int {
 func (s *Stmt) BindIndex(name string) int {
 	defer s.c.arena.mark()()
 	namePtr := s.c.arena.string(name)
-	i := int32(s.c.call("sqlite3_bind_parameter_index",
-		stk_t(s.handle), stk_t(namePtr)))
+	i := int32(s.c.mod.Xsqlite3_bind_parameter_index(
+		int32(s.handle), int32(namePtr)))
 	return int(i)
 }
 
@@ -191,8 +190,8 @@ func (s *Stmt) BindIndex(name string) int {
 //
 // https://sqlite.org/c3ref/bind_parameter_name.html
 func (s *Stmt) BindName(param int) string {
-	ptr := ptr_t(s.c.call("sqlite3_bind_parameter_name",
-		stk_t(s.handle), stk_t(param)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_bind_parameter_name(
+		int32(s.handle), int32(param)))
 	if ptr == 0 {
 		return ""
 	}
@@ -226,8 +225,8 @@ func (s *Stmt) BindInt(param int, value int) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindInt64(param int, value int64) error {
-	rc := res_t(s.c.call("sqlite3_bind_int64",
-		stk_t(s.handle), stk_t(param), stk_t(value)))
+	rc := res_t(s.c.mod.Xsqlite3_bind_int64(
+		int32(s.handle), int32(param), value))
 	return s.c.error(rc)
 }
 
@@ -236,9 +235,8 @@ func (s *Stmt) BindInt64(param int, value int64) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindFloat(param int, value float64) error {
-	rc := res_t(s.c.call("sqlite3_bind_double",
-		stk_t(s.handle), stk_t(param),
-		stk_t(math.Float64bits(value))))
+	rc := res_t(s.c.mod.Xsqlite3_bind_double(
+		int32(s.handle), int32(param), value))
 	return s.c.error(rc)
 }
 
@@ -251,9 +249,9 @@ func (s *Stmt) BindText(param int, value string) error {
 		return TOOBIG
 	}
 	ptr := s.c.newString(value)
-	rc := res_t(s.c.call("sqlite3_bind_text_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(ptr), stk_t(len(value))))
+	rc := res_t(s.c.mod.Xsqlite3_bind_text_go(
+		int32(s.handle), int32(param),
+		int32(ptr), int64(len(value))))
 	return s.c.error(rc)
 }
 
@@ -277,9 +275,9 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 		return s.BindZeroBlob(param, 0)
 	}
 	ptr := s.c.newBytes(value)
-	rc := res_t(s.c.call("sqlite3_bind_blob_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(ptr), stk_t(len(value))))
+	rc := res_t(s.c.mod.Xsqlite3_bind_blob_go(
+		int32(s.handle), int32(param),
+		int32(ptr), int64(len(value))))
 	return s.c.error(rc)
 }
 
@@ -288,8 +286,8 @@ func (s *Stmt) BindBlob(param int, value []byte) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindZeroBlob(param int, n int64) error {
-	rc := res_t(s.c.call("sqlite3_bind_zeroblob64",
-		stk_t(s.handle), stk_t(param), stk_t(n)))
+	rc := res_t(s.c.mod.Xsqlite3_bind_zeroblob64(
+		int32(s.handle), int32(param), n))
 	return s.c.error(rc)
 }
 
@@ -298,8 +296,8 @@ func (s *Stmt) BindZeroBlob(param int, n int64) error {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindNull(param int) error {
-	rc := res_t(s.c.call("sqlite3_bind_null",
-		stk_t(s.handle), stk_t(param)))
+	rc := res_t(s.c.mod.Xsqlite3_bind_null(
+		int32(s.handle), int32(param)))
 	return s.c.error(rc)
 }
 
@@ -331,9 +329,9 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 	_ = append(buf, 0)
 
-	rc := res_t(s.c.call("sqlite3_bind_text_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(ptr), stk_t(len(buf))))
+	rc := res_t(s.c.mod.Xsqlite3_bind_text_go(
+		int32(s.handle), int32(param),
+		int32(ptr), int64(len(buf))))
 	return s.c.error(rc)
 }
 
@@ -345,8 +343,8 @@ func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindPointer(param int, ptr any) error {
 	valPtr := util.AddHandle(s.c.ctx, ptr)
-	rc := res_t(s.c.call("sqlite3_bind_pointer_go",
-		stk_t(s.handle), stk_t(param), stk_t(valPtr)))
+	rc := res_t(s.c.mod.Xsqlite3_bind_pointer_go(
+		int32(s.handle), int32(param), int32(valPtr)))
 	return s.c.error(rc)
 }
 
@@ -358,8 +356,8 @@ func (s *Stmt) BindValue(param int, value Value) error {
 	if value.c != s.c {
 		return MISUSE
 	}
-	rc := res_t(s.c.call("sqlite3_bind_value",
-		stk_t(s.handle), stk_t(param), stk_t(value.handle)))
+	rc := res_t(s.c.mod.Xsqlite3_bind_value(
+		int32(s.handle), int32(param), int32(value.handle)))
 	return s.c.error(rc)
 }
 
@@ -367,8 +365,8 @@ func (s *Stmt) BindValue(param int, value Value) error {
 //
 // https://sqlite.org/c3ref/data_count.html
 func (s *Stmt) DataCount() int {
-	n := int32(s.c.call("sqlite3_data_count",
-		stk_t(s.handle)))
+	n := int32(s.c.mod.Xsqlite3_data_count(
+		int32(s.handle)))
 	return int(n)
 }
 
@@ -376,8 +374,8 @@ func (s *Stmt) DataCount() int {
 //
 // https://sqlite.org/c3ref/column_count.html
 func (s *Stmt) ColumnCount() int {
-	n := int32(s.c.call("sqlite3_column_count",
-		stk_t(s.handle)))
+	n := int32(s.c.mod.Xsqlite3_column_count(
+		int32(s.handle)))
 	return int(n)
 }
 
@@ -386,8 +384,8 @@ func (s *Stmt) ColumnCount() int {
 //
 // https://sqlite.org/c3ref/column_name.html
 func (s *Stmt) ColumnName(col int) string {
-	ptr := ptr_t(s.c.call("sqlite3_column_name",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_name(
+		int32(s.handle), int32(col)))
 	if ptr == 0 {
 		panic(util.OOMErr)
 	}
@@ -399,8 +397,8 @@ func (s *Stmt) ColumnName(col int) string {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnType(col int) Datatype {
-	return Datatype(s.c.call("sqlite3_column_type",
-		stk_t(s.handle), stk_t(col)))
+	return Datatype(s.c.mod.Xsqlite3_column_type(
+		int32(s.handle), int32(col)))
 }
 
 // ColumnDeclType returns the declared datatype of the result column.
@@ -408,8 +406,8 @@ func (s *Stmt) ColumnType(col int) Datatype {
 //
 // https://sqlite.org/c3ref/column_decltype.html
 func (s *Stmt) ColumnDeclType(col int) string {
-	ptr := ptr_t(s.c.call("sqlite3_column_decltype",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_decltype(
+		int32(s.handle), int32(col)))
 	if ptr == 0 {
 		return ""
 	}
@@ -422,8 +420,8 @@ func (s *Stmt) ColumnDeclType(col int) string {
 //
 // https://sqlite.org/c3ref/column_database_name.html
 func (s *Stmt) ColumnDatabaseName(col int) string {
-	ptr := ptr_t(s.c.call("sqlite3_column_database_name",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_database_name(
+		int32(s.handle), int32(col)))
 	if ptr == 0 {
 		return ""
 	}
@@ -436,8 +434,8 @@ func (s *Stmt) ColumnDatabaseName(col int) string {
 //
 // https://sqlite.org/c3ref/column_database_name.html
 func (s *Stmt) ColumnTableName(col int) string {
-	ptr := ptr_t(s.c.call("sqlite3_column_table_name",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_table_name(
+		int32(s.handle), int32(col)))
 	if ptr == 0 {
 		return ""
 	}
@@ -450,8 +448,8 @@ func (s *Stmt) ColumnTableName(col int) string {
 //
 // https://sqlite.org/c3ref/column_database_name.html
 func (s *Stmt) ColumnOriginName(col int) string {
-	ptr := ptr_t(s.c.call("sqlite3_column_origin_name",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_origin_name(
+		int32(s.handle), int32(col)))
 	if ptr == 0 {
 		return ""
 	}
@@ -482,8 +480,8 @@ func (s *Stmt) ColumnInt(col int) int {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnInt64(col int) int64 {
-	return int64(s.c.call("sqlite3_column_int64",
-		stk_t(s.handle), stk_t(col)))
+	return s.c.mod.Xsqlite3_column_int64(
+		int32(s.handle), int32(col))
 }
 
 // ColumnFloat returns the value of the result column as a float64.
@@ -491,9 +489,8 @@ func (s *Stmt) ColumnInt64(col int) int64 {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnFloat(col int) float64 {
-	f := uint64(s.c.call("sqlite3_column_double",
-		stk_t(s.handle), stk_t(col)))
-	return math.Float64frombits(f)
+	return s.c.mod.Xsqlite3_column_double(
+		int32(s.handle), int32(col))
 }
 
 // ColumnTime returns the value of the result column as a [time.Time].
@@ -545,8 +542,8 @@ func (s *Stmt) ColumnBlob(col int, buf []byte) []byte {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnRawText(col int) []byte {
-	ptr := ptr_t(s.c.call("sqlite3_column_text",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_text(
+		int32(s.handle), int32(col)))
 	return s.columnRawBytes(col, ptr, 1)
 }
 
@@ -557,22 +554,22 @@ func (s *Stmt) ColumnRawText(col int) []byte {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnRawBlob(col int) []byte {
-	ptr := ptr_t(s.c.call("sqlite3_column_blob",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_blob(
+		int32(s.handle), int32(col)))
 	return s.columnRawBytes(col, ptr, 0)
 }
 
 func (s *Stmt) columnRawBytes(col int, ptr ptr_t, nul int32) []byte {
 	if ptr == 0 {
-		rc := res_t(s.c.call("sqlite3_errcode", stk_t(s.c.handle)))
+		rc := res_t(s.c.mod.Xsqlite3_errcode(int32(s.c.handle)))
 		if rc != _ROW && rc != _DONE {
 			s.err = s.c.error(rc)
 		}
 		return nil
 	}
 
-	n := int32(s.c.call("sqlite3_column_bytes",
-		stk_t(s.handle), stk_t(col)))
+	n := int32(s.c.mod.Xsqlite3_column_bytes(
+		int32(s.handle), int32(col)))
 	return util.View(s.c.mod, ptr, int64(n+nul))[:n]
 }
 
@@ -581,8 +578,8 @@ func (s *Stmt) columnRawBytes(col int, ptr ptr_t, nul int32) []byte {
 //
 // https://sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnValue(col int) Value {
-	ptr := ptr_t(s.c.call("sqlite3_column_value",
-		stk_t(s.handle), stk_t(col)))
+	ptr := ptr_t(s.c.mod.Xsqlite3_column_value(
+		int32(s.handle), int32(col)))
 	return Value{
 		c:      s.c,
 		handle: ptr,
@@ -691,8 +688,8 @@ func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
 	typePtr := s.c.arena.new(count)
 	dataPtr := s.c.arena.new(count * 8)
 
-	rc := res_t(s.c.call("sqlite3_columns_go",
-		stk_t(s.handle), stk_t(count), stk_t(typePtr), stk_t(dataPtr)))
+	rc := res_t(s.c.mod.Xsqlite3_columns_go(
+		int32(s.handle), int32(count), int32(typePtr), int32(dataPtr)))
 	if rc == res_t(MISUSE) {
 		return nil, 0, MISUSE
 	}

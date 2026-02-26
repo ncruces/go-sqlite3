@@ -8,54 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/julianday"
 )
 
-// ExportHostFunctions is an internal API users need not call directly.
-//
-// ExportHostFunctions registers the required VFS host functions
-// with the provided env module.
-func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder {
-	util.ExportFuncII(env, "go_vfs_find", vfsFind)
-	util.ExportFuncIIJ(env, "go_localtime", vfsLocaltime)
-	util.ExportFuncIIII(env, "go_randomness", vfsRandomness)
-	util.ExportFuncIII(env, "go_sleep", vfsSleep)
-	util.ExportFuncIII(env, "go_current_time_64", vfsCurrentTime64)
-	util.ExportFuncIIIII(env, "go_full_pathname", vfsFullPathname)
-	util.ExportFuncIIII(env, "go_delete", vfsDelete)
-	util.ExportFuncIIIII(env, "go_access", vfsAccess)
-	util.ExportFuncIIIIIII(env, "go_open", vfsOpen)
-	util.ExportFuncII(env, "go_close", vfsClose)
-	util.ExportFuncIIIIJ(env, "go_read", vfsRead)
-	util.ExportFuncIIIIJ(env, "go_write", vfsWrite)
-	util.ExportFuncIIJ(env, "go_truncate", vfsTruncate)
-	util.ExportFuncIII(env, "go_sync", vfsSync)
-	util.ExportFuncIII(env, "go_file_size", vfsFileSize)
-	util.ExportFuncIIII(env, "go_file_control", vfsFileControl)
-	util.ExportFuncII(env, "go_sector_size", vfsSectorSize)
-	util.ExportFuncII(env, "go_device_characteristics", vfsDeviceCharacteristics)
-	util.ExportFuncIII(env, "go_lock", vfsLock)
-	util.ExportFuncIII(env, "go_unlock", vfsUnlock)
-	util.ExportFuncIII(env, "go_check_reserved_lock", vfsCheckReservedLock)
-	util.ExportFuncIIIIII(env, "go_shm_map", vfsShmMap)
-	util.ExportFuncIIIII(env, "go_shm_lock", vfsShmLock)
-	util.ExportFuncIII(env, "go_shm_unmap", vfsShmUnmap)
-	util.ExportFuncVI(env, "go_shm_barrier", vfsShmBarrier)
-	return env
-}
-
-func vfsFind(ctx context.Context, mod api.Module, zVfsName ptr_t) uint32 {
+func VfsFind(ctx context.Context, mod *sqlite3_wasm.Module, zVfsName ptr_t) uint32 {
 	if find(util.ReadString(mod, zVfsName, _MAX_NAME)) != nil {
 		return 1
 	}
 	return 0
 }
 
-func vfsLocaltime(ctx context.Context, mod api.Module, pTm ptr_t, t int64) _ErrorCode {
+func VfsLocaltime(ctx context.Context, mod *sqlite3_wasm.Module, pTm ptr_t, t int64) _ErrorCode {
 	const size = 32 / 8
 	tm := time.Unix(t, 0)
 	// https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
@@ -71,25 +36,25 @@ func vfsLocaltime(ctx context.Context, mod api.Module, pTm ptr_t, t int64) _Erro
 	return _OK
 }
 
-func vfsRandomness(ctx context.Context, mod api.Module, pVfs ptr_t, nByte int32, zByte ptr_t) uint32 {
+func VfsRandomness(ctx context.Context, mod *sqlite3_wasm.Module, pVfs ptr_t, nByte int32, zByte ptr_t) uint32 {
 	mem := util.View(mod, zByte, int64(nByte))
 	n, _ := rand.Reader.Read(mem)
 	return uint32(n)
 }
 
-func vfsSleep(ctx context.Context, mod api.Module, pVfs ptr_t, nMicro int32) _ErrorCode {
+func VfsSleep(ctx context.Context, mod *sqlite3_wasm.Module, pVfs ptr_t, nMicro int32) _ErrorCode {
 	time.Sleep(time.Duration(nMicro) * time.Microsecond)
 	return _OK
 }
 
-func vfsCurrentTime64(ctx context.Context, mod api.Module, pVfs, piNow ptr_t) _ErrorCode {
+func VfsCurrentTime64(ctx context.Context, mod *sqlite3_wasm.Module, pVfs, piNow ptr_t) _ErrorCode {
 	day, nsec := julianday.Date(time.Now())
 	msec := day*86_400_000 + nsec/1_000_000
 	util.Write64(mod, piNow, msec)
 	return _OK
 }
 
-func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative ptr_t, nFull int32, zFull ptr_t) _ErrorCode {
+func VfsFullPathname(ctx context.Context, mod *sqlite3_wasm.Module, pVfs, zRelative ptr_t, nFull int32, zFull ptr_t) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zRelative, _MAX_PATHNAME)
 
@@ -103,7 +68,7 @@ func vfsFullPathname(ctx context.Context, mod api.Module, pVfs, zRelative ptr_t,
 	return vfsErrorCode(ctx, err, _CANTOPEN_FULLPATH)
 }
 
-func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, syncDir int32) _ErrorCode {
+func VfsDelete(ctx context.Context, mod *sqlite3_wasm.Module, pVfs, zPath ptr_t, syncDir int32) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
@@ -111,7 +76,7 @@ func vfsDelete(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, syncDir i
 	return vfsErrorCode(ctx, err, _IOERR_DELETE)
 }
 
-func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, flags AccessFlag, pResOut ptr_t) _ErrorCode {
+func VfsAccess(ctx context.Context, mod *sqlite3_wasm.Module, pVfs, zPath ptr_t, flags AccessFlag, pResOut ptr_t) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	path := util.ReadString(mod, zPath, _MAX_PATHNAME)
 
@@ -120,7 +85,7 @@ func vfsAccess(ctx context.Context, mod api.Module, pVfs, zPath ptr_t, flags Acc
 	return vfsErrorCode(ctx, err, _IOERR_ACCESS)
 }
 
-func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile ptr_t, flags OpenFlag, pOutFlags, pOutVFS ptr_t) _ErrorCode {
+func VfsOpen(ctx context.Context, mod *sqlite3_wasm.Module, pVfs, zPath, pFile ptr_t, flags OpenFlag, pOutFlags, pOutVFS ptr_t) _ErrorCode {
 	vfs := vfsGet(mod, pVfs)
 	name := GetFilename(ctx, mod, zPath, flags)
 
@@ -151,12 +116,12 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile ptr_t, flag
 	return _OK
 }
 
-func vfsClose(ctx context.Context, mod api.Module, pFile ptr_t) _ErrorCode {
+func VfsClose(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) _ErrorCode {
 	err := vfsFileClose(ctx, mod, pFile)
 	return vfsErrorCode(ctx, err, _IOERR_CLOSE)
 }
 
-func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
+func VfsRead(ctx context.Context, mod *sqlite3_wasm.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	buf := util.View(mod, zBuf, int64(iAmt))
 
@@ -171,7 +136,7 @@ func vfsRead(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32,
 	return _IOERR_SHORT_READ
 }
 
-func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
+func VfsWrite(ctx context.Context, mod *sqlite3_wasm.Module, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	buf := util.View(mod, zBuf, int64(iAmt))
 
@@ -179,45 +144,45 @@ func vfsWrite(ctx context.Context, mod api.Module, pFile, zBuf ptr_t, iAmt int32
 	return vfsErrorCode(ctx, err, _IOERR_WRITE)
 }
 
-func vfsTruncate(ctx context.Context, mod api.Module, pFile ptr_t, nByte int64) _ErrorCode {
+func VfsTruncate(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, nByte int64) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Truncate(nByte)
 	return vfsErrorCode(ctx, err, _IOERR_TRUNCATE)
 }
 
-func vfsSync(ctx context.Context, mod api.Module, pFile ptr_t, flags SyncFlag) _ErrorCode {
+func VfsSync(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, flags SyncFlag) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Sync(flags)
 	return vfsErrorCode(ctx, err, _IOERR_FSYNC)
 }
 
-func vfsFileSize(ctx context.Context, mod api.Module, pFile, pSize ptr_t) _ErrorCode {
+func VfsFileSize(ctx context.Context, mod *sqlite3_wasm.Module, pFile, pSize ptr_t) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	size, err := file.Size()
 	util.Write64(mod, pSize, size)
 	return vfsErrorCode(ctx, err, _IOERR_SEEK)
 }
 
-func vfsLock(ctx context.Context, mod api.Module, pFile ptr_t, eLock LockLevel) _ErrorCode {
+func VfsLock(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Lock(eLock)
 	return vfsErrorCode(ctx, err, _IOERR_LOCK)
 }
 
-func vfsUnlock(ctx context.Context, mod api.Module, pFile ptr_t, eLock LockLevel) _ErrorCode {
+func VfsUnlock(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, eLock LockLevel) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	err := file.Unlock(eLock)
 	return vfsErrorCode(ctx, err, _IOERR_UNLOCK)
 }
 
-func vfsCheckReservedLock(ctx context.Context, mod api.Module, pFile, pResOut ptr_t) _ErrorCode {
+func VfsCheckReservedLock(ctx context.Context, mod *sqlite3_wasm.Module, pFile, pResOut ptr_t) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	locked, err := file.CheckReservedLock()
 	util.WriteBool(mod, pResOut, locked)
 	return vfsErrorCode(ctx, err, _IOERR_CHECKRESERVEDLOCK)
 }
 
-func vfsFileControl(ctx context.Context, mod api.Module, pFile ptr_t, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
+func VfsFileControl(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, op FcntlOpcode, pArg ptr_t) _ErrorCode {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	if file, ok := file.(fileControl); ok {
 		return file.fileControl(ctx, mod, op, pArg)
@@ -225,7 +190,7 @@ func vfsFileControl(ctx context.Context, mod api.Module, pFile ptr_t, op _FcntlO
 	return vfsFileControlImpl(ctx, mod, file, op, pArg)
 }
 
-func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
+func vfsFileControlImpl(ctx context.Context, mod *sqlite3_wasm.Module, file File, op FcntlOpcode, pArg ptr_t) _ErrorCode {
 	switch op {
 	case _FCNTL_LOCKSTATE:
 		if file, ok := file.(FileLockState); ok {
@@ -341,27 +306,18 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 				out = err.Error()
 			}
 			if out != "" {
-				fn := mod.ExportedFunction("sqlite3_malloc64")
-				stack := [...]stk_t{stk_t(len(out) + 1)}
-				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
-					panic(err)
-				}
-				util.Write32(mod, pArg, ptr_t(stack[0]))
-				util.WriteString(mod, ptr_t(stack[0]), out)
+				ptr := ptr_t(mod.Xsqlite3_malloc64(int64(len(out)) + 1))
+				util.Write32(mod, pArg, ptr)
+				util.WriteString(mod, ptr, out)
 			}
 			return ret
 		}
 
 	case _FCNTL_BUSYHANDLER:
 		if file, ok := file.(FileBusyHandler); ok {
-			arg := util.Read64[stk_t](mod, pArg)
-			fn := mod.ExportedFunction("sqlite3_invoke_busy_handler_go")
+			arg := util.Read64[int64](mod, pArg)
 			file.BusyHandler(func() bool {
-				stack := [...]stk_t{arg}
-				if err := fn.CallWithStack(ctx, stack[:]); err != nil {
-					panic(err)
-				}
-				return uint32(stack[0]) != 0
+				return mod.Xsqlite3_invoke_busy_handler_go(arg) != 0
 			})
 			return _OK
 		}
@@ -388,41 +344,41 @@ func vfsFileControlImpl(ctx context.Context, mod api.Module, file File, op _Fcnt
 	return _NOTFOUND
 }
 
-func vfsSectorSize(ctx context.Context, mod api.Module, pFile ptr_t) uint32 {
+func VfsSectorSize(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) uint32 {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	return uint32(file.SectorSize())
 }
 
-func vfsDeviceCharacteristics(ctx context.Context, mod api.Module, pFile ptr_t) DeviceCharacteristic {
+func VfsDeviceCharacteristics(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) DeviceCharacteristic {
 	file := vfsFileGet(ctx, mod, pFile).(File)
 	return file.DeviceCharacteristics()
 }
 
-func vfsShmBarrier(ctx context.Context, mod api.Module, pFile ptr_t) {
+func VfsShmBarrier(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) {
 	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	shm.shmBarrier()
 }
 
-func vfsShmMap(ctx context.Context, mod api.Module, pFile ptr_t, iRegion, szRegion, bExtend int32, pp ptr_t) _ErrorCode {
+func VfsShmMap(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, iRegion, szRegion, bExtend int32, pp ptr_t) _ErrorCode {
 	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	p, err := shm.shmMap(ctx, mod, iRegion, szRegion, bExtend != 0)
 	util.Write32(mod, pp, p)
 	return vfsErrorCode(ctx, err, _IOERR_SHMMAP)
 }
 
-func vfsShmLock(ctx context.Context, mod api.Module, pFile ptr_t, offset, n int32, flags _ShmFlag) _ErrorCode {
+func VfsShmLock(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, offset, n int32, flags ShmFlag) _ErrorCode {
 	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	err := shm.shmLock(offset, n, flags)
 	return vfsErrorCode(ctx, err, _IOERR_SHMLOCK)
 }
 
-func vfsShmUnmap(ctx context.Context, mod api.Module, pFile ptr_t, bDelete int32) _ErrorCode {
+func VfsShmUnmap(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, bDelete int32) _ErrorCode {
 	shm := vfsFileGet(ctx, mod, pFile).(FileSharedMemory).SharedMemory()
 	shm.shmUnmap(bDelete != 0)
 	return _OK
 }
 
-func vfsGet(mod api.Module, pVfs ptr_t) VFS {
+func vfsGet(mod *sqlite3_wasm.Module, pVfs ptr_t) VFS {
 	var name string
 	if pVfs != 0 {
 		const zNameOffset = 16
@@ -435,19 +391,19 @@ func vfsGet(mod api.Module, pVfs ptr_t) VFS {
 	panic(util.NoVFSErr + util.ErrorString(name))
 }
 
-func vfsFileRegister(ctx context.Context, mod api.Module, pFile ptr_t, file File) {
+func vfsFileRegister(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t, file File) {
 	const fileHandleOffset = 4
 	id := util.AddHandle(ctx, file)
 	util.Write32(mod, pFile+fileHandleOffset, id)
 }
 
-func vfsFileGet(ctx context.Context, mod api.Module, pFile ptr_t) any {
+func vfsFileGet(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) any {
 	const fileHandleOffset = 4
 	id := util.Read32[ptr_t](mod, pFile+fileHandleOffset)
 	return util.GetHandle(ctx, id)
 }
 
-func vfsFileClose(ctx context.Context, mod api.Module, pFile ptr_t) error {
+func vfsFileClose(ctx context.Context, mod *sqlite3_wasm.Module, pFile ptr_t) error {
 	const fileHandleOffset = 4
 	id := util.Read32[ptr_t](mod, pFile+fileHandleOffset)
 	return util.DelHandle(ctx, id)

@@ -5,7 +5,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/tetratelabs/wazero/api"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wasm"
 )
 
 // A VFS defines the interface between the SQLite core and the underlying operating system.
@@ -195,8 +195,8 @@ type FileSharedMemory interface {
 // SharedMemory is a shared-memory WAL-index implementation.
 // Use [NewSharedMemory] to create a shared-memory.
 type SharedMemory interface {
-	shmMap(context.Context, api.Module, int32, int32, bool) (ptr_t, error)
-	shmLock(int32, int32, _ShmFlag) error
+	shmMap(context.Context, *sqlite3_wasm.Module, int32, int32, bool) (ptr_t, error)
+	shmLock(int32, int32, ShmFlag) error
 	shmUnmap(bool)
 	shmBarrier()
 	io.Closer
@@ -213,7 +213,7 @@ type blockingSharedMemory interface {
 // should explicitly wrap the methods they want to wrap.
 type fileControl interface {
 	File
-	fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg ptr_t) _ErrorCode
+	fileControl(ctx context.Context, mod *sqlite3_wasm.Module, op FcntlOpcode, pArg ptr_t) _ErrorCode
 }
 
 type filePDB interface {

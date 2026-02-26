@@ -12,7 +12,6 @@ const (
 )
 
 type (
-	stk_t = util.Stk_t
 	ptr_t = util.Ptr_t
 )
 
@@ -193,63 +192,63 @@ const (
 )
 
 // https://sqlite.org/c3ref/c_fcntl_begin_atomic_write.html
-type _FcntlOpcode uint32
+type FcntlOpcode uint32
 
 const (
-	_FCNTL_LOCKSTATE             _FcntlOpcode = 1
-	_FCNTL_GET_LOCKPROXYFILE     _FcntlOpcode = 2
-	_FCNTL_SET_LOCKPROXYFILE     _FcntlOpcode = 3
-	_FCNTL_LAST_ERRNO            _FcntlOpcode = 4
-	_FCNTL_SIZE_HINT             _FcntlOpcode = 5
-	_FCNTL_CHUNK_SIZE            _FcntlOpcode = 6
-	_FCNTL_FILE_POINTER          _FcntlOpcode = 7
-	_FCNTL_SYNC_OMITTED          _FcntlOpcode = 8
-	_FCNTL_WIN32_AV_RETRY        _FcntlOpcode = 9
-	_FCNTL_PERSIST_WAL           _FcntlOpcode = 10
-	_FCNTL_OVERWRITE             _FcntlOpcode = 11
-	_FCNTL_VFSNAME               _FcntlOpcode = 12
-	_FCNTL_POWERSAFE_OVERWRITE   _FcntlOpcode = 13
-	_FCNTL_PRAGMA                _FcntlOpcode = 14
-	_FCNTL_BUSYHANDLER           _FcntlOpcode = 15
-	_FCNTL_TEMPFILENAME          _FcntlOpcode = 16
-	_FCNTL_MMAP_SIZE             _FcntlOpcode = 18
-	_FCNTL_TRACE                 _FcntlOpcode = 19
-	_FCNTL_HAS_MOVED             _FcntlOpcode = 20
-	_FCNTL_SYNC                  _FcntlOpcode = 21
-	_FCNTL_COMMIT_PHASETWO       _FcntlOpcode = 22
-	_FCNTL_WIN32_SET_HANDLE      _FcntlOpcode = 23
-	_FCNTL_WAL_BLOCK             _FcntlOpcode = 24
-	_FCNTL_ZIPVFS                _FcntlOpcode = 25
-	_FCNTL_RBU                   _FcntlOpcode = 26
-	_FCNTL_VFS_POINTER           _FcntlOpcode = 27
-	_FCNTL_JOURNAL_POINTER       _FcntlOpcode = 28
-	_FCNTL_WIN32_GET_HANDLE      _FcntlOpcode = 29
-	_FCNTL_PDB                   _FcntlOpcode = 30
-	_FCNTL_BEGIN_ATOMIC_WRITE    _FcntlOpcode = 31
-	_FCNTL_COMMIT_ATOMIC_WRITE   _FcntlOpcode = 32
-	_FCNTL_ROLLBACK_ATOMIC_WRITE _FcntlOpcode = 33
-	_FCNTL_LOCK_TIMEOUT          _FcntlOpcode = 34
-	_FCNTL_DATA_VERSION          _FcntlOpcode = 35
-	_FCNTL_SIZE_LIMIT            _FcntlOpcode = 36
-	_FCNTL_CKPT_DONE             _FcntlOpcode = 37
-	_FCNTL_RESERVE_BYTES         _FcntlOpcode = 38
-	_FCNTL_CKPT_START            _FcntlOpcode = 39
-	_FCNTL_EXTERNAL_READER       _FcntlOpcode = 40
-	_FCNTL_CKSM_FILE             _FcntlOpcode = 41
-	_FCNTL_RESET_CACHE           _FcntlOpcode = 42
-	_FCNTL_NULL_IO               _FcntlOpcode = 43
-	_FCNTL_BLOCK_ON_CONNECT      _FcntlOpcode = 44
-	_FCNTL_FILESTAT              _FcntlOpcode = 45
+	_FCNTL_LOCKSTATE             FcntlOpcode = 1
+	_FCNTL_GET_LOCKPROXYFILE     FcntlOpcode = 2
+	_FCNTL_SET_LOCKPROXYFILE     FcntlOpcode = 3
+	_FCNTL_LAST_ERRNO            FcntlOpcode = 4
+	_FCNTL_SIZE_HINT             FcntlOpcode = 5
+	_FCNTL_CHUNK_SIZE            FcntlOpcode = 6
+	_FCNTL_FILE_POINTER          FcntlOpcode = 7
+	_FCNTL_SYNC_OMITTED          FcntlOpcode = 8
+	_FCNTL_WIN32_AV_RETRY        FcntlOpcode = 9
+	_FCNTL_PERSIST_WAL           FcntlOpcode = 10
+	_FCNTL_OVERWRITE             FcntlOpcode = 11
+	_FCNTL_VFSNAME               FcntlOpcode = 12
+	_FCNTL_POWERSAFE_OVERWRITE   FcntlOpcode = 13
+	_FCNTL_PRAGMA                FcntlOpcode = 14
+	_FCNTL_BUSYHANDLER           FcntlOpcode = 15
+	_FCNTL_TEMPFILENAME          FcntlOpcode = 16
+	_FCNTL_MMAP_SIZE             FcntlOpcode = 18
+	_FCNTL_TRACE                 FcntlOpcode = 19
+	_FCNTL_HAS_MOVED             FcntlOpcode = 20
+	_FCNTL_SYNC                  FcntlOpcode = 21
+	_FCNTL_COMMIT_PHASETWO       FcntlOpcode = 22
+	_FCNTL_WIN32_SET_HANDLE      FcntlOpcode = 23
+	_FCNTL_WAL_BLOCK             FcntlOpcode = 24
+	_FCNTL_ZIPVFS                FcntlOpcode = 25
+	_FCNTL_RBU                   FcntlOpcode = 26
+	_FCNTL_VFS_POINTER           FcntlOpcode = 27
+	_FCNTL_JOURNAL_POINTER       FcntlOpcode = 28
+	_FCNTL_WIN32_GET_HANDLE      FcntlOpcode = 29
+	_FCNTL_PDB                   FcntlOpcode = 30
+	_FCNTL_BEGIN_ATOMIC_WRITE    FcntlOpcode = 31
+	_FCNTL_COMMIT_ATOMIC_WRITE   FcntlOpcode = 32
+	_FCNTL_ROLLBACK_ATOMIC_WRITE FcntlOpcode = 33
+	_FCNTL_LOCK_TIMEOUT          FcntlOpcode = 34
+	_FCNTL_DATA_VERSION          FcntlOpcode = 35
+	_FCNTL_SIZE_LIMIT            FcntlOpcode = 36
+	_FCNTL_CKPT_DONE             FcntlOpcode = 37
+	_FCNTL_RESERVE_BYTES         FcntlOpcode = 38
+	_FCNTL_CKPT_START            FcntlOpcode = 39
+	_FCNTL_EXTERNAL_READER       FcntlOpcode = 40
+	_FCNTL_CKSM_FILE             FcntlOpcode = 41
+	_FCNTL_RESET_CACHE           FcntlOpcode = 42
+	_FCNTL_NULL_IO               FcntlOpcode = 43
+	_FCNTL_BLOCK_ON_CONNECT      FcntlOpcode = 44
+	_FCNTL_FILESTAT              FcntlOpcode = 45
 )
 
 // https://sqlite.org/c3ref/c_shm_exclusive.html
-type _ShmFlag uint32
+type ShmFlag uint32
 
 const (
-	_SHM_UNLOCK    _ShmFlag = 1
-	_SHM_LOCK      _ShmFlag = 2
-	_SHM_SHARED    _ShmFlag = 4
-	_SHM_EXCLUSIVE _ShmFlag = 8
+	_SHM_UNLOCK    ShmFlag = 1
+	_SHM_LOCK      ShmFlag = 2
+	_SHM_SHARED    ShmFlag = 4
+	_SHM_EXCLUSIVE ShmFlag = 8
 
 	_SHM_NLOCK = 8
 	_SHM_BASE  = (22 + _SHM_NLOCK) * 4

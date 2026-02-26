@@ -6,11 +6,37 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-
-	"github.com/tetratelabs/wazero/experimental"
 )
 
-func NewMemory(cap, max uint64) experimental.LinearMemory {
+// The slice covers the entire mmapped memory:
+//   - len(buf) is the already committed memory,
+//   - cap(buf) is the reserved address space.
+type Memory struct {
+	buf  []byte
+	addr uintptr
+	Max  int32
+}
+
+func (m *Memory) Grow(mem *[]byte, delta, _ int32) int32 {
+	if m.buf == nil {
+		m.allocate(uint64(m.Max) << 16)
+	}
+
+	buf := *mem
+	len := len(buf)
+	old := int32(len >> 16)
+	if delta == 0 {
+		return old
+	}
+	new := old + delta
+	if new > m.Max {
+		return -1
+	}
+	*mem = m.reallocate(uint64(new) << 16)
+	return old
+}
+
+func (m *Memory) allocate(max uint64) {
 	// Round up to the page size.
 	rnd := uint64(windows.Getpagesize() - 1)
 	res := (max + rnd) &^ rnd
@@ -21,37 +47,21 @@ func NewMemory(cap, max uint64) experimental.LinearMemory {
 		res = math.MaxUint64
 	}
 
-	com := res
-	kind := windows.MEM_COMMIT
-	if cap < max { // Commit memory only if cap=max.
-		com = 0
-		kind = windows.MEM_RESERVE
-	}
-
 	// Reserve res bytes of address space, to ensure we won't need to move it.
-	r, err := windows.VirtualAlloc(0, uintptr(res), uint32(kind), windows.PAGE_READWRITE)
+	r, err := windows.VirtualAlloc(0, uintptr(res), uint32(windows.MEM_RESERVE), windows.PAGE_READWRITE)
 	if err != nil {
 		panic(err)
 	}
 
-	mem := virtualMemory{addr: r}
 	// SliceHeader, although deprecated, avoids a go vet warning.
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&mem.buf))
+	sh := (*reflect.SliceHeader)(unsafe.Pointer(&m.buf))
 	sh.Data = r
-	sh.Len = int(com)
+	sh.Len = 0
 	sh.Cap = int(res)
-	return &mem
+	m.addr = r
 }
 
-// The slice covers the entire mmapped memory:
-//   - len(buf) is the already committed memory,
-//   - cap(buf) is the reserved address space.
-type virtualMemory struct {
-	buf  []byte
-	addr uintptr
-}
-
-func (m *virtualMemory) Reallocate(size uint64) []byte {
+func (m *Memory) reallocate(size uint64) []byte {
 	com := uint64(len(m.buf))
 	res := uint64(cap(m.buf))
 	if com < size && size <= res {
@@ -74,7 +84,7 @@ func (m *virtualMemory) Reallocate(size uint64) []byte {
 	return m.buf[:size:len(m.buf)]
 }
 
-func (m *virtualMemory) Free() {
+func (m *Memory) Free() {
 	err := windows.VirtualFree(m.addr, 0, windows.MEM_RELEASE)
 	if err != nil {
 		panic(err)
