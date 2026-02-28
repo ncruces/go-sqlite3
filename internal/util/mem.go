@@ -13,9 +13,9 @@ const (
 )
 
 type (
-	i8  interface{ ~int8 | ~uint8 }
-	i32 interface{ ~int32 | ~uint32 }
-	i64 interface{ ~int64 | ~uint64 }
+	i8  = interface{ ~int8 | ~uint8 }
+	i32 = interface{ ~int32 | ~uint32 }
+	i64 = interface{ ~int64 | ~uint64 }
 
 	Stk_t = uint64
 	Ptr_t uint32
