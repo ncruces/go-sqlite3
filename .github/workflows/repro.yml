@@ -29,4 +29,3 @@ jobs:
         subject-path: |
           embed/sqlite3.wasm
           embed/bcw2/bcw2.wasm
-          util/sql3util/wasm/sql3parse_table.wasm

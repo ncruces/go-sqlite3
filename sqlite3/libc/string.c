@@ -1,3 +1,5 @@
+#ifdef __wasm_simd128__
+
 #include <stdint.h>
 #include <string.h>
 #include <wasm_simd128.h>
@@ -59,7 +61,7 @@ void* memchr(const void* s, int c, size_t n) {
   v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
-    v128_t v = *(v128_t*)addr;
+    v128_t v = *__builtin_launder((v128_t*)addr);
     v128_t cmp = wasm_i8x16_eq(v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
@@ -120,7 +122,7 @@ size_t strlen(const char* s) {
   uintptr_t addr = (uintptr_t)s - align;
 
   for (;;) {
-    v128_t v = *(v128_t*)addr;
+    v128_t v = *__builtin_launder((v128_t*)addr);
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(v)) {
       const v128_t cmp = wasm_i8x16_eq(v, (v128_t){});
@@ -155,7 +157,7 @@ char* strchrnul(const char* s, int c) {
   v128_t vc = wasm_i8x16_splat(c);
 
   for (;;) {
-    v128_t v = *(v128_t*)addr;
+    v128_t v = *__builtin_launder((v128_t*)addr);
     const v128_t cmp = wasm_i8x16_eq(v, (v128_t){}) | wasm_i8x16_eq(v, vc);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(cmp)) {
@@ -245,7 +247,7 @@ size_t strspn(const char* s, const char* c) {
   if (!c[1]) {
     v128_t vc = wasm_i8x16_splat(*c);
     for (;;) {
-      v128_t v = *(v128_t*)addr;
+      v128_t v = *__builtin_launder((v128_t*)addr);
       v128_t cmp = wasm_i8x16_eq(v, vc);
       // Bitmask is slow on AArch64, all_true is much faster.
       if (!wasm_i8x16_all_true(cmp)) {
@@ -275,7 +277,7 @@ size_t strspn(const char* s, const char* c) {
   }
 
   for (;;) {
-    v128_t v = *(v128_t*)addr;
+    v128_t v = *__builtin_launder((v128_t*)addr);
     v128_t found = __wasm_v128_chkbits(bitmap, v);
     // Bitmask is slow on AArch64, all_true is much faster.
     if (!wasm_i8x16_all_true(found)) {
@@ -314,7 +316,7 @@ size_t strcspn(const char* s, const char* c) {
   } while (*c++);
 
   for (;;) {
-    v128_t v = *(v128_t*)addr;
+    v128_t v = *__builtin_launder((v128_t*)addr);
     v128_t found = __wasm_v128_chkbits(bitmap, v);
     // Bitmask is slow on AArch64, any_true is much faster.
     if (wasm_v128_any_true(found)) {
@@ -336,3 +338,13 @@ size_t strcspn(const char* s, const char* c) {
     addr += sizeof(v128_t);
   }
 }
+
+#else
+
+size_t strlen(const char* s) {
+  const char* a = s;
+  for (; *s; s++);
+  return s - a;
+}
+
+#endif

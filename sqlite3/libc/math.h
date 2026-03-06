@@ -1,36 +1,36 @@
-#include_next <math.h>  // the system math.h
+#pragma once
 
-#ifndef _WASM_SIMD128_MATH_H
-#define _WASM_SIMD128_MATH_H
+double acos(double);
+double acosh(double);
+double asin(double);
+double asinh(double);
+double atan(double);
+double atan2(double, double);
+double atanh(double);
+double ceil(double);
+double cos(double);
+double cosh(double);
+double exp(double);
+double fabs(double);
+double floor(double);
+double fmod(double, double);
+double log(double);
+double log10(double);
+double log2(double);
+double pow(double, double);
+double sin(double);
+double sinh(double);
+double tan(double);
+double tanh(double);
+double trunc(double);
+double sqrt(double);
 
-#include <wasm_simd128.h>
+#define ceil(x) (__builtin_ceil(x))
+#define floor(x) (__builtin_floor(x))
+#define sqrt(x) (__builtin_sqrt(x))
+#define trunc(x) (__builtin_trunc(x))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifdef __wasm_relaxed_simd__
-
-// This header assumes "relaxed fused multiply-add"
-// is both faster and more precise.
-
-#define FP_FAST_FMA 1
-
-__attribute__((weak))
-double fma(double x, double y, double z) {
-  // If we get a software implementation from the host,
-  // this is enough to short circuit it on the 2nd lane.
-  const v128_t wx = wasm_f64x2_replace_lane(b, 0, x);
-  const v128_t wy = wasm_f64x2_splat(y);
-  const v128_t wz = wasm_f64x2_splat(z);
-  const v128_t wr = wasm_f64x2_relaxed_madd(wx, wy, wz);
-  return wasm_f64x2_extract_lane(wr, 0);
-}
-
-#endif  // __wasm_relaxed_simd__
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif
-
-#endif  // _WASM_SIMD128_MATH_H
+#define isfinite(x) (__builtin_isfinite(x))
+#define isinf(x) (__builtin_isinf(x))
+#define isnan(x) (__builtin_isnan(x))
+#define isnormal(x) (__builtin_isnormal(x))
