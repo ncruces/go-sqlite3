@@ -8,6 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/go-sqlite3/vfs/adiantum"
@@ -23,19 +24,20 @@ func Test_fileformat(t *testing.T) {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
 	vfs.Register("radiantum", adiantum.Wrap(vfs.Find("reader"), nil))
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open("file:test.db?vfs=radiantum")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`PRAGMA textkey='correct+horse+battery+staple'`)
+	_, err = db.ExecContext(ctx, `PRAGMA textkey='correct+horse+battery+staple'`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var version uint32
-	err = db.QueryRow(`PRAGMA user_version`).Scan(&version)
+	err = db.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +45,7 @@ func Test_fileformat(t *testing.T) {
 		t.Error(version)
 	}
 
-	_, err = db.Exec(`PRAGMA integrity_check`)
+	_, err = db.ExecContext(ctx, `PRAGMA integrity_check`)
 	if err != nil {
 		t.Error(err)
 	}

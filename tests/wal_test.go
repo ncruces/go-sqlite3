@@ -51,6 +51,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := testutil.Context(t)
 	tmp := filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))
 
 	db1, err := driver.Open("file:" + tmp + "?_pragma=journal_mode(wal)&_txlock=immediate")
@@ -66,7 +67,7 @@ func TestWAL_readonly(t *testing.T) {
 	defer db2.Close()
 
 	// Create the table using the first (writable) connection.
-	_, err = db1.Exec(`
+	_, err = db1.ExecContext(ctx, `
 		CREATE TABLE t(id INTEGER PRIMARY KEY, name TEXT);
 		INSERT INTO t(name) VALUES('alice');
 	`)
@@ -76,7 +77,7 @@ func TestWAL_readonly(t *testing.T) {
 
 	// Select the data using the second (readonly) connection.
 	var name string
-	err = db2.QueryRow(`SELECT name FROM t`).Scan(&name)
+	err = db2.QueryRowContext(ctx, `SELECT name FROM t`).Scan(&name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +86,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 
 	// Update table.
-	_, err = db1.Exec(`
+	_, err = db1.ExecContext(ctx, `
 		DELETE FROM t;
 		INSERT INTO t(name) VALUES('bob');
 	`)
@@ -94,7 +95,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 
 	// Select the data using the second (readonly) connection.
-	err = db2.QueryRow(`SELECT name FROM t`).Scan(&name)
+	err = db2.QueryRowContext(ctx, `SELECT name FROM t`).Scan(&name)
 	if err != nil {
 		t.Fatal(err)
 	}

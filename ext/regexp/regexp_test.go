@@ -8,6 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -15,6 +16,7 @@ func TestRegister(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +68,7 @@ func TestRegister(t *testing.T) {
 
 	for _, tt := range tests {
 		var got sql.NullString
-		err := db.QueryRow(`SELECT ` + tt.test).Scan(&got)
+		err := db.QueryRowContext(ctx, `SELECT `+tt.test).Scan(&got)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -80,6 +82,7 @@ func TestRegister_errors(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +99,7 @@ func TestRegister_errors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.QueryRow(`SELECT `+tt, `\`).Scan(nil)
+		err := db.QueryRowContext(ctx, `SELECT `+tt, `\`).Scan(nil)
 		if err == nil {
 			t.Fatal("want error")
 		}
@@ -107,6 +110,7 @@ func TestRegister_pointer(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +118,7 @@ func TestRegister_pointer(t *testing.T) {
 	defer db.Close()
 
 	var got int
-	err = db.QueryRow(`SELECT regexp_count('ABCABCAXYaxy', ?, 1)`,
+	err = db.QueryRowContext(ctx, `SELECT regexp_count('ABCABCAXYaxy', ?, 1)`,
 		sqlite3.Pointer(regexp.MustCompile(`(?i)A.`))).Scan(&got)
 	if err != nil {
 		t.Fatal(err)

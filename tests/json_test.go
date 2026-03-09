@@ -17,26 +17,27 @@ func TestJSON(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(testutil.Context(t))
+	conn, err := db.Conn(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(testutil.Context(t), `CREATE TABLE test (col)`)
+	_, err = conn.ExecContext(ctx, `CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 
-	_, err = conn.ExecContext(testutil.Context(t),
+	_, err = conn.ExecContext(ctx,
 		`INSERT INTO test (col) VALUES (?), (?), (?), (?)`,
 		nil, 1, math.Pi, reference,
 	)
@@ -44,7 +45,7 @@ func TestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = conn.ExecContext(testutil.Context(t),
+	_, err = conn.ExecContext(ctx,
 		`INSERT INTO test (col) VALUES (?), (?), (?), (?)`,
 		sqlite3.JSON(math.Pi), sqlite3.JSON(false),
 		julianday.Format(reference), sqlite3.JSON([]string{}))
@@ -52,7 +53,7 @@ func TestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := conn.QueryContext(testutil.Context(t), "SELECT * FROM test")
+	rows, err := conn.QueryContext(ctx, "SELECT * FROM test")
 	if err != nil {
 		t.Fatal(err)
 	}

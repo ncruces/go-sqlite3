@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -14,6 +15,7 @@ func Test_generate(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +25,7 @@ func Test_generate(t *testing.T) {
 	var u uuid.UUID
 
 	// Version 4, SQLite compatible
-	err = db.QueryRow(`SELECT uuid()`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid()`).Scan(&u)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,14 +34,14 @@ func Test_generate(t *testing.T) {
 	}
 
 	// Invalid version
-	err = db.QueryRow(`SELECT uuid(8)`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid(8)`).Scan(&u)
 	if err == nil {
 		t.Error("want error")
 	}
 
 	// Custom version, no arguments
 	for _, want := range []uuid.Version{1, 2, 4, 6, 7} {
-		err = db.QueryRow(`SELECT uuid(?)`, want).Scan(&u)
+		err = db.QueryRowContext(ctx, `SELECT uuid(?)`, want).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,12 +51,12 @@ func Test_generate(t *testing.T) {
 	}
 
 	// Version 2, custom arguments
-	err = db.QueryRow(`SELECT uuid(2, 4)`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid(2, 4)`).Scan(&u)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	err = db.QueryRow(`SELECT uuid(2, 'group')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid(2, 'group')`).Scan(&u)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +81,7 @@ func Test_generate(t *testing.T) {
 		{3, 3, 42},
 	}
 	for _, tt := range dce {
-		err = db.QueryRow(`SELECT uuid(2, ?, ?)`, tt.in, tt.id).Scan(&u)
+		err = db.QueryRowContext(ctx, `SELECT uuid(2, ?, ?)`, tt.in, tt.id).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,12 +97,12 @@ func Test_generate(t *testing.T) {
 	}
 
 	// Versions 3 and 5
-	err = db.QueryRow(`SELECT uuid(3)`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid(3)`).Scan(&u)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	err = db.QueryRow(`SELECT uuid(3, 0, '')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid(3, 0, '')`).Scan(&u)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -139,7 +141,7 @@ func Test_generate(t *testing.T) {
 		{5, "url", "https://www.php.net", uuid.MustParse("a8f6ae40-d8a7-58f0-be05-a22f94eca9ec")},
 	}
 	for _, tt := range tests {
-		err = db.QueryRow(`SELECT uuid(?, ?, ?)`, tt.ver, tt.ns, tt.data).Scan(&u)
+		err = db.QueryRowContext(ctx, `SELECT uuid(?, ?, ?)`, tt.ver, tt.ns, tt.data).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -153,6 +155,7 @@ func Test_convert(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -168,7 +171,7 @@ func Test_convert(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err = db.QueryRow(`SELECT uuid_str(` + tt + `)`).Scan(&u)
+		err = db.QueryRowContext(ctx, `SELECT uuid_str(`+tt+`)`).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +181,7 @@ func Test_convert(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err = db.QueryRow(`SELECT uuid_blob(` + tt + `)`).Scan(&u)
+		err = db.QueryRowContext(ctx, `SELECT uuid_blob(`+tt+`)`).Scan(&u)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -187,22 +190,22 @@ func Test_convert(t *testing.T) {
 		}
 	}
 
-	err = db.QueryRow(`SELECT uuid_str(X'cafe')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid_str(X'cafe')`).Scan(&u)
 	if err == nil {
 		t.Fatal("want error")
 	}
 
-	err = db.QueryRow(`SELECT uuid_blob(X'cafe')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid_blob(X'cafe')`).Scan(&u)
 	if err == nil {
 		t.Fatal("want error")
 	}
 
-	err = db.QueryRow(`SELECT uuid_extract_version(X'cafe')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid_extract_version(X'cafe')`).Scan(&u)
 	if err == nil {
 		t.Fatal("want error")
 	}
 
-	err = db.QueryRow(`SELECT uuid_extract_timestamp(X'cafe')`).Scan(&u)
+	err = db.QueryRowContext(ctx, `SELECT uuid_extract_timestamp(X'cafe')`).Scan(&u)
 	if err == nil {
 		t.Fatal("want error")
 	}

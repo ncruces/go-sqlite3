@@ -22,6 +22,7 @@ func Test_fsdir(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			dsn := memdb.TestDB(t)
 
+			ctx := testutil.Context(t)
 			db, err := driver.Open(dsn, func(c *sqlite3.Conn) error {
 				fileio.RegisterFS(c, fsys)
 				return nil
@@ -31,7 +32,7 @@ func Test_fsdir(t *testing.T) {
 			}
 			defer db.Close()
 
-			rows, err := db.Query(`SELECT * FROM fsdir('.', '.')`)
+			rows, err := db.QueryContext(ctx, `SELECT * FROM fsdir('.', '.')`)
 			if err != nil {
 				t.Fatal(err)
 			}

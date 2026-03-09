@@ -13,6 +13,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/lines"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -67,6 +68,7 @@ func Test_lines(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +77,7 @@ func Test_lines(t *testing.T) {
 
 	const data = "line 1\nline 2\r\nline 3\n"
 
-	rows, err := db.Query(`SELECT rowid, line FROM lines(?)`, data)
+	rows, err := db.QueryContext(ctx, `SELECT rowid, line FROM lines(?)`, data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,20 +100,21 @@ func Test_lines_error(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`SELECT rowid, line FROM lines(?)`, nil)
+	_, err = db.ExecContext(ctx, `SELECT rowid, line FROM lines(?)`, nil)
 	if err == nil {
 		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
-	_, err = db.Exec(`SELECT rowid, line FROM lines_read(?)`, "xpto")
+	_, err = db.ExecContext(ctx, `SELECT rowid, line FROM lines_read(?)`, "xpto")
 	if err == nil {
 		t.Fatal("want error")
 	} else {
@@ -123,6 +126,7 @@ func Test_lines_read(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
@@ -131,7 +135,7 @@ func Test_lines_read(t *testing.T) {
 
 	const data = "line 1\nline 2\r\nline 3\n"
 
-	rows, err := db.Query(`SELECT rowid, line FROM lines_read(?)`,
+	rows, err := db.QueryContext(ctx, `SELECT rowid, line FROM lines_read(?)`,
 		sqlite3.Pointer(strings.NewReader(data)))
 	if err != nil {
 		t.Fatal(err)
@@ -155,13 +159,14 @@ func Test_lines_test(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, lines.Register)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`SELECT rowid, line FROM lines_read(?, '}')`, "lines_test.go")
+	rows, err := db.QueryContext(ctx, `SELECT rowid, line FROM lines_read(?, '}')`, "lines_test.go")
 	if errors.Is(err, os.ErrNotExist) {
 		t.Skip(err)
 	}

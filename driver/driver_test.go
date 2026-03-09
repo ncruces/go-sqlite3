@@ -32,13 +32,14 @@ func Test_Open_error(t *testing.T) {
 func Test_Open_dir(t *testing.T) {
 	t.Parallel()
 
+	ctx := testutil.Context(t)
 	db, err := Open(".")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Conn(testutil.Context(t))
+	_, err = db.Conn(ctx)
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -53,6 +54,7 @@ func Test_Open_pragma(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -60,7 +62,7 @@ func Test_Open_pragma(t *testing.T) {
 	defer db.Close()
 
 	var timeout int
-	err = db.QueryRow(`PRAGMA busy_timeout`).Scan(&timeout)
+	err = db.QueryRowContext(ctx, `PRAGMA busy_timeout`).Scan(&timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,13 +77,14 @@ func Test_Open_pragma_invalid(t *testing.T) {
 		"_pragma": {"busy_timeout 1000"},
 	})
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Conn(testutil.Context(t))
+	_, err = db.Conn(ctx)
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -104,18 +107,19 @@ func Test_Open_txLock(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	tx1, err := db.Begin()
+	tx1, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Begin()
+	_, err = db.BeginTx(ctx, nil)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -155,23 +159,24 @@ func Test_BeginTx(t *testing.T) {
 		"_pragma": {"busy_timeout(0)"},
 	})
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.BeginTx(testutil.Context(t), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	_, err = db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err.Error() != string(errutil.IsolationErr) {
 		t.Error("want isolationErr")
 	}
 
-	tx1, err := db.BeginTx(testutil.Context(t), &sql.TxOptions{ReadOnly: true})
+	tx1, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx2, err := db.BeginTx(testutil.Context(t), &sql.TxOptions{ReadOnly: true})
+	tx2, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,13 +204,14 @@ func Test_nested_context(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +238,7 @@ func Test_nested_context(t *testing.T) {
 
 	want(outer, 0)
 
-	ctx, cancel := context.WithCancel(testutil.Context(t))
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	inner, err := tx.QueryContext(ctx, `SELECT value FROM generate_series(0)`)
@@ -257,6 +263,7 @@ func Test_Prepare(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +271,7 @@ func Test_Prepare(t *testing.T) {
 	defer db.Close()
 
 	var serr *sqlite3.Error
-	_, err = db.Prepare(`SELECT`)
+	_, err = db.PrepareContext(ctx, `SELECT`)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -278,17 +285,17 @@ func Test_Prepare(t *testing.T) {
 		t.Error("got message:", got)
 	}
 
-	_, err = db.Prepare(`SELECT 1; `)
+	_, err = db.PrepareContext(ctx, `SELECT 1; `)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = db.Prepare(`SELECT 1; SELECT`)
+	_, err = db.PrepareContext(ctx, `SELECT 1; SELECT`)
 	if err.Error() != string(errutil.TailErr) {
 		t.Error("want tailErr")
 	}
 
-	_, err = db.Prepare(`SELECT 1; SELECT 2`)
+	_, err = db.PrepareContext(ctx, `SELECT 1; SELECT 2`)
 	if err.Error() != string(errutil.TailErr) {
 		t.Error("want tailErr")
 	}
@@ -298,26 +305,27 @@ func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(testutil.Context(t))
+	conn, err := db.Conn(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	stmt, err := conn.PrepareContext(testutil.Context(t), `SELECT ?, ?5, :AAA, @AAA, $AAA`)
+	stmt, err := conn.PrepareContext(ctx, `SELECT ?, ?5, :AAA, @AAA, $AAA`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
 
 	date := time.Now()
-	row := stmt.QueryRow(true, sql.Named("AAA", math.Pi), nil /*3*/, nil /*4*/, date /*5*/)
+	row := stmt.QueryRowContext(ctx, true, sql.Named("AAA", math.Pi), nil /*3*/, nil /*4*/, date /*5*/)
 
 	var first bool
 	var fifth time.Time
@@ -348,13 +356,14 @@ func Test_QueryRow_blob_null(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(ctx, `
 		SELECT NULL    UNION ALL
 		SELECT x'cafe' UNION ALL
 		SELECT x'babe' UNION ALL
@@ -387,6 +396,7 @@ func Test_time(t *testing.T) {
 				"_timefmt": {fmt},
 			})
 
+			ctx := testutil.Context(t)
 			db, err := Open(dsn)
 			if err != nil {
 				t.Fatal(err)
@@ -395,18 +405,18 @@ func Test_time(t *testing.T) {
 
 			twosday := time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
 
-			_, err = db.Exec(`CREATE TABLE test (at DATETIME)`)
+			_, err = db.ExecContext(ctx, `CREATE TABLE test (at DATETIME)`)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = db.Exec(`INSERT INTO test VALUES (?)`, twosday)
+			_, err = db.ExecContext(ctx, `INSERT INTO test VALUES (?)`, twosday)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			var got time.Time
-			err = db.QueryRow(`SELECT * FROM test`).Scan(&got)
+			err = db.QueryRowContext(ctx, `SELECT * FROM test`).Scan(&got)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -432,13 +442,14 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`
+	_, err = db.ExecContext(ctx, `
 		CREATE TABLE test (
 			col_int  INTEGER,
 			col_real REAL,
@@ -463,7 +474,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := db.Query(`SELECT * FROM test`)
+	rows, err := db.QueryContext(ctx, `SELECT * FROM test`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,6 +531,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 }
 
 func Benchmark_loop(b *testing.B) {
+	ctx := testutil.Context(b)
 	db, err := Open(":memory:")
 	if err != nil {
 		b.Fatal(err)
@@ -527,7 +539,7 @@ func Benchmark_loop(b *testing.B) {
 	defer db.Close()
 
 	var version string
-	err = db.QueryRow(`SELECT sqlite_version();`).Scan(&version)
+	err = db.QueryRowContext(ctx, `SELECT sqlite_version();`).Scan(&version)
 	if err != nil {
 		b.Fatal(err)
 	}

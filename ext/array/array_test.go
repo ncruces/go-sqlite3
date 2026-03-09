@@ -89,13 +89,14 @@ func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(ctx, `
 		SELECT rowid, value FROM array(?)`,
 		sqlite3.Pointer(&[...]any{nil, true, 1, uint(2), math.Pi, "text", []byte{1, 2, 3}}))
 	if err != nil {

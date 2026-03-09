@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/fileio"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -17,6 +18,7 @@ func Test_lsmode(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, fileio.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +36,7 @@ func Test_lsmode(t *testing.T) {
 	}
 
 	var mode string
-	err = db.QueryRow(`SELECT lsmode(?)`, s.Mode()).Scan(&mode)
+	err = db.QueryRowContext(ctx, `SELECT lsmode(?)`, s.Mode()).Scan(&mode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +55,7 @@ func Test_readfile(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			dsn := memdb.TestDB(t)
 
+			ctx := testutil.Context(t)
 			db, err := driver.Open(dsn, func(c *sqlite3.Conn) error {
 				fileio.RegisterFS(c, fsys)
 				return nil
@@ -62,7 +65,7 @@ func Test_readfile(t *testing.T) {
 			}
 			defer db.Close()
 
-			rows, err := db.Query(`SELECT readfile('fileio_test.go')`)
+			rows, err := db.QueryContext(ctx, `SELECT readfile('fileio_test.go')`)
 			if err != nil {
 				t.Fatal(err)
 			}

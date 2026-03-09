@@ -54,7 +54,8 @@ func Fuzz_notWhitespace(f *testing.F) {
 			t.SkipNow()
 		}
 
-		c, err := db.Conn(testutil.Context(t))
+		ctx := testutil.Context(t)
+		c, err := db.Conn(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}

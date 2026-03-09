@@ -7,6 +7,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/zorder"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -14,6 +15,7 @@ func Test_zorder(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -21,7 +23,7 @@ func Test_zorder(t *testing.T) {
 	defer db.Close()
 
 	var got int64
-	err = db.QueryRow(`SELECT zorder(2, 3)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT zorder(2, 3)`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +31,7 @@ func Test_zorder(t *testing.T) {
 		t.Errorf("got %d, want 14", got)
 	}
 
-	err = db.QueryRow(`SELECT zorder(4, 5)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT zorder(4, 5)`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +40,7 @@ func Test_zorder(t *testing.T) {
 	}
 
 	var check bool
-	err = db.QueryRow(`SELECT zorder(3, 4) BETWEEN zorder(2, 3) AND zorder(4, 5)`).Scan(&check)
+	err = db.QueryRowContext(ctx, `SELECT zorder(3, 4) BETWEEN zorder(2, 3) AND zorder(4, 5)`).Scan(&check)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +48,7 @@ func Test_zorder(t *testing.T) {
 		t.Error("want true")
 	}
 
-	err = db.QueryRow(`SELECT zorder(2, 2) NOT BETWEEN zorder(2, 3) AND zorder(4, 5)`).Scan(&check)
+	err = db.QueryRowContext(ctx, `SELECT zorder(2, 2) NOT BETWEEN zorder(2, 3) AND zorder(4, 5)`).Scan(&check)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +61,7 @@ func Test_unzorder(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -66,7 +69,7 @@ func Test_unzorder(t *testing.T) {
 	defer db.Close()
 
 	var got int64
-	err = db.QueryRow(`SELECT unzorder(zorder(3, 4), 2, 0)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT unzorder(zorder(3, 4), 2, 0)`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +77,7 @@ func Test_unzorder(t *testing.T) {
 		t.Errorf("got %d, want 3", got)
 	}
 
-	err = db.QueryRow(`SELECT unzorder(zorder(3, 4), 2, 1)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT unzorder(zorder(3, 4), 2, 1)`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,6 +90,7 @@ func Test_zorder_error(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +98,7 @@ func Test_zorder_error(t *testing.T) {
 	defer db.Close()
 
 	var got int64
-	err = db.QueryRow(`SELECT zorder(1, 2, 3, 100000)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT zorder(1, 2, 3, 100000)`).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -106,7 +110,7 @@ func Test_zorder_error(t *testing.T) {
 		buf.WriteString(strconv.Itoa(0))
 	}
 	buf.WriteByte(')')
-	err = db.QueryRow(buf.String()).Scan(&got)
+	err = db.QueryRowContext(ctx, buf.String()).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}
@@ -116,6 +120,7 @@ func Test_unzorder_error(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testutil.Context(t)
 	db, err := driver.Open(dsn, zorder.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -123,17 +128,17 @@ func Test_unzorder_error(t *testing.T) {
 	defer db.Close()
 
 	var got int64
-	err = db.QueryRow(`SELECT unzorder(-1, 2, 0)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT unzorder(-1, 2, 0)`).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	err = db.QueryRow(`SELECT unzorder(0, 2, 2)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT unzorder(0, 2, 2)`).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	err = db.QueryRow(`SELECT unzorder(0, 25, 2)`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT unzorder(0, 25, 2)`).Scan(&got)
 	if err == nil {
 		t.Error("want error")
 	}
