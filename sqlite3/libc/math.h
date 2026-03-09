@@ -30,6 +30,8 @@ double sqrt(double);
 #define sqrt(x) (__builtin_sqrt(x))
 #define trunc(x) (__builtin_trunc(x))
 
+#define INFINITY __builtin_inf()
+
 #define isfinite(x) (__builtin_isfinite(x))
 #define isinf(x) (__builtin_isinf(x))
 #define isnan(x) (__builtin_isnan(x))

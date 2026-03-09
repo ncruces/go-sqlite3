@@ -4,6 +4,7 @@
 // and that the heap base is 16 byte aligned.
 // It allocates in 16 byte chunks and keeps no size metadata.
 
+#include <stdint.h>
 #include <stdlib.h>
 
 #define PAGESIZE 65536

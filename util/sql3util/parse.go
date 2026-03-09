@@ -24,7 +24,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 		return nil, sqlite3.TOOBIG
 	}
 
-	mod := parser.New(&parser.LibC{})
+	mod := parser.New()
 	copy(mod.Memory[sqlp:], sql)
 	res := mod.Xsql3parse_table(sqlp, int32(len(sql)), errp)
 
@@ -113,13 +113,13 @@ func (c *TableConstraint) load(mem []byte, ptr uint32, sql string) uint32 {
 		c.ConflictClause = loadEnum[ConflictClause](mem, ptr+20)
 		c.IsAutoIncrement = loadBool(mem, ptr+24)
 	case TABLECONSTRAINT_CHECK:
-		c.CheckExpr = loadString(mem, ptr+12, sql)
+		c.CheckExpr = loadString(mem, ptr+28, sql)
 	case TABLECONSTRAINT_FOREIGNKEY:
-		c.ForeignKeyNames = loadSlice(mem, ptr+12, func(ptr uint32, ret *string) uint32 {
+		c.ForeignKeyNames = loadSlice(mem, ptr+36, func(ptr uint32, ret *string) uint32 {
 			*ret = loadIdentifier(mem, ptr, sql)
 			return 8
 		})
-		if ptr := binary.LittleEndian.Uint32(mem[ptr+20:]); ptr != 0 {
+		if ptr := binary.LittleEndian.Uint32(mem[ptr+44:]); ptr != 0 {
 			c.ForeignKeyClause = &ForeignKey{}
 			c.ForeignKeyClause.load(mem, ptr, sql)
 		}
