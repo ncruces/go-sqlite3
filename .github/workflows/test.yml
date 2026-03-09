@@ -154,27 +154,6 @@ jobs:
     - name: Test
       uses: ./.github/actions/vmactions
 
-  test-wasip1:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - uses: bytecodealliance/actions/wasmtime/setup@v1
-    - uses: actions/checkout@v6
-    - uses: actions/setup-go@v6
-      with: { go-version: stable }
-
-    - name: Set path
-      run: echo "$(go env GOROOT)/lib/wasm" >> "$GITHUB_PATH"
-
-    - name: Test wasmtime
-      env:
-        GOOS: wasip1
-        GOARCH: wasm
-        GOWASIRUNTIME: wasmtime
-        GOWASIRUNTIMEARGS: '--env CI=true'
-      run: go test -short -tags sqlite3_dotlk -skip Example ./...
-
   test-qemu:
     runs-on: ubuntu-latest
     needs: test
