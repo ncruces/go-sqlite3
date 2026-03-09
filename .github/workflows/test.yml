@@ -64,6 +64,18 @@ jobs:
       run: go test -tags sqlite3_dotlk ./...
       if: matrix.os != 'windows-latest'
 
+    - name: Test modules
+      shell: bash
+      run: |
+        go work init .
+        go work use -r gormlite
+        go test ./gormlite
+
+    - name: Test GORM
+      shell: bash
+      run: gormlite/test.sh
+      if: matrix.os == 'ubuntu-latest'
+
     - name: Collect coverage
       run: |
         go get -tool github.com/dave/courtney@v0.4.4
