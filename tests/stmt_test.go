@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 )
 
 func TestStmt(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -559,7 +560,7 @@ func TestStmt_Close(t *testing.T) {
 func TestStmt_BindName(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -593,7 +594,7 @@ func TestStmt_BindName(t *testing.T) {
 func TestStmt_ColumnTime(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -655,7 +656,7 @@ func TestStmt_ColumnTime(t *testing.T) {
 func TestStmt_ColumnValue(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -689,7 +690,7 @@ func TestStmt_ColumnValue(t *testing.T) {
 }
 
 func TestStmt_Columns(t *testing.T) {
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,7 +736,7 @@ func TestStmt_Error(t *testing.T) {
 	}
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

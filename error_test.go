@@ -128,7 +128,7 @@ func TestError_Timeout(t *testing.T) {
 func Test_ErrorCode_Error(t *testing.T) {
 	t.Parallel()
 
-	db, err := Open(":memory:")
+	db, err := OpenContext(testContext(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func Test_ErrorCode_Error(t *testing.T) {
 func Test_ExtendedErrorCode_Error(t *testing.T) {
 	t.Parallel()
 
-	db, err := Open(":memory:")
+	db, err := OpenContext(testContext(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

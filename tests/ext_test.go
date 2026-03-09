@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 )
 
 func Test_base64(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +34,7 @@ func Test_base64(t *testing.T) {
 func Test_decimal(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +57,7 @@ func Test_decimal(t *testing.T) {
 func Test_uint(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/array"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -127,7 +128,7 @@ func Test_cursor_Column(t *testing.T) {
 func Test_array_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

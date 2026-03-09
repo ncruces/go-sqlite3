@@ -7,6 +7,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/ext/stats"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -17,7 +18,7 @@ func TestMain(m *testing.M) {
 func TestRegister_variance(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func TestRegister_variance(t *testing.T) {
 func TestRegister_covariance(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +232,7 @@ func TestRegister_covariance(t *testing.T) {
 }
 
 func Benchmark_average(b *testing.B) {
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(b.Context(), ":memory:")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -265,7 +266,7 @@ func Benchmark_average(b *testing.B) {
 }
 
 func Benchmark_variance(b *testing.B) {
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(b.Context(), ":memory:")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -301,7 +302,7 @@ func Benchmark_variance(b *testing.B) {
 func Benchmark_math(b *testing.B) {
 	benchmarks := []string{"sqrt", "tan", "cot", "cbrt"}
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(b.Context(), ":memory:")
 	if err != nil {
 		b.Fatal(err)
 	}

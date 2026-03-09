@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 )
 
 func Test_endianness(t *testing.T) {
@@ -23,7 +24,7 @@ func Test_endianness(t *testing.T) {
 		t.Fatal("Platform is middle endian")
 	}
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}

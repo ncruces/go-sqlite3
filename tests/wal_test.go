@@ -6,6 +6,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -17,7 +18,7 @@ func TestWAL_enter_exit(t *testing.T) {
 
 	file := filepath.Join(t.TempDir(), "test.db")
 
-	db, err := sqlite3.Open(file)
+	db, err := sqlite3.OpenContext(testutil.Context(t), file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +111,7 @@ func TestConn_WALCheckpoint(t *testing.T) {
 
 	file := filepath.Join(t.TempDir(), "test.db")
 
-	db, err := sqlite3.Open(file)
+	db, err := sqlite3.OpenContext(testutil.Context(t), file)
 	if err != nil {
 		t.Fatal(err)
 	}

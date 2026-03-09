@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -54,7 +55,7 @@ func TestConn_Open_modeof(t *testing.T) {
 	}
 	fd.Close()
 
-	db, err := sqlite3.Open("file:" + file + "?modeof=" + mode)
+	db, err := sqlite3.OpenContext(testutil.Context(t), "file:"+file+"?modeof="+mode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +69,7 @@ func TestConn_Open_modeof(t *testing.T) {
 		t.Errorf("got %v, want %v", di.Mode(), fi.Mode())
 	}
 
-	_, err = sqlite3.Open("file:" + file + "?modeof=" + mode + "2")
+	_, err = sqlite3.OpenContext(testutil.Context(t), "file:"+file+"?modeof="+mode+"2")
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -82,7 +83,7 @@ func TestConn_Close(t *testing.T) {
 func TestConn_Close_BUSY(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,13 +116,13 @@ func TestConn_BusyHandler(t *testing.T) {
 
 	dsn := memdb.TestDB(t)
 
-	db1, err := sqlite3.Open(dsn)
+	db1, err := sqlite3.OpenContext(testutil.Context(t), dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db1.Close()
 
-	db2, err := sqlite3.Open(dsn)
+	db2, err := sqlite3.OpenContext(testutil.Context(t), dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,13 +156,13 @@ func TestConn_BusyHandler(t *testing.T) {
 func TestConn_SetInterrupt(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(testutil.Context(t))
 	db.SetInterrupt(ctx)
 
 	// Interrupt doesn't interrupt this.
@@ -216,7 +217,7 @@ func TestConn_SetInterrupt(t *testing.T) {
 func TestConn_Prepare_empty(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +237,7 @@ func TestConn_Prepare_empty(t *testing.T) {
 func TestConn_Prepare_tail(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +257,7 @@ func TestConn_Prepare_tail(t *testing.T) {
 func TestConn_Prepare_invalid(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +300,7 @@ func TestConn_Prepare_invalid(t *testing.T) {
 func TestConn_ReleaseMemory(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +315,7 @@ func TestConn_ReleaseMemory(t *testing.T) {
 func TestConn_SetLastInsertRowID(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +344,7 @@ func TestConn_Filename(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := sqlite3.Open(file)
+	db, err := sqlite3.OpenContext(testutil.Context(t), file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +385,7 @@ func TestConn_Filename(t *testing.T) {
 func TestConn_ReadOnly(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,7 +403,7 @@ func TestConn_ReadOnly(t *testing.T) {
 func TestConn_DBName(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,7 +421,7 @@ func TestConn_DBName(t *testing.T) {
 func TestConn_Status(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,7 +469,7 @@ func TestConn_Status(t *testing.T) {
 func TestConn_TableColumnMetadata(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

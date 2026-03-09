@@ -5,6 +5,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -20,13 +21,13 @@ func TestDriver(t *testing.T) {
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(t.Context())
+	conn, err := db.Conn(testutil.Context(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	res, err := conn.ExecContext(t.Context(),
+	res, err := conn.ExecContext(testutil.Context(t),
 		`CREATE TABLE users (id INTEGER PRIMARY KEY NOT NULL, name VARCHAR(10))`)
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +47,7 @@ func TestDriver(t *testing.T) {
 		t.Errorf("got %d want 0", changes)
 	}
 
-	res, err = conn.ExecContext(t.Context(),
+	res, err = conn.ExecContext(testutil.Context(t),
 		`INSERT INTO users (id, name) VALUES (0, 'go'), (1, 'zig'), (2, 'whatever')`)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +60,7 @@ func TestDriver(t *testing.T) {
 		t.Errorf("got %d want 3", changes)
 	}
 
-	stmt, err := conn.PrepareContext(t.Context(),
+	stmt, err := conn.PrepareContext(testutil.Context(t),
 		`SELECT id, name FROM users`)
 	if err != nil {
 		t.Fatal(err)

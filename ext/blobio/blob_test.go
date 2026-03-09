@@ -13,6 +13,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/array"
 	"github.com/ncruces/go-sqlite3/ext/blobio"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -74,7 +75,7 @@ func TestMain(m *testing.M) {
 func Test_readblob(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +166,7 @@ func Test_readblob(t *testing.T) {
 func Test_writeblob(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +221,7 @@ func Test_writeblob(t *testing.T) {
 func Test_openblob(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

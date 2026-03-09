@@ -8,6 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/ncruces/julianday"
 )
@@ -22,20 +23,20 @@ func TestJSON(t *testing.T) {
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(t.Context())
+	conn, err := db.Conn(testutil.Context(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(t.Context(), `CREATE TABLE test (col)`)
+	_, err = conn.ExecContext(testutil.Context(t), `CREATE TABLE test (col)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	reference := time.Date(2013, 10, 7, 4, 23, 19, 120_000_000, time.FixedZone("", -4*3600))
 
-	_, err = conn.ExecContext(t.Context(),
+	_, err = conn.ExecContext(testutil.Context(t),
 		`INSERT INTO test (col) VALUES (?), (?), (?), (?)`,
 		nil, 1, math.Pi, reference,
 	)
@@ -43,7 +44,7 @@ func TestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = conn.ExecContext(t.Context(),
+	_, err = conn.ExecContext(testutil.Context(t),
 		`INSERT INTO test (col) VALUES (?), (?), (?), (?)`,
 		sqlite3.JSON(math.Pi), sqlite3.JSON(false),
 		julianday.Format(reference), sqlite3.JSON([]string{}))
@@ -51,7 +52,7 @@ func TestJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rows, err := conn.QueryContext(t.Context(), "SELECT * FROM test")
+	rows, err := conn.QueryContext(testutil.Context(t), "SELECT * FROM test")
 	if err != nil {
 		t.Fatal(err)
 	}

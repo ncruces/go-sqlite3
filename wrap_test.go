@@ -2,6 +2,7 @@ package sqlite3
 
 import (
 	"bytes"
+	"context"
 	"math"
 	"testing"
 )
@@ -9,7 +10,7 @@ import (
 func Test_sqlite_new(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +26,7 @@ func Test_sqlite_new(t *testing.T) {
 func Test_sqlite_newArena(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,7 @@ func Test_sqlite_newArena(t *testing.T) {
 func Test_sqlite_newBytes(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +97,7 @@ func Test_sqlite_newBytes(t *testing.T) {
 func Test_sqlite_newString(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +123,7 @@ func Test_sqlite_newString(t *testing.T) {
 func Test_sqlite_getString(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +164,7 @@ func Test_sqlite_getString(t *testing.T) {
 func Test_sqlite_free(t *testing.T) {
 	t.Parallel()
 
-	wrp, err := createWrapper()
+	wrp, err := createWrapper(testContext(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,4 +178,8 @@ func Test_sqlite_free(t *testing.T) {
 	}
 
 	wrp.Free(ptr)
+}
+
+func testContext(t testing.TB) context.Context {
+	return WithMaxMemory(t.Context(), 32*1024*1024)
 }

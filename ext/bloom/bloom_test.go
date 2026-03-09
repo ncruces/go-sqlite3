@@ -8,6 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/ext/bloom"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -18,7 +19,7 @@ func TestMain(m *testing.M) {
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +101,7 @@ func Test_compatible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1")
+	db, err := sqlite3.OpenContext(testutil.Context(t), "file:"+filepath.ToSlash(tmp)+"?nolock=1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +157,7 @@ func Test_compatible(t *testing.T) {
 func Test_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -87,7 +88,7 @@ func TestDB_nolock(t *testing.T) {
 }
 
 func testDB(t testing.TB, name string) {
-	db, err := sqlite3.Open(name)
+	db, err := sqlite3.OpenContext(testutil.Context(t), name)
 	if err != nil {
 		t.Fatal(err)
 	}

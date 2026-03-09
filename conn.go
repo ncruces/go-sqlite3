@@ -75,7 +75,7 @@ func newConn(ctx context.Context, filename string, flags OpenFlag) (ret *Conn, _
 	}
 
 	c := &Conn{interrupt: ctx}
-	c.wrp, err = createWrapper()
+	c.wrp, err = createWrapper(ctx)
 	if err != nil {
 		return nil, err
 	}

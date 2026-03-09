@@ -13,6 +13,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -37,7 +38,7 @@ func Test_Open_dir(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Conn(context.TODO())
+	_, err = db.Conn(testutil.Context(t))
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -80,7 +81,7 @@ func Test_Open_pragma_invalid(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Conn(context.TODO())
+	_, err = db.Conn(testutil.Context(t))
 	if err == nil {
 		t.Fatal("want error")
 	}
@@ -160,17 +161,17 @@ func Test_BeginTx(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.BeginTx(t.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	_, err = db.BeginTx(testutil.Context(t), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err.Error() != string(errutil.IsolationErr) {
 		t.Error("want isolationErr")
 	}
 
-	tx1, err := db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+	tx1, err := db.BeginTx(testutil.Context(t), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tx2, err := db.BeginTx(t.Context(), &sql.TxOptions{ReadOnly: true})
+	tx2, err := db.BeginTx(testutil.Context(t), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +232,7 @@ func Test_nested_context(t *testing.T) {
 
 	want(outer, 0)
 
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(testutil.Context(t))
 	defer cancel()
 
 	inner, err := tx.QueryContext(ctx, `SELECT value FROM generate_series(0)`)
@@ -303,13 +304,13 @@ func Test_QueryRow_named(t *testing.T) {
 	}
 	defer db.Close()
 
-	conn, err := db.Conn(t.Context())
+	conn, err := db.Conn(testutil.Context(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
 
-	stmt, err := conn.PrepareContext(t.Context(), `SELECT ?, ?5, :AAA, @AAA, $AAA`)
+	stmt, err := conn.PrepareContext(testutil.Context(t), `SELECT ?, ?5, :AAA, @AAA, $AAA`)
 	if err != nil {
 		t.Fatal(err)
 	}
