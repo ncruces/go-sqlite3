@@ -17,10 +17,6 @@ func Find(name string) VFS {
 	if name == "" || name == "os" {
 		return vfsOS{}
 	}
-	return find(name)
-}
-
-func find(name string) VFS {
 	vfsRegistryMtx.RLock()
 	defer vfsRegistryMtx.RUnlock()
 	return vfsRegistry[name]

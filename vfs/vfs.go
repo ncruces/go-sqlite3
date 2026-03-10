@@ -11,14 +11,6 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
-//go:linkname vfsFind
-func vfsFind(wrp *sqlite3_wrap.Wrapper, zVfsName ptr_t) uint32 {
-	if find(wrp.ReadString(zVfsName, _MAX_NAME)) != nil {
-		return 1
-	}
-	return 0
-}
-
 //go:linkname vfsFullPathname
 func vfsFullPathname(wrp *sqlite3_wrap.Wrapper, pVfs, zRelative ptr_t, nFull int32, zFull ptr_t) _ErrorCode {
 	vfs := vfsGet(wrp, pVfs)

@@ -13,6 +13,7 @@ import (
 	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
+	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/julianday"
 )
 
@@ -212,11 +213,11 @@ func (e env) Xgo_localtime(pTm int32, t int64) int32 {
 	return _OK
 }
 
-//go:linkname vfsFind github.com/ncruces/go-sqlite3/vfs.vfsFind
-func vfsFind(_ *sqlite3_wrap.Wrapper, v0 int32) int32
-
-func (e env) Xgo_vfs_find(v0 int32) int32 {
-	return vfsFind(e.Wrapper, v0)
+func (e env) Xgo_vfs_find(zVfsName int32) int32 {
+	if vfs.Find(e.ReadString(ptr_t(zVfsName), _MAX_NAME)) != nil {
+		return 1
+	}
+	return 0
 }
 
 //go:linkname vfsFullPathname github.com/ncruces/go-sqlite3/vfs.vfsFullPathname
