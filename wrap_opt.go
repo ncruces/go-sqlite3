@@ -4,8 +4,10 @@ package sqlite3
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -43,13 +45,17 @@ func (e *env) Xsystem(ptr int32) int32 {
 			wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
 		}
 
+		defer func() { recover() }()
 		wrp.X__main_argc_argv(int32(len(args)), int32(argv))
 	}()
 	return 0
 }
 
 func (e env) Xexit(c int32) {
-	os.Exit(int(c))
+	if c != 0 {
+		panic(fmt.Sprint("exit error:", c))
+	}
+	runtime.Goexit()
 }
 
 func (e env) Xputchar(c int32) int32 {
@@ -156,7 +162,7 @@ func (e env) Xputs(ptr int32) int32 {
 
 func (e *env) Xftell(h int32) int32 {
 	f := e.getf(h)
-	if n, err := f.Seek(0, io.SeekStart); err != nil {
+	if n, err := f.Seek(0, io.SeekEnd); err != nil {
 		return -1
 	} else {
 		return int32(n)
