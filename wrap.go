@@ -49,6 +49,7 @@ func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error) {
 func (e *env) Init(m *sqlite3_wasm.Module) { e.Module = m }
 
 // Math functions.
+
 func (env) Xacos(x float64) float64     { return math.Acos(x) }
 func (env) Xacosh(x float64) float64    { return math.Acosh(x) }
 func (env) Xasin(x float64) float64     { return math.Asin(x) }
@@ -71,10 +72,6 @@ func (env) Xtanh(x float64) float64     { return math.Tanh(x) }
 
 // String functions.
 
-func (e env) Xstrlen(s int32) int32 {
-	return int32(bytes.IndexByte(e.Buf[s:], 0))
-}
-
 func (e env) Xmemchr(s, c, n int32) int32 {
 	m := e.Buf[s:]
 	if len(m) > int(n) {
@@ -91,6 +88,10 @@ func (e env) Xmemcmp(s1, s2, n int32) int32 {
 	m1 := e.Buf[s1:e1]
 	m2 := e.Buf[s2:e2]
 	return int32(bytes.Compare(m1, m2))
+}
+
+func (e env) Xstrlen(s int32) int32 {
+	return int32(bytes.IndexByte(e.Buf[s:], 0))
 }
 
 func (e env) Xstrchr(s, c int32) int32 {
@@ -174,6 +175,25 @@ func (e env) Xstrcspn(s, reject int32) int32 {
 		i++
 	}
 	return i
+}
+
+func (e env) Xstrstr(haystack, needle int32) int32 {
+	h := e.Buf[haystack:]
+	n := e.Buf[needle:]
+	h = h[:bytes.IndexByte(h, 0)]
+	n = n[:bytes.IndexByte(n, 0)]
+	i := bytes.Index(h, n)
+	if i < 0 {
+		return 0
+	}
+	return haystack + int32(i)
+}
+
+func (e *env) Xstrcpy(d, s int32) int32 {
+	m := e.Buf[s:]
+	m = m[:bytes.IndexByte(m, 0)+1]
+	copy(e.Buf[d:], m)
+	return d
 }
 
 // VFS functions.
