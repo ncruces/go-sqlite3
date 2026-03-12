@@ -6,6 +6,7 @@ import (
 	"encoding/json/v2"
 	"strconv"
 
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -28,8 +29,8 @@ func (ctx Context) ResultJSON(value any) {
 		ctx.ResultError(err)
 		return // notest
 	}
-	ctx.c.call("sqlite3_result_text_go",
-		stk_t(ctx.handle), stk_t(w.ptr), stk_t(len(w.buf)))
+	ctx.c.ctx.Xsqlite3_result_text_go(
+		int32(ctx.handle), int32(w.ptr), int32(len(w.buf)))
 }
 
 // BindJSON binds the JSON encoding of value to the prepared statement.
@@ -42,9 +43,9 @@ func (s *Stmt) BindJSON(param int, value any) error {
 		s.c.free(w.ptr)
 		return err // notest
 	}
-	rc := res_t(s.c.call("sqlite3_bind_text_go",
-		stk_t(s.handle), stk_t(param),
-		stk_t(w.ptr), stk_t(len(w.buf))))
+	rc := res_t(s.c.ctx.Xsqlite3_bind_text_go(
+		int32(s.handle), int32(param),
+		int32(w.ptr), int32(len(w.buf))))
 	return s.c.error(rc)
 }
 
@@ -67,7 +68,7 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 	case FLOAT:
 		data = util.AppendNumber(nil, s.ColumnFloat(col))
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return json.Unmarshal(data, ptr)
 }
@@ -88,7 +89,7 @@ func (v Value) JSON(ptr any) error {
 	case FLOAT:
 		data = util.AppendNumber(nil, v.Float())
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return json.Unmarshal(data, ptr)
 }
@@ -106,7 +107,7 @@ func (b *bytesWriter) Write(p []byte) (n int, err error) {
 		grow += grow >> 1
 		want = max(want, grow)
 		b.ptr = b.realloc(b.ptr, want)
-		b.buf = util.View(b.mod, b.ptr, want)[:len(b.buf)]
+		b.buf = b.mod.Slice(b.ptr, want)[:len(b.buf)]
 	}
 	b.buf = append(b.buf, p...)
 	_ = append(b.buf, 0)

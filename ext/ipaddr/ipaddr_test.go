@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/ipaddr"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -14,6 +13,7 @@ func TestRegister(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, ipaddr.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -22,7 +22,7 @@ func TestRegister(t *testing.T) {
 
 	var got string
 
-	err = db.QueryRow(`SELECT ipfamily('::1')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipfamily('::1')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipfamily('[::1]:80')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipfamily('[::1]:80')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipfamily('192.168.1.5/24')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipfamily('192.168.1.5/24')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT iphost('192.168.1.5/24')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT iphost('192.168.1.5/24')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipmasklen('192.168.1.5/24')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipmasklen('192.168.1.5/24')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipnetwork('192.168.1.5/24')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipnetwork('192.168.1.5/24')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipcontains('192.168.1.0/24', '192.168.1.5')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipcontains('192.168.1.0/24', '192.168.1.5')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 
-	err = db.QueryRow(`SELECT ipoverlaps('192.168.1.0/24', '192.168.1.5/32')`).Scan(&got)
+	err = db.QueryRowContext(ctx, `SELECT ipoverlaps('192.168.1.0/24', '192.168.1.5/32')`).Scan(&got)
 	if err != nil {
 		t.Fatal(err)
 	}

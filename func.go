@@ -1,15 +1,10 @@
 package sqlite3
 
 import (
-	"context"
 	"io"
 	"iter"
 	"sync"
 	"sync/atomic"
-
-	"github.com/tetratelabs/wazero/api"
-
-	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 // CollationNeeded registers a callback to be invoked
@@ -21,7 +16,7 @@ func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 	if cb != nil {
 		enable = 1
 	}
-	rc := res_t(c.call("sqlite3_collation_needed_go", stk_t(c.handle), stk_t(enable)))
+	rc := res_t(c.wrp.Xsqlite3_collation_needed_go(int32(c.handle), enable))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -36,7 +31,7 @@ func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 // This can be used to load schemas that contain
 // one or more unknown collating sequences.
 func (c Conn) AnyCollationNeeded() error {
-	rc := res_t(c.call("sqlite3_anycollseq_init", stk_t(c.handle), 0, 0))
+	rc := res_t(c.wrp.Xsqlite3_anycollseq_init(int32(c.handle), 0, 0))
 	if err := c.error(rc); err != nil {
 		return err
 	}
@@ -49,13 +44,13 @@ func (c Conn) AnyCollationNeeded() error {
 // https://sqlite.org/c3ref/create_collation.html
 func (c *Conn) CreateCollation(name string, fn CollatingFunction) error {
 	var funcPtr ptr_t
-	defer c.arena.mark()()
-	namePtr := c.arena.string(name)
+	defer c.arena.Mark()()
+	namePtr := c.arena.String(name)
 	if fn != nil {
-		funcPtr = util.AddHandle(c.ctx, fn)
+		funcPtr = c.wrp.AddHandle(fn)
 	}
-	rc := res_t(c.call("sqlite3_create_collation_go",
-		stk_t(c.handle), stk_t(namePtr), stk_t(funcPtr)))
+	rc := res_t(c.wrp.Xsqlite3_create_collation_go(
+		int32(c.handle), int32(namePtr), int32(funcPtr)))
 	return c.error(rc)
 }
 
@@ -68,14 +63,14 @@ type CollatingFunction func(a, b []byte) int
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateFunction(name string, nArg int, flag FunctionFlag, fn ScalarFunction) error {
 	var funcPtr ptr_t
-	defer c.arena.mark()()
-	namePtr := c.arena.string(name)
+	defer c.arena.Mark()()
+	namePtr := c.arena.String(name)
 	if fn != nil {
-		funcPtr = util.AddHandle(c.ctx, fn)
+		funcPtr = c.wrp.AddHandle(fn)
 	}
-	rc := res_t(c.call("sqlite3_create_function_go",
-		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
-		stk_t(flag), stk_t(funcPtr)))
+	rc := res_t(c.wrp.Xsqlite3_create_function_go(
+		int32(c.handle), int32(namePtr), int32(nArg),
+		int32(flag), int32(funcPtr)))
 	return c.error(rc)
 }
 
@@ -88,10 +83,10 @@ type ScalarFunction func(ctx Context, arg ...Value)
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag, fn AggregateSeqFunction) error {
 	var funcPtr ptr_t
-	defer c.arena.mark()()
-	namePtr := c.arena.string(name)
+	defer c.arena.Mark()()
+	namePtr := c.arena.String(name)
 	if fn != nil {
-		funcPtr = util.AddHandle(c.ctx, AggregateConstructor(func() AggregateFunction {
+		funcPtr = c.wrp.AddHandle(AggregateConstructor(func() AggregateFunction {
 			var a aggregateFunc
 			coro := func(yieldCoro func(struct{}) bool) {
 				seq := func(yieldSeq func([]Value) bool) {
@@ -107,9 +102,9 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 			return &a
 		}))
 	}
-	rc := res_t(c.call("sqlite3_create_aggregate_function_go",
-		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
-		stk_t(flag), stk_t(funcPtr)))
+	rc := res_t(c.wrp.Xsqlite3_create_aggregate_function_go(
+		int32(c.handle), int32(namePtr), int32(nArg),
+		int32(flag), int32(funcPtr)))
 	return c.error(rc)
 }
 
@@ -124,10 +119,10 @@ type AggregateSeqFunction func(ctx *Context, seq iter.Seq[[]Value])
 // https://sqlite.org/c3ref/create_function.html
 func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn AggregateConstructor) error {
 	var funcPtr ptr_t
-	defer c.arena.mark()()
-	namePtr := c.arena.string(name)
+	defer c.arena.Mark()()
+	namePtr := c.arena.String(name)
 	if fn != nil {
-		funcPtr = util.AddHandle(c.ctx, AggregateConstructor(func() AggregateFunction {
+		funcPtr = c.wrp.AddHandle(AggregateConstructor(func() AggregateFunction {
 			agg := fn()
 			if win, ok := agg.(WindowFunction); ok {
 				return win
@@ -135,9 +130,9 @@ func (c *Conn) CreateWindowFunction(name string, nArg int, flag FunctionFlag, fn
 			return agg
 		}))
 	}
-	rc := res_t(c.call("sqlite3_create_window_function_go",
-		stk_t(c.handle), stk_t(namePtr), stk_t(nArg),
-		stk_t(flag), stk_t(funcPtr)))
+	rc := res_t(c.wrp.Xsqlite3_create_window_function_go(
+		int32(c.handle), int32(namePtr), int32(nArg),
+		int32(flag), int32(funcPtr)))
 	return c.error(rc)
 }
 
@@ -173,84 +168,86 @@ type WindowFunction interface {
 //
 // https://sqlite.org/c3ref/overload_function.html
 func (c *Conn) OverloadFunction(name string, nArg int) error {
-	defer c.arena.mark()()
-	namePtr := c.arena.string(name)
-	rc := res_t(c.call("sqlite3_overload_function",
-		stk_t(c.handle), stk_t(namePtr), stk_t(nArg)))
+	defer c.arena.Mark()()
+	namePtr := c.arena.String(name)
+	rc := res_t(c.wrp.Xsqlite3_overload_function(
+		int32(c.handle), int32(namePtr), int32(nArg)))
 	return c.error(rc)
 }
 
-func destroyCallback(ctx context.Context, mod api.Module, pApp ptr_t) {
-	util.DelHandle(ctx, pApp)
+func (e env) Xgo_destroy(pApp int32) {
+	e.DelHandle(ptr_t(pApp))
 }
 
-func collationCallback(ctx context.Context, mod api.Module, pArg, pDB ptr_t, eTextRep uint32, zName ptr_t) {
-	if c, ok := ctx.Value(connKey{}).(*Conn); ok && c.handle == pDB && c.collation != nil {
-		name := util.ReadString(mod, zName, _MAX_NAME)
+func (e env) Xgo_collation_needed(pArg, pDB, eTextRep, zName int32) {
+	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.collation != nil {
+		name := e.ReadString(ptr_t(zName), _MAX_NAME)
 		c.collation(c, name)
 	}
 }
 
-func compareCallback(ctx context.Context, mod api.Module, pApp ptr_t, nKey1 int32, pKey1 ptr_t, nKey2 int32, pKey2 ptr_t) uint32 {
-	fn := util.GetHandle(ctx, pApp).(CollatingFunction)
-	return uint32(fn(util.View(mod, pKey1, int64(nKey1)), util.View(mod, pKey2, int64(nKey2))))
+func (e env) Xgo_compare(pApp, nKey1, pKey1, nKey2, pKey2 int32) int32 {
+	fn := e.GetHandle(ptr_t(pApp)).(CollatingFunction)
+	return int32(fn(
+		e.Slice(ptr_t(pKey1), int64(nKey1)),
+		e.Slice(ptr_t(pKey2), int64(nKey2))))
 }
 
-func funcCallback(ctx context.Context, mod api.Module, pCtx, pApp ptr_t, nArg int32, pArg ptr_t) {
-	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, nArg, pArg)
+func (e env) Xgo_func(pCtx, pApp, nArg, pArg int32) {
+	db := e.DB.(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
-	fn := util.GetHandle(db.ctx, pApp).(ScalarFunction)
-	fn(Context{db, pCtx}, *args...)
+	fn := db.wrp.GetHandle(ptr_t(pApp)).(ScalarFunction)
+	fn(Context{db, ptr_t(pCtx)}, *args...)
 }
 
-func stepCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, nArg int32, pArg ptr_t) {
-	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, nArg, pArg)
+func (e env) Xgo_step(pCtx, pAgg, pApp, nArg, pArg int32) {
+	db := e.DB.(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
-	fn, _ := callbackAggregate(db, pAgg, pApp)
-	fn.Step(Context{db, pCtx}, *args...)
+	fn, _ := callbackAggregate(db, ptr_t(pAgg), ptr_t(pApp))
+	fn.Step(Context{db, ptr_t(pCtx)}, *args...)
 }
 
-func valueCallback(ctx context.Context, mod api.Module, pCtx, pAgg, pApp ptr_t, final int32) {
-	db := ctx.Value(connKey{}).(*Conn)
-	fn, handle := callbackAggregate(db, pAgg, pApp)
-	fn.Value(Context{db, pCtx})
+func (e env) Xgo_value(pCtx, pAgg, pApp, final int32) {
+	db := e.DB.(*Conn)
+	fn, handle := callbackAggregate(db, ptr_t(pAgg), ptr_t(pApp))
+	fn.Value(Context{db, ptr_t(pCtx)})
 
 	// Cleanup.
 	if final != 0 {
 		var err error
 		if handle != 0 {
-			err = util.DelHandle(ctx, handle)
+			err = e.DelHandle(handle)
 		} else if c, ok := fn.(io.Closer); ok {
 			err = c.Close()
 		}
 		if err != nil {
-			Context{db, pCtx}.ResultError(err)
+			Context{db, ptr_t(pCtx)}.ResultError(err)
 			return // notest
 		}
 	}
 }
 
-func inverseCallback(ctx context.Context, mod api.Module, pCtx, pAgg ptr_t, nArg int32, pArg ptr_t) {
-	db := ctx.Value(connKey{}).(*Conn)
-	args := callbackArgs(db, nArg, pArg)
+func (e env) Xgo_inverse(pCtx, pAgg, nArg, pArg int32) {
+	db := e.DB.(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
-	fn := util.GetHandle(db.ctx, pAgg).(WindowFunction)
-	fn.Inverse(Context{db, pCtx}, *args...)
+	fn := db.wrp.GetHandle(ptr_t(pAgg)).(WindowFunction)
+	fn.Inverse(Context{db, ptr_t(pCtx)}, *args...)
 }
 
 func callbackAggregate(db *Conn, pAgg, pApp ptr_t) (AggregateFunction, ptr_t) {
 	if pApp == 0 {
-		handle := util.Read32[ptr_t](db.mod, pAgg)
-		return util.GetHandle(db.ctx, handle).(AggregateFunction), handle
+		handle := ptr_t(db.wrp.Read32(pAgg))
+		return db.wrp.GetHandle(handle).(AggregateFunction), handle
 	}
 
 	// We need to create the aggregate.
-	fn := util.GetHandle(db.ctx, pApp).(AggregateConstructor)()
+	fn := db.wrp.GetHandle(pApp).(AggregateConstructor)()
 	if pAgg != 0 {
-		handle := util.AddHandle(db.ctx, fn)
-		util.Write32(db.mod, pAgg, handle)
+		handle := db.wrp.AddHandle(fn)
+		db.wrp.Write32(pAgg, uint32(handle))
 		return fn, handle
 	}
 	return fn, 0
@@ -272,7 +269,7 @@ func callbackArgs(db *Conn, nArg int32, pArg ptr_t) *[]Value {
 	for i := range lst {
 		lst[i] = Value{
 			c:      db,
-			handle: util.Read32[ptr_t](db.mod, pArg+ptr_t(i)*ptrlen),
+			handle: ptr_t(db.wrp.Read32(pArg + ptr_t(i)*ptrlen)),
 		}
 	}
 	*arg = lst

@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -17,6 +16,7 @@ func Test_writefile(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -30,22 +30,22 @@ func Test_writefile(t *testing.T) {
 	sock := filepath.Join(dir, "sock")
 	twosday := time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
 
-	_, err = db.Exec(`SELECT writefile(?, 'Hello world!')`, file)
+	_, err = db.ExecContext(ctx, `SELECT writefile(?, 'Hello world!')`, file)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Exec(`SELECT writefile(?, ?, ?)`, link, "test.txt", fs.ModeSymlink)
+	_, err = db.ExecContext(ctx, `SELECT writefile(?, ?, ?)`, link, "test.txt", fs.ModeSymlink)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Exec(`SELECT writefile(?, ?, ?, ?)`, dir, nil, 0040700, twosday.Unix())
+	_, err = db.ExecContext(ctx, `SELECT writefile(?, ?, ?, ?)`, dir, nil, 0040700, twosday.Unix())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rows, err := db.Query(`SELECT * FROM fsdir('.', ?)`, dir)
+	rows, err := db.QueryContext(ctx, `SELECT * FROM fsdir('.', ?)`, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,19 +70,19 @@ func Test_writefile(t *testing.T) {
 		}
 	}
 
-	_, err = db.Exec(`SELECT writefile(?, 'Hello world!')`, nest)
+	_, err = db.ExecContext(ctx, `SELECT writefile(?, 'Hello world!')`, nest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Exec(`SELECT writefile(?, ?, ?)`, sock, nil, fs.ModeSocket)
+	_, err = db.ExecContext(ctx, `SELECT writefile(?, ?, ?)`, sock, nil, fs.ModeSocket)
 	if err == nil {
 		t.Fatal("want error")
 	} else {
 		t.Log(err)
 	}
 
-	_, err = db.Exec(`SELECT writefile()`)
+	_, err = db.ExecContext(ctx, `SELECT writefile()`)
 	if err == nil {
 		t.Fatal("want error")
 	} else {

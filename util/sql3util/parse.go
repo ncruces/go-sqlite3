@@ -1,18 +1,13 @@
 package sql3util
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/binary"
 	"strings"
 
-	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
-	parser "github.com/ncruces/go-sqlite3/util/sql3util/internal/parser"
-)
-
-const (
-	errp = 4
-	sqlp = 8
+	parser "github.com/ncruces/go-sqlite3-wasm/parser"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // ParseTable parses a [CREATE] or [ALTER TABLE] command.
@@ -20,26 +15,24 @@ const (
 // [CREATE]: https://sqlite.org/lang_createtable.html
 // [ALTER TABLE]: https://sqlite.org/lang_altertable.html
 func ParseTable(sql string) (_ *Table, err error) {
-	if len(sql) > 8192 {
-		return nil, sqlite3.TOOBIG
-	}
-
 	mod := parser.New()
+	errp := mod.Xmalloc(4)
+	sqlp := mod.Xmalloc(int32(len(sql) + 1))
 	copy(mod.Memory[sqlp:], sql)
 	res := mod.Xsql3parse_table(sqlp, int32(len(sql)), errp)
 
 	c := binary.LittleEndian.Uint32(mod.Memory[errp:])
 	switch c {
 	case _MEMORY:
-		panic(util.OOMErr)
+		panic(errutil.OOMErr)
 	case _SYNTAX:
-		return nil, util.ErrorString("sql3parse: invalid syntax")
+		return nil, errutil.ErrorString("sql3parse: invalid syntax")
 	case _UNSUPPORTEDSQL:
-		return nil, util.ErrorString("sql3parse: unsupported SQL")
+		return nil, errutil.ErrorString("sql3parse: unsupported SQL")
 	}
 
 	var tab Table
-	tab.load(mod.Memory, uint32(res), sql)
+	tab.load(mod.Memory, uint32(res), uint32(sqlp), sql)
 	return &tab, nil
 }
 
@@ -59,10 +52,10 @@ type Table struct {
 	NewName        string
 }
 
-func (t *Table) load(mem []byte, ptr uint32, sql string) uint32 {
-	t.Name = loadIdentifier(mem, ptr+0, sql)
-	t.Schema = loadIdentifier(mem, ptr+8, sql)
-	t.Comment = loadString(mem, ptr+16, sql)
+func (t *Table) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
+	t.Name = loadIdentifier(mem, ptr+0, sqlp, sql)
+	t.Schema = loadIdentifier(mem, ptr+8, sqlp, sql)
+	t.Comment = loadString(mem, ptr+16, sqlp, sql)
 
 	t.IsTemporary = loadBool(mem, ptr+24)
 	t.IsIfNotExists = loadBool(mem, ptr+25)
@@ -71,19 +64,19 @@ func (t *Table) load(mem []byte, ptr uint32, sql string) uint32 {
 
 	t.Columns = loadSlice(mem, ptr+28, func(ptr uint32, ret *Column) uint32 {
 		p := binary.LittleEndian.Uint32(mem[ptr:])
-		ret.load(mem, p, sql)
+		ret.load(mem, p, sqlp, sql)
 		return 4
 	})
 
 	t.Constraints = loadSlice(mem, ptr+36, func(ptr uint32, ret *TableConstraint) uint32 {
 		p := binary.LittleEndian.Uint32(mem[ptr:])
-		ret.load(mem, p, sql)
+		ret.load(mem, p, sqlp, sql)
 		return 4
 	})
 
 	t.Type = loadEnum[StatementType](mem, ptr+44)
-	t.CurrentName = loadIdentifier(mem, ptr+48, sql)
-	t.NewName = loadIdentifier(mem, ptr+56, sql)
+	t.CurrentName = loadIdentifier(mem, ptr+48, sqlp, sql)
+	t.NewName = loadIdentifier(mem, ptr+56, sqlp, sql)
 	return 64
 }
 
@@ -102,26 +95,26 @@ type TableConstraint struct {
 	ForeignKeyClause *ForeignKey
 }
 
-func (c *TableConstraint) load(mem []byte, ptr uint32, sql string) uint32 {
+func (c *TableConstraint) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
 	c.Type = loadEnum[ConstraintType](mem, ptr+0)
-	c.Name = loadIdentifier(mem, ptr+4, sql)
+	c.Name = loadIdentifier(mem, ptr+4, sqlp, sql)
 	switch c.Type {
 	case TABLECONSTRAINT_PRIMARYKEY, TABLECONSTRAINT_UNIQUE:
 		c.IndexedColumns = loadSlice(mem, ptr+12, func(ptr uint32, ret *IdxColumn) uint32 {
-			return ret.load(mem, ptr, sql)
+			return ret.load(mem, ptr, sqlp, sql)
 		})
 		c.ConflictClause = loadEnum[ConflictClause](mem, ptr+20)
 		c.IsAutoIncrement = loadBool(mem, ptr+24)
 	case TABLECONSTRAINT_CHECK:
-		c.CheckExpr = loadString(mem, ptr+28, sql)
+		c.CheckExpr = loadString(mem, ptr+28, sqlp, sql)
 	case TABLECONSTRAINT_FOREIGNKEY:
 		c.ForeignKeyNames = loadSlice(mem, ptr+36, func(ptr uint32, ret *string) uint32 {
-			*ret = loadIdentifier(mem, ptr, sql)
+			*ret = loadIdentifier(mem, ptr, sqlp, sql)
 			return 8
 		})
 		if ptr := binary.LittleEndian.Uint32(mem[ptr+44:]); ptr != 0 {
 			c.ForeignKeyClause = &ForeignKey{}
-			c.ForeignKeyClause.load(mem, ptr, sql)
+			c.ForeignKeyClause.load(mem, ptr, sqlp, sql)
 		}
 	}
 	return 28
@@ -156,45 +149,45 @@ type Column struct {
 	GeneratedType            GenType
 }
 
-func (c *Column) load(mem []byte, ptr uint32, sql string) uint32 {
-	c.Name = loadIdentifier(mem, ptr+0, sql)
-	c.Type = loadString(mem, ptr+8, sql)
-	c.Length = loadString(mem, ptr+16, sql)
-	c.Comment = loadString(mem, ptr+24, sql)
+func (c *Column) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sqlp, sql)
+	c.Type = loadString(mem, ptr+8, sqlp, sql)
+	c.Length = loadString(mem, ptr+16, sqlp, sql)
+	c.Comment = loadString(mem, ptr+24, sqlp, sql)
 
 	c.IsPrimaryKey = loadBool(mem, ptr+32)
 	c.IsAutoIncrement = loadBool(mem, ptr+33)
 	c.IsNotNull = loadBool(mem, ptr+34)
 	c.IsUnique = loadBool(mem, ptr+35)
 
-	c.PKConstraintName = loadIdentifier(mem, ptr+36, sql)
+	c.PKConstraintName = loadIdentifier(mem, ptr+36, sqlp, sql)
 	c.PKOrder = loadEnum[OrderClause](mem, ptr+44)
 	c.PKConflictClause = loadEnum[ConflictClause](mem, ptr+48)
 
-	c.NotNullConstraintName = loadIdentifier(mem, ptr+52, sql)
+	c.NotNullConstraintName = loadIdentifier(mem, ptr+52, sqlp, sql)
 	c.NotNullConflictClause = loadEnum[ConflictClause](mem, ptr+60)
 
-	c.UniqueConstraintName = loadIdentifier(mem, ptr+64, sql)
+	c.UniqueConstraintName = loadIdentifier(mem, ptr+64, sqlp, sql)
 	c.UniqueConflictClause = loadEnum[ConflictClause](mem, ptr+72)
 
 	c.CheckConstraints = loadSlice(mem, ptr+76, func(ptr uint32, ret *CheckConstraint) uint32 {
-		return ret.load(mem, ptr, sql)
+		return ret.load(mem, ptr, sqlp, sql)
 	})
 
-	c.DefaultConstraintName = loadIdentifier(mem, ptr+84, sql)
-	c.DefaultExpr = loadString(mem, ptr+92, sql)
+	c.DefaultConstraintName = loadIdentifier(mem, ptr+84, sqlp, sql)
+	c.DefaultExpr = loadString(mem, ptr+92, sqlp, sql)
 
-	c.CollateConstraintName = loadIdentifier(mem, ptr+100, sql)
-	c.CollateName = loadIdentifier(mem, ptr+108, sql)
+	c.CollateConstraintName = loadIdentifier(mem, ptr+100, sqlp, sql)
+	c.CollateName = loadIdentifier(mem, ptr+108, sqlp, sql)
 
-	c.ForeignKeyConstraintName = loadIdentifier(mem, ptr+116, sql)
+	c.ForeignKeyConstraintName = loadIdentifier(mem, ptr+116, sqlp, sql)
 	if p := binary.LittleEndian.Uint32(mem[ptr+124:]); p != 0 {
 		c.ForeignKeyClause = &ForeignKey{}
-		c.ForeignKeyClause.load(mem, p, sql)
+		c.ForeignKeyClause.load(mem, p, sqlp, sql)
 	}
 
-	c.GeneratedConstraintName = loadIdentifier(mem, ptr+128, sql)
-	c.GeneratedExpr = loadString(mem, ptr+136, sql)
+	c.GeneratedConstraintName = loadIdentifier(mem, ptr+128, sqlp, sql)
+	c.GeneratedExpr = loadString(mem, ptr+136, sqlp, sql)
 	c.GeneratedType = loadEnum[GenType](mem, ptr+144)
 	return 148
 }
@@ -205,9 +198,9 @@ type CheckConstraint struct {
 	Expr string
 }
 
-func (c *CheckConstraint) load(mem []byte, ptr uint32, sql string) uint32 {
-	c.Name = loadIdentifier(mem, ptr+0, sql)
-	c.Expr = loadString(mem, ptr+8, sql)
+func (c *CheckConstraint) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sqlp, sql)
+	c.Expr = loadString(mem, ptr+8, sqlp, sql)
 	return 16
 }
 
@@ -221,17 +214,17 @@ type ForeignKey struct {
 	Deferrable  FKDefType
 }
 
-func (f *ForeignKey) load(mem []byte, ptr uint32, sql string) uint32 {
-	f.Table = loadIdentifier(mem, ptr+0, sql)
+func (f *ForeignKey) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
+	f.Table = loadIdentifier(mem, ptr+0, sqlp, sql)
 
 	f.ColumnNames = loadSlice(mem, ptr+8, func(ptr uint32, ret *string) uint32 {
-		*ret = loadIdentifier(mem, ptr, sql)
+		*ret = loadIdentifier(mem, ptr, sqlp, sql)
 		return 8
 	})
 
 	f.OnDelete = loadEnum[FKAction](mem, ptr+16)
 	f.OnUpdate = loadEnum[FKAction](mem, ptr+20)
-	f.Match = loadIdentifier(mem, ptr+24, sql)
+	f.Match = loadIdentifier(mem, ptr+24, sqlp, sql)
 	f.Deferrable = loadEnum[FKDefType](mem, ptr+32)
 	return 36
 }
@@ -243,35 +236,35 @@ type IdxColumn struct {
 	Order       OrderClause
 }
 
-func (c *IdxColumn) load(mem []byte, ptr uint32, sql string) uint32 {
-	c.Name = loadIdentifier(mem, ptr+0, sql)
-	c.CollateName = loadIdentifier(mem, ptr+8, sql)
+func (c *IdxColumn) load(mem []byte, ptr, sqlp uint32, sql string) uint32 {
+	c.Name = loadIdentifier(mem, ptr+0, sqlp, sql)
+	c.CollateName = loadIdentifier(mem, ptr+8, sqlp, sql)
 	c.Order = loadEnum[OrderClause](mem, ptr+16)
 	return 20
 }
 
-func loadString(mem []byte, ptr uint32, sql string) string {
+func loadString(mem []byte, ptr, sqlp uint32, sql string) string {
 	off := binary.LittleEndian.Uint32(mem[ptr+0:])
 	if off == 0 {
 		return ""
 	}
 	cnt := binary.LittleEndian.Uint32(mem[ptr+4:])
 
-	if int(off+cnt-sqlp) >= len(sql) {
+	if uint(off+cnt-sqlp) >= uint(len(sql)) {
 		return string(mem[off : off+cnt])
 	}
 
 	return sql[off-sqlp : off+cnt-sqlp]
 }
 
-func loadIdentifier(mem []byte, ptr uint32, sql string) string {
+func loadIdentifier(mem []byte, ptr, sqlp uint32, sql string) string {
 	off := binary.LittleEndian.Uint32(mem[ptr+0:])
 	if off == 0 {
 		return ""
 	}
 	cnt := binary.LittleEndian.Uint32(mem[ptr+4:])
 
-	if int(off+cnt-sqlp) >= len(sql) {
+	if uint(off+cnt-sqlp) >= uint(len(sql)) {
 		return string(mem[off : off+cnt])
 	}
 
@@ -311,4 +304,12 @@ func loadEnum[T ~uint32](mem []byte, ptr uint32) T {
 func loadBool(mem []byte, ptr uint32) bool {
 	val := mem[ptr]
 	return val != 0
+}
+
+type libc struct{ *parser.Module }
+
+func (l *libc) Init(m *parser.Module) { l.Module = m }
+
+func (l *libc) Xstrlen(v0 int32) int32 {
+	return int32(bytes.IndexByte(l.Memory[v0:], 0))
 }

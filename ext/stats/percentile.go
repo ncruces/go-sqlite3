@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/sort/quick"
 )
@@ -83,7 +84,7 @@ func (q *percentile) at(pos float64) (float64, error) {
 		pos = pos / 100
 	}
 	if pos < 0 || pos > 1 {
-		return 0, util.ErrorString("invalid pos")
+		return 0, errutil.ErrorString("invalid pos")
 	}
 
 	i, f := math.Modf(pos * float64(len(q.nums)-1))

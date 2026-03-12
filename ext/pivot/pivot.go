@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers the pivot virtual table.
@@ -49,7 +49,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	}
 	defer stmt.Close()
 	if tail != "" {
-		return nil, util.TailErr
+		return nil, errutil.TailErr
 	}
 
 	t.keys = make([]string, stmt.ColumnCount())
@@ -70,11 +70,11 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 		return nil, err
 	}
 	if tail != "" {
-		return nil, util.TailErr
+		return nil, errutil.TailErr
 	}
 
 	if stmt.ColumnCount() != 2 {
-		return nil, util.ErrorString("pivot: column definition query expects 2 result columns")
+		return nil, errutil.ErrorString("pivot: column definition query expects 2 result columns")
 	}
 	for stmt.Step() {
 		name := sqlite3.QuoteIdentifier(stmt.ColumnText(1))
@@ -94,11 +94,11 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 		return nil, err
 	}
 	if tail != "" {
-		return nil, util.TailErr
+		return nil, errutil.TailErr
 	}
 
 	if stmt.ColumnCount() != 1 {
-		return nil, util.ErrorString("pivot: cell query expects 1 result columns")
+		return nil, errutil.ErrorString("pivot: cell query expects 1 result columns")
 	}
 	if stmt.BindCount() != len(t.keys)+1 {
 		return nil, fmt.Errorf("pivot: cell query expects %d bound parameters", len(t.keys)+1)

@@ -1,99 +1,62 @@
 package mptest
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
 	"embed"
-	"io"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
+	_ "unsafe"
 
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
-
-	"github.com/ncruces/go-sqlite3/internal/util"
+	_ "github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testenv"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
+	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/ncruces/go-sqlite3/vfs/mvcc"
+	_ "github.com/ncruces/go-sqlite3/vfs/mvcc"
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
+
+const ptrlen = sqlite3_wrap.PtrLen
+
+type ptr_t = sqlite3_wrap.Ptr_t
+
+//go:linkname createWrapper github.com/ncruces/go-sqlite3.createWrapper
+func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
 
 //go:embed testdata/*
 var scripts embed.FS
 
-var (
-	rt        wazero.Runtime
-	module    wazero.CompiledModule
-	instances atomic.Uint64
-)
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	cfg := wazero.NewRuntimeConfig().WithMemoryLimitPages(512)
-	rt = wazero.NewRuntimeWithConfig(ctx, cfg)
-	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
-	env := vfs.ExportHostFunctions(rt.NewHostModuleBuilder("env"))
-	env.NewFunctionBuilder().WithFunc(system).Export("system")
-	_, err := env.Instantiate(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	binary, err := os.ReadFile("wasm/mptest.wasm")
-	if err != nil {
-		panic(err)
-	}
-
-	module, err = rt.CompileModule(ctx, binary)
-	if err != nil {
-		panic(err)
-	}
-
-	os.Exit(m.Run())
+func init() {
+	testenv.Exit = exit
+	testenv.System = system
+	testenv.FS, _ = fs.Sub(scripts, "testdata")
 }
 
-func config(ctx context.Context) wazero.ModuleConfig {
-	name := strconv.FormatUint(instances.Add(1), 10)
-	log := ctx.Value(logger{}).(io.Writer)
-	fs, err := fs.Sub(scripts, "testdata")
+func runTest(t *testing.T, args ...string) {
+	testenv.TB = t
+	wrp, err := createWrapper(testcfg.Context(t))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
+	}
+	defer wrp.Close()
+
+	argv := wrp.New(int64(ptrlen * len(args)))
+	for i, a := range args {
+		wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
 	}
 
-	return wazero.NewModuleConfig().
-		WithName(name).WithStdout(log).WithStderr(log).WithFS(fs).
-		WithSysWalltime().WithSysNanotime().WithSysNanosleep().
-		WithOsyield(runtime.Gosched).
-		WithRandSource(rand.Reader)
-}
-
-func system(ctx context.Context, mod api.Module, ptr uint32) uint32 {
-	buf, _ := mod.Memory().Read(ptr, mod.Memory().Size()-ptr)
-	buf = buf[:bytes.IndexByte(buf, 0)]
-
-	args := strings.Split(string(buf), " ")
-	for i := range args {
-		args[i] = strings.Trim(args[i], `"`)
+	if c := wrp.Xmain_mptest(int32(len(args)), int32(argv)); c != 0 {
+		t.Error("exit error: ", c)
 	}
-	args = args[:len(args)-1]
-
-	cfg := config(ctx).WithArgs(args...)
-	go func() {
-		ctx := util.NewContext(ctx)
-		mod, _ := rt.InstantiateModule(ctx, module, cfg)
-		mod.Close(ctx)
-	}()
-	return 0
 }
 
 func Test_config01(t *testing.T) {
@@ -101,14 +64,8 @@ func Test_config01(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "config01.test")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
+	runTest(t, "mptest", name, "config01.test")
 }
 
 func Test_config02(t *testing.T) {
@@ -122,14 +79,8 @@ func Test_config02(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "config02.test")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
+	runTest(t, "mptest", name, "config02.test")
 }
 
 func Test_crash01(t *testing.T) {
@@ -140,14 +91,8 @@ func Test_crash01(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
+	runTest(t, "mptest", name, "crash01.test")
 }
 
 func Test_multiwrite01(t *testing.T) {
@@ -158,26 +103,14 @@ func Test_multiwrite01(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
+	runTest(t, "mptest", name, "multiwrite01.test")
 }
 
 func Test_config01_memory(t *testing.T) {
 	memdb.Create("test.db", nil)
-	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
+	runTest(t, "mptest", "/test.db", "config01.test",
 		"--vfs", "memdb")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_multiwrite01_memory(t *testing.T) {
@@ -186,26 +119,14 @@ func Test_multiwrite01_memory(t *testing.T) {
 	}
 
 	memdb.Create("test.db", nil)
-	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
+	runTest(t, "mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_config01_mvcc(t *testing.T) {
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db", "config01.test",
+	runTest(t, "mptest", "/test.db", "config01.test",
 		"--vfs", "mvcc")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_mvcc(t *testing.T) {
@@ -214,14 +135,8 @@ func Test_crash01_mvcc(t *testing.T) {
 	}
 
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db", "crash01.test",
+	runTest(t, "mptest", "/test.db", "crash01.test",
 		"--vfs", "mvcc")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_multiwrite01_mvcc(t *testing.T) {
@@ -230,14 +145,8 @@ func Test_multiwrite01_mvcc(t *testing.T) {
 	}
 
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	ctx := util.NewContext(newContext(t))
-	cfg := config(ctx).WithArgs("mptest", "/test.db", "multiwrite01.test",
+	runTest(t, "mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "mvcc")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_wal(t *testing.T) {
@@ -248,15 +157,9 @@ func Test_crash01_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_multiwrite01_wal(t *testing.T) {
@@ -267,15 +170,9 @@ func Test_multiwrite01_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := filepath.Join(t.TempDir(), "test.db")
-	cfg := config(ctx).WithArgs("mptest", name, "multiwrite01.test",
+	runTest(t, "mptest", name, "multiwrite01.test",
 		"--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_adiantum(t *testing.T) {
@@ -289,16 +186,10 @@ func Test_crash01_adiantum(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "adiantum")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_adiantum_wal(t *testing.T) {
@@ -312,16 +203,10 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "adiantum", "--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_xts(t *testing.T) {
@@ -335,16 +220,10 @@ func Test_crash01_xts(t *testing.T) {
 		t.Skip("skipping without locks")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "xts")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mod.Close(ctx)
 }
 
 func Test_crash01_xts_wal(t *testing.T) {
@@ -358,43 +237,49 @@ func Test_crash01_xts_wal(t *testing.T) {
 		t.Skip("skipping without shared memory")
 	}
 
-	ctx := util.NewContext(newContext(t))
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	cfg := config(ctx).WithArgs("mptest", name, "crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "xts", "--journalmode", "wal")
-	mod, err := rt.InstantiateModule(ctx, module, cfg)
-	if err != nil {
-		t.Fatal(err)
+}
+
+func system(wrp *sqlite3_wrap.Wrapper, ptr int32) int32 {
+	if ptr == 0 {
+		return 0
 	}
-	mod.Close(ctx)
-}
 
-func newContext(t *testing.T) context.Context {
-	return context.WithValue(t.Context(), logger{}, &testWriter{T: t})
-}
+	s := wrp.ReadString(ptr_t(ptr), 1e6)
 
-type logger struct{}
+	args := strings.Split(s, " ")
+	for i := range args {
+		args[i] = strings.Trim(args[i], `"`)
+	}
+	if args[0] != "mptest" || args[len(args)-1] != "&" {
+		return -1
+	}
+	args = args[:len(args)-1]
 
-type testWriter struct {
-	// +checklocks:mtx
-	*testing.T
-	// +checklocks:mtx
-	buf []byte
-	mtx sync.Mutex
-}
-
-func (l *testWriter) Write(p []byte) (n int, err error) {
-	l.mtx.Lock()
-	defer l.mtx.Unlock()
-
-	l.buf = append(l.buf, p...)
-	for {
-		before, after, found := bytes.Cut(l.buf, []byte("\n"))
-		if !found {
-			return len(p), nil
+	go func() {
+		wrp, err := createWrapper(testcfg.Context(testenv.TB))
+		if err != nil {
+			panic(err)
 		}
-		l.Logf("%s", before)
-		l.buf = after
+		defer wrp.Close()
+
+		argv := wrp.New(int64(ptrlen * len(args)))
+		for i, a := range args {
+			wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
+		}
+
+		defer func() { recover() }()
+		wrp.Xmain_mptest(int32(len(args)), int32(argv))
+	}()
+	return 0
+}
+
+func exit(c int32) {
+	if c != 0 {
+		panic(fmt.Sprint("exit error: ", c))
 	}
+	runtime.Goexit()
 }

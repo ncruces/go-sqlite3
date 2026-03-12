@@ -10,9 +10,8 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/fileio"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -23,6 +22,7 @@ func Test_fsdir(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			dsn := memdb.TestDB(t)
 
+			ctx := testcfg.Context(t)
 			db, err := driver.Open(dsn, func(c *sqlite3.Conn) error {
 				fileio.RegisterFS(c, fsys)
 				return nil
@@ -32,7 +32,7 @@ func Test_fsdir(t *testing.T) {
 			}
 			defer db.Close()
 
-			rows, err := db.Query(`SELECT * FROM fsdir('.', '.')`)
+			rows, err := db.QueryContext(ctx, `SELECT * FROM fsdir('.', '.')`)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -65,7 +65,7 @@ func Test_fsdir(t *testing.T) {
 func Test_fsdir_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,7 +3,6 @@
 package vfs
 
 import (
-	"context"
 	"io"
 	"os"
 	"sync"
@@ -11,15 +10,14 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/tetratelabs/wazero/api"
-
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 type vfsShm struct {
 	*os.File
 	path     string
-	regions  []*util.MappedRegion
+	regions  []*sqlite3_wrap.MappedRegion
 	readOnly bool
 	fileLock bool
 	blocking bool
@@ -75,7 +73,7 @@ func (s *vfsShm) shmOpen() error {
 	return err
 }
 
-func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, extend bool) (ptr_t, error) {
+func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) (ptr_t, error) {
 	// Ensure size is a multiple of the OS page size.
 	if int(size)&(unix.Getpagesize()-1) != 0 {
 		return 0, _IOERR_SHMMAP
@@ -102,7 +100,7 @@ func (s *vfsShm) shmMap(ctx context.Context, mod api.Module, id, size int32, ext
 		}
 	}
 
-	r, err := util.MapRegion(ctx, mod, s.File, int64(id)*int64(size), size, s.readOnly)
+	r, err := wrp.MapRegion(s.File, int64(id)*int64(size), size, s.readOnly)
 	if err != nil {
 		return 0, err
 	}
@@ -117,11 +115,11 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 	// Argument check.
 	switch {
 	case n <= 0:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	case offset < 0 || offset+n > _SHM_NLOCK:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	case n != 1 && flags&_SHM_EXCLUSIVE == 0:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	switch flags {
 	case
@@ -131,7 +129,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 		_SHM_UNLOCK | _SHM_EXCLUSIVE:
 		//
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 
 	if s.File == nil {
@@ -151,7 +149,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 	case flags&_SHM_EXCLUSIVE != 0:
 		return osWriteLock(s.File, _SHM_BASE+int64(offset), int64(n), timeout)
 	default:
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 }
 

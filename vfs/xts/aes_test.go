@@ -8,8 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	"github.com/ncruces/go-sqlite3/vfs/readervfs"
@@ -25,19 +24,20 @@ func Test_fileformat(t *testing.T) {
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(testDB)))
 	vfs.Register("rxts", xts.Wrap(vfs.Find("reader"), nil))
 
+	ctx := testcfg.Context(t)
 	db, err := driver.Open("file:test.db?vfs=rxts")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`PRAGMA textkey='correct+horse+battery+staple'`)
+	_, err = db.ExecContext(ctx, `PRAGMA textkey='correct+horse+battery+staple'`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var version uint32
-	err = db.QueryRow(`PRAGMA user_version`).Scan(&version)
+	err = db.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func Test_fileformat(t *testing.T) {
 		t.Error(version)
 	}
 
-	_, err = db.Exec(`PRAGMA integrity_check`)
+	_, err = db.ExecContext(ctx, `PRAGMA integrity_check`)
 	if err != nil {
 		t.Error(err)
 	}
@@ -53,10 +53,9 @@ func Test_fileformat(t *testing.T) {
 
 func Benchmark_nokey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
-		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1")
+		db, err := sqlite3.OpenContext(b.Context(), "file:"+filepath.ToSlash(tmp)+"?nolock=1")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -66,10 +65,9 @@ func Benchmark_nokey(b *testing.B) {
 
 func Benchmark_hexkey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
-		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
+		db, err := sqlite3.OpenContext(b.Context(), "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
 			"&vfs=xts&hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 		if err != nil {
 			b.Fatal(err)
@@ -80,10 +78,9 @@ func Benchmark_hexkey(b *testing.B) {
 
 func Benchmark_textkey(b *testing.B) {
 	tmp := filepath.Join(b.TempDir(), "test.db")
-	sqlite3.Initialize()
 
 	for b.Loop() {
-		db, err := sqlite3.Open("file:" + filepath.ToSlash(tmp) + "?nolock=1" +
+		db, err := sqlite3.OpenContext(b.Context(), "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
 			"&vfs=xts&textkey=correct+horse+battery+staple")
 		if err != nil {
 			b.Fatal(err)

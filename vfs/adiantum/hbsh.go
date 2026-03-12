@@ -8,6 +8,7 @@ import (
 	"lukechampine.com/adiantum/hbsh"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -142,7 +143,7 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	}
 
 	if n != len(p) {
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return n, nil
 }
@@ -192,7 +193,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 	}
 
 	if n != len(p) {
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	return n, nil
 }

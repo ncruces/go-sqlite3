@@ -68,8 +68,8 @@ jobs:
       shell: bash
       run: |
         go work init .
-        go work use -r embed/bcw2 gormlite
-        go test ./embed/bcw2 ./gormlite
+        go work use -r gormlite
+        go test ./gormlite
 
     - name: Test GORM
       shell: bash
@@ -104,6 +104,7 @@ jobs:
           - name: illumos
             action: omnios
             version: 'r151056'
+            tflags: '-test.short'
           - name: openbsd
             version: '7.8'
             tflags: '-test.short'
@@ -144,11 +145,14 @@ jobs:
         os:
           - name: dragonfly
             action: 'vmactions/dragonflybsd-vm@v1'
+            tflags: '-test.short'
           - name: illumos
             action: 'vmactions/openindiana-vm@v0'
+            tflags: '-test.short'
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
             bflags: '-tags sqlite3_dotlk'
+            tflags: '-test.short'
     runs-on: ubuntu-latest
     needs: test
 
@@ -166,27 +170,6 @@ jobs:
     - name: Test
       uses: ./.github/actions/vmactions
 
-  test-wasip1:
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - uses: bytecodealliance/actions/wasmtime/setup@v1
-    - uses: actions/checkout@v6
-    - uses: actions/setup-go@v6
-      with: { go-version: stable }
-
-    - name: Set path
-      run: echo "$(go env GOROOT)/lib/wasm" >> "$GITHUB_PATH"
-
-    - name: Test wasmtime
-      env:
-        GOOS: wasip1
-        GOARCH: wasm
-        GOWASIRUNTIME: wasmtime
-        GOWASIRUNTIMEARGS: '--env CI=true'
-      run: go test -short -tags sqlite3_dotlk -skip Example ./...
-
   test-qemu:
     runs-on: ubuntu-latest
     needs: test
@@ -198,15 +181,15 @@ jobs:
       with: { go-version: stable }
 
     - name: Test 386 (32-bit)
-      run: GOARCH=386 go test -short ./...
+      run: GOARCH=386 go test ./...
 
-    - name: Test riscv64 (interpreter)
+    - name: Test riscv64
       run: GOARCH=riscv64 go test -short ./...
 
-    - name: Test ppc64le (interpreter)
+    - name: Test ppc64le
       run: GOARCH=ppc64le go test -short ./...
 
-    - name: Test loong64 (interpreter)
+    - name: Test loong64
       run: GOARCH=loong64 go test -short ./...
 
     - name: Test s390x (big-endian)
@@ -225,7 +208,7 @@ jobs:
       run: go test ./...
 
     - name: Test arm (32-bit)
-      run: GOARCH=arm GOARM=7 go test -short ./...
+      run: GOARCH=arm GOARM=7 go test ./...
 
   test-macintel:
     runs-on: macos-15-intel

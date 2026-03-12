@@ -14,7 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers the statement virtual table.
@@ -30,7 +30,7 @@ type table struct {
 
 func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	if len(arg) != 1 {
-		return nil, util.ErrorString("statement: wrong number of arguments")
+		return nil, errutil.ErrorString("statement: wrong number of arguments")
 	}
 
 	sql := "SELECT * FROM\n" + arg[0]
@@ -42,7 +42,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	}
 	if tail != "" {
 		stmt.Close()
-		return nil, util.TailErr
+		return nil, errutil.TailErr
 	}
 
 	var sep string

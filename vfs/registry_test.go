@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -37,7 +37,7 @@ func TestRegister(t *testing.T) {
 	vfs.Register("foo", testVFS{t})
 	defer vfs.Unregister("foo")
 
-	conn, err := sqlite3.Open("file:file.db?vfs=foo")
+	conn, err := sqlite3.OpenContext(testcfg.Context(t), "file:file.db?vfs=foo")
 	if err != nil {
 		t.Fatal(err)
 	}

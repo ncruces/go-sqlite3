@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -97,7 +96,7 @@ func FuzzParseTimeShift(f *testing.F) {
 	f.Add("+0001-12-30 12:30:60.1234567890")
 	f.Add("-12:30:60.1234567890")
 
-	c, err := sqlite3.Open(":memory:")
+	c, err := sqlite3.OpenContext(f.Context(), ":memory:")
 	if err != nil {
 		f.Fatal(err)
 	}

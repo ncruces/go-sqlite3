@@ -9,9 +9,8 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/array"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -90,13 +89,14 @@ func Test_cursor_Column(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, array.Register)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(ctx, `
 		SELECT rowid, value FROM array(?)`,
 		sqlite3.Pointer(&[...]any{nil, true, 1, uint(2), math.Pi, "text", []byte{1, 2, 3}}))
 	if err != nil {
@@ -129,7 +129,7 @@ func Test_cursor_Column(t *testing.T) {
 func Test_array_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

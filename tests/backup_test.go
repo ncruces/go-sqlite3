@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -19,7 +18,7 @@ func TestBackup(t *testing.T) {
 	backupName := filepath.Join(t.TempDir(), "backup.db")
 
 	func() { // Create backup.
-		db, err := sqlite3.Open(":memory:")
+		db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +46,7 @@ func TestBackup(t *testing.T) {
 	}()
 
 	func() { // Restore backup.
-		db, err := sqlite3.Open(":memory:")
+		db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -98,7 +97,7 @@ func TestBackup(t *testing.T) {
 	}()
 
 	func() { // Errors.
-		db, err := sqlite3.Open(backupName)
+		db, err := sqlite3.OpenContext(testcfg.Context(t), backupName)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +130,7 @@ func TestBackup(t *testing.T) {
 	}()
 
 	func() { // Incremental.
-		db, err := sqlite3.Open(backupName)
+		db, err := sqlite3.OpenContext(testcfg.Context(t), backupName)
 		if err != nil {
 			t.Fatal(err)
 		}

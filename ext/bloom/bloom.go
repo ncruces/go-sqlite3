@@ -15,7 +15,7 @@ import (
 	"github.com/dchest/siphash"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
@@ -51,7 +51,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 			return nil, err
 		}
 		if nelem <= 0 {
-			return nil, util.ErrorString("bloom: number of elements in filter must be positive")
+			return nil, errutil.ErrorString("bloom: number of elements in filter must be positive")
 		}
 	} else {
 		nelem = 100
@@ -61,7 +61,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 		var ok bool
 		b.prob, ok = sql3util.ParseFloat(arg[1])
 		if !ok || b.prob <= 0 || b.prob >= 1 {
-			return nil, util.ErrorString("bloom: probability must be in the range (0,1)")
+			return nil, errutil.ErrorString("bloom: probability must be in the range (0,1)")
 		}
 	} else {
 		b.prob = 0.01
@@ -73,7 +73,7 @@ func create(db *sqlite3.Conn, _, schema, table string, arg ...string) (_ *bloom,
 			return nil, err
 		}
 		if b.hashes <= 0 {
-			return nil, util.ErrorString("bloom: number of hash functions must be positive")
+			return nil, errutil.ErrorString("bloom: number of hash functions must be positive")
 		}
 	} else {
 		b.hashes = max(1, numHashes(b.prob))
@@ -175,7 +175,7 @@ func (t *bloom) Integrity(schema, table string, flags int) error {
 	}
 	defer load.Close()
 
-	err = util.ErrorString("bloom: invalid parameters")
+	err = errutil.ErrorString("bloom: invalid parameters")
 	if !load.Step() {
 		return err
 	}
@@ -217,9 +217,9 @@ func (b *bloom) BestIndex(idx *sqlite3.IndexInfo) error {
 func (b *bloom) Update(arg ...sqlite3.Value) (rowid int64, err error) {
 	if arg[0].Type() != sqlite3.NULL {
 		if len(arg) == 1 {
-			return 0, util.ErrorString("bloom: elements cannot be deleted")
+			return 0, errutil.ErrorString("bloom: elements cannot be deleted")
 		}
-		return 0, util.ErrorString("bloom: elements cannot be updated")
+		return 0, errutil.ErrorString("bloom: elements cannot be updated")
 	}
 
 	if arg[2].NoChange() {

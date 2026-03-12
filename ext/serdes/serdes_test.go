@@ -8,15 +8,15 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/serdes"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 //go:embed testdata/wal.db
 var walDB []byte
 
 func Test_wal(t *testing.T) {
-	db, err := sqlite3.Open("testdata/wal.db")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), "testdata/wal.db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func Test_northwind(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func httpGet() ([]byte, error) {
 }
 
 func TestOpen_errors(t *testing.T) {
-	_, err := sqlite3.Open("file:test.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
+	_, err := sqlite3.OpenContext(testcfg.Context(t), "file:test.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
 	if err == nil {
 		t.Error("want error")
 	}
@@ -105,7 +105,7 @@ func TestOpen_errors(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN", err)
 	}
 
-	_, err = sqlite3.Open("file:serdes.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
+	_, err = sqlite3.OpenContext(testcfg.Context(t), "file:serdes.db?vfs=github.com/ncruces/go-sqlite3/ext/serdes.sliceVFS")
 	if err == nil {
 		t.Error("want error")
 	}

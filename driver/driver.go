@@ -1,10 +1,8 @@
 // Package driver provides a database/sql driver for SQLite.
 //
 // Importing package driver registers a [database/sql] driver named "sqlite3".
-// You may also need to import package embed.
 //
 //	import _ "github.com/ncruces/go-sqlite3/driver"
-//	import _ "github.com/ncruces/go-sqlite3/embed"
 //
 // The data source name for "sqlite3" databases can be a filename or a "file:" [URI].
 //
@@ -110,6 +108,7 @@ import (
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -343,7 +342,7 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 	var txLock string
 	switch opts.Isolation {
 	default:
-		return nil, util.IsolationErr
+		return nil, errutil.IsolationErr
 	case driver.IsolationLevel(sql.LevelLinearizable):
 		txLock = "exclusive"
 	case driver.IsolationLevel(sql.LevelSerializable):
@@ -405,7 +404,7 @@ func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, e
 	}
 	if notWhitespace(tail) {
 		s.Close()
-		return nil, util.TailErr
+		return nil, errutil.TailErr
 	}
 	return &stmt{Stmt: s, tmRead: c.tmRead, tmWrite: c.tmWrite, inputs: -2}, nil
 }
@@ -549,7 +548,7 @@ func (s *stmt) setupBindings(args []driver.NamedValue) (err error) {
 			case nil:
 				err = s.Stmt.BindNull(id)
 			default:
-				panic(util.AssertErr())
+				panic(errutil.AssertErr())
 			}
 			if err != nil {
 				return err

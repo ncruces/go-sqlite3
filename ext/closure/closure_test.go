@@ -8,9 +8,8 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/ncruces/go-sqlite3/ext/closure"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func TestMain(m *testing.M) {
@@ -89,7 +88,7 @@ func Example() {
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +156,7 @@ func TestRegister(t *testing.T) {
 func Test_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

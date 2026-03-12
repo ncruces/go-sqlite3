@@ -5,8 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func Test_namedValues(t *testing.T) {
@@ -55,7 +54,8 @@ func Fuzz_notWhitespace(f *testing.F) {
 			t.SkipNow()
 		}
 
-		c, err := db.Conn(t.Context())
+		ctx := testcfg.Context(t)
+		c, err := db.Conn(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}

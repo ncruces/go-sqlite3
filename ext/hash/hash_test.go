@@ -14,8 +14,7 @@ import (
 	_ "golang.org/x/crypto/ripemd160"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -55,6 +54,7 @@ func TestRegister(t *testing.T) {
 		{"blake2b('', 256)", "0E5751C026E543B2E8AB2EB06099DAA1D1E5DF47778F7787FAAB45CDF12FE3A8"},
 	}
 
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +65,7 @@ func TestRegister(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var hash string
 
-			err = db.QueryRow(`SELECT hex(` + tt.name + `)`).Scan(&hash)
+			err = db.QueryRowContext(ctx, `SELECT hex(`+tt.name+`)`).Scan(&hash)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -76,22 +76,22 @@ func TestRegister(t *testing.T) {
 		})
 	}
 
-	_, err = db.Exec(`SELECT sha256('', 255)`)
+	_, err = db.ExecContext(ctx, `SELECT sha256('', 255)`)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	_, err = db.Exec(`SELECT sha512('', 255)`)
+	_, err = db.ExecContext(ctx, `SELECT sha512('', 255)`)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	_, err = db.Exec(`SELECT sha3('', 255)`)
+	_, err = db.ExecContext(ctx, `SELECT sha3('', 255)`)
 	if err == nil {
 		t.Error("want error")
 	}
 
-	_, err = db.Exec(`SELECT blake2b('', 255)`)
+	_, err = db.ExecContext(ctx, `SELECT blake2b('', 255)`)
 	if err == nil {
 		t.Error("want error")
 	}

@@ -5,14 +5,13 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func TestCreateFunction(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +195,7 @@ func TestCreateFunction(t *testing.T) {
 func TestCreateFunction_error(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +231,7 @@ func TestCreateFunction_error(t *testing.T) {
 }
 
 func TestCreateFunction_delete(t *testing.T) {
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +251,7 @@ func TestCreateFunction_delete(t *testing.T) {
 func TestOverloadFunction(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +271,7 @@ func TestOverloadFunction(t *testing.T) {
 func TestAnyCollationNeeded(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +324,7 @@ func TestAnyCollationNeeded(t *testing.T) {
 func TestPointer(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.Open(":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"
-	_ "github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 //go:embed testdata/wal.db
@@ -16,7 +15,7 @@ func Test_wal(t *testing.T) {
 	t.Parallel()
 	dsn := TestDB(t, NewSnapshot(walDB))
 
-	db, err := sqlite3.Open(dsn)
+	db, err := sqlite3.OpenContext(testcfg.Context(t), dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

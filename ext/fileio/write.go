@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/util/fsutil"
 )
 
 func writefile(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if len(arg) < 2 || len(arg) > 4 {
-		ctx.ResultError(util.ErrorString("writefile: wrong number of arguments"))
+		ctx.ResultError(errutil.ErrorString("writefile: wrong number of arguments"))
 		return
 	}
 

@@ -2,12 +2,11 @@ package vfs
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"encoding/binary"
 
-	"github.com/tetratelabs/wazero/api"
-
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -86,14 +85,14 @@ func (c *cksmFile) DeviceCharacteristics() DeviceCharacteristic {
 	return ret
 }
 
-func (c *cksmFile) fileControl(ctx context.Context, mod api.Module, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
+func (c *cksmFile) fileControl(wrp *sqlite3_wrap.Wrapper, op _FcntlOpcode, pArg ptr_t) _ErrorCode {
 	if op == _FCNTL_PRAGMA {
-		rc := vfsFileControlImpl(ctx, mod, c, op, pArg)
+		rc := vfsFileControlImpl(wrp, c, op, pArg)
 		if rc != _NOTFOUND {
 			return rc
 		}
 	}
-	return vfsFileControlImpl(ctx, mod, c.File, op, pArg)
+	return vfsFileControlImpl(wrp, c.File, op, pArg)
 }
 
 func (c *cksmFile) init(header *[100]byte) {
@@ -126,7 +125,7 @@ func cksmCompute(a []byte) (cksm [8]byte) {
 		a = a[8:]
 	}
 	if len(a) != 0 {
-		panic(util.AssertErr())
+		panic(errutil.AssertErr())
 	}
 	binary.LittleEndian.PutUint32(cksm[0:4], s1)
 	binary.LittleEndian.PutUint32(cksm[4:8], s2)

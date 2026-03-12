@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 // Register registers the SQL functions:
@@ -111,7 +111,7 @@ func writeblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 
 func openblob(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	if len(arg) < 6 {
-		ctx.ResultError(util.ErrorString("openblob: wrong number of arguments"))
+		ctx.ResultError(errutil.ErrorString("openblob: wrong number of arguments"))
 		return
 	}
 

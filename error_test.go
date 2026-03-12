@@ -6,12 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ncruces/go-sqlite3/internal/util"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 func Test_assertErr(t *testing.T) {
-	err := util.AssertErr()
-	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:13)") {
+	err := errutil.AssertErr()
+	if s := err.Error(); !strings.HasPrefix(s, "sqlite3: assertion failed") || !strings.HasSuffix(s, "error_test.go:14)") {
 		t.Errorf("got %q", s)
 	}
 }
@@ -127,7 +128,7 @@ func TestError_Timeout(t *testing.T) {
 func Test_ErrorCode_Error(t *testing.T) {
 	t.Parallel()
 
-	db, err := Open(":memory:")
+	db, err := OpenContext(testContext(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,8 +137,8 @@ func Test_ErrorCode_Error(t *testing.T) {
 	// Test all error codes.
 	for i := 0; i == int(ErrorCode(i)); i++ {
 		want := "sqlite3: "
-		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
-		want += util.ReadString(db.mod, ptr, _MAX_NAME)
+		ptr := ptr_t(db.wrp.Xsqlite3_errstr(int32(i)))
+		want += db.wrp.ReadString(ptr, _MAX_NAME)
 
 		got := ErrorCode(i).Error()
 		if got != want {
@@ -149,7 +150,7 @@ func Test_ErrorCode_Error(t *testing.T) {
 func Test_ExtendedErrorCode_Error(t *testing.T) {
 	t.Parallel()
 
-	db, err := Open(":memory:")
+	db, err := OpenContext(testContext(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,8 +159,8 @@ func Test_ExtendedErrorCode_Error(t *testing.T) {
 	// Test all extended error codes.
 	for i := 0; i == int(xErrorCode(i)); i++ {
 		want := "sqlite3: "
-		ptr := ptr_t(db.call("sqlite3_errstr", stk_t(i)))
-		want += util.ReadString(db.mod, ptr, _MAX_NAME)
+		ptr := ptr_t(db.wrp.Xsqlite3_errstr(int32(i)))
+		want += db.wrp.ReadString(ptr, _MAX_NAME)
 
 		got := xErrorCode(i).Error()
 		if got != want {
@@ -175,14 +176,14 @@ func Test_errorCode(t *testing.T) {
 		wantCode res_t
 	}{
 		{nil, "", _OK},
-		{ERROR, "", util.ERROR},
-		{IOERR, "", util.IOERR},
-		{IOERR_READ, "", util.IOERR_READ},
-		{&Error{code: util.ERROR}, "", util.ERROR},
-		{fmt.Errorf("%w", ERROR), ERROR.Error(), util.ERROR},
-		{fmt.Errorf("%w", IOERR), IOERR.Error(), util.IOERR},
-		{fmt.Errorf("%w", IOERR_READ), IOERR_READ.Error(), util.IOERR_READ},
-		{fmt.Errorf("error"), "error", util.ERROR},
+		{ERROR, "", sqlite3_wrap.ERROR},
+		{IOERR, "", sqlite3_wrap.IOERR},
+		{IOERR_READ, "", sqlite3_wrap.IOERR_READ},
+		{&Error{code: sqlite3_wrap.ERROR}, "", sqlite3_wrap.ERROR},
+		{fmt.Errorf("%w", ERROR), ERROR.Error(), sqlite3_wrap.ERROR},
+		{fmt.Errorf("%w", IOERR), IOERR.Error(), sqlite3_wrap.IOERR},
+		{fmt.Errorf("%w", IOERR_READ), IOERR_READ.Error(), sqlite3_wrap.IOERR_READ},
+		{fmt.Errorf("error"), "error", sqlite3_wrap.ERROR},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
