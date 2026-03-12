@@ -1,19 +1,21 @@
 package mptest
 
 import (
-	"bufio"
 	"context"
 	"embed"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	_ "unsafe"
 
 	_ "github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/internal/testcfg"
-	"github.com/ncruces/go-sqlite3/internal/testfs"
+	"github.com/ncruces/go-sqlite3/internal/testenv"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -23,9 +25,6 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
-//go:embed testdata/*
-var scripts embed.FS
-
 const ptrlen = sqlite3_wrap.PtrLen
 
 type ptr_t = sqlite3_wrap.Ptr_t
@@ -33,13 +32,17 @@ type ptr_t = sqlite3_wrap.Ptr_t
 //go:linkname createWrapper github.com/ncruces/go-sqlite3.createWrapper
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
 
+//go:embed testdata/*
+var scripts embed.FS
+
 func init() {
-	testfs.Stdout = bufio.NewWriter(os.Stdout)
-	testfs.Stderr = bufio.NewWriter(os.Stderr)
-	testfs.FS, _ = fs.Sub(scripts, "testdata")
+	testenv.Exit = exit
+	testenv.System = system
+	testenv.FS, _ = fs.Sub(scripts, "testdata")
 }
 
 func runTest(t *testing.T, args ...string) {
+	testenv.TB = t
 	wrp, err := createWrapper(testcfg.Context(t))
 	if err != nil {
 		t.Fatal(err)
@@ -238,4 +241,45 @@ func Test_crash01_xts_wal(t *testing.T) {
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "xts", "--journalmode", "wal")
+}
+
+func system(wrp *sqlite3_wrap.Wrapper, ptr int32) int32 {
+	if ptr == 0 {
+		return 0
+	}
+
+	s := wrp.ReadString(ptr_t(ptr), 1e6)
+
+	args := strings.Split(s, " ")
+	for i := range args {
+		args[i] = strings.Trim(args[i], `"`)
+	}
+	if args[0] != "mptest" || args[len(args)-1] != "&" {
+		return -1
+	}
+	args = args[:len(args)-1]
+
+	go func() {
+		wrp, err := createWrapper(testcfg.Context(testenv.TB))
+		if err != nil {
+			panic(err)
+		}
+		defer wrp.Close()
+
+		argv := wrp.New(int64(ptrlen * len(args)))
+		for i, a := range args {
+			wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
+		}
+
+		defer func() { recover() }()
+		wrp.Xmain_mptest(int32(len(args)), int32(argv))
+	}()
+	return 0
+}
+
+func exit(c int32) {
+	if c != 0 {
+		panic(fmt.Sprint("exit error: ", c))
+	}
+	runtime.Goexit()
 }
