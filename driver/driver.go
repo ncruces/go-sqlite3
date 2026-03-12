@@ -1,7 +1,6 @@
 // Package driver provides a database/sql driver for SQLite.
 //
 // Importing package driver registers a [database/sql] driver named "sqlite3".
-// You may also need to import package embed.
 //
 //	import _ "github.com/ncruces/go-sqlite3/driver"
 //

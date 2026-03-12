@@ -58,6 +58,17 @@ func (e env) Xexit(c int32) {
 	runtime.Goexit()
 }
 
+func (e env) Xputs(ptr int32) int32 {
+	s := e.ReadString(ptr_t(ptr), _MAX_NAME)
+	if _, err := os.Stdout.WriteString(s); err != nil {
+		return -1
+	}
+	if _, err := os.Stdout.WriteString("\n"); err != nil {
+		return -1
+	}
+	return 0
+}
+
 func (e env) Xfclose(h int32) int32 {
 	var err error
 	switch h {
@@ -146,14 +157,6 @@ func (e env) Xfwrite(ptr, sz, cnt, h int32) int32 {
 	b := e.Buf[ptr:][:sz*cnt]
 	n, _ := f.Write(b)
 	return int32(n / int(sz))
-}
-
-func (e env) Xputs(ptr int32) int32 {
-	s := e.ReadString(ptr_t(ptr), _MAX_NAME)
-	if _, err := os.Stdout.WriteString(s); err != nil {
-		return -1
-	}
-	return 0
 }
 
 func (e env) Xftell(h int32) int32 {

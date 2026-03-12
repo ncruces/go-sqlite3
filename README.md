@@ -33,8 +33,6 @@ db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 - [`github.com/ncruces/go-sqlite3/driver`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver)
   provides a [`database/sql`](https://pkg.go.dev/database/sql) driver
   ([example](https://pkg.go.dev/github.com/ncruces/go-sqlite3/driver#example-package)).
-- [`github.com/ncruces/go-sqlite3/embed`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/embed)
-  embeds a build of SQLite into your application.
 - [`github.com/ncruces/go-sqlite3/vfs`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/vfs)
   wraps the [C SQLite VFS API](https://sqlite.org/vfs.html) and provides a pure Go implementation.
 - [`github.com/ncruces/go-sqlite3/gormlite`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/gormlite)
@@ -63,7 +61,6 @@ db.QueryRow(`SELECT sqlite_version()`).Scan(&version)
 - [statistics functions](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
 - [encryption at rest](vfs/adiantum/README.md)
 - [many extensions](ext/README.md)
-- [and more…](embed/README.md)
 
 ### Caveats
 
