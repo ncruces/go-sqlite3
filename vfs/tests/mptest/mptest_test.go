@@ -1,7 +1,10 @@
 package mptest
 
 import (
+	"bufio"
 	"context"
+	"embed"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,7 +12,8 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/testfs"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -19,6 +23,9 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
+//go:embed testdata/*
+var scripts embed.FS
+
 const ptrlen = sqlite3_wrap.PtrLen
 
 type ptr_t = sqlite3_wrap.Ptr_t
@@ -26,8 +33,14 @@ type ptr_t = sqlite3_wrap.Ptr_t
 //go:linkname createWrapper github.com/ncruces/go-sqlite3.createWrapper
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
 
+func init() {
+	testfs.Stdout = bufio.NewWriter(os.Stdout)
+	testfs.Stderr = bufio.NewWriter(os.Stderr)
+	testfs.FS, _ = fs.Sub(scripts, "testdata")
+}
+
 func runTest(t *testing.T, args ...string) {
-	wrp, err := createWrapper(testutil.Context(t))
+	wrp, err := createWrapper(testcfg.Context(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +62,7 @@ func Test_config01(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/config01.test")
+	runTest(t, "mptest", name, "config01.test")
 }
 
 func Test_config02(t *testing.T) {
@@ -64,7 +77,7 @@ func Test_config02(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/config02.test")
+	runTest(t, "mptest", name, "config02.test")
 }
 
 func Test_crash01(t *testing.T) {
@@ -76,7 +89,7 @@ func Test_crash01(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/crash01.test")
+	runTest(t, "mptest", name, "crash01.test")
 }
 
 func Test_multiwrite01(t *testing.T) {
@@ -88,12 +101,12 @@ func Test_multiwrite01(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/multiwrite01.test")
+	runTest(t, "mptest", name, "multiwrite01.test")
 }
 
 func Test_config01_memory(t *testing.T) {
 	memdb.Create("test.db", nil)
-	runTest(t, "mptest", "/test.db", "testdata/config01.test",
+	runTest(t, "mptest", "/test.db", "config01.test",
 		"--vfs", "memdb")
 }
 
@@ -103,13 +116,13 @@ func Test_multiwrite01_memory(t *testing.T) {
 	}
 
 	memdb.Create("test.db", nil)
-	runTest(t, "mptest", "/test.db", "testdata/multiwrite01.test",
+	runTest(t, "mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "memdb")
 }
 
 func Test_config01_mvcc(t *testing.T) {
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "testdata/config01.test",
+	runTest(t, "mptest", "/test.db", "config01.test",
 		"--vfs", "mvcc")
 }
 
@@ -119,7 +132,7 @@ func Test_crash01_mvcc(t *testing.T) {
 	}
 
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "testdata/crash01.test",
+	runTest(t, "mptest", "/test.db", "crash01.test",
 		"--vfs", "mvcc")
 }
 
@@ -129,7 +142,7 @@ func Test_multiwrite01_mvcc(t *testing.T) {
 	}
 
 	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "testdata/multiwrite01.test",
+	runTest(t, "mptest", "/test.db", "multiwrite01.test",
 		"--vfs", "mvcc")
 }
 
@@ -142,7 +155,7 @@ func Test_crash01_wal(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--journalmode", "wal")
 }
 
@@ -155,7 +168,7 @@ func Test_multiwrite01_wal(t *testing.T) {
 	}
 
 	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "testdata/multiwrite01.test",
+	runTest(t, "mptest", name, "multiwrite01.test",
 		"--journalmode", "wal")
 }
 
@@ -172,7 +185,7 @@ func Test_crash01_adiantum(t *testing.T) {
 
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "testdata/crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "adiantum")
 }
 
@@ -189,7 +202,7 @@ func Test_crash01_adiantum_wal(t *testing.T) {
 
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "testdata/crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "adiantum", "--journalmode", "wal")
 }
 
@@ -206,7 +219,7 @@ func Test_crash01_xts(t *testing.T) {
 
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "testdata/crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "xts")
 }
 
@@ -223,6 +236,6 @@ func Test_crash01_xts_wal(t *testing.T) {
 
 	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
 		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "testdata/crash01.test",
+	runTest(t, "mptest", name, "crash01.test",
 		"--vfs", "xts", "--journalmode", "wal")
 }

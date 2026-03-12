@@ -9,7 +9,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/ext/pivot"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 // https://antonz.org/sqlite-pivot-table/
@@ -91,7 +91,7 @@ func TestMain(m *testing.M) {
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestRegister(t *testing.T) {
 func TestRegister_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,17 +1,19 @@
 package sqlite3
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/ncruces/go-sqlite3/internal/testfs"
 )
 
 // These libc functions are only used by tests,
-// and need to be further locked down.
+// they should only work under testing.
 
 func (e env) Xsystem(ptr int32) int32 {
 	if !testing.Testing() {
@@ -60,118 +62,101 @@ func (e env) Xexit(c int32) {
 
 func (e env) Xputs(ptr int32) int32 {
 	s := e.ReadString(ptr_t(ptr), _MAX_NAME)
-	if _, err := os.Stdout.WriteString(s); err != nil {
-		return -1
-	}
-	if _, err := os.Stdout.WriteString("\n"); err != nil {
-		return -1
-	}
+	testfs.Stdout.WriteString(s)
+	testfs.Stdout.WriteByte('\n')
 	return 0
 }
 
 func (e env) Xfclose(h int32) int32 {
-	var err error
 	switch h {
 	case 0:
-		//
-	case 1:
-		err = os.Stdout.Sync()
-	case 2:
-		err = os.Stderr.Sync()
-	default:
-		err = e.DelHandle(ptr_t(h))
+		return -1
+	case 1, 2:
+		return e.Xfflush(h)
 	}
-	if err != nil {
+	if e.DelHandle(ptr_t(h)) != nil {
 		return -1
 	}
 	return 0
 }
 
 func (e env) Xfopen(path, mode int32) int32 {
-	p := e.ReadString(ptr_t(path), _MAX_NAME)
-	m := e.ReadString(ptr_t(mode), _MAX_NAME)
-
-	var flag int
-	if len(m) > 0 {
-		switch m[0] {
-		case 'r':
-			flag = os.O_RDONLY
-		case 'w':
-			flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-		case 'a':
-			flag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-		}
-		if m[len(m)-1] == '+' {
-			flag &^= os.O_RDONLY | os.O_WRONLY
-			flag |= os.O_RDWR
-		}
+	if testfs.FS == nil {
+		return 0
 	}
 
-	f, err := os.OpenFile(string(p), flag, 0666)
+	p := e.ReadString(ptr_t(path), _MAX_NAME)
+	f, err := testfs.FS.Open(p)
 	if err != nil {
 		return 0
 	}
 	return int32(e.AddHandle(f))
 }
 
-func (e env) getf(h int32) *os.File {
-	switch h {
-	case 0:
-		return os.Stdin
-	case 1:
-		return os.Stdout
-	case 2:
-		return os.Stderr
-	default:
-		return e.GetHandle(ptr_t(h)).(*os.File)
-	}
-}
-
 func (e env) Xfflush(h int32) int32 {
-	f := e.getf(h)
-	if err := f.Sync(); err != nil {
+	w := getw(h)
+	if w == nil {
+		return -1
+	}
+	if w.Flush() != nil {
 		return -1
 	}
 	return 0
 }
 
 func (e env) Xfputc(c, h int32) int32 {
-	f := e.getf(h)
-	var b [1]byte
-	b[0] = byte(c)
-	if _, err := f.Write(b[:]); err != nil {
+	w := getw(h)
+	if w == nil {
+		return -1
+	}
+	if w.WriteByte(byte(c)) != nil {
 		return -1
 	}
 	return 0
 }
 
+func (e env) Xfwrite(ptr, sz, cnt, h int32) int32 {
+	w := getw(h)
+	if w == nil {
+		return 0
+	}
+	b := e.Buf[ptr:][:sz*cnt]
+	n, _ := w.Write(b)
+	return int32(n / int(sz))
+}
+
 func (e env) Xfread(ptr, sz, cnt, h int32) int32 {
-	f := e.getf(h)
+	f := e.GetHandle(ptr_t(h)).(io.Reader)
 	b := e.Buf[ptr:][:sz*cnt]
 	n, _ := f.Read(b)
 	return int32(n / int(sz))
 }
 
-func (e env) Xfwrite(ptr, sz, cnt, h int32) int32 {
-	f := e.getf(h)
-	b := e.Buf[ptr:][:sz*cnt]
-	n, _ := f.Write(b)
-	return int32(n / int(sz))
-}
-
 func (e env) Xftell(h int32) int32 {
-	f := e.getf(h)
-	if n, err := f.Seek(0, io.SeekEnd); err != nil {
+	f := e.GetHandle(ptr_t(h)).(io.Seeker)
+	n, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
 		return -1
-	} else {
-		return int32(n)
 	}
+	return int32(n)
 }
 
 func (e env) Xfseek(h, offset, whence int32) int32 {
-	f := e.getf(h)
-	if _, err := f.Seek(int64(offset), int(whence)); err != nil {
+	f := e.GetHandle(ptr_t(h)).(io.Seeker)
+	_, err := f.Seek(int64(offset), int(whence))
+	if err != nil {
 		return -1
 	}
 	return 0
+}
+
+func getw(h int32) *bufio.Writer {
+	switch h {
+	case 1:
+		return testfs.Stdout
+	case 2:
+		return testfs.Stderr
+	default:
+		return nil
+	}
 }

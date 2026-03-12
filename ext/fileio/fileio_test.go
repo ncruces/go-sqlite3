@@ -10,7 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/fileio"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -18,7 +18,7 @@ func Test_lsmode(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, fileio.Register)
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +55,7 @@ func Test_readfile(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			dsn := memdb.TestDB(t)
 
-			ctx := testutil.Context(t)
+			ctx := testcfg.Context(t)
 			db, err := driver.Open(dsn, func(c *sqlite3.Conn) error {
 				fileio.RegisterFS(c, fsys)
 				return nil

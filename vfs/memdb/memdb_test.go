@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 //go:embed testdata/wal.db
@@ -16,7 +16,7 @@ func Test_wal(t *testing.T) {
 
 	Create("test.db", walDB)
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), "file:/test.db?vfs=memdb")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), "file:/test.db?vfs=memdb")
 	if err != nil {
 		t.Fatal(err)
 	}

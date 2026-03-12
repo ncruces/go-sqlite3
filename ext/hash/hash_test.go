@@ -14,7 +14,7 @@ import (
 	_ "golang.org/x/crypto/ripemd160"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -54,7 +54,7 @@ func TestRegister(t *testing.T) {
 		{"blake2b('', 256)", "0E5751C026E543B2E8AB2EB06099DAA1D1E5DF47778F7787FAAB45CDF12FE3A8"},
 	}
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)

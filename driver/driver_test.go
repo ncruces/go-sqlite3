@@ -13,7 +13,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -32,7 +32,7 @@ func Test_Open_error(t *testing.T) {
 func Test_Open_dir(t *testing.T) {
 	t.Parallel()
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(".")
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func Test_Open_pragma(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func Test_Open_pragma_invalid(t *testing.T) {
 		"_pragma": {"busy_timeout 1000"},
 	})
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func Test_Open_txLock(t *testing.T) {
 		"_pragma": {"busy_timeout(1000)"},
 	})
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -159,7 +159,7 @@ func Test_BeginTx(t *testing.T) {
 		"_pragma": {"busy_timeout(0)"},
 	})
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -204,7 +204,7 @@ func Test_nested_context(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -263,7 +263,7 @@ func Test_Prepare(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -305,7 +305,7 @@ func Test_QueryRow_named(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -356,7 +356,7 @@ func Test_QueryRow_blob_null(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -396,7 +396,7 @@ func Test_time(t *testing.T) {
 				"_timefmt": {fmt},
 			})
 
-			ctx := testutil.Context(t)
+			ctx := testcfg.Context(t)
 			db, err := Open(dsn)
 			if err != nil {
 				t.Fatal(err)
@@ -442,7 +442,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -531,7 +531,7 @@ func Test_ColumnType_ScanType(t *testing.T) {
 }
 
 func Benchmark_loop(b *testing.B) {
-	ctx := testutil.Context(b)
+	ctx := testcfg.Context(b)
 	db, err := Open(":memory:")
 	if err != nil {
 		b.Fatal(err)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/util/ioutil"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/ncruces/go-sqlite3/vfs/readervfs"
@@ -21,7 +21,7 @@ func Test_fileformat(t *testing.T) {
 
 	readervfs.Create("test.db", ioutil.NewSizeReaderAt(strings.NewReader(cksmDB)))
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open("file:test.db?vfs=reader")
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func Test_fileformat(t *testing.T) {
 func Test_enable(t *testing.T) {
 	t.Parallel()
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(memdb.TestDB(t),
 		func(db *sqlite3.Conn) error {
 			return db.EnableChecksums("main")

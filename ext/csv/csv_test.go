@@ -8,7 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/ext/csv"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func Example() {
@@ -62,7 +62,7 @@ func TestMain(m *testing.M) {
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ Robert	"Griesemer"	"gri"`
 func TestAffinity(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestAffinity(t *testing.T) {
 func TestRegister_errors(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

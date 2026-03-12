@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestRegister(t *testing.T) {
 func TestRegister_collation(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestRegister_collation(t *testing.T) {
 func TestRegisterCollationsNeeded(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestRegisterCollationsNeeded(t *testing.T) {
 func TestRegister_error(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

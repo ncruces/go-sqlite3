@@ -8,7 +8,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -134,7 +134,7 @@ func TestTimeFormat_Scanner(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +174,7 @@ func TestTimeFormat_Scanner(t *testing.T) {
 func TestDB_timeCollation(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestDB_isoWeek(t *testing.T) {
 	}
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}

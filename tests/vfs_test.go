@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 	"github.com/ncruces/go-sqlite3/vfs/readervfs"
 )
@@ -13,7 +13,7 @@ import (
 func TestMemoryVFS_Open_notfound(t *testing.T) {
 	memdb.Delete("demo.db")
 
-	_, err := sqlite3.OpenContext(testutil.Context(t), "file:/demo.db?vfs=memdb&mode=ro")
+	_, err := sqlite3.OpenContext(testcfg.Context(t), "file:/demo.db?vfs=memdb&mode=ro")
 	if err == nil {
 		t.Error("want error")
 	}
@@ -25,7 +25,7 @@ func TestMemoryVFS_Open_notfound(t *testing.T) {
 func TestReaderVFS_Open_notfound(t *testing.T) {
 	readervfs.Delete("demo.db")
 
-	_, err := sqlite3.OpenContext(testutil.Context(t), "file:demo.db?vfs=reader")
+	_, err := sqlite3.OpenContext(testcfg.Context(t), "file:demo.db?vfs=reader")
 	if err == nil {
 		t.Error("want error")
 	}

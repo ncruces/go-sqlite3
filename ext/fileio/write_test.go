@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ncruces/go-sqlite3/driver"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
@@ -16,7 +16,7 @@ func Test_writefile(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	db, err := driver.Open(dsn, Register)
 	if err != nil {
 		t.Fatal(err)

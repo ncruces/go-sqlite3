@@ -6,7 +6,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -18,7 +18,7 @@ func TestWAL_enter_exit(t *testing.T) {
 
 	file := filepath.Join(t.TempDir(), "test.db")
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), file)
+	db, err := sqlite3.OpenContext(testcfg.Context(t), file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestWAL_readonly(t *testing.T) {
 	}
 	t.Parallel()
 
-	ctx := testutil.Context(t)
+	ctx := testcfg.Context(t)
 	tmp := filepath.ToSlash(filepath.Join(t.TempDir(), "test.db"))
 
 	db1, err := driver.Open("file:" + tmp + "?_pragma=journal_mode(wal)&_txlock=immediate")
@@ -112,7 +112,7 @@ func TestConn_WALCheckpoint(t *testing.T) {
 
 	file := filepath.Join(t.TempDir(), "test.db")
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), file)
+	db, err := sqlite3.OpenContext(testcfg.Context(t), file)
 	if err != nil {
 		t.Fatal(err)
 	}

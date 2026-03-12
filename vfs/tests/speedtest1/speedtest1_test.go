@@ -1,6 +1,7 @@
 package speedtest1
 
 import (
+	"bufio"
 	"context"
 	_ "embed"
 	"flag"
@@ -13,6 +14,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
+	"github.com/ncruces/go-sqlite3/internal/testfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
 	_ "github.com/ncruces/go-sqlite3/vfs/mvcc"
@@ -29,6 +31,8 @@ func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
 var options []string
 
 func TestMain(m *testing.M) {
+	testfs.Stdout = bufio.NewWriter(os.Stdout)
+	testfs.Stderr = bufio.NewWriter(os.Stderr)
 	initFlags()
 	os.Exit(m.Run())
 }

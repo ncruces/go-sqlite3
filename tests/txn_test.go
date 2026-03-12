@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/testutil"
+	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func TestConn_Transaction_exec(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestConn_Transaction_exec(t *testing.T) {
 func TestConn_Transaction_panic(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestConn_Transaction_panic(t *testing.T) {
 func TestConn_Transaction_interrupt(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(testutil.Context(t))
+	ctx, cancel := context.WithCancel(testcfg.Context(t))
 	db.SetInterrupt(ctx)
 
 	tx, err = db.BeginExclusive()
@@ -202,7 +202,7 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	db.SetInterrupt(testutil.Context(t))
+	db.SetInterrupt(testcfg.Context(t))
 	stmt, _, err := db.Prepare(`SELECT count(*) FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -219,13 +219,13 @@ func TestConn_Transaction_interrupt(t *testing.T) {
 func TestConn_Transaction_interrupted(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithCancel(testutil.Context(t))
+	ctx, cancel := context.WithCancel(testcfg.Context(t))
 	db.SetInterrupt(ctx)
 	cancel()
 
@@ -247,13 +247,13 @@ func TestConn_Transaction_busy(t *testing.T) {
 	t.Parallel()
 	dsn := memdb.TestDB(t)
 
-	db1, err := sqlite3.OpenContext(testutil.Context(t), dsn)
+	db1, err := sqlite3.OpenContext(testcfg.Context(t), dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db1.Close()
 
-	db2, err := sqlite3.OpenContext(testutil.Context(t), dsn+"&_pragma=busy_timeout(10000)")
+	db2, err := sqlite3.OpenContext(testcfg.Context(t), dsn+"&_pragma=busy_timeout(10000)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestConn_Transaction_busy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(testutil.Context(t))
+	ctx, cancel := context.WithCancel(testcfg.Context(t))
 	db2.SetInterrupt(ctx)
 	go cancel()
 
@@ -293,7 +293,7 @@ func TestConn_Transaction_busy(t *testing.T) {
 func TestConn_Transaction_rollback(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ func TestConn_Transaction_rollback(t *testing.T) {
 func TestConn_Transaction_concurrent(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +349,7 @@ func TestConn_Transaction_concurrent(t *testing.T) {
 func TestConn_Savepoint_exec(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +416,7 @@ func TestConn_Savepoint_exec(t *testing.T) {
 func TestConn_Savepoint_panic(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +471,7 @@ func TestConn_Savepoint_panic(t *testing.T) {
 func TestConn_Savepoint_interrupt(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +492,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(testutil.Context(t))
+	ctx, cancel := context.WithCancel(testcfg.Context(t))
 	db.SetInterrupt(ctx)
 
 	savept1 := db.Savepoint()
@@ -529,7 +529,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 		t.Errorf("got %v, want sqlite3.INTERRUPT", err)
 	}
 
-	db.SetInterrupt(testutil.Context(t))
+	db.SetInterrupt(testcfg.Context(t))
 	stmt, _, err := db.Prepare(`SELECT count(*) FROM test`)
 	if err != nil {
 		t.Fatal(err)
@@ -546,7 +546,7 @@ func TestConn_Savepoint_interrupt(t *testing.T) {
 func TestConn_Savepoint_rollback(t *testing.T) {
 	t.Parallel()
 
-	db, err := sqlite3.OpenContext(testutil.Context(t), ":memory:")
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
