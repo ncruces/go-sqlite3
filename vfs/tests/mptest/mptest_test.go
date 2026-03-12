@@ -1,5 +1,3 @@
-//go:build mptest
-
 package mptest
 
 import (
@@ -11,6 +9,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
+	"github.com/ncruces/go-sqlite3/internal/testutil"
 	"github.com/ncruces/go-sqlite3/vfs"
 	_ "github.com/ncruces/go-sqlite3/vfs/adiantum"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
@@ -20,21 +19,15 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
-const (
-	ptrlen = sqlite3_wrap.PtrLen
-	intlen = sqlite3_wrap.IntLen
-)
+const ptrlen = sqlite3_wrap.PtrLen
 
-type (
-	ptr_t = sqlite3_wrap.Ptr_t
-	res_t = sqlite3_wrap.Res_t
-)
+type ptr_t = sqlite3_wrap.Ptr_t
 
 //go:linkname createWrapper github.com/ncruces/go-sqlite3.createWrapper
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
 
 func runTest(t *testing.T, args ...string) {
-	wrp, err := createWrapper(t.Context())
+	wrp, err := createWrapper(testutil.Context(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,8 +38,8 @@ func runTest(t *testing.T, args ...string) {
 		wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
 	}
 
-	if c := wrp.X__main_argc_argv(int32(len(args)), int32(argv)); c != 0 {
-		t.Error("exit error:", c)
+	if c := wrp.Xmain_mptest(int32(len(args)), int32(argv)); c != 0 {
+		t.Error("exit error: ", c)
 	}
 }
 

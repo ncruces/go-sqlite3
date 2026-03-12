@@ -189,7 +189,7 @@ func (e env) Xstrstr(haystack, needle int32) int32 {
 	return haystack + int32(i)
 }
 
-func (e *env) Xstrcpy(d, s int32) int32 {
+func (e env) Xstrcpy(d, s int32) int32 {
 	m := e.Buf[s:]
 	m = m[:bytes.IndexByte(m, 0)+1]
 	copy(e.Buf[d:], m)

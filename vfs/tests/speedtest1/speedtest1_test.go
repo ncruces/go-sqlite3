@@ -1,5 +1,3 @@
-//go:build speedtest1
-
 package speedtest1
 
 import (
@@ -21,15 +19,9 @@ import (
 	_ "github.com/ncruces/go-sqlite3/vfs/xts"
 )
 
-const (
-	ptrlen = sqlite3_wrap.PtrLen
-	intlen = sqlite3_wrap.IntLen
-)
+const ptrlen = sqlite3_wrap.PtrLen
 
-type (
-	ptr_t = sqlite3_wrap.Ptr_t
-	res_t = sqlite3_wrap.Res_t
-)
+type ptr_t = sqlite3_wrap.Ptr_t
 
 //go:linkname createWrapper github.com/ncruces/go-sqlite3.createWrapper
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error)
@@ -79,7 +71,7 @@ func runBenchmark(b *testing.B, args ...string) {
 		wrp.Write32(argv+ptr_t(i)*ptrlen, uint32(wrp.NewString(a)))
 	}
 
-	wrp.X__main_argc_argv(int32(len(args)), int32(argv))
+	wrp.Xmain_speedtest1(int32(len(args)), int32(argv))
 }
 
 func Benchmark_speedtest1(b *testing.B) {

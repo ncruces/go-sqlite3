@@ -1,5 +1,3 @@
-//go:build mptest || speedtest1
-
 package sqlite3
 
 import (
@@ -8,19 +6,17 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
+	"testing"
 )
 
-// These libc functions are only used by tests.
+// These libc functions are only used by tests,
+// and need to be further locked down.
 
-func (e env) Xatoi(ptr int32) int32 {
-	s := e.ReadString(ptr_t(ptr), _MAX_NAME)
-	i, _ := strconv.Atoi(strings.TrimSpace(s))
-	return int32(i)
-}
-
-func (e *env) Xsystem(ptr int32) int32 {
+func (e env) Xsystem(ptr int32) int32 {
+	if !testing.Testing() {
+		return -1
+	}
 	if ptr == 0 {
 		return 0
 	}
@@ -31,10 +27,14 @@ func (e *env) Xsystem(ptr int32) int32 {
 	for i := range args {
 		args[i] = strings.Trim(args[i], `"`)
 	}
+	if args[0] != "mptest" || args[len(args)-1] != "&" {
+		return -1
+	}
 	args = args[:len(args)-1]
 
 	go func() {
-		wrp, err := createWrapper(context.TODO())
+		ctx := WithMaxMemory(context.TODO(), 32*1024*1024)
+		wrp, err := createWrapper(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -46,27 +46,23 @@ func (e *env) Xsystem(ptr int32) int32 {
 		}
 
 		defer func() { recover() }()
-		wrp.X__main_argc_argv(int32(len(args)), int32(argv))
+		wrp.Xmain_mptest(int32(len(args)), int32(argv))
 	}()
 	return 0
 }
 
 func (e env) Xexit(c int32) {
-	if c != 0 {
-		panic(fmt.Sprint("exit error:", c))
+	if c != 0 || !testing.Testing() {
+		panic(fmt.Sprint("exit error: ", c))
 	}
 	runtime.Goexit()
-}
-
-func (e env) Xputchar(c int32) int32 {
-	return e.Xfputc(c, 1)
 }
 
 func (e env) Xfclose(h int32) int32 {
 	var err error
 	switch h {
 	case 0:
-		return 0
+		//
 	case 1:
 		err = os.Stdout.Sync()
 	case 2:
@@ -138,7 +134,7 @@ func (e env) Xfputc(c, h int32) int32 {
 	return 0
 }
 
-func (e *env) Xfread(ptr, sz, cnt, h int32) int32 {
+func (e env) Xfread(ptr, sz, cnt, h int32) int32 {
 	f := e.getf(h)
 	b := e.Buf[ptr:][:sz*cnt]
 	n, _ := f.Read(b)
@@ -160,7 +156,7 @@ func (e env) Xputs(ptr int32) int32 {
 	return 0
 }
 
-func (e *env) Xftell(h int32) int32 {
+func (e env) Xftell(h int32) int32 {
 	f := e.getf(h)
 	if n, err := f.Seek(0, io.SeekEnd); err != nil {
 		return -1
@@ -169,14 +165,10 @@ func (e *env) Xftell(h int32) int32 {
 	}
 }
 
-func (e *env) Xfseek(h, offset, whence int32) int32 {
+func (e env) Xfseek(h, offset, whence int32) int32 {
 	f := e.getf(h)
 	if _, err := f.Seek(int64(offset), int(whence)); err != nil {
 		return -1
 	}
 	return 0
-}
-
-func (e env) Xrewind(h int32) {
-	e.Xfseek(h, 0, io.SeekStart)
 }

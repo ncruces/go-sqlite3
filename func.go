@@ -175,25 +175,25 @@ func (c *Conn) OverloadFunction(name string, nArg int) error {
 	return c.error(rc)
 }
 
-func (e *env) Xgo_destroy(pApp int32) {
+func (e env) Xgo_destroy(pApp int32) {
 	e.DelHandle(ptr_t(pApp))
 }
 
-func (e *env) Xgo_collation_needed(pArg, pDB, eTextRep, zName int32) {
+func (e env) Xgo_collation_needed(pArg, pDB, eTextRep, zName int32) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.collation != nil {
 		name := e.ReadString(ptr_t(zName), _MAX_NAME)
 		c.collation(c, name)
 	}
 }
 
-func (e *env) Xgo_compare(pApp, nKey1, pKey1, nKey2, pKey2 int32) int32 {
+func (e env) Xgo_compare(pApp, nKey1, pKey1, nKey2, pKey2 int32) int32 {
 	fn := e.GetHandle(ptr_t(pApp)).(CollatingFunction)
 	return int32(fn(
 		e.Slice(ptr_t(pKey1), int64(nKey1)),
 		e.Slice(ptr_t(pKey2), int64(nKey2))))
 }
 
-func (e *env) Xgo_func(pCtx, pApp, nArg, pArg int32) {
+func (e env) Xgo_func(pCtx, pApp, nArg, pArg int32) {
 	db := e.DB.(*Conn)
 	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
@@ -201,7 +201,7 @@ func (e *env) Xgo_func(pCtx, pApp, nArg, pArg int32) {
 	fn(Context{db, ptr_t(pCtx)}, *args...)
 }
 
-func (e *env) Xgo_step(pCtx, pAgg, pApp, nArg, pArg int32) {
+func (e env) Xgo_step(pCtx, pAgg, pApp, nArg, pArg int32) {
 	db := e.DB.(*Conn)
 	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
@@ -209,7 +209,7 @@ func (e *env) Xgo_step(pCtx, pAgg, pApp, nArg, pArg int32) {
 	fn.Step(Context{db, ptr_t(pCtx)}, *args...)
 }
 
-func (e *env) Xgo_value(pCtx, pAgg, pApp, final int32) {
+func (e env) Xgo_value(pCtx, pAgg, pApp, final int32) {
 	db := e.DB.(*Conn)
 	fn, handle := callbackAggregate(db, ptr_t(pAgg), ptr_t(pApp))
 	fn.Value(Context{db, ptr_t(pCtx)})
@@ -229,7 +229,7 @@ func (e *env) Xgo_value(pCtx, pAgg, pApp, final int32) {
 	}
 }
 
-func (e *env) Xgo_inverse(pCtx, pAgg, nArg, pArg int32) {
+func (e env) Xgo_inverse(pCtx, pAgg, nArg, pArg int32) {
 	db := e.DB.(*Conn)
 	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)

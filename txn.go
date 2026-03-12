@@ -264,7 +264,7 @@ func (c *Conn) UpdateHook(cb func(action AuthorizerActionCode, schema, table str
 	c.update = cb
 }
 
-func (e *env) Xgo_commit_hook(pDB int32) (rollback int32) {
+func (e env) Xgo_commit_hook(pDB int32) (rollback int32) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.commit != nil {
 		if !c.commit() {
 			rollback = 1
@@ -273,13 +273,13 @@ func (e *env) Xgo_commit_hook(pDB int32) (rollback int32) {
 	return rollback
 }
 
-func (e *env) Xgo_rollback_hook(pDB int32) {
+func (e env) Xgo_rollback_hook(pDB int32) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.rollback != nil {
 		c.rollback()
 	}
 }
 
-func (e *env) Xgo_update_hook(pDB, action, zSchema, zTabName int32, rowid int64) {
+func (e env) Xgo_update_hook(pDB, action, zSchema, zTabName int32, rowid int64) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.update != nil {
 		schema := e.ReadString(ptr_t(zSchema), _MAX_NAME)
 		table := e.ReadString(ptr_t(zTabName), _MAX_NAME)
