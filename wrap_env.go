@@ -6,15 +6,15 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/testenv"
 )
 
-func (e env) Xexit(c int32) {
+func (e *env) Xexit(c int32) {
 	testenv.Exit(c)
 }
 
-func (e env) Xsystem(ptr int32) int32 {
+func (e *env) Xsystem(ptr int32) int32 {
 	return testenv.System(e.Wrapper, ptr)
 }
 
-func (e env) Xputs(ptr int32) int32 {
+func (e *env) Xputs(ptr int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}
@@ -24,7 +24,7 @@ func (e env) Xputs(ptr int32) int32 {
 	return 0
 }
 
-func (e env) Xfclose(h int32) int32 {
+func (e *env) Xfclose(h int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}
@@ -34,7 +34,7 @@ func (e env) Xfclose(h int32) int32 {
 	return 0
 }
 
-func (e env) Xfopen(path, mode int32) int32 {
+func (e *env) Xfopen(path, mode int32) int32 {
 	if testenv.TB == nil {
 		return 0
 	}
@@ -46,14 +46,14 @@ func (e env) Xfopen(path, mode int32) int32 {
 	return int32(e.AddHandle(f))
 }
 
-func (e env) Xfflush(h int32) int32 {
+func (e *env) Xfflush(h int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}
 	return 0
 }
 
-func (e env) Xfputc(c, h int32) int32 {
+func (e *env) Xfputc(c, h int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}
@@ -63,7 +63,7 @@ func (e env) Xfputc(c, h int32) int32 {
 	return 0
 }
 
-func (e env) Xfwrite(ptr, sz, cnt, h int32) int32 {
+func (e *env) Xfwrite(ptr, sz, cnt, h int32) int32 {
 	if testenv.TB == nil {
 		return 0
 	}
@@ -72,7 +72,7 @@ func (e env) Xfwrite(ptr, sz, cnt, h int32) int32 {
 	return int32(n / int(sz))
 }
 
-func (e env) Xfread(ptr, sz, cnt, h int32) int32 {
+func (e *env) Xfread(ptr, sz, cnt, h int32) int32 {
 	if testenv.TB == nil {
 		return 0
 	}
@@ -82,7 +82,7 @@ func (e env) Xfread(ptr, sz, cnt, h int32) int32 {
 	return int32(n / int(sz))
 }
 
-func (e env) Xftell(h int32) int32 {
+func (e *env) Xftell(h int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}
@@ -94,7 +94,7 @@ func (e env) Xftell(h int32) int32 {
 	return int32(n)
 }
 
-func (e env) Xfseek(h, offset, whence int32) int32 {
+func (e *env) Xfseek(h, offset, whence int32) int32 {
 	if testenv.TB == nil {
 		return -1
 	}

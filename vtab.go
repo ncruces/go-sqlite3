@@ -444,7 +444,7 @@ const (
 	INDEX_SCAN_HEX    IndexScanFlag = 0x00000002
 )
 
-func (e env) vtabModuleCallback(kind vtabConstructor, pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+func (e *env) vtabModuleCallback(kind vtabConstructor, pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
 	arg := make([]reflect.Value, 1+nArg)
 	arg[0] = reflect.ValueOf(e.DB)
 
@@ -463,26 +463,26 @@ func (e env) vtabModuleCallback(kind vtabConstructor, pMod, nArg, pArg, ppVTab, 
 	return e.vtabError(pzErr, _PTR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_create(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+func (e *env) Xgo_vtab_create(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
 	return e.vtabModuleCallback(xCreate, pMod, nArg, pArg, ppVTab, pzErr)
 }
 
-func (e env) Xgo_vtab_connect(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
+func (e *env) Xgo_vtab_connect(pMod, nArg, pArg, ppVTab, pzErr int32) int32 {
 	return e.vtabModuleCallback(xConnect, pMod, nArg, pArg, ppVTab, pzErr)
 }
 
-func (e env) Xgo_vtab_disconnect(pVTab int32) int32 {
+func (e *env) Xgo_vtab_disconnect(pVTab int32) int32 {
 	err := e.vtabDelHandle(pVTab)
 	return e.vtabError(0, _PTR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_destroy(pVTab int32) int32 {
+func (e *env) Xgo_vtab_destroy(pVTab int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabDestroyer)
 	err := errors.Join(vtab.Destroy(), e.vtabDelHandle(pVTab))
 	return e.vtabError(0, _PTR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_best_index(pVTab, pIdxInfo int32) int32 {
+func (e *env) Xgo_vtab_best_index(pVTab, pIdxInfo int32) int32 {
 	var info IndexInfo
 	info.handle = ptr_t(pIdxInfo)
 	info.c = e.DB.(*Conn)
@@ -495,7 +495,7 @@ func (e env) Xgo_vtab_best_index(pVTab, pIdxInfo int32) int32 {
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_update(pVTab, nArg, pArg, pRowID int32) int32 {
+func (e *env) Xgo_vtab_update(pVTab, nArg, pArg, pRowID int32) int32 {
 	db := e.DB.(*Conn)
 	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
@@ -509,13 +509,13 @@ func (e env) Xgo_vtab_update(pVTab, nArg, pArg, pRowID int32) int32 {
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_rename(pVTab, zNew int32) int32 {
+func (e *env) Xgo_vtab_rename(pVTab, zNew int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabRenamer)
 	err := vtab.Rename(e.ReadString(ptr_t(zNew), _MAX_NAME))
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_find_function(pVTab, nArg, zName, pxFunc int32) int32 {
+func (e *env) Xgo_vtab_find_function(pVTab, nArg, zName, pxFunc int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabOverloader)
 	f, op := vtab.FindFunction(int(nArg), e.ReadString(ptr_t(zName), _MAX_NAME))
 	if op != 0 {
@@ -529,7 +529,7 @@ func (e env) Xgo_vtab_find_function(pVTab, nArg, zName, pxFunc int32) int32 {
 	return int32(op)
 }
 
-func (e env) Xgo_vtab_integrity(pVTab, zSchema, zTabName, mFlags, pzErr int32) int32 {
+func (e *env) Xgo_vtab_integrity(pVTab, zSchema, zTabName, mFlags, pzErr int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabChecker)
 	schema := e.ReadString(ptr_t(zSchema), _MAX_NAME)
 	table := e.ReadString(ptr_t(zTabName), _MAX_NAME)
@@ -539,49 +539,49 @@ func (e env) Xgo_vtab_integrity(pVTab, zSchema, zTabName, mFlags, pzErr int32) i
 	return e.vtabError(pzErr, _PTR_ERROR, err, _OK)
 }
 
-func (e env) Xgo_vtab_begin(pVTab int32) int32 {
+func (e *env) Xgo_vtab_begin(pVTab int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Begin()
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_sync(pVTab int32) int32 {
+func (e *env) Xgo_vtab_sync(pVTab int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Sync()
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_commit(pVTab int32) int32 {
+func (e *env) Xgo_vtab_commit(pVTab int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Commit()
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_rollback(pVTab int32) int32 {
+func (e *env) Xgo_vtab_rollback(pVTab int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabTxn)
 	err := vtab.Rollback()
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_savepoint(pVTab, id int32) int32 {
+func (e *env) Xgo_vtab_savepoint(pVTab, id int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.Savepoint(int(id))
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_release(pVTab, id int32) int32 {
+func (e *env) Xgo_vtab_release(pVTab, id int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.Release(int(id))
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_vtab_rollback_to(pVTab, id int32) int32 {
+func (e *env) Xgo_vtab_rollback_to(pVTab, id int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTabSavepointer)
 	err := vtab.RollbackTo(int(id))
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_open(pVTab, ppCur int32) int32 {
+func (e *env) Xgo_cur_open(pVTab, ppCur int32) int32 {
 	vtab := e.vtabGetHandle(pVTab).(VTab)
 
 	cursor, err := vtab.Open()
@@ -592,12 +592,12 @@ func (e env) Xgo_cur_open(pVTab, ppCur int32) int32 {
 	return e.vtabError(pVTab, _VTAB_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_close(pCur int32) int32 {
+func (e *env) Xgo_cur_close(pCur int32) int32 {
 	err := e.vtabDelHandle(pCur)
 	return e.vtabError(0, _PTR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_filter(pCur, idxNum, idxStr, nArg, pArg int32) int32 {
+func (e *env) Xgo_cur_filter(pCur, idxNum, idxStr, nArg, pArg int32) int32 {
 	db := e.DB.(*Conn)
 	args := callbackArgs(db, nArg, ptr_t(pArg))
 	defer returnArgs(args)
@@ -612,7 +612,7 @@ func (e env) Xgo_cur_filter(pCur, idxNum, idxStr, nArg, pArg int32) int32 {
 	return e.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_eof(pCur int32) int32 {
+func (e *env) Xgo_cur_eof(pCur int32) int32 {
 	cursor := e.vtabGetHandle(pCur).(VTabCursor)
 	if cursor.EOF() {
 		return 1
@@ -620,20 +620,20 @@ func (e env) Xgo_cur_eof(pCur int32) int32 {
 	return 0
 }
 
-func (e env) Xgo_cur_next(pCur int32) int32 {
+func (e *env) Xgo_cur_next(pCur int32) int32 {
 	cursor := e.vtabGetHandle(pCur).(VTabCursor)
 	err := cursor.Next()
 	return e.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_column(pCur, pCtx, n int32) int32 {
+func (e *env) Xgo_cur_column(pCur, pCtx, n int32) int32 {
 	cursor := e.vtabGetHandle(pCur).(VTabCursor)
 	db := e.DB.(*Conn)
 	err := cursor.Column(Context{db, ptr_t(pCtx)}, int(n))
 	return e.vtabError(pCur, _CURSOR_ERROR, err, ERROR)
 }
 
-func (e env) Xgo_cur_rowid(pCur, pRowID int32) int32 {
+func (e *env) Xgo_cur_rowid(pCur, pRowID int32) int32 {
 	cursor := e.vtabGetHandle(pCur).(VTabCursor)
 
 	rowID, err := cursor.RowID()
@@ -650,7 +650,7 @@ const (
 	_CURSOR_ERROR
 )
 
-func (e env) vtabError(ptr int32, kind uint32, err error, def ErrorCode) int32 {
+func (e *env) vtabError(ptr int32, kind uint32, err error, def ErrorCode) int32 {
 	const zErrMsgOffset = 8
 	msg, code := errorCode(err, def)
 	if ptr != 0 && msg != "" {
@@ -669,19 +669,19 @@ func (e env) vtabError(ptr int32, kind uint32, err error, def ErrorCode) int32 {
 	return int32(code)
 }
 
-func (e env) vtabGetHandle(ptr int32) any {
+func (e *env) vtabGetHandle(ptr int32) any {
 	const handleOffset = 4
 	handle := ptr_t(e.Memory.Read32(ptr_t(ptr) - handleOffset))
 	return e.GetHandle(handle)
 }
 
-func (e env) vtabDelHandle(ptr int32) error {
+func (e *env) vtabDelHandle(ptr int32) error {
 	const handleOffset = 4
 	handle := ptr_t(e.Memory.Read32(ptr_t(ptr) - handleOffset))
 	return e.DelHandle(handle)
 }
 
-func (e env) vtabPutHandle(pptr int32, val any) {
+func (e *env) vtabPutHandle(pptr int32, val any) {
 	const handleOffset = 4
 	handle := e.AddHandle(val)
 	ptr := ptr_t(e.Memory.Read32(ptr_t(pptr)))
