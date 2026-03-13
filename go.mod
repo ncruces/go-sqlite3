@@ -21,6 +21,8 @@ require (
 )
 
 retract (
+	v0.31.1 // SQLite 3.52.0 withdrawn
+	v0.31.0 // SQLite 3.52.0 withdrawn
 	v0.23.2 // tagged from the wrong branch
 	v0.4.0 // tagged from the wrong branch
 )

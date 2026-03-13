@@ -33,9 +33,6 @@ The build is easily reproducible, and verifiable, using
 
 You can use your own custom build of SQLite.
 
-Examples of custom builds of SQLite are:
-- [`github.com/ncruces/go-sqlite3/embed/bcw2`](https://github.com/ncruces/go-sqlite3/tree/main/embed/bcw2)
-  built from a branch supporting [`BEGIN CONCURRENT`](https://sqlite.org/src/doc/begin-concurrent/doc/begin_concurrent.md)
-  and [Wal2](https://sqlite.org/cgi/src/doc/wal2/doc/wal2.md).
+Example of a custom build of SQLite:
 - [`github.com/asg017/sqlite-vec-go-bindings/ncruces`](https://github.com/asg017/sqlite-vec-go-bindings)
   which includes the [`sqlite-vec`](https://github.com/asg017/sqlite-vec) vector search extension.

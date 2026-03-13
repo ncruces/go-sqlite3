@@ -28,4 +28,3 @@ jobs:
       with:
         subject-path: |
           embed/sqlite3.wasm
-          embed/bcw2/bcw2.wasm

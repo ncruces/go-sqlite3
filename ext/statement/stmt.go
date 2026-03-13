@@ -36,7 +36,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (*table, error) {
 	sql := "SELECT * FROM\n" + arg[0]
 
 	stmt, tail, err := db.PrepareFlags(sql,
-		sqlite3.PREPARE_PERSISTENT|sqlite3.PREPARE_FROM_DDL)
+		sqlite3.PREPARE_PERSISTENT /*PREPARE_FROM_DDL*/)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (t *table) Open() (_ sqlite3.VTabCursor, err error) {
 		t.inuse = true
 	} else {
 		stmt, _, err = t.stmt.Conn().PrepareFlags(t.sql,
-			sqlite3.PREPARE_DONT_LOG|sqlite3.PREPARE_FROM_DDL)
+			sqlite3.PREPARE_DONT_LOG /*PREPARE_FROM_DDL*/)
 		if err != nil {
 			return nil, err
 		}
