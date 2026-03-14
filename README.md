@@ -19,6 +19,7 @@ Using the [`database/sql`](https://pkg.go.dev/database/sql) driver:
 
 import "database/sql"
 import _ "github.com/ncruces/go-sqlite3/driver"
+import _ "github.com/ncruces/go-sqlite3/embed"
 
 var version string
 db, _ := sql.Open("sqlite3", "file:demo.db")
