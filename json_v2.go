@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
@@ -23,14 +24,14 @@ func JSON(value any) any {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultJSON(value any) {
-	w := bytesWriter{sqlite: ctx.c.sqlite}
+	w := bytesWriter{wrp: ctx.c.wrp}
 	if err := json.MarshalWrite(&w, value); err != nil {
-		ctx.c.free(w.ptr)
+		ctx.c.wrp.Free(w.ptr)
 		ctx.ResultError(err)
 		return // notest
 	}
-	ctx.c.ctx.Xsqlite3_result_text_go(
-		int32(ctx.handle), int32(w.ptr), int32(len(w.buf)))
+	ctx.c.wrp.Xsqlite3_result_text_go(
+		int32(ctx.handle), int32(w.ptr), int64(len(w.buf)))
 }
 
 // BindJSON binds the JSON encoding of value to the prepared statement.
@@ -38,14 +39,14 @@ func (ctx Context) ResultJSON(value any) {
 //
 // https://sqlite.org/c3ref/bind_blob.html
 func (s *Stmt) BindJSON(param int, value any) error {
-	w := bytesWriter{sqlite: s.c.sqlite}
+	w := bytesWriter{wrp: s.c.wrp}
 	if err := json.MarshalWrite(&w, value); err != nil {
-		s.c.free(w.ptr)
+		s.c.wrp.Free(w.ptr)
 		return err // notest
 	}
-	rc := res_t(s.c.ctx.Xsqlite3_bind_text_go(
+	rc := res_t(s.c.wrp.Xsqlite3_bind_text_go(
 		int32(s.handle), int32(param),
-		int32(w.ptr), int32(len(w.buf))))
+		int32(w.ptr), int64(len(w.buf))))
 	return s.c.error(rc)
 }
 
@@ -95,7 +96,7 @@ func (v Value) JSON(ptr any) error {
 }
 
 type bytesWriter struct {
-	*sqlite
+	wrp *sqlite3_wrap.Wrapper
 	buf []byte
 	ptr ptr_t
 }
@@ -106,8 +107,8 @@ func (b *bytesWriter) Write(p []byte) (n int, err error) {
 		grow := int64(cap(b.buf))
 		grow += grow >> 1
 		want = max(want, grow)
-		b.ptr = b.realloc(b.ptr, want)
-		b.buf = b.mod.Slice(b.ptr, want)[:len(b.buf)]
+		b.ptr = b.wrp.Realloc(b.ptr, want)
+		b.buf = b.wrp.Slice(b.ptr, want)[:len(b.buf)]
 	}
 	b.buf = append(b.buf, p...)
 	_ = append(b.buf, 0)
