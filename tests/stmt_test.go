@@ -1,9 +1,11 @@
 package tests
 
 import (
+	"bytes"
 	"encoding/json"
 	"math"
 	"math/bits"
+	"strings"
 	"testing"
 	"time"
 
@@ -269,10 +271,10 @@ func TestStmt(t *testing.T) {
 		if got := stmt.ColumnFloat(0); got != math.Pi {
 			t.Errorf("got %v, want π", got)
 		}
-		if got := stmt.ColumnText(0); got != "3.1415926535897931" {
+		if got := stmt.ColumnText(0); !strings.HasPrefix(got, "3.14159265358979") {
 			t.Errorf("got %q, want π", got)
 		}
-		if got := stmt.ColumnBlob(0, nil); string(got) != "3.1415926535897931" {
+		if got := stmt.ColumnBlob(0, nil); !bytes.HasPrefix(got, []byte("3.14159265358979")) {
 			t.Errorf("got %q, want π", got)
 		}
 		var got float64

@@ -111,7 +111,7 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 		if ptr == 0 {
 			panic(errutil.OOMErr)
 		}
-		clear(wrp.Slice(ptr_t(ptr), _WALINDEX_PGSZ))
+		clear(wrp.Bytes(ptr_t(ptr), _WALINDEX_PGSZ))
 		s.ptrs = append(s.ptrs, ptr_t(ptr))
 	}
 

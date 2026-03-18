@@ -25,7 +25,7 @@ func WithMaxMemory(ctx context.Context, max int64) context.Context {
 	if max < 0 || max > 65536*65536 {
 		panic(errutil.OOMErr)
 	}
-	return context.WithValue(ctx, configKey{}, int32(max/65536))
+	return context.WithValue(ctx, configKey{}, max/65536)
 }
 
 var _ sqlite3_wasm.Xenv = &env{}
@@ -37,16 +37,17 @@ func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error) {
 	if bits.UintSize < 64 {
 		mem.Max = 512 // 32MB
 	}
-	if max, ok := ctx.Value(configKey{}).(int32); ok {
+	if max, ok := ctx.Value(configKey{}).(int64); ok {
 		mem.Max = max
 	}
+	mem.Grow(5, mem.Max) // 320KB
 	env := &env{&sqlite3_wrap.Wrapper{Memory: mem}}
-	sqlite3_wasm.New(mem, env)
+	env.Module = sqlite3_wasm.New(env)
 	env.X_initialize()
 	return env.Wrapper, nil
 }
 
-func (e *env) Init(m *sqlite3_wasm.Module) { e.Module = m }
+func (e *env) Xmemory() sqlite3_wasm.Memory { return e.Memory }
 
 // Math functions.
 
@@ -199,7 +200,7 @@ func (e *env) Xstrcpy(d, s int32) int32 {
 // VFS functions.
 
 func (e *env) Xgo_randomness(pVfs, nByte, zByte int32) int32 {
-	mem := e.Slice(ptr_t(zByte), int64(nByte))
+	mem := e.Bytes(ptr_t(zByte), int64(nByte))
 	n, _ := rand.Reader.Read(mem)
 	return int32(n)
 }

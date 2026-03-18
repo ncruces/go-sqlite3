@@ -180,7 +180,7 @@ const (
 	PREPARE_NORMALIZE  PrepareFlag = 0x02
 	PREPARE_NO_VTAB    PrepareFlag = 0x04
 	PREPARE_DONT_LOG   PrepareFlag = 0x10
-	PREPARE_FROM_DDL   PrepareFlag = 0x20
+	// PREPARE_FROM_DDL PrepareFlag = 0x20
 )
 
 // FunctionFlag is a flag that can be passed to
@@ -267,6 +267,7 @@ const (
 	DBCONFIG_ENABLE_ATTACH_CREATE  DBConfig = 1020
 	DBCONFIG_ENABLE_ATTACH_WRITE   DBConfig = 1021
 	DBCONFIG_ENABLE_COMMENTS       DBConfig = 1022
+	// SQLITE_DBCONFIG_FP_DIGITS   DBConfig = 1023
 	// DBCONFIG_MAX                DBConfig = 1022
 )
 
@@ -308,7 +309,7 @@ const (
 	LIMIT_VARIABLE_NUMBER     LimitCategory = 9
 	LIMIT_TRIGGER_DEPTH       LimitCategory = 10
 	LIMIT_WORKER_THREADS      LimitCategory = 11
-	LIMIT_PARSER_DEPTH        LimitCategory = 12
+	// LIMIT_PARSER_DEPTH     LimitCategory = 12
 )
 
 // AuthorizerActionCode are the integer action codes

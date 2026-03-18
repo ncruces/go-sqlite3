@@ -112,7 +112,7 @@ func (b *Blob) Read(p []byte) (n int, err error) {
 		err = io.EOF
 	}
 
-	copy(p, b.c.wrp.Slice(b.bufptr, want))
+	copy(p, b.c.wrp.Bytes(b.bufptr, want))
 	return int(want), err
 }
 
@@ -142,7 +142,7 @@ func (b *Blob) WriteTo(w io.Writer) (n int64, err error) {
 			return n, err
 		}
 
-		mem := b.c.wrp.Slice(b.bufptr, want)
+		mem := b.c.wrp.Bytes(b.bufptr, want)
 		m, err := w.Write(mem[:want])
 		b.offset += int64(m)
 		n += int64(m)
@@ -204,7 +204,7 @@ func (b *Blob) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 
 	for {
-		mem := b.c.wrp.Slice(b.bufptr, want)
+		mem := b.c.wrp.Bytes(b.bufptr, want)
 		m, err := r.Read(mem[:want])
 		if m > 0 {
 			rc := res_t(b.c.wrp.Xsqlite3_blob_write(int32(b.handle),

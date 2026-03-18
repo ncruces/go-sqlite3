@@ -148,7 +148,7 @@ func (v Value) rawBytes(ptr ptr_t, nul int32) []byte {
 	}
 
 	n := int32(v.c.wrp.Xsqlite3_value_bytes(int32(v.handle)))
-	return v.c.wrp.Slice(ptr, int64(n+nul))[:n]
+	return v.c.wrp.Bytes(ptr, int64(n+nul))[:n]
 }
 
 // Pointer gets the pointer associated with this value,

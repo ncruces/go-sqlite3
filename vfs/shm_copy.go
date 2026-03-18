@@ -40,7 +40,7 @@ func (s *vfsShm) shmAcquire(errp *error) {
 	for id, p := range s.ptrs {
 		shared := shmPage(s.shared[id][:])
 		shadow := shmPage(s.shadow[id][:])
-		privat := shmPage(s.wrp.Slice(p, _WALINDEX_PGSZ))
+		privat := shmPage(s.wrp.Bytes(p, _WALINDEX_PGSZ))
 		for i, shared := range shared {
 			if shadow[i] != shared {
 				shadow[i] = shared
@@ -51,14 +51,14 @@ func (s *vfsShm) shmAcquire(errp *error) {
 }
 
 func (s *vfsShm) shmRelease() {
-	if len(s.ptrs) == 0 || shmEqual(s.shadow[0][:], s.wrp.Slice(s.ptrs[0], _WALINDEX_HDR_SIZE)) {
+	if len(s.ptrs) == 0 || shmEqual(s.shadow[0][:], s.wrp.Bytes(s.ptrs[0], _WALINDEX_HDR_SIZE)) {
 		return
 	}
 	// Copies modified words from private to shared memory.
 	for id, p := range s.ptrs {
 		shared := shmPage(s.shared[id][:])
 		shadow := shmPage(s.shadow[id][:])
-		privat := shmPage(s.wrp.Slice(p, _WALINDEX_PGSZ))
+		privat := shmPage(s.wrp.Bytes(p, _WALINDEX_PGSZ))
 		for i, privat := range privat {
 			if shadow[i] != privat {
 				shadow[i] = privat

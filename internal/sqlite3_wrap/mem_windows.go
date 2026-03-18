@@ -10,22 +10,22 @@ import (
 
 type Memory struct {
 	Buf []byte
-	Max int32
+	Max int64
 	com int
 	ptr uintptr
 }
 
-func (m *Memory) Data() *[]byte {
+func (m *Memory) Slice() *[]byte {
 	return &m.Buf
 }
 
-func (m *Memory) Grow(delta, _ int32) int32 {
+func (m *Memory) Grow(delta, _ int64) int64 {
 	if m.Buf == nil {
 		m.allocate(uint64(m.Max) << 16)
 	}
 
 	len := len(m.Buf)
-	old := int32(len >> 16)
+	old := int64(len >> 16)
 	if delta == 0 {
 		return old
 	}

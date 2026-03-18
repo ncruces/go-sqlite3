@@ -189,8 +189,8 @@ func (e *env) Xgo_collation_needed(pArg, pDB, eTextRep, zName int32) {
 func (e *env) Xgo_compare(pApp, nKey1, pKey1, nKey2, pKey2 int32) int32 {
 	fn := e.GetHandle(ptr_t(pApp)).(CollatingFunction)
 	return int32(fn(
-		e.Slice(ptr_t(pKey1), int64(nKey1)),
-		e.Slice(ptr_t(pKey2), int64(nKey2))))
+		e.Bytes(ptr_t(pKey1), int64(nKey1)),
+		e.Bytes(ptr_t(pKey2), int64(nKey2))))
 }
 
 func (e *env) Xgo_func(pCtx, pApp, nArg, pArg int32) {

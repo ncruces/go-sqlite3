@@ -146,7 +146,7 @@ func (ctx Context) ResultTime(value time.Time, format TimeFormat) {
 func (ctx Context) resultRFC3339Nano(value time.Time) {
 	const maxlen = 48
 	ptr := ctx.c.wrp.New(maxlen)
-	buf := ctx.c.wrp.Slice(ptr, maxlen)
+	buf := ctx.c.wrp.Bytes(ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 	_ = append(buf, 0)
 

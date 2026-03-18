@@ -108,7 +108,7 @@ func (b *bytesWriter) Write(p []byte) (n int, err error) {
 		grow += grow >> 1
 		want = max(want, grow)
 		b.ptr = b.wrp.Realloc(b.ptr, want)
-		b.buf = b.wrp.Slice(b.ptr, want)[:len(b.buf)]
+		b.buf = b.wrp.Bytes(b.ptr, want)[:len(b.buf)]
 	}
 	b.buf = append(b.buf, p...)
 	_ = append(b.buf, 0)

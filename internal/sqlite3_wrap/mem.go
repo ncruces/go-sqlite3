@@ -18,7 +18,7 @@ type (
 	Res_t int32
 )
 
-func (mem *Memory) Slice(ptr Ptr_t, size int64) []byte {
+func (mem *Memory) Bytes(ptr Ptr_t, size int64) []byte {
 	if ptr == 0 {
 		panic(errutil.NilErr)
 	}
@@ -98,19 +98,19 @@ func (mem *Memory) ReadString(ptr Ptr_t, maxlen int64) string {
 	if int64(len(buf)) > maxlen {
 		buf = buf[:maxlen]
 	}
-	if i := bytes.IndexByte(buf, 0); i >= 0 {
-		return string(buf[:i])
+	if before, _, ok := bytes.Cut(buf, []byte{0}); ok {
+		return string(before)
 	}
 	panic(errutil.NoNulErr)
 }
 
 func (mem *Memory) WriteBytes(ptr Ptr_t, b []byte) {
-	buf := mem.Slice(ptr, int64(len(b)))
+	buf := mem.Bytes(ptr, int64(len(b)))
 	copy(buf, b)
 }
 
 func (mem *Memory) WriteString(ptr Ptr_t, s string) {
-	buf := mem.Slice(ptr, int64(len(s))+1)
+	buf := mem.Bytes(ptr, int64(len(s))+1)
 	buf[len(s)] = 0
 	copy(buf, s)
 }

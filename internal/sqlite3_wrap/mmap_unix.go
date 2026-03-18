@@ -38,7 +38,7 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	}
 
 	// Save the newly allocated region.
-	buf := w.Slice(ptr, int64(size))
+	buf := w.Bytes(ptr, int64(size))
 	ret := &MappedRegion{
 		Ptr:  ptr,
 		size: size,

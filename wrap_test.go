@@ -61,7 +61,7 @@ func Test_sqlite_newArena(t *testing.T) {
 	if ptr == 0 {
 		t.Fatalf("got nullptr")
 	}
-	if got := wrp.Slice(ptr, int64(len(title))); string(got) != title {
+	if got := wrp.Bytes(ptr, int64(len(title))); string(got) != title {
 		t.Errorf("got %q, want %q", got, title)
 	}
 
@@ -89,7 +89,7 @@ func Test_sqlite_newBytes(t *testing.T) {
 	}
 
 	want := buf
-	if got := wrp.Slice(ptr, int64(len(want))); !bytes.Equal(got, want) {
+	if got := wrp.Bytes(ptr, int64(len(want))); !bytes.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -115,7 +115,7 @@ func Test_sqlite_newString(t *testing.T) {
 	}
 
 	want := str + "\000"
-	if got := wrp.Slice(ptr, int64(len(want))); string(got) != want {
+	if got := wrp.Bytes(ptr, int64(len(want))); string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

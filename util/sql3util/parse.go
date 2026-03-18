@@ -16,12 +16,13 @@ import (
 // [ALTER TABLE]: https://sqlite.org/lang_altertable.html
 func ParseTable(sql string) (_ *Table, err error) {
 	mod := parser.New()
-	errp := mod.Xmalloc(4)
+	mem := mod.Xmemory().Slice()
 	sqlp := mod.Xmalloc(int32(len(sql) + 1))
-	copy(mod.Memory[sqlp:], sql)
+	errp := mod.Xmalloc(4)
+	copy((*mem)[sqlp:], sql)
 	res := mod.Xsql3parse_table(sqlp, int32(len(sql)), errp)
 
-	c := binary.LittleEndian.Uint32(mod.Memory[errp:])
+	c := binary.LittleEndian.Uint32((*mem)[errp:])
 	switch c {
 	case _MEMORY:
 		panic(errutil.OOMErr)
@@ -32,7 +33,7 @@ func ParseTable(sql string) (_ *Table, err error) {
 	}
 
 	var tab Table
-	tab.load(mod.Memory, uint32(res), uint32(sqlp), sql)
+	tab.load(*mem, uint32(res), uint32(sqlp), sql)
 	return &tab, nil
 }
 
@@ -306,10 +307,10 @@ func loadBool(mem []byte, ptr uint32) bool {
 	return val != 0
 }
 
-type libc struct{ *parser.Module }
+type libc struct{ memory *[]byte }
 
-func (l *libc) Init(m *parser.Module) { l.Module = m }
+func (l *libc) Init(m *parser.Module) { l.memory = m.Xmemory().Slice() }
 
 func (l *libc) Xstrlen(v0 int32) int32 {
-	return int32(bytes.IndexByte(l.Memory[v0:], 0))
+	return int32(bytes.IndexByte((*l.memory)[v0:], 0))
 }

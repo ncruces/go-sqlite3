@@ -325,7 +325,7 @@ func (s *Stmt) BindTime(param int, value time.Time, format TimeFormat) error {
 func (s *Stmt) bindRFC3339Nano(param int, value time.Time) error {
 	const maxlen = 48
 	ptr := s.c.wrp.New(maxlen)
-	buf := s.c.wrp.Slice(ptr, maxlen)
+	buf := s.c.wrp.Bytes(ptr, maxlen)
 	buf = value.AppendFormat(buf[:0], time.RFC3339Nano)
 	_ = append(buf, 0)
 
@@ -570,7 +570,7 @@ func (s *Stmt) columnRawBytes(col int, ptr ptr_t, nul int32) []byte {
 
 	n := int32(s.c.wrp.Xsqlite3_column_bytes(
 		int32(s.handle), int32(col)))
-	return s.c.wrp.Slice(ptr, int64(n+nul))[:n]
+	return s.c.wrp.Bytes(ptr, int64(n+nul))[:n]
 }
 
 // ColumnValue returns the unprotected value of the result column.
@@ -617,7 +617,7 @@ func (s *Stmt) Columns(dest ...any) error {
 			len := int32(mem.Read32(ptr + 4))
 			if len != 0 {
 				ptr := ptr_t(mem.Read32(ptr))
-				buf := mem.Slice(ptr, int64(len))
+				buf := mem.Bytes(ptr, int64(len))
 				dest[i] = string(buf)
 			} else {
 				dest[i] = ""
@@ -626,7 +626,7 @@ func (s *Stmt) Columns(dest ...any) error {
 			len := int32(mem.Read32(ptr + 4))
 			if len != 0 {
 				ptr := ptr_t(mem.Read32(ptr))
-				buf := mem.Slice(ptr, int64(len))
+				buf := mem.Bytes(ptr, int64(len))
 				tmp, _ := dest[i].([]byte)
 				dest[i] = append(tmp[:0], buf...)
 			} else {
@@ -677,7 +677,7 @@ func (s *Stmt) ColumnsRaw(dest ...any) error {
 					cap++
 				}
 				ptr := ptr_t(mem.Read32(ptr))
-				buf := mem.Slice(ptr, int64(cap))[:len]
+				buf := mem.Bytes(ptr, int64(cap))[:len]
 				dest[i] = buf
 			}
 		}
@@ -699,5 +699,5 @@ func (s *Stmt) columns(count int64) ([]byte, ptr_t, error) {
 		return nil, 0, err
 	}
 
-	return s.c.wrp.Slice(typePtr, count), dataPtr, nil
+	return s.c.wrp.Bytes(typePtr, count), dataPtr, nil
 }

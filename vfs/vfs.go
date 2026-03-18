@@ -86,7 +86,7 @@ func vfsClose(wrp *sqlite3_wrap.Wrapper, pFile ptr_t) _ErrorCode {
 //go:linkname vfsRead
 func vfsRead(wrp *sqlite3_wrap.Wrapper, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(wrp, pFile).(File)
-	buf := wrp.Slice(zBuf, int64(iAmt))
+	buf := wrp.Bytes(zBuf, int64(iAmt))
 
 	n, err := file.ReadAt(buf, iOfst)
 	if n == int(iAmt) {
@@ -102,7 +102,7 @@ func vfsRead(wrp *sqlite3_wrap.Wrapper, pFile, zBuf ptr_t, iAmt int32, iOfst int
 //go:linkname vfsWrite
 func vfsWrite(wrp *sqlite3_wrap.Wrapper, pFile, zBuf ptr_t, iAmt int32, iOfst int64) _ErrorCode {
 	file := vfsFileGet(wrp, pFile).(File)
-	buf := wrp.Slice(zBuf, int64(iAmt))
+	buf := wrp.Bytes(zBuf, int64(iAmt))
 
 	_, err := file.WriteAt(buf, iOfst)
 	return vfsErrorCode(wrp, err, _IOERR_WRITE)
