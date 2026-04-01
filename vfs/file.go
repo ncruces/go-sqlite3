@@ -13,6 +13,9 @@ import (
 type vfsOS struct{}
 
 func (vfsOS) FullPathname(path string) (string, error) {
+	if runtime.GOOS == "js" {
+		return filepath.Clean(path), nil
+	}
 	link, err := evalSymlinks(path)
 	if err != nil {
 		return "", err
@@ -30,11 +33,11 @@ func evalSymlinks(path string) (string, error) {
 	if errors.Is(err, fs.ErrNotExist) {
 		path, file = filepath.Split(path)
 	}
-	path, err = filepath.EvalSymlinks(path)
+	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(path, file), nil
+	return filepath.Join(resolved, file), nil
 }
 
 func (vfsOS) Delete(path string, syncDir bool) error {

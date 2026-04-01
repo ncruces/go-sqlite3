@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -69,6 +70,9 @@ func TestDB_memdb(t *testing.T) {
 
 func TestDB_adiantum(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
 		"&vfs=adiantum&textkey=correct+horse+battery+staple")
@@ -76,6 +80,9 @@ func TestDB_adiantum(t *testing.T) {
 
 func TestDB_xts(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1"+
 		"&vfs=xts&textkey=correct+horse+battery+staple")
@@ -83,6 +90,9 @@ func TestDB_xts(t *testing.T) {
 
 func TestDB_nolock(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
 	tmp := filepath.Join(t.TempDir(), "test.db")
 	testDB(t, "file:"+filepath.ToSlash(tmp)+"?nolock=1")
 }

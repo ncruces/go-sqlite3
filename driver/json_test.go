@@ -1,3 +1,5 @@
+//go:build !js
+
 package driver_test
 
 import (

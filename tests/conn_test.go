@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +21,12 @@ func TestConn_Open_dir(t *testing.T) {
 	_, err := sqlite3.OpenFlags(".", 0)
 	if err == nil {
 		t.Fatal("want error")
+	}
+	if runtime.GOOS == "js" {
+		if !errors.Is(err, sqlite3.CANTOPEN) {
+			t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+		}
+		return
 	}
 	if !errors.Is(err, sqlite3.CANTOPEN_ISDIR) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN_ISDIR", err)
@@ -40,10 +47,12 @@ func TestConn_Open_notfound(t *testing.T) {
 
 func TestConn_Open_modeof(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
 
-	dir := t.TempDir()
-	file := filepath.Join(dir, "test.db")
-	mode := filepath.Join(dir, "modeof.txt")
+	file := testcfg.TempFilename(t, ".db")
+	mode := testcfg.TempFilename(t, ".txt")
 
 	fd, err := os.OpenFile(mode, os.O_CREATE, 0624)
 	if err != nil {
@@ -332,16 +341,18 @@ func TestConn_SetLastInsertRowID(t *testing.T) {
 func TestConn_Filename(t *testing.T) {
 	t.Parallel()
 
-	file := filepath.Join(t.TempDir(), "test.db")
+	file := testcfg.TempFilename(t, ".db")
 	f, err := os.Create(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	f.Close()
 
-	file, err = filepath.EvalSymlinks(file)
-	if err != nil {
-		t.Fatal(err)
+	if runtime.GOOS != "js" {
+		file, err = filepath.EvalSymlinks(file)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	db, err := sqlite3.OpenContext(testcfg.Context(t), file)

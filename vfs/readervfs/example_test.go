@@ -1,3 +1,5 @@
+//go:build !js
+
 package readervfs_test
 
 import (

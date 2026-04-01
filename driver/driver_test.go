@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/url"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -42,6 +43,12 @@ func Test_Open_dir(t *testing.T) {
 	_, err = db.Conn(ctx)
 	if err == nil {
 		t.Fatal("want error")
+	}
+	if runtime.GOOS == "js" {
+		if !errors.Is(err, sqlite3.CANTOPEN) {
+			t.Errorf("got %v, want sqlite3.CANTOPEN", err)
+		}
+		return
 	}
 	if !errors.Is(err, sqlite3.CANTOPEN_ISDIR) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN_ISDIR", err)

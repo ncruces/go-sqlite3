@@ -1,0 +1,48 @@
+//go:build !js
+
+package statement_test
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/ext/statement"
+)
+
+func Example() {
+	sqlite3.AutoExtension(statement.Register)
+
+	db, err := sqlite3.Open(":memory:")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`
+		CREATE VIRTUAL TABLE split_date USING statement((
+			SELECT
+				strftime('%Y', :date) AS year,
+				strftime('%m', :date) AS month,
+				strftime('%d', :date) AS day
+		))`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT * FROM split_date('2022-02-22')`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if stmt.Step() {
+		fmt.Printf("Twosday was %d-%d-%d", stmt.ColumnInt(0), stmt.ColumnInt(1), stmt.ColumnInt(2))
+	}
+	if err := stmt.Reset(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Output:
+	// Twosday was 2022-2-22
+}

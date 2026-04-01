@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 	"net/url"
-	"path/filepath"
+	"os"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -102,7 +102,10 @@ func TestConn_ConfigLog(t *testing.T) {
 func TestConn_FileControl(t *testing.T) {
 	t.Parallel()
 
-	file := filepath.Join(t.TempDir(), "test.db")
+	file := testcfg.TempFilename(t, ".db")
+	if err := os.WriteFile(file, nil, 0666); err != nil {
+		t.Fatal(err)
+	}
 	db, err := sqlite3.OpenContext(testcfg.Context(t), file)
 	if err != nil {
 		t.Fatal(err)

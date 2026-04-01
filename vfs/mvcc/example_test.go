@@ -1,3 +1,5 @@
+//go:build !js
+
 package mvcc_test
 
 import (

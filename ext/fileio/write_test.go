@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"io/fs"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 
 func Test_writefile(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
+
 	dsn := memdb.TestDB(t)
 
 	ctx := testcfg.Context(t)
@@ -23,7 +28,7 @@ func Test_writefile(t *testing.T) {
 	}
 	defer db.Close()
 
-	dir := t.TempDir()
+	dir := testcfg.TempDir(t)
 	link := filepath.Join(dir, "link")
 	file := filepath.Join(dir, "test.txt")
 	nest := filepath.Join(dir, "tmp", "test.txt")

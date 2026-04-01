@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"runtime"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -16,6 +17,10 @@ import (
 var walDB []byte
 
 func Test_wal(t *testing.T) {
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
+	}
+
 	db, err := sqlite3.OpenContext(testcfg.Context(t), "testdata/wal.db")
 	if err != nil {
 		t.Fatal(err)
@@ -38,6 +43,9 @@ func Test_wal(t *testing.T) {
 func Test_northwind(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
+	}
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on js/wasm")
 	}
 
 	input, err := httpGet()
