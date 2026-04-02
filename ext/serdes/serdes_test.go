@@ -10,12 +10,17 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/ext/serdes"
 	"github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/vfs"
 )
 
 //go:embed testdata/wal.db
 var walDB []byte
 
 func Test_wal(t *testing.T) {
+	if !vfs.SupportsFileLocking {
+		t.Skip("skipping without locks")
+	}
+
 	db, err := sqlite3.OpenContext(testcfg.Context(t), "testdata/wal.db")
 	if err != nil {
 		t.Fatal(err)

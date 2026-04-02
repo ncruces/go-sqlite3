@@ -170,6 +170,27 @@ jobs:
     - name: Test
       uses: ./.github/actions/vmactions
 
+  test-wasip1:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: bytecodealliance/actions/wasmtime/setup@v1
+    - uses: actions/checkout@v6
+    - uses: actions/setup-go@v6
+      with: { go-version: stable }
+
+    - name: Setup
+      run: echo "$(go env GOROOT)/lib/wasm" >> "$GITHUB_PATH"
+
+    - name: Test wasmtime
+      env:
+        GOOS: wasip1
+        GOARCH: wasm
+        GOWASIRUNTIME: wasmtime
+        GOWASIRUNTIMEARGS: '--env CI=true --optimize opt-level=0'
+      run: go test -short -tags sqlite3_dotlk -skip Example ./...
+
   test-qemu:
     runs-on: ubuntu-latest
     needs: test
@@ -182,9 +203,6 @@ jobs:
 
     - name: Test 386 (32-bit)
       run: GOARCH=386 go test ./...
-
-    - name: Test riscv64
-      run: GOARCH=riscv64 go test -short ./...
 
     - name: Test ppc64le
       run: GOARCH=ppc64le go test -short ./...
@@ -209,6 +227,18 @@ jobs:
 
     - name: Test arm (32-bit)
       run: GOARCH=arm GOARM=7 go test ./...
+
+  test-linuxriscv:
+    runs-on: ubuntu-24.04-riscv
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-go@v6
+      with: { go-version: stable }
+
+    - name: Test
+      run: go test ./...
 
   test-macintel:
     runs-on: macos-15-intel

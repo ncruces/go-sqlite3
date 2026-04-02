@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +21,9 @@ func TestConn_Open_dir(t *testing.T) {
 	_, err := sqlite3.OpenFlags(".", 0)
 	if err == nil {
 		t.Fatal("want error")
+	}
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on JS")
 	}
 	if !errors.Is(err, sqlite3.CANTOPEN_ISDIR) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN_ISDIR", err)
@@ -39,6 +43,9 @@ func TestConn_Open_notfound(t *testing.T) {
 }
 
 func TestConn_Open_modeof(t *testing.T) {
+	if runtime.GOOS == "js" {
+		t.Skip("skipping on JS")
+	}
 	t.Parallel()
 
 	dir := t.TempDir()
