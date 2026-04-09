@@ -2,16 +2,21 @@ package testenv
 
 import (
 	"bytes"
+	"context"
 	"io/fs"
 	"sync"
-	"testing"
 
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
+type Context interface {
+	Context() context.Context
+	Logf(format string, args ...any)
+}
+
 var (
 	FS     fs.FS
-	TB     testing.TB
+	TB     Context
 	Exit   func(int32)
 	System func(*sqlite3_wrap.Wrapper, int32) int32
 
@@ -20,7 +25,6 @@ var (
 )
 
 func WriteByte(c byte) error {
-	TB.Helper()
 	mtx.Lock()
 	defer mtx.Unlock()
 
@@ -34,7 +38,6 @@ func WriteByte(c byte) error {
 }
 
 func Write(p []byte) (n int, err error) {
-	TB.Helper()
 	mtx.Lock()
 	defer mtx.Unlock()
 

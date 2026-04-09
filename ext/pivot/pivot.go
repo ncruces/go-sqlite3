@@ -43,7 +43,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 
 	// Row key query.
 	t.scan = "SELECT * FROM\n" + arg[0]
-	stmt, tail, err := db.PrepareFlags(t.scan, 0 /*PREPARE_FROM_DDL*/)
+	stmt, tail, err := db.PrepareFlags(t.scan, sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	stmt.Close()
 
 	// Column definition query.
-	stmt, tail, err = db.PrepareFlags("SELECT * FROM\n"+arg[1], 0 /*PREPARE_FROM_DDL*/)
+	stmt, tail, err = db.PrepareFlags("SELECT * FROM\n"+arg[1], sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 
 	// Pivot cell query.
 	t.cell = "SELECT * FROM\n" + arg[2]
-	stmt, tail, err = db.PrepareFlags(t.cell, 0 /*PREPARE_FROM_DDL*/)
+	stmt, tail, err = db.PrepareFlags(t.cell, sqlite3.PREPARE_FROM_DDL)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		return err
 	}
 
-	const prepflags = sqlite3.PREPARE_DONT_LOG /*PREPARE_FROM_DDL*/
+	const prepflags = sqlite3.PREPARE_DONT_LOG | sqlite3.PREPARE_FROM_DDL
 
 	c.scan, _, err = c.table.db.PrepareFlags(idxStr, prepflags)
 	if err != nil {

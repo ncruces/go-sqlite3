@@ -1,22 +1,22 @@
 module github.com/ncruces/go-sqlite3
 
-go 1.26.0
+go 1.25.0
 
 require (
-	github.com/ncruces/go-sqlite3-wasm v1.0.4-0.20260329114232-2491c387476c
+	github.com/ncruces/go-sqlite3-wasm v1.1.1-0.20260409221933-87e4b35a38d0
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v1.0.0
-	golang.org/x/sys v0.41.0
+	golang.org/x/sys v0.43.0
 )
 
 require (
 	github.com/dchest/siphash v1.2.3 // ext/bloom
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
-	golang.org/x/crypto v0.48.0 // vfs/adiantum vfs/xts
-	golang.org/x/sync v0.19.0 // test
-	golang.org/x/text v0.34.0 // ext/unicode
+	golang.org/x/crypto v0.50.0 // vfs/adiantum vfs/xts
+	golang.org/x/sync v0.20.0 // test
+	golang.org/x/text v0.36.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
