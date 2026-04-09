@@ -1,9 +1,9 @@
 module github.com/ncruces/go-sqlite3/gormlite
 
-go 1.26.0
+go 1.25.0
 
 require (
-	github.com/ncruces/go-sqlite3 v0.33.2
+	github.com/ncruces/go-sqlite3 v0.33.3
 	gorm.io/gorm v1.31.1
 )
 
