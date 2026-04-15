@@ -3,7 +3,7 @@ module github.com/ncruces/go-sqlite3
 go 1.25.0
 
 require (
-	github.com/ncruces/go-sqlite3-wasm v1.1.1-0.20260409221933-87e4b35a38d0
+	github.com/ncruces/go-sqlite3-wasm v1.1.1-0.20260415150456-8f09d589f667
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v1.0.0
