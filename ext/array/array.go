@@ -45,12 +45,14 @@ func (array) Open() (sqlite3.VTabCursor, error) {
 }
 
 type cursor struct {
-	array reflect.Value
-	rowID int
+	value  reflect.Value
+	slice  any
+	rowID  int
+	length int
 }
 
 func (c *cursor) EOF() bool {
-	return c.rowID >= c.array.Len()
+	return c.rowID >= c.length
 }
 
 func (c *cursor) Next() error {
@@ -68,7 +70,22 @@ func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 		return nil
 	}
 
-	v := c.array.Index(c.rowID)
+	switch arr := c.slice.(type) {
+	case []int:
+		ctx.ResultInt(arr[c.rowID])
+		return nil
+	case []int64:
+		ctx.ResultInt64(arr[c.rowID])
+		return nil
+	case []float64:
+		ctx.ResultFloat(arr[c.rowID])
+		return nil
+	case []string:
+		ctx.ResultText(arr[c.rowID])
+		return nil
+	}
+
+	v := c.value.Index(c.rowID)
 	k := v.Kind()
 
 	if k == reflect.Interface {
@@ -110,14 +127,14 @@ func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 	return nil
 }
 
-func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
-	array := reflect.ValueOf(arg[0].Pointer())
-	array, err := indexable(array)
+func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) (err error) {
+	c.slice = arg[0].Pointer()
+	c.value = reflect.ValueOf(c.slice)
+	c.value, err = indexable(c.value)
 	if err != nil {
 		return err
 	}
-
-	c.array = array
+	c.length = c.value.Len()
 	c.rowID = 0
 	return nil
 }
