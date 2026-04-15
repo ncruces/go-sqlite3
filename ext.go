@@ -7,6 +7,9 @@ type ExtensionLibrary interface {
 	Xsqlite3_extension_init(db, _, _ int32) int32
 }
 
+// ExtensionInfo returns values needed to load a dynamically linked SQLite extension.
+type ExtensionInfo func() (memorySize, memoryAlignment, tableSize, tableAlignment int64)
+
 type extEnv struct {
 	*env
 	memoryBase int32
@@ -16,32 +19,27 @@ type extEnv struct {
 func (e *extEnv) X__memory_base() *int32 { return &e.memoryBase }
 func (e *extEnv) X__table_base() *int32  { return &e.tableBase }
 
-type ExtensionInfo struct {
-	MemorySize      int64
-	MemoryAlignment int64
-	TableSize       int64
-	TableAlignment  int64
-}
-
 // ExtensionInit loads an SQLite extension library.
 //
 // https://sqlite.org/loadext.html
 func ExtensionInit[Env any, Mod ExtensionLibrary](db *Conn, init func(env Env) Mod, info ExtensionInfo) error {
+	memSize, memAlign, tableSize, tableAlign := info()
+
 	var memBase int32
-	if info.MemorySize > 0 {
-		memBase = db.wrp.Xaligned_alloc(int32(info.MemoryAlignment), int32(info.MemorySize))
+	if memSize > 0 {
+		memBase = db.wrp.Xaligned_alloc(int32(memAlign), int32(memSize))
 		if memBase == 0 {
 			panic(errutil.OOMErr)
 		}
 	}
 
 	var tableBase int
-	if info.TableSize > 0 {
+	if tableSize > 0 {
 		// Round up to the alignment.
-		rnd := int(info.TableAlignment) - 1
+		rnd := int(tableAlign) - 1
 		tab := db.wrp.X__indirect_function_table()
 		tableBase = (len(*tab) + rnd) &^ rnd
-		if add := tableBase + int(info.TableSize) - len(*tab); add > 0 {
+		if add := tableBase + int(tableSize) - len(*tab); add > 0 {
 			*tab = append(*tab, make([]any, add)...)
 		}
 	}
