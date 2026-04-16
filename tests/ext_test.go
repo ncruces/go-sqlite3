@@ -16,18 +16,41 @@ func Test_base64(t *testing.T) {
 	}
 	defer db.Close()
 
-	// base64
-	stmt, _, err := db.Prepare(`SELECT base64('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu')`)
-	if err != nil {
-		t.Error(err)
-	}
-	defer stmt.Close()
+	tests := []struct {
+		s    string
+		want string
+	}{
+		{"x''", ""},
+		{"''", ""},
 
-	if !stmt.Step() {
-		t.Fatal("expected one row")
+		{"x'000102030405'", "AAECAwQF"},
+		{"x'0001020304'", "AAECAwQ="},
+		{"x'00010203'", "AAECAw=="},
+
+		{"'AAECAwQF'", "\x00\x01\x02\x03\x04\x05"},
+		{"'AAECAwQ='", "\x00\x01\x02\x03\x04"},
+		{"'AAECAw=='", "\x00\x01\x02\x03"},
+
+		{"' AAECAwQF '", "\x00\x01\x02\x03\x04\x05"},
+		{"' AAECAwQ'", "\x00\x01\x02\x03\x04"},
+		{"' AAECAw '", "\x00\x01\x02\x03"},
 	}
-	if got := stmt.ColumnText(0); got != "Many hands make light work." {
-		t.Errorf("got %q", got)
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			stmt, _, err := db.Prepare(`SELECT base64(` + tt.s + `)`)
+			if err != nil {
+				t.Error(err)
+			}
+			defer stmt.Close()
+
+			if !stmt.Step() {
+				t.Fatal("expected one row")
+			}
+			if got := stmt.ColumnText(0); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

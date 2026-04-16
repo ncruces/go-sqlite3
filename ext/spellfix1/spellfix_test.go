@@ -36,7 +36,7 @@ func Test(t *testing.T) {
 	tests := []struct {
 		s1   string
 		s2   string
-		cost int
+		want int
 	}{
 		{"anchor", "amchor", 50},
 		{"anchor", "anchoxr", 97},
@@ -57,8 +57,8 @@ func Test(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != tt.cost {
-				t.Errorf("got %d, want %d", got, tt.cost)
+			if got != tt.want {
+				t.Errorf("got %d, want %d", got, tt.want)
 			}
 		})
 	}

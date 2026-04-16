@@ -1,6 +1,82 @@
 package sqlite3
 
-import "github.com/ncruces/go-sqlite3/internal/errutil"
+import (
+	"bytes"
+	"encoding/base64"
+	"sync"
+
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+)
+
+var (
+	// +checklocks:extRegistryMtx
+	extRegistry    []func(*Conn) error
+	extRegistryMtx sync.RWMutex
+)
+
+// AutoExtension causes the entryPoint function to be invoked
+// for each new database connection that is created.
+//
+// https://sqlite.org/c3ref/auto_extension.html
+func AutoExtension(entryPoint func(*Conn) error) {
+	extRegistryMtx.Lock()
+	extRegistry = append(extRegistry, entryPoint)
+	extRegistryMtx.Unlock()
+}
+
+func initExtensions(c *Conn) error {
+	c.base64()
+	extRegistryMtx.RLock()
+	defer extRegistryMtx.RUnlock()
+	for _, f := range extRegistry {
+		if err := f(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Conn) base64() error {
+	return c.CreateFunction("base64", 1, DETERMINISTIC, func(ctx Context, arg ...Value) {
+		switch a := arg[0]; a.Type() {
+		case NULL:
+
+		case BLOB:
+			data := a.RawBlob()
+			code := base64.StdEncoding
+			size := int64(code.EncodedLen(len(data)))
+			if size > _MAX_LENGTH {
+				ctx.ResultError(TOOBIG)
+				return
+			}
+			ptr := c.wrp.New(size)
+			if size > 0 {
+				code.Encode(c.wrp.Bytes(ptr, size), data)
+			}
+			ctx.c.wrp.Xsqlite3_result_text_go(int32(ctx.handle), int32(ptr), size)
+
+		case TEXT:
+			data := a.RawText()
+			data = bytes.Trim(data, " \t\n\v\f\r")
+			data = bytes.TrimRight(data, "=")
+			code := base64.RawStdEncoding
+			size := int64(code.DecodedLen(len(data)))
+			if size > _MAX_LENGTH {
+				ctx.ResultError(TOOBIG)
+				return
+			}
+			ptr := c.wrp.New(size)
+			if size > 0 {
+				n, _ := code.Decode(c.wrp.Bytes(ptr, size), data)
+				size = int64(n)
+			}
+			ctx.c.wrp.Xsqlite3_result_blob_go(int32(ctx.handle), int32(ptr), size)
+
+		default:
+			ctx.ResultError(errutil.ErrorString("base64: accepts only blob or text"))
+		}
+	})
+}
 
 // ExtensionLibrary represents a dynamically linked SQLite extension.
 type ExtensionLibrary interface {

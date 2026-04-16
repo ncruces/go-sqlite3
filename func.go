@@ -1,6 +1,7 @@
 package sqlite3
 
 import (
+	"bytes"
 	"io"
 	"iter"
 	"sync"
@@ -30,13 +31,10 @@ func (c *Conn) CollationNeeded(cb func(db *Conn, name string)) error {
 //
 // This can be used to load schemas that contain
 // one or more unknown collating sequences.
-func (c Conn) AnyCollationNeeded() error {
-	rc := res_t(c.wrp.Xsqlite3_anycollseq_init(int32(c.handle), 0, 0))
-	if err := c.error(rc); err != nil {
-		return err
-	}
-	c.collation = nil
-	return nil
+func (c *Conn) AnyCollationNeeded() error {
+	return c.CollationNeeded(func(db *Conn, name string) {
+		db.CreateCollation(name, bytes.Compare)
+	})
 }
 
 // CreateCollation defines a new collating sequence.
