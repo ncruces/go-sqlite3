@@ -4,11 +4,29 @@ package driver
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/ncruces/go-sqlite3"
 )
 
 func (r *rows) ScanColumn(i int, dest any) error {
+	var tm *time.Time
+	switch d := dest.(type) {
+	case *time.Time:
+		tm = d
+	case *sql.NullTime:
+		tm = &d.Time
+	case *sql.Null[time.Time]:
+		tm = &d.V
+	}
+	if tm != nil {
+		t := r.Stmt.ColumnTime(i, r.tmRead)
+		if !t.IsZero() {
+			*tm = t
+			return nil
+		}
+	}
+
 	var src any
 	switch r.stmt.ColumnType(i) {
 	case sqlite3.NULL:

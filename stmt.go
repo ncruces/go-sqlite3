@@ -507,6 +507,7 @@ func (s *Stmt) ColumnTime(col int, format TimeFormat) time.Time {
 	case TEXT, BLOB:
 		v = s.ColumnText(col)
 	case NULL:
+		s.err = errutil.TimeErr
 		return time.Time{}
 	default:
 		panic(errutil.AssertErr())
