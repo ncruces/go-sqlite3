@@ -555,6 +555,9 @@ func Test_rows_ScanColumn(t *testing.T) {
 	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
 		t.Error(err)
 	}
+	if err == nil && tm.IsZero() {
+		t.Error(tm)
+	}
 
 	var nt sql.NullTime
 	err = db.QueryRow(`SELECT NULL`).Scan(&nt)
@@ -565,6 +568,9 @@ func Test_rows_ScanColumn(t *testing.T) {
 	err = db.QueryRow(`SELECT datetime()`).Scan(&nt)
 	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
 		t.Error(err)
+	}
+	if err == nil && nt.Time.IsZero() {
+		t.Error(nt.Time)
 	}
 }
 
