@@ -32,9 +32,9 @@ func (*env) Xtanh(x float64) float64     { return math.Tanh(x) }
 // string.h
 
 func (e *env) Xmemchr(s, c, n int32) int32 {
-	m := e.Buf[s:]
-	if len(m) > int(n) {
-		m = m[:n]
+	m := e.Buf[uint32(s):]
+	if uint(len(m)) > uint(uint32(n)) {
+		m = m[:uint32(n)]
 	}
 	if i := bytes.IndexByte(m, byte(c)); i >= 0 {
 		return s + int32(i)
@@ -44,31 +44,29 @@ func (e *env) Xmemchr(s, c, n int32) int32 {
 
 func (e *env) Xmemcmp(s1, s2, n int32) int32 {
 	e1, e2 := s1+n, s2+n
-	m1 := e.Buf[s1:e1]
-	m2 := e.Buf[s2:e2]
+	m1 := e.Buf[uint32(s1):uint32(e1)]
+	m2 := e.Buf[uint32(s2):uint32(e2)]
 	return int32(bytes.Compare(m1, m2))
 }
 
 func (e *env) Xstrlen(s int32) int32 {
-	return int32(bytes.IndexByte(e.Buf[s:], 0))
+	return int32(bytes.IndexByte(e.Buf[uint32(s):], 0))
 }
 
 func (e *env) Xstrchr(s, c int32) int32 {
 	s = e.Xstrchrnul(s, c)
-	if e.Buf[s] == byte(c) {
+	if e.Buf[uint32(s)] == byte(c) {
 		return s
 	}
 	return 0
 }
 
 func (e *env) Xstrchrnul(s, c int32) int32 {
-	m := e.Buf[s:]
+	m := e.Buf[uint32(s):]
 	m = m[:bytes.IndexByte(m, 0)]
-	b := byte(c)
 	l := len(m)
-	if c != 0 {
-		i := bytes.IndexByte(m, b)
-		if i >= 0 {
+	if b := byte(c); b != 0 {
+		if i := bytes.IndexByte(m, b); i >= 0 {
 			l = i
 		}
 	}
@@ -76,7 +74,7 @@ func (e *env) Xstrchrnul(s, c int32) int32 {
 }
 
 func (e *env) Xstrrchr(s, c int32) int32 {
-	m := e.Buf[s:]
+	m := e.Buf[uint32(s):]
 	m = m[:bytes.IndexByte(m, 0)+1]
 	if i := bytes.LastIndexByte(m, byte(c)); i >= 0 {
 		return s + int32(i)
@@ -85,60 +83,54 @@ func (e *env) Xstrrchr(s, c int32) int32 {
 }
 
 func (e *env) Xstrcmp(s1, s2 int32) int32 {
-	m1 := e.Buf[s1:]
-	m2 := e.Buf[s2:]
-	m1 = m1[:bytes.IndexByte(m1, 0)]
-	m2 = m2[:bytes.IndexByte(m2, 0)]
-	return int32(bytes.Compare(m1, m2))
+	m1 := e.Buf[uint32(s1):]
+	m2 := e.Buf[uint32(s2):]
+	sz := min(len(m1), len(m2))
+	if i := bytes.IndexByte(m1[:sz], 0); i >= 0 {
+		sz = i + 1
+	}
+	return int32(bytes.Compare(m1[:sz], m2[:sz]))
 }
 
 func (e *env) Xstrncmp(s1, s2, n int32) int32 {
-	m1 := e.Buf[s1:]
-	m2 := e.Buf[s2:]
-	m1 = m1[:bytes.IndexByte(m1, 0)]
-	m2 = m2[:bytes.IndexByte(m2, 0)]
-	if len(m1) > int(n) {
-		m1 = m1[:n]
+	m1 := e.Buf[uint32(s1):]
+	m2 := e.Buf[uint32(s2):]
+	sz := int(min(uint(len(m1)), uint(len(m2)), uint(uint32(n))))
+	if i := bytes.IndexByte(m1[:sz], 0); i >= 0 {
+		sz = i + 1
 	}
-	if len(m2) > int(n) {
-		m2 = m2[:n]
-	}
-	return int32(bytes.Compare(m1, m2))
+	return int32(bytes.Compare(m1[:sz], m2[:sz]))
 }
 
 func (e *env) Xstrspn(s, accept int32) int32 {
-	m := e.Buf[s:]
-	a := e.Buf[accept:]
+	m := e.Buf[uint32(s):]
+	a := e.Buf[uint32(accept):]
 	a = a[:bytes.IndexByte(a, 0)]
 
-	i := int32(0)
-	for _, b := range m {
-		if bytes.IndexByte(a, b) == -1 {
-			break
+	for i, b := range m {
+		if bytes.IndexByte(a, b) < 0 {
+			return int32(i)
 		}
-		i++
 	}
-	return i
+	return int32(len(m))
 }
 
 func (e *env) Xstrcspn(s, reject int32) int32 {
-	m := e.Buf[s:]
-	r := e.Buf[reject:]
-	r = r[:bytes.IndexByte(r, 0)]
+	m := e.Buf[uint32(s):]
+	r := e.Buf[uint32(reject):]
+	r = r[:bytes.IndexByte(r, 0)+1]
 
-	i := int32(0)
-	for _, b := range m {
-		if b == 0 || bytes.IndexByte(r, b) != -1 {
-			break
+	for i, b := range m {
+		if bytes.IndexByte(r, b) >= 0 {
+			return int32(i)
 		}
-		i++
 	}
-	return i
+	return int32(len(m))
 }
 
 func (e *env) Xstrstr(haystack, needle int32) int32 {
-	h := e.Buf[haystack:]
-	n := e.Buf[needle:]
+	h := e.Buf[uint32(haystack):]
+	n := e.Buf[uint32(needle):]
 	h = h[:bytes.IndexByte(h, 0)]
 	n = n[:bytes.IndexByte(n, 0)]
 	i := bytes.Index(h, n)
@@ -149,16 +141,16 @@ func (e *env) Xstrstr(haystack, needle int32) int32 {
 }
 
 func (e *env) Xstrcpy(d, s int32) int32 {
-	m := e.Buf[s:]
+	m := e.Buf[uint32(s):]
 	m = m[:bytes.IndexByte(m, 0)+1]
-	copy(e.Buf[d:], m)
+	copy(e.Buf[uint32(d):], m)
 	return d
 }
 
 // stdlib.h
 
 func (e *env) Xstrtod(s, endptr int32) float64 {
-	m0 := e.Buf[s:]
+	m0 := e.Buf[uint32(s):]
 	m1 := bytes.TrimLeft(m0, " \t\n\v\f\r")
 	m2 := bytes.TrimLeft(m1, "+-.0123456789abcdefinptxyABCDEFINPTXY")
 	spaces := len(m0) - len(m1)
@@ -169,7 +161,7 @@ func (e *env) Xstrtod(s, endptr int32) float64 {
 		var err error
 		str := unsafe.String(&m1[0], digits)
 		val, err = strconv.ParseFloat(str, 64)
-		if err == nil {
+		if e, ok := err.(*strconv.NumError); !ok || e.Err == strconv.ErrRange {
 			break
 		}
 	}
@@ -184,7 +176,7 @@ func (e *env) Xstrtod(s, endptr int32) float64 {
 }
 
 func (e *env) Xstrtol(s, endptr, base int32) int32 {
-	m0 := e.Buf[s:]
+	m0 := e.Buf[uint32(s):]
 	m1 := bytes.TrimLeft(m0, " \t\n\v\f\r")
 	m2 := bytes.TrimLeft(m1, "+-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	spaces := len(m0) - len(m1)
