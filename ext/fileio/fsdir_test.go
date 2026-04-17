@@ -32,7 +32,7 @@ func Test_fsdir(t *testing.T) {
 			}
 			defer db.Close()
 
-			rows, err := db.QueryContext(ctx, `SELECT * FROM fsdir('.', '.')`)
+			rows, err := db.QueryContext(ctx, `SELECT * FROM fsdir('.') WHERE level <= 2`)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -42,7 +42,8 @@ func Test_fsdir(t *testing.T) {
 				var mode fs.FileMode
 				var mtime time.Time
 				var data sql.RawBytes
-				err := rows.Scan(&name, &mode, sqlite3.TimeFormatUnixFrac.Scanner(&mtime), &data)
+				var level int
+				err := rows.Scan(&name, &mode, sqlite3.TimeFormatUnixFrac.Scanner(&mtime), &data, &level)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -56,6 +57,9 @@ func Test_fsdir(t *testing.T) {
 					if !bytes.HasPrefix(data, []byte("package fileio_test")) {
 						t.Errorf("got: %s", data[:min(64, len(data))])
 					}
+				}
+				if level > 2 {
+					t.Errorf("got: %v", level)
 				}
 			}
 		})

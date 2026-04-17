@@ -12,18 +12,23 @@ import (
 )
 
 const (
-	_COL_NAME = 0
-	_COL_MODE = 1
-	_COL_TIME = 2
-	_COL_DATA = 3
-	_COL_ROOT = 4
-	_COL_BASE = 5
+	_COL_NAME = iota
+	_COL_MODE
+	_COL_MTIME
+	_COL_DATA
+	_COL_LEVEL
+	_COL_ROOT
+	_COL_BASE
 )
 
 type fsdir struct{ fsys fs.FS }
 
 func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
-	var root, base bool
+	var levelOp sqlite3.IndexConstraintOp
+	var root bool
+	level := -1
+	base := -1
+
 	for i, cst := range idx.Constraint {
 		switch cst.Column {
 		case _COL_ROOT:
@@ -39,20 +44,44 @@ func (d fsdir) BestIndex(idx *sqlite3.IndexInfo) error {
 			if !cst.Usable || cst.Op != sqlite3.INDEX_CONSTRAINT_EQ {
 				return sqlite3.CONSTRAINT
 			}
-			idx.ConstraintUsage[i] = sqlite3.IndexConstraintUsage{
-				Omit:      true,
-				ArgvIndex: 2,
+			base = i
+		case _COL_LEVEL:
+			if !cst.Usable {
+				break
 			}
-			base = true
+			switch cst.Op {
+			case sqlite3.INDEX_CONSTRAINT_EQ, sqlite3.INDEX_CONSTRAINT_LE, sqlite3.INDEX_CONSTRAINT_LT:
+				levelOp = cst.Op
+				level = i
+			}
 		}
 	}
 	if !root {
 		return sqlite3.CONSTRAINT
 	}
-	if base {
-		idx.EstimatedCost = 10
-	} else {
-		idx.EstimatedCost = 100
+
+	args := 2
+	idx.IdxNum = 0
+	idx.EstimatedCost = 1e9
+	if base >= 0 {
+		idx.IdxNum |= 1
+		idx.EstimatedCost /= 1e4
+		idx.ConstraintUsage[base] = sqlite3.IndexConstraintUsage{
+			Omit:      true,
+			ArgvIndex: args,
+		}
+		args++
+	}
+	if level >= 0 {
+		idx.EstimatedCost /= 1e4
+		idx.IdxNum |= (args - 1) << 1
+		if levelOp == sqlite3.INDEX_CONSTRAINT_LT {
+			idx.IdxNum |= 1 << 3
+		}
+		idx.ConstraintUsage[level] = sqlite3.IndexConstraintUsage{
+			Omit:      levelOp != sqlite3.INDEX_CONSTRAINT_EQ,
+			ArgvIndex: args,
+		}
 	}
 	return nil
 }
@@ -63,18 +92,20 @@ func (d fsdir) Open() (sqlite3.VTabCursor, error) {
 
 type cursor struct {
 	fsdir
-	base  string
-	next  func() (entry, bool)
-	stop  func()
-	curr  entry
-	eof   bool
-	rowID int64
+	base     string
+	next     func() (entry, bool)
+	stop     func()
+	curr     entry
+	eof      bool
+	rowID    int64
+	maxLevel int
 }
 
 type entry struct {
 	fs.DirEntry
-	err  error
-	path string
+	err   error
+	path  string
+	level int
 }
 
 func (c *cursor) Close() error {
@@ -90,24 +121,40 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	}
 
 	root := arg[0].Text()
-	if len(arg) > 1 {
-		base := arg[1].Text()
+	if i := idxNum & 1; i > 0 {
+		base := arg[i].Text()
 		if c.fsys != nil {
-			root = path.Join(base, root)
 			base = path.Clean(base) + "/"
 		} else {
-			root = filepath.Join(base, root)
 			base = filepath.Clean(base) + string(filepath.Separator)
 		}
+		root = base + root
 		c.base = base
+	}
+	if i := idxNum >> 1; i > 0 {
+		c.maxLevel = arg[i&3].Int() - i>>2
 	}
 
 	c.next, c.stop = iter.Pull(func(yield func(entry) bool) {
-		walkDir := func(path string, d fs.DirEntry, err error) error {
-			if yield(entry{d, err, path}) {
-				return nil
+		var stack []string
+		walkDir := func(p string, d fs.DirEntry, err error) error {
+			level := len(stack)
+			for level > 1 && !strings.HasPrefix(c.dir(p), stack[level-1]) {
+				level--
 			}
-			return fs.SkipAll
+			stack = stack[:level]
+			level++
+
+			if !yield(entry{d, err, p, level}) {
+				return fs.SkipAll
+			}
+			if d != nil && d.IsDir() {
+				if 0 < c.maxLevel && c.maxLevel <= level {
+					return fs.SkipDir
+				}
+				stack = append(stack, p)
+			}
+			return nil
 		}
 		if c.fsys != nil {
 			fs.WalkDir(c.fsys, root, walkDir)
@@ -149,7 +196,7 @@ func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 		}
 		ctx.ResultInt64(int64(i.Mode()))
 
-	case _COL_TIME:
+	case _COL_MTIME:
 		i, err := c.curr.Info()
 		if err != nil {
 			return err
@@ -178,6 +225,22 @@ func (c *cursor) Column(ctx sqlite3.Context, n int) error {
 			}
 			ctx.ResultText(t)
 		}
+
+	case _COL_LEVEL:
+		ctx.ResultInt(c.curr.level)
 	}
 	return nil
+}
+
+func (c *cursor) dir(p string) string {
+	var dir string
+	if c.fsys != nil {
+		dir, _ = path.Split(p)
+	} else {
+		dir, _ = filepath.Split(p)
+	}
+	if dir == "" {
+		dir = "."
+	}
+	return dir
 }

@@ -57,7 +57,8 @@ func Test_writefile(t *testing.T) {
 		var mode fs.FileMode
 		var mtime time.Time
 		var data sql.NullString
-		err := rows.Scan(&name, &mode, &mtime, &data)
+		var level int
+		err := rows.Scan(&name, &mode, &mtime, &data, &level)
 		if err != nil {
 			t.Fatal(err)
 		}
