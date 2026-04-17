@@ -4,7 +4,7 @@ package sqlite3
 import (
 	"context"
 	"crypto/rand"
-	"math/bits"
+	"strconv"
 	"time"
 	_ "unsafe"
 
@@ -32,7 +32,7 @@ type env struct{ *sqlite3_wrap.Wrapper }
 
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error) {
 	mem := &sqlite3_wrap.Memory{Max: 4096} // 256MB
-	if bits.UintSize < 64 {
+	if strconv.IntSize < 64 {
 		mem.Max = 512 // 32MB
 	}
 	if max, ok := ctx.Value(configKey{}).(int64); ok {

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -531,6 +532,45 @@ func Test_ColumnType_ScanType(t *testing.T) {
 	err = rows.Err()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func Test_rows_ScanColumn(t *testing.T) {
+	t.Parallel()
+	dsn := memdb.TestDB(t)
+
+	db, err := Open(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var tm time.Time
+	err = db.QueryRow(`SELECT NULL`).Scan(&tm)
+	if err == nil {
+		t.Error("want error")
+	}
+	// Go 1.27
+	err = db.QueryRow(`SELECT datetime()`).Scan(&tm)
+	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
+		t.Error(err)
+	}
+	if err == nil && tm.IsZero() {
+		t.Error(tm)
+	}
+
+	var nt sql.NullTime
+	err = db.QueryRow(`SELECT NULL`).Scan(&nt)
+	if err != nil {
+		t.Error(err)
+	}
+	// Go 1.27
+	err = db.QueryRow(`SELECT datetime()`).Scan(&nt)
+	if err != nil && !strings.HasPrefix(err.Error(), "sql: Scan error") {
+		t.Error(err)
+	}
+	if err == nil && nt.Time.IsZero() {
+		t.Error(nt.Time)
 	}
 }
 
