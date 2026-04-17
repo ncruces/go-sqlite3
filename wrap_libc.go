@@ -9,25 +9,93 @@ import (
 
 // math.h
 
-func (*env) Xacos(x float64) float64     { return math.Acos(x) }
-func (*env) Xacosh(x float64) float64    { return math.Acosh(x) }
-func (*env) Xasin(x float64) float64     { return math.Asin(x) }
-func (*env) Xasinh(x float64) float64    { return math.Asinh(x) }
-func (*env) Xatan(x float64) float64     { return math.Atan(x) }
-func (*env) Xatan2(y, x float64) float64 { return math.Atan2(y, x) }
-func (*env) Xatanh(x float64) float64    { return math.Atanh(x) }
-func (*env) Xcos(x float64) float64      { return math.Cos(x) }
-func (*env) Xcosh(x float64) float64     { return math.Cosh(x) }
-func (*env) Xexp(x float64) float64      { return math.Exp(x) }
-func (*env) Xfmod(x, y float64) float64  { return math.Mod(x, y) }
-func (*env) Xlog(x float64) float64      { return math.Log(x) }
-func (*env) Xlog10(x float64) float64    { return math.Log10(x) }
-func (*env) Xlog2(x float64) float64     { return math.Log2(x) }
-func (*env) Xpow(x, y float64) float64   { return math.Pow(x, y) }
-func (*env) Xsin(x float64) float64      { return math.Sin(x) }
-func (*env) Xsinh(x float64) float64     { return math.Sinh(x) }
-func (*env) Xtan(x float64) float64      { return math.Tan(x) }
-func (*env) Xtanh(x float64) float64     { return math.Tanh(x) }
+func (*env) Xacos(x float64) float64           { return math.Acos(x) }
+func (*env) Xacosh(x float64) float64          { return math.Acosh(x) }
+func (*env) Xasin(x float64) float64           { return math.Asin(x) }
+func (*env) Xasinh(x float64) float64          { return math.Asinh(x) }
+func (*env) Xatan(x float64) float64           { return math.Atan(x) }
+func (*env) Xatan2(y, x float64) float64       { return math.Atan2(y, x) }
+func (*env) Xatanh(x float64) float64          { return math.Atanh(x) }
+func (*env) Xcbrt(x float64) float64           { return math.Cbrt(x) }
+func (*env) Xcopysign(x, y float64) float64    { return math.Copysign(x, y) }
+func (*env) Xcos(x float64) float64            { return math.Cos(x) }
+func (*env) Xcosh(x float64) float64           { return math.Cosh(x) }
+func (*env) Xerf(x float64) float64            { return math.Erf(x) }
+func (*env) Xerfc(x float64) float64           { return math.Erfc(x) }
+func (*env) Xexp(x float64) float64            { return math.Exp(x) }
+func (*env) Xexp2(x float64) float64           { return math.Exp2(x) }
+func (*env) Xexpm1(x float64) float64          { return math.Expm1(x) }
+func (*env) Xfabs(x float64) float64           { return math.Abs(x) }
+func (*env) Xfdim(x, y float64) float64        { return math.Dim(x, y) }
+func (*env) Xfma(x, y, z float64) float64      { return math.FMA(x, y, z) }
+func (*env) Xfmod(x, y float64) float64        { return math.Mod(x, y) }
+func (*env) Xhypot(x, y float64) float64       { return math.Hypot(x, y) }
+func (*env) Xj0(x float64) float64             { return math.J0(x) }
+func (*env) Xj1(x float64) float64             { return math.J1(x) }
+func (*env) Xjn(n int32, x float64) float64    { return math.Jn(int(n), x) }
+func (*env) Xldexp(x float64, n int32) float64 { return math.Ldexp(x, int(n)) }
+func (*env) Xlog(x float64) float64            { return math.Log(x) }
+func (*env) Xlog10(x float64) float64          { return math.Log10(x) }
+func (*env) Xlog1p(x float64) float64          { return math.Log1p(x) }
+func (*env) Xlog2(x float64) float64           { return math.Log2(x) }
+func (*env) Xlogb(x float64) float64           { return math.Logb(x) }
+func (*env) Xnextafter(x, y float64) float64   { return math.Nextafter(x, y) }
+func (*env) Xpow(x, y float64) float64         { return math.Pow(x, y) }
+func (*env) Xremainder(x, y float64) float64   { return math.Remainder(x, y) }
+func (*env) Xround(x float64) float64          { return math.Round(x) }
+func (*env) Xsin(x float64) float64            { return math.Sin(x) }
+func (*env) Xsinh(x float64) float64           { return math.Sinh(x) }
+func (*env) Xsqrt(x float64) float64           { return math.Sqrt(x) }
+func (*env) Xtan(x float64) float64            { return math.Tan(x) }
+func (*env) Xtanh(x float64) float64           { return math.Tanh(x) }
+func (*env) Xtgamma(x float64) float64         { return math.Gamma(x) }
+func (*env) Xy0(x float64) float64             { return math.Y0(x) }
+func (*env) Xy1(x float64) float64             { return math.Y1(x) }
+func (*env) Xyn(n int32, x float64) float64    { return math.Yn(int(n), x) }
+func (*env) Xilogb(x float64) int32            { return int32(math.Ilogb(x)) }
+
+func (*env) Xlgamma(x float64) float64 {
+	x, _ = math.Lgamma(x)
+	return x
+}
+
+func (e *env) Xfrexp(x float64, eptr int32) float64 {
+	x, exp := math.Frexp(x)
+	e.Memory.Write32(ptr_t(eptr), uint32(exp))
+	return x
+}
+
+func (e *env) Xmodf(x float64, iptr int32) (f float64) {
+	if math.IsInf(x, 0) {
+		f = math.Copysign(0, x)
+	} else {
+		x, f = math.Modf(x)
+	}
+	e.Memory.Write64(ptr_t(iptr), math.Float64bits(x))
+	return f
+}
+
+func (*env) Xfmax(x, y float64) float64 {
+	switch r := max(x, y); {
+	case !math.IsNaN(r):
+		return r
+	case math.IsNaN(x):
+		return y
+	default:
+		return x
+	}
+}
+
+func (*env) Xfmin(x, y float64) float64 {
+	switch r := min(x, y); {
+	case !math.IsNaN(r):
+		return r
+	case math.IsNaN(x):
+		return y
+	default:
+		return x
+	}
+}
 
 // string.h
 
