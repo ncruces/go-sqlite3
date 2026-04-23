@@ -8,7 +8,7 @@ import (
 	"time"
 	_ "unsafe"
 
-	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm"
+	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm/v2"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/vfs"
@@ -65,23 +65,6 @@ func (e *env) Xgo_current_time_64(pVfs, nMicro int32) int32 {
 	msec := day*86_400_000 + nsec/1_000_000
 	e.Write64(ptr_t(nMicro), uint64(msec))
 	return int32(_OK)
-}
-
-func (e *env) Xgo_localtime(pTm int32, t int64) int32 {
-	const size = 32 / 8
-	mem := e.Memory
-	tm := time.Unix(t, 0)
-	// https://pubs.opengroup.org/onlinepubs/7908799/xsh/time.h.html
-	mem.Write32(ptr_t(pTm+0*size), uint32(tm.Second()))
-	mem.Write32(ptr_t(pTm+1*size), uint32(tm.Minute()))
-	mem.Write32(ptr_t(pTm+2*size), uint32(tm.Hour()))
-	mem.Write32(ptr_t(pTm+3*size), uint32(tm.Day()))
-	mem.Write32(ptr_t(pTm+4*size), uint32(tm.Month()-time.January))
-	mem.Write32(ptr_t(pTm+5*size), uint32(tm.Year()-1900))
-	mem.Write32(ptr_t(pTm+6*size), uint32(tm.Weekday()-time.Sunday))
-	mem.Write32(ptr_t(pTm+7*size), uint32(tm.YearDay()-1))
-	mem.WriteBool(ptr_t(pTm+8*size), tm.IsDST())
-	return _OK
 }
 
 func (e *env) Xgo_vfs_find(zVfsName int32) int32 {
