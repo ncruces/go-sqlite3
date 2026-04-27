@@ -21,8 +21,9 @@ func Fuzz_stringOrTime_1(f *testing.F) {
 	f.Add("2006-01-02T15:04:05.9999999999Z")
 	f.Add("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
 
+	r := rows{stmt: &stmt{}}
 	f.Fuzz(func(t *testing.T, str string) {
-		v, ok := maybeTime([]byte(str))
+		v, ok := r.maybeTime([]byte(str))
 		if ok {
 			// Make sure times round-trip to the same string:
 			// https://pkg.go.dev/database/sql#Rows.Scan
@@ -50,8 +51,9 @@ func Fuzz_stringOrTime_2(f *testing.F) {
 	f.Add(int64(639095955742), int64(222_222_222))  // twosday, year 22222AD
 	f.Add(int64(-763421161058), int64(222_222_222)) // twosday, year 22222BC
 
+	r := rows{stmt: &stmt{}}
 	checkTime := func(t testing.TB, date time.Time) {
-		v, ok := maybeTime(date.AppendFormat(nil, time.RFC3339Nano))
+		v, ok := r.maybeTime(date.AppendFormat(nil, time.RFC3339Nano))
 		if ok {
 			// Make sure times round-trip to the same time:
 			if !v.Equal(date) {

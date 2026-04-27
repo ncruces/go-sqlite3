@@ -820,12 +820,9 @@ func (r *rows) convert(i int, dest any) any {
 			return dest
 		}
 		if scan != _TEXT {
-			switch r.tmWrite {
-			case "", time.RFC3339, time.RFC3339Nano:
-				t, ok := maybeTime(v)
-				if ok {
-					return t
-				}
+			t, ok := r.maybeTime(v)
+			if ok {
+				return t
 			}
 		}
 		dest = string(v)
