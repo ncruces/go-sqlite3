@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"math"
-	"strconv"
+	"math/bits"
 	"strings"
 	"testing"
 	"time"
@@ -733,7 +733,7 @@ func TestStmt_Error(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}
-	if strconv.IntSize < 64 {
+	if bits.UintSize < 64 {
 		t.Skip("skipping on 32-bit")
 	}
 	t.Parallel()
