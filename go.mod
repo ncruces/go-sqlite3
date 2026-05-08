@@ -3,11 +3,11 @@ module github.com/ncruces/go-sqlite3
 go 1.25.0
 
 require (
-	github.com/ncruces/go-sqlite3-wasm/v2 v2.1.35300
+	github.com/ncruces/go-sqlite3-wasm/v2 v2.2.35301
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v0.1.6
 	github.com/ncruces/wbt v1.0.0
-	golang.org/x/sys v0.43.0
+	golang.org/x/sys v0.44.0
 )
 
 require (
@@ -16,7 +16,7 @@ require (
 	github.com/psanford/httpreadat v0.1.0 // example
 	golang.org/x/crypto v0.50.0 // vfs/adiantum vfs/xts
 	golang.org/x/sync v0.20.0 // test
-	golang.org/x/text v0.36.0 // ext/unicode
+	golang.org/x/text v0.37.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
