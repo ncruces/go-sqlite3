@@ -201,7 +201,7 @@ jobs:
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
-    - name: Test 386 (32-bit)
+    - name: Test 32-bit
       run: GOARCH=386 go test ./...
 
     - name: Test loong64
@@ -213,10 +213,10 @@ jobs:
     - name: Test ppc64le
       run: GOARCH=ppc64le go test -short ./...
 
-    - name: Test s390x (big-endian)
-      run: GOARCH=s390x go test -short -tags sqlite3_dotlk ./...
+    - name: Test s390x
+      run: GOARCH=s390x go test -short ./...
 
-  test-linuxarm:
+  test-linux-arm:
     runs-on: ubuntu-24.04-arm
     needs: test
 
@@ -228,12 +228,15 @@ jobs:
     - name: Test
       run: go test ./...
 
-    - name: Test arm (32-bit)
+    - name: Test 32-bit
       run: GOARCH=arm GOARM=7 go test ./...
 
-  test-linuxriscv:
-    runs-on: ubuntu-24.04-riscv
-    needs: test-qemu
+  test-os-other:
+    strategy:
+      matrix:
+        os: [macos-15-intel, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    needs: test
 
     steps:
     - uses: actions/checkout@v6
@@ -243,38 +246,15 @@ jobs:
     - name: Test
       run: go test ./...
 
-  test-linuxibm:
+  test-linux-other:
     strategy:
       matrix:
-        os: [ubuntu-24.04-s390x, ubuntu-24.04-ppc64le-p10]
+        os: [ubuntu-24.04-riscv, ubuntu-24.04-s390x, ubuntu-24.04-ppc64le-p10]
     runs-on: ${{ matrix.os }}
     needs: test-qemu
 
     steps:
     - uses: actions/checkout@v6
-    - name: Test dot locks
-      run: go test -tags sqlite3_dotlk ./...
-
-  test-macintel:
-    runs-on: macos-15-intel
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-go@v6
-      with: { go-version: stable }
-
-    - name: Test
-      run: go test ./...
-
-  test-winarm:
-    runs-on: windows-11-arm
-    needs: test
-
-    steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-go@v6
-      with: { go-version: stable }
 
     - name: Test
       run: go test ./...

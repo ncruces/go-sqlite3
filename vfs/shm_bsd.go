@@ -1,4 +1,4 @@
-//go:build ((freebsd || openbsd || netbsd || dragonfly || illumos) && (386 || arm || amd64 || arm64 || riscv64 || ppc64le || loong64) && !sqlite3_dotlk) || sqlite3_flock
+//go:build ((freebsd || openbsd || netbsd || dragonfly || illumos) && !sqlite3_dotlk) || sqlite3_flock
 
 package vfs
 
@@ -143,8 +143,8 @@ func (s *vfsShm) shmOpen() (err error) {
 }
 
 func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) (ptr_t, error) {
-	// Ensure size is a multiple of the OS page size.
-	if int(size)&(unix.Getpagesize()-1) != 0 {
+	// Ensure pages are reasonably sized.
+	if unix.Getpagesize() > int(size)*2 {
 		return 0, _IOERR_SHMMAP
 	}
 
