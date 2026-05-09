@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/sys/unix"
 
@@ -249,7 +250,6 @@ func (s *vfsShm) shmUnmap(delete bool) {
 }
 
 func (s *vfsShm) shmBarrier() {
-	s.Lock()
-	//lint:ignore SA2001 memory barrier.
-	s.Unlock()
+	var b atomic.Bool
+	b.Swap(true)
 }

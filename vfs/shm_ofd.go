@@ -5,7 +5,7 @@ package vfs
 import (
 	"io"
 	"os"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -21,7 +21,6 @@ type vfsShm struct {
 	readOnly bool
 	fileLock bool
 	blocking bool
-	sync.Mutex
 }
 
 var _ blockingSharedMemory = &vfsShm{}
@@ -174,9 +173,8 @@ func (s *vfsShm) shmUnmap(delete bool) {
 }
 
 func (s *vfsShm) shmBarrier() {
-	s.Lock()
-	//lint:ignore SA2001 memory barrier.
-	s.Unlock()
+	var b atomic.Bool
+	b.Swap(true)
 }
 
 func (s *vfsShm) shmEnableBlocking(block bool) {
