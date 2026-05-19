@@ -103,8 +103,7 @@ jobs:
             version: '10.1'
           - name: illumos
             action: omnios
-            version: 'r151056'
-            tflags: '-test.short'
+            version: 'r151058'
           - name: openbsd
             version: '7.8'
             tflags: '-test.short'
@@ -129,15 +128,17 @@ jobs:
         TESTFLAGS: ${{ matrix.os.tflags }}
       run: .github/workflows/build-test.sh
 
-    - name: Test
-      uses: cross-platform-actions/action@v1.0.0
+    - uses: cross-platform-actions/action@v1.1.0
       with:
         operating_system: ${{ matrix.os.action || matrix.os.name }}
         architecture: ${{ matrix.os.arch }}
         version: ${{ matrix.os.version }}
         shell: bash
-        run: . ./test.sh
         sync_files: runner-to-vm
+
+    - name: Test
+      shell: cpa.sh {0}
+      run: . ./test.sh
 
   test-vm:
     strategy:
