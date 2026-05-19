@@ -19,14 +19,18 @@ you can load into your database connections.
   reads, writes and lists files.
 - [`github.com/ncruces/go-sqlite3/ext/hash`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/hash)
   provides cryptographic hash functions.
+- [`github.com/ncruces/go-sqlite3/ext/ipaddr`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/ipaddr)
+  provides functions to manipulate IPs and CIDRs.
 - [`github.com/ncruces/go-sqlite3/ext/lines`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/lines)
   reads data [line-by-line](https://github.com/asg017/sqlite-lines).
 - [`github.com/ncruces/go-sqlite3/ext/pivot`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/pivot)
   creates [pivot tables](https://github.com/jakethaw/pivot_vtab).
 - [`github.com/ncruces/go-sqlite3/ext/regexp`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/regexp)
-  provides regular expression functions.
+  provides [regular expression](https://github.com/nalgeon/sqlean/blob/main/docs/regexp.md) functions.
 - [`github.com/ncruces/go-sqlite3/ext/serdes`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/serdes)
   (de)serializes databases.
+- [`github.com/ncruces/go-sqlite3/ext/spellfix1`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/spellfix1)
+  searches a vocabulary for [close matches](https://sqlite.org/spellfix1.html).
 - [`github.com/ncruces/go-sqlite3/ext/statement`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/statement)
   creates [parameterized views](https://github.com/0x09/sqlite-statement-vtab).
 - [`github.com/ncruces/go-sqlite3/ext/stats`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/stats)
@@ -35,6 +39,8 @@ you can load into your database connections.
   provides [Unicode aware](https://sqlite.org/src/dir/ext/icu) functions.
 - [`github.com/ncruces/go-sqlite3/ext/uuid`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/uuid)
   generates [UUIDs](https://en.wikipedia.org/wiki/Universally_unique_identifier).
+- [`github.com/ncruces/go-sqlite3/ext/vec1`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/vec1)
+  provides approximate nearest-neighbor [vector search](https://sqlite.org/vec1/doc/trunk/doc/vec1.md).
 - [`github.com/ncruces/go-sqlite3/ext/zorder`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/zorder)
   maps multidimensional data to one dimension.
 
