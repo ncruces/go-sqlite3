@@ -85,7 +85,7 @@ func (c *Conn) CreateAggregateFunction(name string, nArg int, flag FunctionFlag,
 	namePtr := c.arena.String(name)
 	if fn != nil {
 		funcPtr = c.wrp.AddHandle(AggregateConstructor(func() AggregateFunction {
-			var a aggregateFunc
+			a := aggregateFunc{fn: fn}
 			coro := func(yieldCoro func(struct{}) bool) {
 				seq := func(yieldSeq func([]Value) bool) {
 					for yieldSeq(a.arg) {
@@ -279,15 +279,18 @@ func returnArgs(p *[]Value) {
 }
 
 type aggregateFunc struct {
-	next func() (struct{}, bool)
-	stop func()
-	ctx  Context
-	arg  []Value
+	next    func() (struct{}, bool)
+	stop    func()
+	fn      AggregateSeqFunction
+	ctx     Context
+	arg     []Value
+	stepped bool
 }
 
 func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
 	a.ctx = ctx
 	a.arg = append(a.arg[:0], arg...)
+	a.stepped = true
 	if _, more := a.next(); !more {
 		a.stop()
 	}
@@ -295,6 +298,16 @@ func (a *aggregateFunc) Step(ctx Context, arg ...Value) {
 
 func (a *aggregateFunc) Value(ctx Context) {
 	a.ctx = ctx
+	if !a.stepped {
+		// SQLite invokes xFinal exactly once per group, including the
+		// implicit single-group case of an ungrouped aggregate over an
+		// empty input. The coroutine in CreateAggregateFunction only
+		// runs fn after the first Step, so call fn directly here with
+		// an empty seq to preserve those semantics.
+		a.stop()
+		a.fn(&a.ctx, func(yield func([]Value) bool) {})
+		return
+	}
 	a.stop()
 }
 
