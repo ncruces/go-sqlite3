@@ -62,7 +62,7 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 }
 
 // Larger sectors don't seem to significantly improve security,
-// and don't affect perfomance.
+// and don't affect performance.
 // https://crossbowerbt.github.io/docs/crypto/pdf00086.pdf
 // For flexibility, pick the minimum size of an SQLite page.
 // https://sqlite.org/fileformat.html#pages
