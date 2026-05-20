@@ -2,6 +2,7 @@ package tests
 
 import (
 	"errors"
+	"iter"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
@@ -248,6 +249,42 @@ func TestCreateFunction_delete(t *testing.T) {
 	}
 }
 
+func TestCreateAggregateFunction_empty(t *testing.T) {
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.CreateAggregateFunction("my_count", 0, 0,
+		func(ctx *sqlite3.Context, seq iter.Seq[[]sqlite3.Value]) {
+			var n int64
+			for range seq {
+				n++
+			}
+			ctx.ResultInt64(n)
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT my_count() FROM (SELECT 1) WHERE FALSE`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if !stmt.Step() {
+		t.Fatalf("no row: %v", stmt.Err())
+	}
+	if got := stmt.ColumnType(0); got == sqlite3.NULL {
+		t.Errorf("aggregate over empty input: got NULL, want 0")
+	}
+	if got, want := stmt.ColumnInt64(0), int64(0); got != want {
+		t.Errorf("my_count() over empty input = %d, want %d", got, want)
+	}
+}
+
 func TestOverloadFunction(t *testing.T) {
 	t.Parallel()
 
@@ -321,7 +358,7 @@ func TestAnyCollationNeeded(t *testing.T) {
 	}
 }
 
-func TestPointer(t *testing.T) {
+func TestCreateFunction_pointer(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")

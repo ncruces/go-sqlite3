@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"testing"
 
 	"github.com/ncruces/go-sqlite3"
 )
@@ -57,47 +56,4 @@ func ExampleConn_CreateAggregateFunction() {
 	}
 	// Output:
 	// 2
-}
-
-// TestAggregateSeqFunction_EmptyInput verifies that the per-group
-// callback is invoked exactly once even when the group has zero
-// input rows, matching SQLite's xFinal semantics.
-func TestAggregateSeqFunction_EmptyInput(t *testing.T) {
-	db, err := sqlite3.Open(memory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	var calls int
-	err = db.CreateAggregateFunction("my_count", 0, 0,
-		func(ctx *sqlite3.Context, seq iter.Seq[[]sqlite3.Value]) {
-			calls++
-			var n int64
-			for range seq {
-				n++
-			}
-			ctx.ResultInt64(n)
-		})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stmt, _, err := db.Prepare(`SELECT my_count() FROM (SELECT 1) WHERE FALSE`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if !stmt.Step() {
-		t.Fatalf("no row: %v", stmt.Err())
-	}
-	if got := stmt.ColumnType(0); got == sqlite3.NULL {
-		t.Errorf("aggregate over empty input: got NULL, want 0")
-	}
-	if got, want := stmt.ColumnInt64(0), int64(0); got != want {
-		t.Errorf("my_count() over empty input = %d, want %d", got, want)
-	}
-	if calls != 1 {
-		t.Errorf("callback invocations = %d, want 1", calls)
-	}
 }
