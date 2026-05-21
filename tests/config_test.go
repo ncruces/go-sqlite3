@@ -336,7 +336,7 @@ func TestConn_Trace(t *testing.T) {
 
 	rows := 0
 	closed := false
-	err = db.Trace(math.MaxUint32, func(evt sqlite3.TraceEvent, a1 any, a2 any) error {
+	err = db.Trace(math.MaxUint32, func(evt sqlite3.TraceEvent, a1, a2 any) error {
 		switch evt {
 		case sqlite3.TRACE_CLOSE:
 			closed = true

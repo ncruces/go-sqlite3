@@ -4,13 +4,14 @@ package driver
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"math"
 	"time"
 
 	"github.com/ncruces/go-sqlite3"
 )
 
-func (r *rows) ScanColumn(i int, dest any) error {
+func (r *rows) ScanColumn(ctx driver.ScanContext, i int, dest any) error {
 	typ := r.Stmt.ColumnType(i)
 
 	// Fast path.
@@ -73,7 +74,7 @@ func (r *rows) ScanColumn(i int, dest any) error {
 	}
 
 	// Fallback.
-	return sql.ConvertAssign(dest, r.convert(i, src))
+	return sql.ConvertAssign(ctx, dest, r.convert(i, src))
 }
 
 func (r *rows) scanTime(src any) (_ time.Time, _ bool) {

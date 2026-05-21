@@ -86,7 +86,7 @@ type xtsFile struct {
 	sector [sectorSize]byte
 }
 
-func (x *xtsFile) Pragma(name string, value string) (string, error) {
+func (x *xtsFile) Pragma(name, value string) (string, error) {
 	var key []byte
 	switch name {
 	case "key":

@@ -91,7 +91,7 @@ type hbshFile struct {
 	block [blockSize]byte
 }
 
-func (h *hbshFile) Pragma(name string, value string) (string, error) {
+func (h *hbshFile) Pragma(name, value string) (string, error) {
 	var key []byte
 	switch name {
 	case "key":

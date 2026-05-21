@@ -807,17 +807,17 @@ func (r *rows) Next(dest []driver.Value) error {
 	if err := r.Stmt.ColumnsRaw(data...); err != nil {
 		return err
 	}
-	for i := range data {
-		data[i] = r.convert(i, data[i])
+	for i := range dest {
+		dest[i] = r.convert(i, dest[i])
 	}
 	return nil
 }
 
-func (r *rows) convert(i int, dest any) any {
+func (r *rows) convert(i int, val driver.Value) driver.Value {
 	scan := r.scanType(i)
-	if v, ok := dest.([]byte); ok {
+	if v, ok := val.([]byte); ok {
 		if len(v) == cap(v) { // a BLOB
-			return dest
+			return val
 		}
 		if scan != _TEXT {
 			t, ok := r.maybeTime(v)
@@ -825,21 +825,21 @@ func (r *rows) convert(i int, dest any) any {
 				return t
 			}
 		}
-		dest = string(v)
+		val = string(v)
 	}
 	switch scan {
 	case _TIME:
-		t, err := r.tmRead.Decode(dest)
+		t, err := r.tmRead.Decode(val)
 		if err == nil {
 			return t
 		}
 	case _BOOL:
-		switch dest {
+		switch val {
 		case int64(0):
 			return false
 		case int64(1):
 			return true
 		}
 	}
-	return dest
+	return val
 }
