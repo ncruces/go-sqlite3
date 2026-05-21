@@ -48,6 +48,10 @@ func (r *rows) ScanColumn(ctx driver.ScanContext, i int, dest any) error {
 		case *string:
 			*d = string(b)
 			return nil
+		case *sql.NullString:
+			d.String = string(b)
+			d.Valid = true
+			return nil
 		case *[]byte:
 			*d = append((*d)[:0], b...)
 			return nil
@@ -63,9 +67,6 @@ func (r *rows) ScanColumn(ctx driver.ScanContext, i int, dest any) error {
 			*d, ok = r.scanTime(src)
 		case *sql.NullTime:
 			d.Time, ok = r.scanTime(src)
-			d.Valid = ok
-		case *sql.Null[time.Time]:
-			d.V, ok = r.scanTime(src)
 			d.Valid = ok
 		}
 		if ok {
@@ -97,9 +98,6 @@ func (r *rows) scanFloat(f float64, dest any) bool {
 	case *sql.NullFloat64:
 		d.Float64 = f
 		d.Valid = true
-	case *sql.Null[float64]:
-		d.V = f
-		d.Valid = true
 	case *sql.Null[float32]:
 		d.V = float32(f)
 		d.Valid = true
@@ -116,16 +114,14 @@ func (r *rows) scanInt(i int64, dest any) bool {
 	case *sql.NullInt64:
 		d.Int64 = i
 		d.Valid = true
-	case *sql.Null[int64]:
-		d.V = i
-		d.Valid = true
 
 	case *uint64:
 		*d = uint64(i)
 		return 0 <= i
-	case *uint:
-		*d = uint(i)
-		return 0 <= i && uint64(i) <= math.MaxUint
+	case *sql.Null[uint64]:
+		d.V = uint64(i)
+		d.Valid = true
+		return 0 <= i
 
 	case *int:
 		*d = int(i)
@@ -134,6 +130,14 @@ func (r *rows) scanInt(i int64, dest any) bool {
 		d.V = int(i)
 		d.Valid = true
 		return math.MinInt <= i && i <= math.MaxInt
+
+	case *uint:
+		*d = uint(i)
+		return 0 <= i && uint64(i) <= math.MaxUint
+	case *sql.Null[uint]:
+		d.V = uint(i)
+		d.Valid = true
+		return 0 <= i && uint64(i) <= math.MaxUint
 
 	default:
 		return false
