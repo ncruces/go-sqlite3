@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-GITHUB_TAG="https://github.com/sqlite/sqlite/raw/version-3.52.0"
+GITHUB_TAG="https://github.com/sqlite/sqlite/raw/version-3.53.2"
 
 cd testdata/
 curl -#OL "$GITHUB_TAG/mptest/config01.test"

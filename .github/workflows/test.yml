@@ -105,7 +105,7 @@ jobs:
             action: omnios
             version: 'r151058'
           - name: openbsd
-            version: '7.8'
+            version: '7.9'
             tflags: '-test.short'
           - name: freebsd
             arch: arm64
@@ -128,7 +128,7 @@ jobs:
         TESTFLAGS: ${{ matrix.os.tflags }}
       run: .github/workflows/build-test.sh
 
-    - uses: cross-platform-actions/action@v1.1.0
+    - uses: cross-platform-actions/action@v1.2.0
       with:
         operating_system: ${{ matrix.os.action || matrix.os.name }}
         architecture: ${{ matrix.os.arch }}
