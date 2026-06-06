@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	parser "github.com/ncruces/go-sqlite3-wasm/v2/parser"
+	parser "github.com/ncruces/go-sqlite3-wasm/v3/parser"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 

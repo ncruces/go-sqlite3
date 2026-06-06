@@ -17,6 +17,8 @@ you can load into your database connections.
   reads [comma-separated values](https://sqlite.org/csv.html).
 - [`github.com/ncruces/go-sqlite3/ext/fileio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/fileio)
   reads, writes and lists files.
+- [`github.com/ncruces/go-sqlite3/ext/fts5`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/fts5)
+  provides [full-text search](https://sqlite.org/fts5.html).
 - [`github.com/ncruces/go-sqlite3/ext/hash`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/hash)
   provides cryptographic hash functions.
 - [`github.com/ncruces/go-sqlite3/ext/ipaddr`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/ipaddr)
@@ -27,6 +29,8 @@ you can load into your database connections.
   creates [pivot tables](https://github.com/jakethaw/pivot_vtab).
 - [`github.com/ncruces/go-sqlite3/ext/regexp`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/regexp)
   provides [regular expression](https://github.com/nalgeon/sqlean/blob/main/docs/regexp.md) functions.
+- [`github.com/ncruces/go-sqlite3/ext/rtree`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/rtree)
+  provides [multi-dimensional](https://sqlite.org/rtree.html) and [geospatial](https://sqlite.org/geopoly.html) indexes.
 - [`github.com/ncruces/go-sqlite3/ext/serdes`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/serdes)
   (de)serializes databases.
 - [`github.com/ncruces/go-sqlite3/ext/spellfix1`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/spellfix1)

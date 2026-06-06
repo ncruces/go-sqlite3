@@ -5,7 +5,7 @@ package vec1
 
 import (
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3-wasm/v2/vec1"
+	"github.com/ncruces/go-sqlite3-wasm/v3/vec1"
 )
 
 // Register registers the vec1 vector extension.

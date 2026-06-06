@@ -1,6 +1,7 @@
 package array_test
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -10,12 +11,17 @@ import (
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/array"
+	"github.com/ncruces/go-sqlite3/ext/rtree"
 	"github.com/ncruces/go-sqlite3/internal/testcfg"
 	"github.com/ncruces/go-sqlite3/vfs/memdb"
 )
 
 func Example_driver() {
-	db, err := driver.Open("file:/test.db?vfs=memdb", array.Register)
+	db, err := driver.Open("file:/test.db?vfs=memdb", func(c *sqlite3.Conn) error {
+		return errors.Join(
+			array.Register(c),
+			rtree.Register(c))
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,6 +57,7 @@ func Example_driver() {
 
 func Example() {
 	sqlite3.AutoExtension(array.Register)
+	sqlite3.AutoExtension(rtree.Register)
 
 	db, err := sqlite3.Open(":memory:")
 	if err != nil {
