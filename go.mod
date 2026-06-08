@@ -15,8 +15,8 @@ require (
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
 	golang.org/x/crypto v0.52.0 // vfs/adiantum vfs/xts
-	golang.org/x/sync v0.20.0 // test
-	golang.org/x/text v0.37.0 // ext/unicode
+	golang.org/x/sync v0.21.0 // test
+	golang.org/x/text v0.38.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
