@@ -22,6 +22,23 @@ func TestConn_Transaction_exec(t *testing.T) {
 	db.RollbackHook(func() {})
 	db.CommitHook(func() bool { return true })
 	db.UpdateHook(func(sqlite3.AuthorizerActionCode, string, string, int64) {})
+	db.PreUpdateHook(func(pud sqlite3.PreUpdateData) {
+		if got := pud.Count(); got != 1 {
+			t.Errorf("got %d, want 1", got)
+		}
+		if got := pud.Depth(); got != 0 {
+			t.Errorf("got %d, want 0", got)
+		}
+		if got := pud.BlobWrite(); got != -1 {
+			t.Errorf("got %d, want -1", got)
+		}
+		if _, err := pud.New(0); err != nil {
+			t.Error(err)
+		}
+		if _, err := pud.Old(0); !errors.Is(err, sqlite3.MISUSE) {
+			t.Error(err)
+		}
+	})
 
 	err = db.Exec(`CREATE TABLE test (col)`)
 	if err != nil {
