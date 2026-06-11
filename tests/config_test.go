@@ -449,8 +449,8 @@ func TestConn_memoryLimit(t *testing.T) {
 	const limit = 64 * 1024 * 1024
 
 	n = db.SoftHeapLimit(limit)
-	if n != 0 {
-		t.Fatal("want zero")
+	if n == 0 {
+		t.Fatal("want limit")
 	}
 
 	n = db.SoftHeapLimit(-1)

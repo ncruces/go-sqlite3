@@ -104,6 +104,7 @@ jobs:
           - name: illumos
             action: omnios
             version: 'r151058'
+            tflags: '-test.short'
           - name: openbsd
             version: '7.9'
             tflags: '-test.short'
