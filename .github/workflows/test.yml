@@ -101,12 +101,16 @@ jobs:
             version: '15.0'
           - name: netbsd
             version: '10.1'
+          - name: openbsd
+            version: '7.9'
+            tflags: '-test.short'
+          - name: dragonfly
+            action: dragonflybsd
+            version: '6.4.2'
+            tflags: '-test.short'
           - name: illumos
             action: omnios
             version: 'r151058'
-            tflags: '-test.short'
-          - name: openbsd
-            version: '7.9'
             tflags: '-test.short'
           - name: freebsd
             arch: arm64
@@ -145,12 +149,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - name: dragonfly
-            action: 'vmactions/dragonflybsd-vm@v1'
-            tflags: '-test.short'
-          - name: illumos
-            action: 'vmactions/openindiana-vm@v0'
-            tflags: '-test.short'
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
             bflags: '-tags sqlite3_dotlk'
