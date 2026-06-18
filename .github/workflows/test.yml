@@ -30,7 +30,7 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
@@ -124,7 +124,7 @@ jobs:
     needs: test
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Build
       env:
@@ -157,7 +157,7 @@ jobs:
     needs: test
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Build
       env:
@@ -176,7 +176,7 @@ jobs:
 
     steps:
     - uses: bytecodealliance/actions/wasmtime/setup@v1
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
@@ -197,7 +197,7 @@ jobs:
 
     steps:
     - uses: docker/setup-qemu-action@v4
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
@@ -221,7 +221,7 @@ jobs:
     needs: test
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
@@ -239,7 +239,7 @@ jobs:
     needs: test
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/setup-go@v6
       with: { go-version: stable }
 
@@ -254,7 +254,7 @@ jobs:
     needs: test-qemu
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Test
       run: go test -short ./...
