@@ -2,7 +2,6 @@ package sqlite3_wrap
 
 import (
 	"math"
-	"reflect"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -56,11 +55,8 @@ func (m *Memory) allocate(max uint64) {
 	}
 	m.ptr = r
 
-	// SliceHeader, although deprecated, avoids a go vet warning.
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&m.Buf))
-	sh.Data = r
-	sh.Len = 0
-	sh.Cap = int(res)
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&r))
+	m.Buf = unsafe.Slice((*byte)(ptr), res)[:0]
 }
 
 func (m *Memory) reallocate(size uint64) {

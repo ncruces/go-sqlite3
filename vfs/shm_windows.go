@@ -74,6 +74,8 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 		return 0, err
 	}
 
+	s.Lock()
+	defer s.Unlock()
 	defer s.shmAcquire(&err)
 
 	// Check if file is big enough.
@@ -124,6 +126,9 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
 		return _IOERR_SHMLOCK
 	}
 
+	s.Lock()
+	defer s.Unlock()
+
 	switch {
 	case flags&_SHM_LOCK != 0:
 		defer s.shmAcquire(&err)
@@ -148,7 +153,9 @@ func (s *vfsShm) shmUnmap(delete bool) {
 		return
 	}
 
+	s.Lock()
 	s.shmRelease()
+	defer s.Unlock()
 
 	// Free local memory.
 	for _, p := range s.ptrs {

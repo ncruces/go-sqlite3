@@ -2,14 +2,12 @@ package sqlite3_wrap
 
 import (
 	"os"
-	"reflect"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 type MappedRegion struct {
-	windows.Handle
 	Data []byte
 	addr uintptr
 }
@@ -22,6 +20,7 @@ func MapRegion(f *os.File, offset int64, size int32) (*MappedRegion, error) {
 	if h == 0 {
 		return nil, err
 	}
+	defer windows.CloseHandle(h)
 
 	const allocationGranularity = 64 * 1024
 	align := offset % allocationGranularity
@@ -30,17 +29,14 @@ func MapRegion(f *os.File, offset int64, size int32) (*MappedRegion, error) {
 	a, err := windows.MapViewOfFile(h, windows.FILE_MAP_WRITE,
 		uint32(offset>>32), uint32(offset), uintptr(size)+uintptr(align))
 	if a == 0 {
-		windows.CloseHandle(h)
 		return nil, err
 	}
 
-	ret := &MappedRegion{Handle: h, addr: a}
-	// SliceHeader, although deprecated, avoids a go vet warning.
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&ret.Data))
-	sh.Data = a + uintptr(align)
-	sh.Len = int(size)
-	sh.Cap = int(size)
-	return ret, nil
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&a))
+	return &MappedRegion{
+		Data: unsafe.Slice((*byte)(unsafe.Add(ptr, align)), size),
+		addr: a,
+	}, nil
 }
 
 func (r *MappedRegion) Unmap() error {
@@ -52,5 +48,5 @@ func (r *MappedRegion) Unmap() error {
 		return err
 	}
 	r.Data = nil
-	return windows.CloseHandle(r.Handle)
+	return nil
 }
