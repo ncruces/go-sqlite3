@@ -102,14 +102,9 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 	var err error
 	var f *os.File
 	if name == nil {
-		f, err = os.CreateTemp(os.Getenv("SQLITE_TMPDIR"), "*.db")
+		f, err = osCreateTemp(flags)
 	} else {
 		f, err = os.OpenFile(name.String(), oflags, 0666)
-	}
-	if err != nil {
-		if name == nil {
-			return nil, flags, sysError{err, _IOERR_GETTEMPPATH}
-		}
 		if errors.Is(err, syscall.EISDIR) {
 			return nil, flags, sysError{err, _CANTOPEN_ISDIR}
 		}
@@ -117,6 +112,8 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 			osAccess(name.String(), ACCESS_EXISTS) != nil {
 			return nil, flags, sysError{err, _READONLY_DIRECTORY}
 		}
+	}
+	if err != nil {
 		return nil, flags, err
 	}
 
@@ -126,20 +123,19 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 			return nil, flags, sysError{err, _IOERR_FSTAT}
 		}
 	}
-	if isUnix && flags&OPEN_DELETEONCLOSE != 0 {
-		os.Remove(f.Name())
-	}
 
 	file := vfsFile{
 		File:  f,
 		flags: flags | _FLAG_PSOW,
-		shm:   NewSharedMemory(name.String()+"-shm", flags),
 	}
 	if osBatchAtomic(f) {
 		file.flags |= _FLAG_ATOMIC
 	}
 	if isUnix && isCreate && isJournl {
 		file.flags |= _FLAG_SYNC_DIR
+	}
+	if name.String() != "" {
+		file.shm = NewSharedMemory(name.String()+"-shm", flags)
 	}
 	return &file, flags, nil
 }

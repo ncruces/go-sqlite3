@@ -5,10 +5,41 @@ package vfs
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
+
+func osCreateTemp(flags OpenFlag) (*os.File, error) {
+	dir := os.Getenv("SQLITE_TMPDIR")
+	if dir == "" {
+		dir = os.TempDir()
+	}
+
+	for {
+		fd, err := unix.Open(dir, unix.O_RDWR|unix.O_EXCL|unix.O_TMPFILE|unix.O_CLOEXEC, 0600)
+		if err == nil {
+			path := filepath.Join(dir, "tmp.db")
+			return os.NewFile(uintptr(fd), path), nil
+		}
+		if err == unix.EISDIR || err == unix.EOPNOTSUPP {
+			break
+		}
+		if err != unix.EINTR {
+			return nil, sysError{err, _IOERR_GETTEMPPATH}
+		}
+	}
+
+	f, err := os.CreateTemp(dir, "*.db")
+	if err != nil {
+		return nil, sysError{err, _IOERR_GETTEMPPATH}
+	}
+	if flags&OPEN_DELETEONCLOSE != 0 {
+		os.Remove(f.Name())
+	}
+	return f, nil
+}
 
 func osSync(file *os.File, _ OpenFlag, _ SyncFlag) error {
 	// SQLite trusts Linux's fdatasync for all fsync's.
