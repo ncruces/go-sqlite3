@@ -61,6 +61,10 @@ On Windows, this package uses `MapViewOfFile`, like SQLite.
 
 You can also opt into a cross-platform, in-process, memory sharing implementation
 with the `sqlite3_dotlk` build tag.
+This implementation [shares memory through copying](https://github.com/ncruces/go-sqlite3/wiki/Sharing-memory-through-copying),
+and is best used with moderate concurrency. Call
+[`db.SetMaxOpenConns(max(2, runtime.GOMAXPROCS(0)))`](https://pkg.go.dev/database/sql#DB.SetMaxOpenConns)
+to avoid excessive concurrency.
 
 Otherwise, [WAL support is limited](https://sqlite.org/wal.html#noshm),
 and `EXCLUSIVE` locking mode must be set to create, read, and write WAL databases.

@@ -155,13 +155,15 @@ func (m _Migrator) ColumnTypes(value interface{}) ([]gorm.ColumnType, error) {
 }
 
 func (m _Migrator) DropColumn(value interface{}, name string) error {
-	return m.recreateTable(value, nil, func(ddl *ddl, stmt *gorm.Statement) (*ddl, []interface{}, error) {
-		if field := stmt.Schema.LookUpField(name); field != nil {
-			name = field.DBName
-		}
+	return m.RunWithoutForeignKey(func() error {
+		return m.recreateTable(value, nil, func(ddl *ddl, stmt *gorm.Statement) (*ddl, []interface{}, error) {
+			if field := stmt.Schema.LookUpField(name); field != nil {
+				name = field.DBName
+			}
 
-		ddl.removeColumn(name)
-		return ddl, nil, nil
+			ddl.removeColumn(name)
+			return ddl, nil, nil
+		})
 	})
 }
 
