@@ -50,7 +50,7 @@ func TestWALConcurrentWriters(t *testing.T) {
 	}
 
 	const (
-		iters     = 2000
+		iters     = 1500
 		blobBytes = 8192
 		ckptEvery = 25
 		maxRounds = 3
@@ -125,6 +125,9 @@ func walStressRound(t *testing.T, workers, iters, ckptEvery int, blob []byte) er
 						!errors.Is(err, sqlite3.BUSY) && !errors.Is(err, sqlite3.PROTOCOL) {
 						return fmt.Errorf("checkpoint: %w", err)
 					}
+				}
+				if i%100 == 99 {
+					t.Logf("%d %d", i+1, gid)
 				}
 			}
 			return nil

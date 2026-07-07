@@ -13,19 +13,37 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
+type vfsShmParent struct {
+	lock [_SHM_NLOCK]int8 // +checklocks:Mutex
+	sync.Mutex
+}
+
+var parent vfsShmParent
+
 type vfsShm struct {
 	*os.File
+	*vfsShmParent
 	wrp      *sqlite3_wrap.Wrapper
 	path     string
 	regions  []*sqlite3_wrap.MappedRegion
 	shared   [][]byte
 	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []ptr_t
+	lock     [_SHM_NLOCK]bool
 	fileLock bool
-	sync.Mutex
 }
 
 func (s *vfsShm) Close() error {
+	if s.ptrs == nil {
+		return nil
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	// Unlock everything.
+	s.shmLock(0, _SHM_NLOCK, _SHM_UNLOCK)
+
 	// Unmap regions.
 	for _, r := range s.regions {
 		r.Unmap()
@@ -45,6 +63,7 @@ func (s *vfsShm) shmOpen() error {
 		if err != nil {
 			return sysError{err, _CANTOPEN}
 		}
+		s.vfsShmParent = &parent
 		s.fileLock = false
 		s.File = f
 	}
@@ -136,16 +155,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
 		s.shmRelease()
 	}
 
-	switch {
-	case flags&_SHM_UNLOCK != 0:
-		return osUnlock(s.File, _SHM_BASE+uint32(offset), uint32(n))
-	case flags&_SHM_SHARED != 0:
-		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
-	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
-	default:
-		panic(errutil.AssertErr())
-	}
+	return s.shmMemLock(offset, n, flags)
 }
 
 func (s *vfsShm) shmUnmap(delete bool) {
