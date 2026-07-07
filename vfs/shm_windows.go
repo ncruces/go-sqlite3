@@ -13,6 +13,8 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
+var mtx sync.Mutex
+
 type vfsShm struct {
 	*os.File
 	wrp      *sqlite3_wrap.Wrapper
@@ -22,7 +24,7 @@ type vfsShm struct {
 	shadow   [][_WALINDEX_PGSZ]byte
 	ptrs     []ptr_t
 	fileLock bool
-	sync.Mutex
+	*sync.Mutex
 }
 
 func (s *vfsShm) Close() error {
@@ -37,6 +39,7 @@ func (s *vfsShm) Close() error {
 }
 
 func (s *vfsShm) shmOpen() error {
+	s.Mutex = &mtx
 	if s.fileLock {
 		return nil
 	}
