@@ -62,7 +62,7 @@ func TestWALConcurrentWriters(t *testing.T) {
 		blobBytes = 8192
 		ckptEvery = 25
 		maxRounds = 3
-		budget    = 7 * time.Minute
+		budget    = 5 * time.Minute
 	)
 	t.Logf("runner parallelism: NumCPU=%d GOMAXPROCS=%d", runtime.NumCPU(), runtime.GOMAXPROCS(0))
 
@@ -75,6 +75,7 @@ func TestWALConcurrentWriters(t *testing.T) {
 	round := 0
 	for round < maxRounds {
 		round++
+		t.Logf("round %d", round)
 		if err := walStressRound(t, workers, iters, ckptEvery, blob); err != nil {
 			t.Fatalf("round %d: WAL corruption reproduced: %v", round, err)
 		}

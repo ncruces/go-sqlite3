@@ -39,7 +39,6 @@ func (s *vfsShm) Close() error {
 }
 
 func (s *vfsShm) shmOpen() error {
-	s.Mutex = &mtx
 	if s.fileLock {
 		return nil
 	}
@@ -49,6 +48,7 @@ func (s *vfsShm) shmOpen() error {
 			return sysError{err, _CANTOPEN}
 		}
 		s.fileLock = false
+		s.Mutex = &mtx
 		s.File = f
 	}
 
