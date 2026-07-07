@@ -17,13 +17,13 @@ type vfsShmParent struct {
 	refs   int // +checklocks:vfsShmListMtx
 
 	lock [_SHM_NLOCK]int8 // +checklocks:Mutex
-	sync.Mutex
 }
 
 var (
 	// +checklocks:vfsShmListMtx
 	vfsShmList    = map[string]*vfsShmParent{}
 	vfsShmListMtx sync.Mutex
+	vfsShmFileMtx sync.Mutex
 )
 
 type vfsShm struct {
@@ -33,6 +33,7 @@ type vfsShm struct {
 	shadow [][_WALINDEX_PGSZ]byte
 	ptrs   []ptr_t
 	lock   [_SHM_NLOCK]bool
+	sync.Mutex
 }
 
 func (s *vfsShm) Close() error {
@@ -40,8 +41,8 @@ func (s *vfsShm) Close() error {
 		return nil
 	}
 
-	vfsShmListMtx.Lock()
-	defer vfsShmListMtx.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
 	// Unlock everything.
 	s.shmLock(0, _SHM_NLOCK, _SHM_UNLOCK)
@@ -148,6 +149,8 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
 		s.shmRelease()
 	}
 
+	vfsShmFileMtx.Lock()
+	defer vfsShmFileMtx.Unlock()
 	return s.shmMemLock(offset, n, flags)
 }
 

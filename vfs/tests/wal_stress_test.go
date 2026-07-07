@@ -1,10 +1,3 @@
-// The sqlite3_dotlk build keeps the copy-on-lock-boundary scheme, which
-// cannot fully eliminate wal-index staleness: under this load it reliably
-// fails with SQLITE_PROTOCOL (a documented limitation, not corruption —
-// the database stays intact). Only the real-file VFS paths are exercised.
-//
-//go:build !sqlite3_dotlk
-
 package tests
 
 import (
@@ -57,13 +50,13 @@ func TestWALConcurrentWriters(t *testing.T) {
 	}
 
 	const (
-		workers   = 64
 		iters     = 2000
 		blobBytes = 8192
 		ckptEvery = 25
 		maxRounds = 3
 		budget    = 5 * time.Minute
 	)
+	workers := 64
 	t.Logf("runner parallelism: NumCPU=%d GOMAXPROCS=%d", runtime.NumCPU(), runtime.GOMAXPROCS(0))
 
 	blob := make([]byte, blobBytes)

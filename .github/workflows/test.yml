@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     env:
       SQLITE3_TEST_WAL_STRESS: "1"
@@ -20,4 +20,4 @@ jobs:
       - uses: actions/setup-go@v6
         with: { go-version: stable }
       - name: WAL concurrent-writers regression
-        run: go test ./vfs/tests/ -run '^TestWALConcurrentWriters$' -v -count=1 -timeout 25m
+        run: go test -tags sqlite3_dotlk ./vfs/tests/ -run '^TestWALConcurrentWriters$' -v -count=1 -timeout 25m
