@@ -31,10 +31,10 @@ const (
 // https://sqlite.org/walformat.html#the_wal_index_file_format
 
 func (s *vfsShm) shmAcquire(errp *error) {
-	if errp != nil && *errp != nil {
-		return
-	}
-	if len(s.ptrs) == 0 || shmEqual(s.shadow[0][:], s.shared[0][:]) {
+	// if errp != nil && *errp != nil {
+	// 	return
+	// }
+	if len(s.ptrs) == 0 /*|| shmEqual(s.shadow[0][:], s.shared[0][:])*/ {
 		return
 	}
 	// Copies modified words from shared to private memory.
@@ -52,7 +52,7 @@ func (s *vfsShm) shmAcquire(errp *error) {
 }
 
 func (s *vfsShm) shmRelease() {
-	if len(s.ptrs) == 0 || shmEqual(s.shadow[0][:], s.wrp.Bytes(s.ptrs[0], _WALINDEX_HDR_SIZE)) {
+	if len(s.ptrs) == 0 /*|| shmEqual(s.shadow[0][:], s.wrp.Bytes(s.ptrs[0], _WALINDEX_HDR_SIZE))*/ {
 		return
 	}
 	// Copies modified words from private to shared memory.
