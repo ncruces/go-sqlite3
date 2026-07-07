@@ -1,0 +1,27 @@
+name: WAL Repro
+
+# On-demand regression run for the Windows WAL-index corruption. The test is
+# opt-in (gated behind SQLITE3_TEST_WAL_STRESS) so it never taxes the normal
+# test matrix. On an unfixed Windows build it fails in the first round; on the
+# fixed build, and on every direct-mapped VFS (unix, native), it stays green.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wal:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      SQLITE3_TEST_WAL_STRESS: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with: { go-version: stable }
+      - name: WAL concurrent-writers regression
+        run: go test ./vfs/tests/ -run '^TestWALConcurrentWriters$' -v -count=1 -timeout 25m
