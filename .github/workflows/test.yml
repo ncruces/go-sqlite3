@@ -104,10 +104,6 @@ jobs:
           - name: openbsd
             version: '7.9'
             tflags: '-test.short'
-          - name: dragonfly
-            action: dragonflybsd
-            version: '6.4.2'
-            tflags: '-test.short'
           - name: illumos
             action: omnios
             version: 'r151058'
@@ -149,6 +145,9 @@ jobs:
     strategy:
       matrix:
         os:
+          - name: dragonfly
+            action: 'vmactions/dragonflybsd-vm@v1'
+            tflags: '-test.short'
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
             bflags: '-tags sqlite3_dotlk'

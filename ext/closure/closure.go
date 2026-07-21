@@ -11,7 +11,6 @@ import (
 	"math"
 
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
@@ -35,12 +34,12 @@ func Register(db *sqlite3.Conn) error {
 				column string
 				parent string
 
-				done = util.Set[string]{}
+				done = set[string]{}
 			)
 
 			for _, arg := range arg {
 				key, val := sql3util.NamedArg(arg)
-				if done.Contains(key) {
+				if done.has(key) {
 					return nil, fmt.Errorf("transitive_closure: more than one %q parameter", key)
 				}
 				switch key {
@@ -53,7 +52,7 @@ func Register(db *sqlite3.Conn) error {
 				default:
 					return nil, fmt.Errorf("transitive_closure: unknown %q parameter", key)
 				}
-				done.Add(key)
+				done.add(key)
 			}
 
 			err := db.DeclareVTab(`CREATE TABLE x(id INT,depth INT,root HIDDEN,tablename TEXT HIDDEN,idcolumn TEXT HIDDEN,parentcolumn TEXT HIDDEN)`)
@@ -209,8 +208,8 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	defer stmt.Close()
 
 	c.nodes = []node{{root, 0}}
-	set := util.Set[int64]{}
-	set.Add(root)
+	set := set[int64]{}
+	set.add(root)
 	for i := range c.nodes {
 		curr := c.nodes[i]
 		if curr.depth >= maxDepth {
@@ -222,8 +221,8 @@ func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 		for stmt.Step() {
 			if stmt.ColumnType(0) == sqlite3.INTEGER {
 				next := stmt.ColumnInt64(0)
-				if !set.Contains(next) {
-					set.Add(next)
+				if !set.has(next) {
+					set.add(next)
 					c.nodes = append(c.nodes, node{next, curr.depth + 1})
 				}
 			}

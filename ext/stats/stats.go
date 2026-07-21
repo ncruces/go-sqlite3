@@ -47,7 +47,7 @@
 //
 // [Built-in Aggregate Functions]: https://sqlite.org/lang_aggfunc.html
 // [Built-in Window Functions]: https://sqlite.org/windowfunctions.html#builtins
-// [ANSI SQL Aggregate Functions]: https://oreilly.com/library/view/sql-in-a/9780596155322/ch04s02.html
+// [ANSI SQL Aggregate Functions]: http://users.atw.hu/sqlnut/sqlnut2-chp-4-sect-2.html
 package stats
 
 import (
@@ -168,18 +168,14 @@ func (fn *variance) Value(ctx sqlite3.Context) {
 }
 
 func (fn *variance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	f := a.Float()
-	if f != 0.0 || a.Type() != sqlite3.NULL {
-		fn.enqueue(f)
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.enqueue(arg[0].Float())
 	}
 }
 
 func (fn *variance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	f := a.Float()
-	if f != 0.0 || a.Type() != sqlite3.NULL {
-		fn.dequeue(f)
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.dequeue(arg[0].Float())
 	}
 }
 
@@ -239,24 +235,18 @@ func (fn *covariance) Value(ctx sqlite3.Context) {
 }
 
 func (fn *covariance) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	b, a := arg[1], arg[0] // avoid a bounds check
-	fa := a.Float()
-	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.Type() != sqlite3.NULL) &&
-		(fb != 0.0 || b.Type() != sqlite3.NULL) {
-		fn.enqueue(fa, fb)
+		arg[1].NumericType() <= sqlite3.FLOAT &&
+		arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.enqueue(arg[0].Float(), arg[1].Float())
 	}
 }
 
 func (fn *covariance) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	b, a := arg[1], arg[0] // avoid a bounds check
-	fa := a.Float()
-	fb := b.Float()
 	if true &&
-		(fa != 0.0 || a.Type() != sqlite3.NULL) &&
-		(fb != 0.0 || b.Type() != sqlite3.NULL) {
-		fn.dequeue(fa, fb)
+		arg[1].NumericType() <= sqlite3.FLOAT &&
+		arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.dequeue(arg[0].Float(), arg[1].Float())
 	}
 }
 
@@ -293,17 +283,13 @@ func (fn *momentfn) Value(ctx sqlite3.Context) {
 }
 
 func (fn *momentfn) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	f := a.Float()
-	if f != 0.0 || a.Type() != sqlite3.NULL {
-		fn.enqueue(f)
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.enqueue(arg[0].Float())
 	}
 }
 
 func (fn *momentfn) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	f := a.Float()
-	if f != 0.0 || a.Type() != sqlite3.NULL {
-		fn.dequeue(f)
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		fn.dequeue(arg[0].Float())
 	}
 }
