@@ -30,6 +30,7 @@ type vfsShm struct {
 	*vfsShmParent
 	wrp    *sqlite3_wrap.Wrapper
 	path   string
+	copyMu *shmCopyLock // serializes copies per shared buffer
 	shadow [][_WALINDEX_PGSZ]byte
 	ptrs   []ptr_t
 	lock   [_SHM_NLOCK]bool
@@ -38,6 +39,12 @@ type vfsShm struct {
 func (s *vfsShm) Close() error {
 	if s.vfsShmParent == nil {
 		return nil
+	}
+
+	// Release the per-file copy lock; nothing after this copies.
+	if s.copyMu != nil {
+		shmCopyLockPut(s.path)
+		s.copyMu = nil
 	}
 
 	vfsShmListMtx.Lock()
@@ -73,6 +80,7 @@ func (s *vfsShm) shmOpen() error {
 	if g, ok := vfsShmList[s.path]; ok {
 		s.vfsShmParent = g
 		g.refs++
+		s.copyMu = shmCopyLockGet(s.path)
 		return nil
 	}
 
@@ -88,6 +96,7 @@ func (s *vfsShm) shmOpen() error {
 	// Add the new shared buffer.
 	s.vfsShmParent = &vfsShmParent{}
 	vfsShmList[s.path] = s.vfsShmParent
+	s.copyMu = shmCopyLockGet(s.path)
 	return nil
 }
 
@@ -131,6 +140,18 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 
 	s.shadow[0][4] = 1
 	return s.ptrs[id], nil
+}
+
+func (s *vfsShm) shmBarrier() {
+	if s.copyMu == nil {
+		return // never mapped
+	}
+	s.Lock()
+	s.copyMu.Lock()
+	s.shmAcquireLocked()
+	s.shmReleaseLocked()
+	s.copyMu.Unlock()
+	s.Unlock()
 }
 
 func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
