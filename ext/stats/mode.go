@@ -106,8 +106,8 @@ func (m *mode) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
 type counter[T comparable] map[T]uint
 
 func (c *counter[T]) add(k T) {
-	if (*c) == nil {
-		(*c) = make(counter[T])
+	if *c == nil {
+		*c = make(counter[T])
 	}
 	(*c)[k]++
 }

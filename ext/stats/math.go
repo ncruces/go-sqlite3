@@ -7,15 +7,13 @@ import (
 )
 
 func cot(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	if f := arg[0].Float(); f != 0.0 {
-		ctx.ResultFloat(1 / math.Tan(f))
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		ctx.ResultFloat(1 / math.Tan(arg[0].Float()))
 	}
 }
 
 func cbrt(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	f := a.Float()
-	if f != 0.0 || a.Type() != sqlite3.NULL {
-		ctx.ResultFloat(math.Cbrt(f))
+	if arg[0].NumericType() <= sqlite3.FLOAT {
+		ctx.ResultFloat(math.Cbrt(arg[0].Float()))
 	}
 }

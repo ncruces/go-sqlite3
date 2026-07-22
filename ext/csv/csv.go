@@ -17,7 +17,6 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
-	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/osutil"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
@@ -41,12 +40,12 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			comma    rune = ','
 			comment  rune
 
-			done = util.Set[string]{}
+			done = set[string]{}
 		)
 
 		for _, arg := range arg {
 			key, val := sql3util.NamedArg(arg)
-			if done.Contains(key) {
+			if done.has(key) {
 				return nil, fmt.Errorf("csv: more than one %q parameter", key)
 			}
 			switch key {
@@ -70,7 +69,7 @@ func RegisterFS(db *sqlite3.Conn, fsys fs.FS) error {
 			if err != nil {
 				return nil, err
 			}
-			done.Add(key)
+			done.add(key)
 		}
 
 		if (filename == "") == (data == "") {
