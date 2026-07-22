@@ -54,10 +54,10 @@ func (m *Memory) allocate(max uint64) {
 	// Reserve res bytes of address space, to ensure we won't need to move it.
 	// Prefer a placeholder reservation (Windows 10 1803+): it can later have
 	// file views mapped into it, which the WAL-index shared memory uses.
-	m.placeh = PlaceholdersSupported()
+	m.placeh = placeholdersSupported()
 	if m.placeh {
 		r, err := virtualAlloc2(0, uintptr(res),
-			_MEM_RESERVE|_MEM_RESERVE_PLACEHOLDERS, _PAGE_NOACCESS)
+			windows.MEM_RESERVE|_MEM_RESERVE_PLACEHOLDERS, windows.PAGE_NOACCESS)
 		if err != nil {
 			panic(err)
 		}
@@ -102,7 +102,7 @@ func (m *Memory) reallocate(size uint64) {
 				}
 			}
 			if _, err := virtualAlloc2(m.ptr+uintptr(com), uintptr(new-com),
-				_MEM_RESERVE|_MEM_COMMIT|_MEM_REPLACE_PLACEHOLDER, _PAGE_READWRITE); err != nil {
+				windows.MEM_RESERVE|windows.MEM_COMMIT|_MEM_REPLACE_PLACEHOLDER, windows.PAGE_READWRITE); err != nil {
 				panic(err)
 			}
 		} else {
@@ -138,7 +138,7 @@ func (m *Memory) MapFileRegion(f *os.File, fileOff int64, addrOff, size uintptr)
 		return err
 	}
 	if _, err := mapViewOfFile3(h, addr, uint64(fileOff), size,
-		_MEM_REPLACE_PLACEHOLDER, _PAGE_READWRITE); err != nil {
+		_MEM_REPLACE_PLACEHOLDER, windows.PAGE_READWRITE); err != nil {
 		windows.CloseHandle(h)
 		m.restoreCommitted(addr, size)
 		return err
@@ -156,7 +156,7 @@ func (m *Memory) MapFileRegion(f *os.File, fileOff int64, addrOff, size uintptr)
 // with the address space intact.
 func (m *Memory) restoreCommitted(addr, size uintptr) {
 	if _, err := virtualAlloc2(addr, size,
-		_MEM_RESERVE|_MEM_COMMIT|_MEM_REPLACE_PLACEHOLDER, _PAGE_READWRITE); err != nil {
+		windows.MEM_RESERVE|windows.MEM_COMMIT|_MEM_REPLACE_PLACEHOLDER, windows.PAGE_READWRITE); err != nil {
 		panic(err)
 	}
 }
