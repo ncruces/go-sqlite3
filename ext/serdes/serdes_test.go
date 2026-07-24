@@ -17,7 +17,7 @@ import (
 var walDB []byte
 
 func Test_wal(t *testing.T) {
-	if !vfs.SupportsFileLocking {
+	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without locks")
 	}
 

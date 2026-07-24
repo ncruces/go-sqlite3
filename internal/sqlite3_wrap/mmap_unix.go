@@ -14,6 +14,8 @@ type mmapState struct {
 	regions []*MappedRegion
 }
 
+func (s *mmapState) unmapAll() {}
+
 func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
 	pageSize := int64(unix.Getpagesize())
 	align := offset & (pageSize - 1)
@@ -46,11 +48,10 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	}
 
 	// Save the newly allocated region.
-	buf := w.Bytes(ptr, int64(size))
 	ret := &MappedRegion{
 		base: ptr,
 		size: size,
-		addr: unsafe.Pointer(&buf[0]),
+		addr: unsafe.Pointer(&w.Buf[ptr]),
 	}
 	w.regions = append(w.regions, ret)
 	return ret
@@ -66,11 +67,10 @@ type MappedRegion struct {
 
 func (r *MappedRegion) Unmap() error {
 	// We can't munmap the region, otherwise it could be remaped by the runtime.
-	// We shouldn't create a hole, because unaligned reads might fail.
-	// Instead remap it readonly, and if successful,
-	// it can be reused for a subsequent mmap.
+	// Instead, convert it to a protected, private, anonymous mapping.
+	// If successful, it can be reused for a subsequent mmap.
 	_, err := unix.MmapPtr(-1, 0, r.addr, uintptr(r.size),
-		unix.PROT_READ, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
+		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
 	r.used = err != nil
 	return err
 }
