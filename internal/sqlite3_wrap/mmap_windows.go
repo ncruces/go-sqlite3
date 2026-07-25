@@ -1,5 +1,3 @@
-//go:build unix
-
 package sqlite3_wrap
 
 import (
@@ -7,17 +5,23 @@ import (
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3/internal/errutil"
-	"golang.org/x/sys/unix"
+	"golang.org/x/sys/windows"
 )
 
 type mmapState struct {
 	regions []*MappedRegion
 }
 
-func (s *mmapState) unmapAll() {}
+func (s *mmapState) unmapAll() {
+	for _, r := range s.regions {
+		if r.used {
+			r.Unmap()
+		}
+	}
+}
 
 func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
-	pageSize := int64(unix.Getpagesize())
+	pageSize := int64(allocationGranularity)
 	align := offset & (pageSize - 1)
 	offset -= align
 
@@ -42,7 +46,7 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	}
 
 	// Allocate page aligned memmory.
-	ptr := Ptr_t(w.Xaligned_alloc(int32(unix.Getpagesize()), size))
+	ptr := Ptr_t(w.reserve(int64(size)))
 	if ptr == 0 {
 		panic(errutil.OOMErr)
 	}
@@ -51,14 +55,14 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	ret := &MappedRegion{
 		base: ptr,
 		size: size,
-		addr: unsafe.Pointer(&w.Buf[ptr]),
+		addr: uintptr(unsafe.Pointer(&w.Buf[ptr])),
 	}
 	w.regions = append(w.regions, ret)
 	return ret
 }
 
 type MappedRegion struct {
-	addr unsafe.Pointer
+	addr uintptr
 	base Ptr_t
 	Ptr  Ptr_t
 	size int32
@@ -66,22 +70,38 @@ type MappedRegion struct {
 }
 
 func (r *MappedRegion) Unmap() error {
-	// We can't munmap the region, otherwise it could be remaped by the runtime.
-	// Instead, convert it to a protected, private, anonymous mapping.
+	if !r.used {
+		return nil
+	}
+	// Convert the region back to a placeholder.
 	// If successful, it can be reused for a subsequent mmap.
-	_, err := unix.MmapPtr(-1, 0, r.addr, uintptr(r.size),
-		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
+	err := unmapViewOfFile2(r.addr, _MEM_PRESERVE_PLACEHOLDER)
 	r.used = err != nil
 	return err
 }
 
 func (r *MappedRegion) mmap(f *os.File, offset int64, readOnly bool) error {
-	prot := unix.PROT_READ
-	if !readOnly {
-		prot |= unix.PROT_WRITE
+	prot := uint32(windows.PAGE_READWRITE)
+	if readOnly {
+		prot = windows.PAGE_READONLY
 	}
-	_, err := unix.MmapPtr(int(f.Fd()), offset, r.addr, uintptr(r.size),
-		prot, unix.MAP_SHARED|unix.MAP_FIXED)
+	err := mmap(f, offset, r.addr, r.size, prot)
 	r.used = err == nil
+	return err
+}
+
+func mmap(f *os.File, offset int64, addr uintptr, size int32, prot uint32) error {
+	maxSize := offset + int64(size)
+
+	h, err := windows.CreateFileMapping(
+		windows.Handle(f.Fd()), nil, prot,
+		uint32(maxSize>>32), uint32(maxSize), nil)
+	if h == 0 {
+		return err
+	}
+	defer windows.CloseHandle(h)
+
+	_, err = mapViewOfFile3(h, addr, uint64(offset), uintptr(size),
+		_MEM_REPLACE_PLACEHOLDER, prot)
 	return err
 }
