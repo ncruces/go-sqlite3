@@ -26,7 +26,6 @@ func (w *Wrapper) Close() (err error) {
 			}
 		}
 	}
-	w.unmapAll()
 	if e := w.Memory.Close(); e != nil {
 		err = e
 	}

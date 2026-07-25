@@ -12,14 +12,6 @@ type mmapState struct {
 	regions []*MappedRegion
 }
 
-func (s *mmapState) unmapAll() {
-	for _, r := range s.regions {
-		if r.used {
-			r.Unmap()
-		}
-	}
-}
-
 func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
 	pageSize := int64(allocationGranularity)
 	align := offset & (pageSize - 1)
@@ -70,9 +62,6 @@ type MappedRegion struct {
 }
 
 func (r *MappedRegion) Unmap() error {
-	if !r.used {
-		return nil
-	}
 	// Convert the region back to a placeholder.
 	// If successful, it can be reused for a subsequent mmap.
 	err := unmapViewOfFile2(r.addr, _MEM_PRESERVE_PLACEHOLDER)

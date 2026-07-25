@@ -1,8 +1,3 @@
-// The sqlite3_dotlk build keeps the copy-on-lock-boundary scheme, which
-// cannot fully eliminate wal-index staleness: under this load it reliably
-// fails with SQLITE_PROTOCOL (a documented limitation, not corruption —
-// the database stays intact). Only the real-file VFS paths are exercised.
-//
 //go:build !sqlite3_dotlk
 
 package tests
