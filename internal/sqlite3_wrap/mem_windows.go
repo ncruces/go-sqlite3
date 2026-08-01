@@ -10,6 +10,7 @@ import (
 type Memory struct {
 	Buf []byte
 	Max int64
+	pcs []uintptr
 	com int
 	ptr uintptr
 }
@@ -38,39 +39,60 @@ func (m *Memory) Grow(delta, max int64) int64 {
 }
 
 func (m *Memory) allocate(max uint64) {
-	// Round up to the page size.
-	rnd := uint64(windows.Getpagesize() - 1)
+	if !placeholdersSupported() {
+		return
+	}
+
+	// Round up to the allocation granularity.
+	rnd := uint64(allocationGranularity - 1)
 	res := (max + rnd) &^ rnd
 
 	if res > math.MaxInt {
 		// This ensures uintptr(res) overflows to a large value,
-		// and windows.VirtualAlloc returns an error.
+		// and VirtualAlloc2 returns an error.
 		res = math.MaxUint64
 	}
 
 	// Reserve res bytes of address space, to ensure we won't need to move it.
-	r, err := windows.VirtualAlloc(0, uintptr(res), windows.MEM_RESERVE, windows.PAGE_READWRITE)
+	// Use virtual memory placeholders so we can later map files.
+	// https://devblogs.microsoft.com/oldnewthing/?p=109346
+	r, err := virtualAlloc2(0, uintptr(res),
+		windows.MEM_RESERVE|_MEM_RESERVE_PLACEHOLDER, windows.PAGE_NOACCESS)
 	if err != nil {
 		panic(err)
 	}
+	m.pcs = append(m.pcs, 0)
 	m.ptr = r
 
-	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&r))
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&m.ptr))
 	m.Buf = unsafe.Slice((*byte)(ptr), res)[:0]
 }
 
 func (m *Memory) reallocate(size uint64) {
+	if m.ptr == 0 {
+		m.Buf = append(m.Buf, make([]byte, size-uint64(len(m.Buf)))...)
+		return
+	}
+
 	com := uint64(m.com)
 	res := uint64(cap(m.Buf))
 	if com < size && size <= res {
-		// Grow geometrically, round up to the page size.
-		rnd := uint64(windows.Getpagesize() - 1)
-		new := com + com>>3
-		new = min(max(size, new), res)
-		new = (new + rnd) &^ rnd
+		// Round up to the allocation granularity.
+		rnd := uint64(allocationGranularity - 1)
+		new := (size + rnd) &^ rnd
 
-		// Commit additional memory up to new bytes.
-		_, err := windows.VirtualAlloc(m.ptr, uintptr(new), windows.MEM_COMMIT, windows.PAGE_READWRITE)
+		// Split the trailing placeholder.
+		if new < res {
+			err := windows.VirtualFree(m.ptr+uintptr(com), uintptr(new-com),
+				windows.MEM_RELEASE|_MEM_PRESERVE_PLACEHOLDER)
+			if err != nil {
+				panic(err)
+			}
+			m.pcs = append(m.pcs, uintptr(new))
+		}
+		// Replace the placeholder with committed memory.
+		_, err := virtualAlloc2(m.ptr+uintptr(com), uintptr(new-com),
+			windows.MEM_COMMIT|windows.MEM_RESERVE|_MEM_REPLACE_PLACEHOLDER, windows.PAGE_READWRITE)
 		if err != nil {
 			panic(err)
 		}
@@ -79,10 +101,61 @@ func (m *Memory) reallocate(size uint64) {
 	m.Buf = m.Buf[:size]
 }
 
+func (m *Memory) reserve(size int64) int64 {
+	if m.ptr == 0 || size <= 0 {
+		return 0
+	}
+
+	rnd := int64(allocationGranularity - 1)
+	size = (size + rnd) &^ rnd
+
+	old := int64(len(m.Buf))
+	res := int64(cap(m.Buf))
+	new := old + size
+
+	if new > res || new < old {
+		return 0
+	}
+
+	// Split the trailing placeholder.
+	if new < res {
+		err := windows.VirtualFree(m.ptr+uintptr(m.com), uintptr(new-int64(m.com)),
+			windows.MEM_RELEASE|_MEM_PRESERVE_PLACEHOLDER)
+		if err != nil {
+			panic(err)
+		}
+		m.pcs = append(m.pcs, uintptr(new))
+	}
+	m.com = int(new)
+	m.Buf = m.Buf[:new]
+	return old
+}
+
 func (m *Memory) Close() error {
-	err := windows.VirtualFree(m.ptr, 0, windows.MEM_RELEASE)
+	if m.ptr == 0 {
+		m.Buf = nil
+		return nil
+	}
+
+	for i, off := range m.pcs {
+		err := windows.VirtualFree(m.ptr+off, 0, windows.MEM_RELEASE)
+		if err != nil {
+			var next = uintptr(cap(m.Buf))
+			if i+1 < len(m.pcs) {
+				next = m.pcs[i+1]
+			}
+			if windows.VirtualFree(m.ptr+off, next-off, windows.MEM_RELEASE) != nil {
+				panic(err)
+			}
+		}
+	}
+
 	m.Buf = nil
+	m.pcs = nil
 	m.com = 0
 	m.ptr = 0
-	return err
+	return nil
 }
+
+// CanMapFiles reports whether file views can be mapped into this memory.
+func (m *Memory) CanMapFiles() bool { return m.ptr != 0 }
