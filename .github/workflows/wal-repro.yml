@@ -21,7 +21,7 @@ jobs:
       SQLITE3_TEST_WAL_STRESS: "1"
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with: { go-version: stable }
       - name: WAL concurrent-writers regression
         run: go test ./vfs/tests/ -run '^TestWALConcurrentWriters$' -v -count=1 -timeout 25m
