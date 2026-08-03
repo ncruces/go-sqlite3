@@ -8,10 +8,11 @@ import (
 )
 
 type Memory struct {
-	Buf []byte
-	Max int64
-	pcs []uintptr
-	ptr uintptr
+	Buf     []byte
+	Max     int64
+	pieces  []uintptr
+	regions []*MappedRegion
+	ptr     uintptr
 }
 
 func (m *Memory) Slice() *[]byte {
@@ -56,7 +57,7 @@ func (m *Memory) allocate(max uint64) {
 	if err != nil {
 		panic(err)
 	}
-	m.pcs = append(m.pcs, 0)
+	m.pieces = append(m.pieces, 0)
 	m.ptr = r
 
 	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&m.ptr))
@@ -79,7 +80,7 @@ func (m *Memory) commit(size uint64) {
 			if err != nil {
 				panic(err)
 			}
-			m.pcs = append(m.pcs, uintptr(size))
+			m.pieces = append(m.pieces, uintptr(size))
 		}
 		// Replace the placeholder with committed memory.
 		_, err := virtualAlloc2(m.ptr+uintptr(com), uintptr(size-com),
@@ -111,7 +112,7 @@ func (m *Memory) reserve(size int64) int64 {
 		if err != nil {
 			panic(err)
 		}
-		m.pcs = append(m.pcs, uintptr(new))
+		m.pieces = append(m.pieces, uintptr(new))
 	}
 	m.Buf = m.Buf[:new]
 	return com
@@ -123,7 +124,14 @@ func (m *Memory) Close() (err error) {
 		return nil
 	}
 
-	for _, off := range m.pcs {
+	for _, r := range m.regions {
+		e := r.Close()
+		if err == nil {
+			err = e
+		}
+	}
+
+	for _, off := range m.pieces {
 		e := windows.VirtualFree(m.ptr+off, 0, windows.MEM_RELEASE)
 		if err == nil {
 			err = e
@@ -131,9 +139,10 @@ func (m *Memory) Close() (err error) {
 	}
 
 	m.Buf = nil
-	m.pcs = nil
+	m.pieces = nil
+	m.regions = nil
 	m.ptr = 0
-	return nil
+	return err
 }
 
 // CanMapFiles reports whether file views can be mapped into this memory.

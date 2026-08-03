@@ -10,10 +10,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type mmapState struct {
-	regions []*MappedRegion
-}
-
 func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
 	pageSize := int64(unix.Getpagesize())
 	align := offset & (pageSize - 1)
@@ -62,11 +58,11 @@ type MappedRegion struct {
 }
 
 func (r *MappedRegion) Unmap() error {
-	// We can't munmap the region, otherwise it could be remaped by the runtime.
-	// Instead, convert it to a protected, private, anonymous mapping.
-	// If successful, it can be reused for a subsequent mmap.
+	// We can't munmap the region, otherwise it could be remapped by the runtime.
+	// Instead, map anonymous (zeroed) pages readonly.
+	// If successful, the region can be reused for a subsequent mmap.
 	_, err := unix.MmapPtr(-1, 0, r.addr, uintptr(r.size),
-		unix.PROT_NONE, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
+		unix.PROT_READ, unix.MAP_PRIVATE|unix.MAP_FIXED|unix.MAP_ANON)
 	r.used = err != nil
 	return err
 }

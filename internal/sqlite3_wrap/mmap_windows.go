@@ -8,10 +8,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-type mmapState struct {
-	regions []*MappedRegion
-}
-
 func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool) (*MappedRegion, error) {
 	align := offset & (allocationGranularity - 1)
 	size += int32(align + allocationGranularity - 1)
@@ -29,7 +25,7 @@ func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool)
 func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	// Find unused region.
 	for _, r := range w.regions {
-		if !r.used && r.size == size {
+		if !r.file && r.size == size {
 			return r
 		}
 	}
@@ -55,28 +51,52 @@ type MappedRegion struct {
 	base Ptr_t
 	Ptr  Ptr_t
 	size int32
-	used bool
+	file bool
+	zero bool
+}
+
+func (r *MappedRegion) Close() error {
+	if !r.file && !r.zero {
+		return nil
+	}
+
+	// Convert the file view back to a placeholder.
+	err := unmapViewOfFile2(r.addr, _MEM_PRESERVE_PLACEHOLDER)
+	if err != nil {
+		return err
+	}
+	r.file = false
+	r.zero = false
+	return nil
 }
 
 func (r *MappedRegion) Unmap() error {
-	// Convert the region back to a placeholder.
-	// If successful, it can be reused for a subsequent mmap.
-	err := unmapViewOfFile2(r.addr, _MEM_PRESERVE_PLACEHOLDER)
-	r.used = err != nil
+	err := r.Close()
+	if err != nil {
+		return err
+	}
+
+	err = mmapZero(r.addr, r.size)
+	r.zero = err == nil
 	return err
 }
 
 func (r *MappedRegion) mmap(f *os.File, offset int64, readOnly bool) error {
+	err := r.Close()
+	if err != nil {
+		return err
+	}
+
 	prot := uint32(windows.PAGE_READWRITE)
 	if readOnly {
 		prot = windows.PAGE_READONLY
 	}
-	err := mmap(f, offset, r.addr, r.size, prot)
-	r.used = err == nil
+	err = mmapFile(f, offset, r.addr, r.size, prot)
+	r.file = err == nil
 	return err
 }
 
-func mmap(f *os.File, offset int64, addr uintptr, size int32, prot uint32) error {
+func mmapFile(f *os.File, offset int64, addr uintptr, size int32, prot uint32) error {
 	maxSize := offset + int64(size)
 
 	h, err := windows.CreateFileMapping(
@@ -89,5 +109,20 @@ func mmap(f *os.File, offset int64, addr uintptr, size int32, prot uint32) error
 
 	_, err = mapViewOfFile3(h, addr, uint64(offset), uintptr(size),
 		_MEM_REPLACE_PLACEHOLDER, prot)
+	return err
+}
+
+func mmapZero(addr uintptr, size int32) error {
+	maxSize := uint64(size)
+	h, err := windows.CreateFileMapping(
+		^windows.Handle(0), nil, windows.PAGE_READONLY,
+		uint32(maxSize>>32), uint32(maxSize), nil)
+	if h == 0 {
+		return err
+	}
+	defer windows.CloseHandle(h)
+
+	_, err = mapViewOfFile3(h, addr, 0, uintptr(size),
+		_MEM_REPLACE_PLACEHOLDER, windows.PAGE_READONLY)
 	return err
 }

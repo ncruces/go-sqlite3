@@ -20,16 +20,6 @@ type vfsShm struct {
 	fileLock bool
 }
 
-func (s *vfsShm) Close() error {
-	// Unmap regions.
-	for _, r := range s.regions {
-		r.Unmap()
-	}
-	s.regions = nil
-
-	return s.File.Close()
-}
-
 func (s *vfsShm) shmOpen() error {
 	if s.fileLock {
 		return nil
@@ -109,6 +99,12 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	if s.File == nil {
 		return
 	}
+
+	// Unmap regions.
+	for _, r := range s.regions {
+		r.Unmap()
+	}
+	s.regions = nil
 
 	// Close the file.
 	s.Close()

@@ -9,9 +9,10 @@ import (
 )
 
 type Memory struct {
-	Buf []byte
-	Max int64
-	com int
+	Buf       []byte
+	Max       int64
+	regions   []*MappedRegion
+	committed int
 }
 
 func (m *Memory) Slice() *[]byte {
@@ -58,7 +59,7 @@ func (m *Memory) allocate(max uint64) {
 }
 
 func (m *Memory) commit(size uint64) {
-	com := uint64(m.com)
+	com := uint64(m.committed)
 	res := uint64(cap(m.Buf))
 	if com < size && size <= res {
 		// Grow geometrically, round up to the page size.
@@ -68,11 +69,11 @@ func (m *Memory) commit(size uint64) {
 		new = (new + rnd) &^ rnd
 
 		// Commit additional memory up to new bytes.
-		err := unix.Mprotect(m.Buf[m.com:new], unix.PROT_READ|unix.PROT_WRITE)
+		err := unix.Mprotect(m.Buf[m.committed:new], unix.PROT_READ|unix.PROT_WRITE)
 		if err != nil {
 			panic(err)
 		}
-		m.com = int(new)
+		m.committed = int(new)
 	}
 	m.Buf = m.Buf[:size]
 }
@@ -80,6 +81,7 @@ func (m *Memory) commit(size uint64) {
 func (m *Memory) Close() error {
 	err := unix.Munmap(m.Buf[:cap(m.Buf)])
 	m.Buf = nil
-	m.com = 0
+	m.regions = nil
+	m.committed = 0
 	return err
 }
