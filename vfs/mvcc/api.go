@@ -97,7 +97,6 @@ func TakeSnapshot(name string) Snapshot {
 // TestDB creates a shared database from a snapshot for the test to use.
 // The database is automatically deleted when the test and all its subtests complete.
 // Returns a URI filename appropriate to call Open with.
-// Each subsequent call to TestDB returns a unique database.
 //
 //	func Test_something(t *testing.T) {
 //		t.Parallel()

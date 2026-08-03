@@ -33,7 +33,7 @@ func (m *Memory) Grow(delta, max int64) int64 {
 	if new > max || new < old {
 		return -1
 	}
-	m.reallocate(uint64(new) << 16)
+	m.commit(uint64(new) << 16)
 	return old
 }
 
@@ -57,7 +57,7 @@ func (m *Memory) allocate(max uint64) {
 	m.Buf = b[:0]
 }
 
-func (m *Memory) reallocate(size uint64) {
+func (m *Memory) commit(size uint64) {
 	com := uint64(m.com)
 	res := uint64(cap(m.Buf))
 	if com < size && size <= res {

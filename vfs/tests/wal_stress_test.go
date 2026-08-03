@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,7 +27,7 @@ import (
 // -shm was mapped into wasm memory) this corrupts the database on Windows: a
 // checkpointer acting on a stale wal-index view backfills stale pages and
 // truncates not-yet-backfilled frames. The cold-reopen integrity_check catches
-// it, and SQLITE_PROTOCOL during the run is the other symptom of the same bug.
+// it.
 //
 // On the fixed VFS — and on every platform whose VFS maps the -shm directly
 // (unix, native) — every round stays clean. The test therefore goes red only
@@ -78,12 +79,19 @@ func TestWALConcurrentWriters(t *testing.T) {
 // returns a non-empty description if the WAL defect was observed. It removes
 // its own scratch directory so repeated rounds do not accumulate disk.
 func walStressRound(t *testing.T, workers, iters, ckptEvery int, blob []byte) error {
-	dir := t.TempDir()
-
-	path := filepath.Join(dir, "wal_stress.db")
-	dsn := "file:" + path +
-		"?_pragma=busy_timeout(10000)&_pragma=journal_mode(wal)" +
-		"&_pragma=synchronous(normal)&_txlock=deferred"
+	dsn := (&url.URL{
+		Scheme:   "file",
+		OmitHost: true,
+		Path:     filepath.Join(t.TempDir(), "wal_stress.db"),
+		RawQuery: url.Values{
+			"_txlock": {"deferred"},
+			"_pragma": {
+				"busy_timeout(10000)",
+				"journal_mode(wal)",
+				"synchronous(normal)",
+			},
+		}.Encode(),
+	}).String()
 
 	db, err := driver.Open(dsn)
 	if err != nil {

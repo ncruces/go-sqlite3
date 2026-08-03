@@ -75,7 +75,6 @@ func Delete(name string) {
 // TestDB creates an empty shared memory database for the test to use.
 // The database is automatically deleted when the test and all its subtests complete.
 // Returns a URI filename appropriate to call Open with.
-// Each subsequent call to TestDB returns a unique database.
 //
 //	func Test_something(t *testing.T) {
 //		t.Parallel()
