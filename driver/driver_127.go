@@ -78,7 +78,7 @@ func (r *rows) ScanColumn(ctx driver.ScanContext, i int, dest any) error {
 	return sql.ConvertAssign(ctx, dest, r.convert(i, src))
 }
 
-func (r *rows) scanTime(src any) (_ time.Time, _ bool) {
+func (r *rows) scanTime(src any) (time.Time, bool) {
 	if s, ok := src.([]byte); ok {
 		if t, ok := r.maybeTime(s); ok {
 			return t, true

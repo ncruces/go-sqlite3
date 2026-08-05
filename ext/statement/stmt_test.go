@@ -43,7 +43,6 @@ func Example() {
 	if err := stmt.Reset(); err != nil {
 		log.Fatal(err)
 	}
-
 	// Output:
 	// Twosday was 2022-2-22
 }

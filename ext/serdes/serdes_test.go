@@ -18,7 +18,7 @@ var walDB []byte
 
 func Test_wal(t *testing.T) {
 	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without locks")
+		t.Skip("skipping without shared memory")
 	}
 
 	db, err := sqlite3.OpenContext(testcfg.Context(t), "testdata/wal.db")

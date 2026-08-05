@@ -75,7 +75,6 @@ func Example_json() {
 		fmt.Printf("id: %s, name: %s, quantity: %d, price: %d\n",
 			item.ItemID, item.Name, item.Quantity, item.Price)
 	}
-
 	// Output:
 	// total: 850
 	// id: 111, name: T-shirt, quantity: 1, price: 250

@@ -102,7 +102,6 @@ func Example_json() {
 	if err := sl2.Err(); err != nil {
 		log.Fatal(err)
 	}
-
 	// Output:
 	// total: 850
 	// id: 111, name: T-shirt, quantity: 1, price: 250

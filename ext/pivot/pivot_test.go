@@ -75,7 +75,6 @@ func Example() {
 	if err := stmt.Reset(); err != nil {
 		log.Fatal(err)
 	}
-
 	// Output:
 	// product 2020    2021    2022    2023
 	// alpha   100     120     130     140

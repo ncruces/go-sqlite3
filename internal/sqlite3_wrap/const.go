@@ -1,6 +1,6 @@
 package sqlite3_wrap
 
-// https://sqlite.com/rescode.html
+// https://sqlite.org/rescode.html
 const (
 	OK = 0 /* Successful result */
 
