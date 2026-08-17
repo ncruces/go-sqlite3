@@ -59,188 +59,93 @@ func runTest(t *testing.T, args ...string) {
 	}
 }
 
-func Test_config01(t *testing.T) {
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
+func Test_mptest(t *testing.T) {
+	scripts := []struct {
+		script      string
+		slow        bool
+		crashes     bool
+		changesJrnl bool
+		changesPgsz bool
+	}{
+		{script: "multiwrite01.test"},
+		{script: "crash01.test", crashes: true},
+		{script: "config01.test", changesJrnl: true},
+		{script: "config02.test", slow: true, crashes: true, changesPgsz: true},
 	}
 
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "config01.test")
-}
-
-func Test_config02(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
-
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "config02.test")
-}
-
-func Test_crash01(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
+	envs := []struct {
+		name    string
+		vfs     string
+		isMemdb bool
+		isMVCC  bool
+		isWAL   bool
+		needKey bool
+	}{
+		{name: ""},
+		{name: "_wal", isWAL: true},
+		// Encryption.
+		{name: "_xts", vfs: "xts", needKey: true},
+		{name: "_adiantum", vfs: "adiantum", needKey: true},
+		{name: "_xts_wal", vfs: "xts", isWAL: true, needKey: true},
+		{name: "_adiantum_wal", vfs: "adiantum", isWAL: true, needKey: true},
+		// Memory.
+		{name: "_memory", vfs: "memdb", isMemdb: true},
+		{name: "_mvcc", vfs: "mvcc", isMVCC: true},
 	}
 
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "crash01.test")
-}
+	for _, script := range scripts {
+		for _, env := range envs {
+			if env.isMemdb && script.crashes {
+				continue
+			}
+			if env.isMVCC && script.changesPgsz {
+				continue
+			}
+			if env.isWAL && (script.changesJrnl || script.changesPgsz) {
+				continue
+			}
 
-func Test_multiwrite01(t *testing.T) {
-	if testing.Short() && os.Getenv("CI") != "" {
-		t.Skip("skipping in slow CI")
+			name := strings.TrimSuffix(script.script, ".test") + env.name
+			t.Run(name, func(t *testing.T) {
+				if !vfs.SupportsFileLocking && !(env.isMemdb || env.isMVCC) {
+					t.Skip("skipping without file locking")
+				}
+				if !vfs.SupportsSharedMemory && env.isWAL {
+					t.Skip("skipping without shared memory")
+				}
+				if os.Getenv("CI") != "" && script.slow {
+					t.Skip("skipping in CI")
+				}
+				if testing.Short() && (script.slow || env.needKey) {
+					t.Skip("skipping in short mode")
+				}
+
+				var db string
+				switch {
+				case env.isMemdb:
+					db = memdb.TestDB(t)
+				case env.isMVCC:
+					db = mvcc.TestDB(t, mvcc.Snapshot{})
+				default:
+					db = filepath.Join(t.TempDir(), "test.db")
+					if env.needKey {
+						db = "file:" + db +
+							"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+					}
+				}
+
+				args := []string{"mptest", db, script.script}
+				if env.vfs != "" {
+					args = append(args, "--vfs", env.vfs)
+				}
+				if env.isWAL {
+					args = append(args, "--journalmode", "wal")
+				}
+
+				runTest(t, args...)
+			})
+		}
 	}
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
-
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "multiwrite01.test")
-}
-
-func Test_config01_memory(t *testing.T) {
-	memdb.Create("test.db", nil)
-	runTest(t, "mptest", "/test.db", "config01.test",
-		"--vfs", "memdb")
-}
-
-func Test_multiwrite01_memory(t *testing.T) {
-	if testing.Short() && os.Getenv("CI") != "" {
-		t.Skip("skipping in slow CI")
-	}
-
-	memdb.Create("test.db", nil)
-	runTest(t, "mptest", "/test.db", "multiwrite01.test",
-		"--vfs", "memdb")
-}
-
-func Test_config01_mvcc(t *testing.T) {
-	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "config01.test",
-		"--vfs", "mvcc")
-}
-
-func Test_crash01_mvcc(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-
-	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "crash01.test",
-		"--vfs", "mvcc")
-}
-
-func Test_multiwrite01_mvcc(t *testing.T) {
-	if testing.Short() && os.Getenv("CI") != "" {
-		t.Skip("skipping in slow CI")
-	}
-
-	mvcc.Create("test.db", mvcc.Snapshot{})
-	runTest(t, "mptest", "/test.db", "multiwrite01.test",
-		"--vfs", "mvcc")
-}
-
-func Test_crash01_wal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "crash01.test",
-		"--journalmode", "wal")
-}
-
-func Test_multiwrite01_wal(t *testing.T) {
-	if testing.Short() && os.Getenv("CI") != "" {
-		t.Skip("skipping in slow CI")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	name := filepath.Join(t.TempDir(), "test.db")
-	runTest(t, "mptest", name, "multiwrite01.test",
-		"--journalmode", "wal")
-}
-
-func Test_crash01_adiantum(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
-
-	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "crash01.test",
-		"--vfs", "adiantum")
-}
-
-func Test_crash01_adiantum_wal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "crash01.test",
-		"--vfs", "adiantum", "--journalmode", "wal")
-}
-
-func Test_crash01_xts(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
-
-	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "crash01.test",
-		"--vfs", "xts")
-}
-
-func Test_crash01_xts_wal(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping in CI")
-	}
-	if !vfs.SupportsSharedMemory {
-		t.Skip("skipping without shared memory")
-	}
-
-	name := "file:" + filepath.Join(t.TempDir(), "test.db") +
-		"?hexkey=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	runTest(t, "mptest", name, "crash01.test",
-		"--vfs", "xts", "--journalmode", "wal")
 }
 
 func system(wrp *sqlite3_wrap.Wrapper, ptr int32) int32 {
