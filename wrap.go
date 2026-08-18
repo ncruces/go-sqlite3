@@ -214,3 +214,17 @@ func vfsShmUnmap(_ *sqlite3_wrap.Wrapper, v0, v1 int32) int32
 func (e *env) Xgo_shm_unmap(v0, v1 int32) int32 {
 	return vfsShmUnmap(e.Wrapper, v0, v1)
 }
+
+//go:linkname vfsFetch github.com/ncruces/go-sqlite3/vfs.vfsFetch
+func vfsFetch(_ *sqlite3_wrap.Wrapper, v0 int32, v1 int64, v2, v3 int32) int32
+
+func (e *env) Xgo_fetch(v0 int32, v1 int64, v2, v3 int32) int32 {
+	return vfsFetch(e.Wrapper, v0, v1, v2, v3)
+}
+
+//go:linkname vfsUnfetch github.com/ncruces/go-sqlite3/vfs.vfsUnfetch
+func vfsUnfetch(_ *sqlite3_wrap.Wrapper, v0 int32, v1 int64, v2 int32) int32
+
+func (e *env) Xgo_unfetch(v0 int32, v1 int64, v2 int32) int32 {
+	return vfsUnfetch(e.Wrapper, v0, v1, v2)
+}

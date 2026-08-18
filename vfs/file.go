@@ -127,6 +127,7 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 	file := vfsFile{
 		File:  f,
 		flags: flags | _FLAG_PSOW,
+		mmap:  NewMemoryMapper(f, flags),
 	}
 	if osBatchAtomic(f) {
 		file.flags |= _FLAG_ATOMIC
@@ -143,6 +144,7 @@ func (vfsOS) OpenFilename(name *Filename, flags OpenFlag) (File, OpenFlag, error
 type vfsFile struct {
 	*os.File
 	shm   SharedMemory
+	mmap  MemoryMapper
 	lock  LockLevel
 	flags OpenFlag
 }

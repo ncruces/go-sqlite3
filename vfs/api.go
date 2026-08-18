@@ -206,13 +206,31 @@ type blockingSharedMemory interface {
 	shmEnableBlocking(block bool)
 }
 
+// FileMemoryMapper extends File to possibly implement
+// memory mapped files.
+// The same memory mapper instance must be returned
+// for the entire life of the file.
+// It's OK for MemoryMapper to return nil.
+type FileMemoryMapper interface {
+	File
+	MemoryMapper() MemoryMapper
+}
+
+// MemoryMapper is a file mapper implementation.
+// Use [NewMemoryMapper] to create a mapper.
+type MemoryMapper interface {
+	mmapSize(*sqlite3_wrap.Wrapper, ptr_t)
+	fetch(*sqlite3_wrap.Wrapper, int64, int32, ptr_t) error
+	io.Closer
+}
+
 // FileControl makes it easy to forward all fileControl methods,
 // which we want to do for the checksum VFS.
 // However, this is not a safe default, and other VFSes
 // should explicitly wrap the methods they want to wrap.
 type fileControl interface {
 	File
-	fileControl(wrp *sqlite3_wrap.Wrapper, op _FcntlOpcode, pArg ptr_t) _ErrorCode
+	fileControl(*sqlite3_wrap.Wrapper, _FcntlOpcode, ptr_t) _ErrorCode
 }
 
 type filePDB interface {
