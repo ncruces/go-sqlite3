@@ -30,13 +30,13 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 		}
 	}
 
-	// Allocate page aligned memmory.
+	// Reserve page aligned memmory.
 	ptr := Ptr_t(w.reserve(int64(size)))
 	if ptr == 0 {
 		panic(errutil.OOMErr)
 	}
 
-	// Save the newly allocated region.
+	// Save the newly reserved region.
 	ret := &MappedRegion{
 		base: ptr,
 		size: size,

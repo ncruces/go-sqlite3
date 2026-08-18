@@ -224,9 +224,6 @@ func Test_ChildProcess_rollback(t *testing.T) {
 }
 
 func Test_MultiProcess_wal(t *testing.T) {
-	if !vfs.SupportsFileLocking {
-		t.Skip("skipping without locks")
-	}
 	if !vfs.SupportsSharedMemory {
 		t.Skip("skipping without shared memory")
 	}
@@ -289,8 +286,8 @@ func Test_ChildProcess_wal(t *testing.T) {
 }
 
 func Benchmark_parallel(b *testing.B) {
-	if !vfs.SupportsSharedMemory {
-		b.Skip("skipping without shared memory")
+	if !vfs.SupportsFileLocking {
+		b.Skip("skipping without locks")
 	}
 
 	name := "file:" +
