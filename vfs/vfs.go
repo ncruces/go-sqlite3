@@ -371,8 +371,8 @@ func vfsShmUnmap(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, bDelete int32) _ErrorCo
 
 //go:linkname vfsFetch
 func vfsFetch(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, iOfst int64, iAmt int32, pp ptr_t) _ErrorCode {
-	mmap := vfsFileGet(wrp, pFile).(FileMemoryMapper).MemoryMapper()
-	err := mmap.fetch(wrp, iOfst, iAmt, pp)
+	mem := vfsFileGet(wrp, pFile).(FileMemoryMapper).MemoryMapper()
+	err := mem.fetch(wrp, iOfst, iAmt, pp)
 	return vfsErrorCode(wrp, err, _IOERR_MMAP)
 }
 

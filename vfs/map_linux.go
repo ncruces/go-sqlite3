@@ -42,11 +42,10 @@ func (m *vfsMapper) fetch(wrp *sqlite3_wrap.Wrapper, iOfst int64, iAmt int32, pp
 			if err != nil {
 				return err
 			}
-			if m.mmap == nil {
-				return _IOERR_NOMEM
-			}
 		}
-		ptr = m.mmap.Ptr + ptr_t(iOfst)
+		if m.mmap != nil {
+			ptr = m.mmap.Ptr + ptr_t(iOfst)
+		}
 	}
 	wrp.Write32(pp, uint32(ptr))
 	return nil
