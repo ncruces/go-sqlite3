@@ -6,7 +6,6 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"golang.org/x/sys/unix"
 )
 
@@ -17,8 +16,10 @@ func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool)
 	size &^= int32(pageSize - 1)
 
 	r := w.newRegion(size)
-	err := r.mmap(f, offset-align, readOnly)
-	if err != nil {
+	if r == nil {
+		return nil, nil
+	}
+	if err := r.mmap(f, offset-align, readOnly); err != nil {
 		return nil, err
 	}
 	r.Ptr = r.base + Ptr_t(align)
@@ -36,7 +37,7 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	// Allocate page aligned memmory.
 	ptr := Ptr_t(w.Xaligned_alloc(int32(unix.Getpagesize()), size))
 	if ptr == 0 {
-		panic(errutil.OOMErr)
+		return nil
 	}
 
 	// Save the newly allocated region.

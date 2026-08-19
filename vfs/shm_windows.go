@@ -74,6 +74,9 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 	if err != nil {
 		return 0, err
 	}
+	if r == nil {
+		return 0, _IOERR_NOMEM
+	}
 	s.regions = append(s.regions, r)
 	return r.Ptr, nil
 }

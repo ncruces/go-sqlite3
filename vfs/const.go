@@ -42,6 +42,7 @@ const (
 	_IOERR_UNLOCK            _ErrorCode = sqlite3_wrap.IOERR_UNLOCK
 	_IOERR_RDLOCK            _ErrorCode = sqlite3_wrap.IOERR_RDLOCK
 	_IOERR_DELETE            _ErrorCode = sqlite3_wrap.IOERR_DELETE
+	_IOERR_NOMEM             _ErrorCode = sqlite3_wrap.IOERR_NOMEM
 	_IOERR_ACCESS            _ErrorCode = sqlite3_wrap.IOERR_ACCESS
 	_IOERR_CHECKRESERVEDLOCK _ErrorCode = sqlite3_wrap.IOERR_CHECKRESERVEDLOCK
 	_IOERR_LOCK              _ErrorCode = sqlite3_wrap.IOERR_LOCK

@@ -95,8 +95,8 @@ func (mem *Memory) ReadString(ptr Ptr_t, maxlen int64) string {
 		return ""
 	}
 	buf := mem.Buf[ptr:]
-	if int64(len(buf)) > maxlen {
-		buf = buf[:maxlen]
+	if int64(len(buf)-1) > maxlen {
+		buf = buf[:maxlen+1]
 	}
 	if before, _, ok := bytes.Cut(buf, []byte{0}); ok {
 		return string(before)

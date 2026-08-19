@@ -144,7 +144,7 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (ptr_t, error) {
 func (c *Conn) closeDB(handle ptr_t) {
 	rc := res_t(c.wrp.Xsqlite3_close_v2(int32(handle)))
 	if err := c.errorFor(handle, rc); err != nil {
-		panic(err)
+		panic(err) // MISUSE
 	}
 }
 

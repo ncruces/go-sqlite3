@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/ncruces/go-sqlite3/internal/dotlk"
-	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
@@ -123,7 +122,7 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 	for int(id) >= len(s.ptrs) {
 		ptr := wrp.Xsqlite3_malloc64(int64(size))
 		if ptr == 0 {
-			panic(errutil.OOMErr)
+			return 0, _IOERR_NOMEM
 		}
 		clear(wrp.Bytes(ptr_t(ptr), _WALINDEX_PGSZ))
 		s.ptrs = append(s.ptrs, ptr_t(ptr))
