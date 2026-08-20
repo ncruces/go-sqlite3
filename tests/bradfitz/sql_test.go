@@ -163,9 +163,7 @@ func testPreparedStmt(t params) {
 	const nRuns = 10
 	var wg sync.WaitGroup
 	for range nRuns {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range 10 {
 				count := 0
 				if err := sel.QueryRow().Scan(&count); err != nil && err != sql.ErrNoRows {
@@ -177,7 +175,7 @@ func testPreparedStmt(t params) {
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }

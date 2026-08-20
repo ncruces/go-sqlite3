@@ -98,6 +98,8 @@ func (e *extEnv) X__table_base() *int32  { return &e.tableBase }
 // ExtensionInit loads an SQLite extension library.
 //
 // https://sqlite.org/loadext.html
+//
+// Deprecated: use the generic method.
 func ExtensionInit[Env any, Mod ExtensionLibrary](db *Conn, init func(env Env) Mod, info ExtensionInfo) error {
 	memSize, memAlign, tableSize, tableAlign := info()
 

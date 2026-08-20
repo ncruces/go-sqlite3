@@ -9,6 +9,8 @@ import (
 // If create is nil, the virtual table is eponymous.
 //
 // https://sqlite.org/c3ref/create_module.html
+//
+// Deprecated: use the generic method.
 func CreateModule[T VTab](db *Conn, name string, create, connect VTabConstructor[T]) error {
 	var flags int
 
