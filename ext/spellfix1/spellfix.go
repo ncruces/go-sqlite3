@@ -5,7 +5,7 @@ package spellfix1
 
 import (
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3-wasm/v3/spellfix"
+	"github.com/ncruces/go-sqlite3-wasm/v4/spellfix"
 )
 
 // Register registers the spellfix1 virtual table.

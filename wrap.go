@@ -8,7 +8,7 @@ import (
 	"time"
 	_ "unsafe"
 
-	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm/v3"
+	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm/v4"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/vfs"

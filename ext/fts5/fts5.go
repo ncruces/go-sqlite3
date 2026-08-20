@@ -5,7 +5,7 @@ package fts5
 
 import (
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3-wasm/v3/fts5"
+	"github.com/ncruces/go-sqlite3-wasm/v4/fts5"
 )
 
 // Register registers the fts5 extension.

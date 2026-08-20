@@ -6,7 +6,7 @@ package rtree
 
 import (
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3-wasm/v3/rtree"
+	"github.com/ncruces/go-sqlite3-wasm/v4/rtree"
 )
 
 // Register registers the rtree and geopoly virtual tables.
