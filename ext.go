@@ -25,6 +25,7 @@ func AutoExtension(entryPoint func(*Conn) error) {
 }
 
 func initExtensions(c *Conn) error {
+	c.uuid()
 	c.base64()
 	extRegistryMtx.RLock()
 	defer extRegistryMtx.RUnlock()

@@ -143,8 +143,8 @@ func fromValue(arg sqlite3.Value) (u uuid.UUID, err error) {
 
 	case sqlite3.BLOB:
 		blob := arg.RawBlob()
-		if len := len(blob); len != 16 {
-			err = fmt.Errorf("uuid: invalid BLOB length: %d", len)
+		if size := len(blob); size != len(u) {
+			err = fmt.Errorf("uuid: invalid BLOB length: %d", size)
 		} else {
 			copy(u[:], blob)
 		}
