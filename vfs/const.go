@@ -53,6 +53,7 @@ const (
 	_IOERR_SHMMAP            _ErrorCode = sqlite3_wrap.IOERR_SHMMAP
 	_IOERR_SEEK              _ErrorCode = sqlite3_wrap.IOERR_SEEK
 	_IOERR_DELETE_NOENT      _ErrorCode = sqlite3_wrap.IOERR_DELETE_NOENT
+	_IOERR_MMAP              _ErrorCode = sqlite3_wrap.IOERR_MMAP
 	_IOERR_GETTEMPPATH       _ErrorCode = sqlite3_wrap.IOERR_GETTEMPPATH
 	_IOERR_BEGIN_ATOMIC      _ErrorCode = sqlite3_wrap.IOERR_BEGIN_ATOMIC
 	_IOERR_COMMIT_ATOMIC     _ErrorCode = sqlite3_wrap.IOERR_COMMIT_ATOMIC

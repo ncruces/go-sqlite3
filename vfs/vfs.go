@@ -66,12 +66,17 @@ func vfsOpen(wrp *sqlite3_wrap.Wrapper, pVfs, zPath, pFile ptr_t, flags OpenFlag
 			file.SetPowersafeOverwrite(b)
 		}
 	}
-	if file, ok := file.(FileSharedMemory); ok && pOutVFS != 0 {
-		wrp.WriteBool(pOutVFS, file.SharedMemory() != nil)
-	}
 	if pOutFlags != 0 {
 		wrp.Write32(pOutFlags, uint32(flags))
 	}
+	var outVFS uint32
+	if file, ok := file.(FileSharedMemory); ok && file.SharedMemory() != nil {
+		outVFS |= 1
+	}
+	if file, ok := file.(FileMemoryMapper); ok && file.MemoryMapper() != nil {
+		outVFS |= 2
+	}
+	wrp.Write32(pOutVFS, outVFS)
 	file = cksmWrapFile(file, flags)
 	vfsFileRegister(wrp, pFile, file)
 	return _OK
@@ -302,6 +307,14 @@ func vfsFileControlImpl(wrp *sqlite3_wrap.Wrapper, file File, op _FcntlOpcode, p
 			}
 		}
 
+	case _FCNTL_MMAP_SIZE:
+		if file, ok := file.(FileMemoryMapper); ok {
+			if mmap := file.MemoryMapper(); mmap != nil {
+				mmap.mmapSize(wrp, pArg)
+				return _OK
+			}
+		}
+
 	case _FCNTL_PDB:
 		if file, ok := file.(filePDB); ok {
 			file.SetDB(wrp.DB)
@@ -353,6 +366,22 @@ func vfsShmLock(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, offset, n int32, flags _
 func vfsShmUnmap(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, bDelete int32) _ErrorCode {
 	shm := vfsFileGet(wrp, pFile).(FileSharedMemory).SharedMemory()
 	shm.shmUnmap(bDelete != 0)
+	return _OK
+}
+
+//go:linkname vfsFetch
+func vfsFetch(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, iOfst int64, iAmt int32, pp ptr_t) _ErrorCode {
+	mem := vfsFileGet(wrp, pFile).(FileMemoryMapper).MemoryMapper()
+	err := mem.fetch(wrp, iOfst, iAmt, pp)
+	return vfsErrorCode(wrp, err, _IOERR_MMAP)
+}
+
+//go:linkname vfsUnfetch
+func vfsUnfetch(wrp *sqlite3_wrap.Wrapper, pFile ptr_t, _ int64, p ptr_t) _ErrorCode {
+	if p == 0 {
+		mmap := vfsFileGet(wrp, pFile).(FileMemoryMapper).MemoryMapper()
+		mmap.Close()
+	}
 	return _OK
 }
 

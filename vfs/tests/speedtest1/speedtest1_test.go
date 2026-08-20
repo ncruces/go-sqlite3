@@ -60,6 +60,12 @@ func runBenchmark(b *testing.B, args ...string) {
 	}
 
 	testenv.TB = b
+	testenv.Exit = func(c int32) {
+		if c != 0 {
+			b.Fatal("exit error:", c)
+		}
+		b.SkipNow()
+	}
 	wrp, err := createWrapper(b.Context())
 	if err != nil {
 		b.Fatal(err)
