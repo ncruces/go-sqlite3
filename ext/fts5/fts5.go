@@ -5,7 +5,7 @@ package fts5
 
 import (
 	"github.com/ncruces/go-sqlite3"
-	"github.com/ncruces/go-sqlite3-wasm/v4/fts5"
+	"github.com/ncruces/go-sqlite3-wasm/v5/fts5"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
