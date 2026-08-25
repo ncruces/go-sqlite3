@@ -15,8 +15,8 @@ import (
 
 func Example() {
 	db, err := driver.Open("file:/test.db?vfs=memdb", func(c *sqlite3.Conn) error {
-		return fts5.RegisterCustom(c, func(a *fts5.Api) error {
-			return a.CreateTokenizer("utf8", func(arg string) (fts5.Tokenizer, error) {
+		return fts5.RegisterCustom(c, func(a *fts5.API) error {
+			return a.CreateTokenizer("utf8", func(arg []string) (fts5.Tokenizer, error) {
 				return Utf8Tokenizer{}, nil
 			})
 		})

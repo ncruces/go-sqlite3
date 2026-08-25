@@ -87,6 +87,9 @@ type ExtensionLibrary interface {
 // ExtensionInfo returns values needed to load a dynamically linked SQLite extension.
 type ExtensionInfo func() (memorySize, memoryAlignment, tableSize, tableAlignment int64)
 
+// ExtEnv is the concrete type passed to [ExtensionInit] initializers.
+//
+// ExtEnv exposes undocumented internal APIs that are subject to change without notice.
 type ExtEnv struct {
 	*env
 	memoryBase int32

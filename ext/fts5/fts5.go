@@ -15,8 +15,11 @@ func Register(db *sqlite3.Conn) error {
 	return RegisterCustom(db, nil)
 }
 
-func RegisterCustom(db *sqlite3.Conn, init func(*Api) error) error {
-	var api Api
+// Register registers the fts5 extension,
+// allowing you to register custom tokenizers,
+// using [API.CreateTokenizer].
+func RegisterCustom(db *sqlite3.Conn, init func(*API) error) error {
+	var api API
 	err := sqlite3.ExtensionInit(db, func(e *sqlite3.ExtEnv) *fts5.Module {
 		api.env = env{ExtEnv: e}
 		api.env.Module = fts5.New(&api.env)
@@ -28,9 +31,16 @@ func RegisterCustom(db *sqlite3.Conn, init func(*Api) error) error {
 	return err
 }
 
-type Api struct{ env env }
+// API exposes methods to extend FTS5.
+//
+// https://sqlite.org/fts5.html#extending_fts5
+type API struct{ env env }
 
-func (a *Api) CreateTokenizer(name string, fn TokenizerConstructor) error {
+// CreateTokenizer registers a tokenizer.
+// If fn returns an [io.Closer], it will be called to free resources.
+//
+// https://sqlite.org/fts5.html#custom_tokenizers
+func (a *API) CreateTokenizer(name string, fn TokenizerConstructor) error {
 	ptr := a.env.NewString(name)
 	defer a.env.Free(ptr)
 
@@ -43,12 +53,25 @@ func (a *Api) CreateTokenizer(name string, fn TokenizerConstructor) error {
 	return sql3util.CodeToError(rc)
 }
 
+// TokenizerConstructor allocates and initializes a [Tokenizer] instance.
+//
+// https://sqlite.org/fts5.html#custom_tokenizers
+type TokenizerConstructor func(arg []string) (Tokenizer, error)
+
+// Tokenizer is the interface implemented by tokenizer instances.
+//
+// https://sqlite.org/fts5.html#custom_tokenizers
 type Tokenizer interface {
+	// This function is expected to tokenize text.
+	// For each token in the input string, the supplied callback must be invoked.
 	Tokenize(flags TokenizeFlag, text, locale string, xToken TokenCallback) error
 }
 
-type TokenizerConstructor func(arg string) (Tokenizer, error)
-
+// TokenCallback is a callback invoked to emit a token.
+// For tokens that are substrings of the input text,
+// token can be an empty string, enabling zero copy tokenization.
+//
+// https://sqlite.org/fts5.html#custom_tokenizers
 type TokenCallback func(tflags TokenFlag, token string, start, end int) error
 
 type env struct {
@@ -57,8 +80,14 @@ type env struct {
 }
 
 func (e *env) Xgo_fts5_create(pApp, azArg, nArg, pOut int32) int32 {
+	arg := make([]string, nArg)
+	for i := range nArg {
+		ptr := ptr_t(e.Memory.Read32(ptr_t(azArg + i*ptrlen)))
+		arg[i] = e.ReadString(ptr, 1e6)
+	}
+
 	fn := e.GetHandle(ptr_t(pApp)).(TokenizerConstructor)
-	t, err := fn(string(e.Bytes(ptr_t(azArg), int64(nArg))))
+	t, err := fn(arg)
 
 	var handle ptr_t
 	if t != nil {
@@ -106,3 +135,5 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 }
 
 type ptr_t = sqlite3_wrap.Ptr_t
+
+const ptrlen = sqlite3_wrap.PtrLen

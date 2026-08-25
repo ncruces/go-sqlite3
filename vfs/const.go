@@ -11,9 +11,7 @@ const (
 	ptrlen = sqlite3_wrap.PtrLen
 )
 
-type (
-	ptr_t = sqlite3_wrap.Ptr_t
-)
+type ptr_t = sqlite3_wrap.Ptr_t
 
 // https://sqlite.org/rescode.html
 type _ErrorCode uint32
