@@ -1,7 +1,7 @@
 /*
 ** Configure five tasks in different ways, then run tests.
 */
---if vfsname() GLOB 'unix'
+--if vfsname() GLOB 'os'
 PRAGMA page_size=8192;
 --task 1
   PRAGMA journal_mode=PERSIST;

@@ -109,6 +109,16 @@ func (c *cksmFile) SharedMemory() SharedMemory {
 	return nil
 }
 
+func (c *cksmFile) MemoryMapper() MemoryMapper {
+	if c.verifyCksm {
+		return nil
+	}
+	if f, ok := c.File.(FileMemoryMapper); ok {
+		return f.MemoryMapper()
+	}
+	return nil
+}
+
 func (c *cksmFile) Unwrap() File {
 	return c.File
 }

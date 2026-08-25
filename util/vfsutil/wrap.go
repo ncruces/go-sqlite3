@@ -183,3 +183,11 @@ func WrapSharedMemory(f vfs.File) vfs.SharedMemory {
 	}
 	return nil
 }
+
+// WrapMemoryMapper helps wrap [vfs.FileMemoryMapper].
+func WrapMemoryMapper(f vfs.File) vfs.MemoryMapper {
+	if f, ok := f.(vfs.FileMemoryMapper); ok {
+		return f.MemoryMapper()
+	}
+	return nil
+}
