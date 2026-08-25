@@ -87,14 +87,14 @@ type ExtensionLibrary interface {
 // ExtensionInfo returns values needed to load a dynamically linked SQLite extension.
 type ExtensionInfo func() (memorySize, memoryAlignment, tableSize, tableAlignment int64)
 
-type extEnv struct {
+type ExtEnv struct {
 	*env
 	memoryBase int32
 	tableBase  int32
 }
 
-func (e *extEnv) X__memory_base() *int32 { return &e.memoryBase }
-func (e *extEnv) X__table_base() *int32  { return &e.tableBase }
+func (e *ExtEnv) X__memory_base() *int32 { return &e.memoryBase }
+func (e *ExtEnv) X__table_base() *int32  { return &e.tableBase }
 
 // ExtensionInit loads an SQLite extension library.
 //
@@ -123,7 +123,7 @@ func ExtensionInit[Env any, Mod ExtensionLibrary](db *Conn, init func(env Env) M
 		}
 	}
 
-	e := &extEnv{
+	e := &ExtEnv{
 		env:        &env{db.wrp},
 		memoryBase: memBase,
 		tableBase:  int32(tableBase),
