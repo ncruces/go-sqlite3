@@ -44,11 +44,12 @@ func (a *Api) CreateTokenizer(name string, fn TokenizerConstructor) error {
 }
 
 type Tokenizer interface {
-	Tokenize(flags TokenizeFlag, text, locale string,
-		xToken func(tflags TokenFlag, token string, start, end int32) error) error
+	Tokenize(flags TokenizeFlag, text, locale string, xToken TokenCallback) error
 }
 
 type TokenizerConstructor func(arg string) (Tokenizer, error)
+
+type TokenCallback func(tflags TokenFlag, token string, start, end int) error
 
 type env struct {
 	*sqlite3.ExtEnv
@@ -75,23 +76,32 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 		locale = string(e.Bytes(ptr_t(pLocale), int64(nLocale)))
 	}
 
-	err := tok.Tokenize(TokenizeFlag(flags), text, locale, func(tflags TokenFlag, token string, start, end int32) error {
-		var ptr ptr_t
-		var siz int32
+	var ptr ptr_t
+	var buf []byte
 
-		if token == "" {
-			ptr = ptr_t(pText + start)
-			siz = end - start
-		} else {
-			ptr := e.NewString(token)
-			siz = int32(len(token))
-			defer e.Free(ptr)
+	err := tok.Tokenize(TokenizeFlag(flags), text, locale, func(tflags TokenFlag, token string, start, end int) error {
+		if len(token) > len(buf) {
+			want := int64(len(buf))
+			want += want >> 1
+			want = max(want, int64(len(token)))
+			ptr = e.Realloc(ptr, want)
+			buf = e.Bytes(ptr, want)
 		}
 
-		rc := e.Xfts5_xToken(xToken, pCtx, int32(tflags), int32(ptr), siz, start, end)
+		tok := int32(ptr)
+		siz := int32(len(token))
+		if token != "" {
+			copy(buf, token)
+		} else {
+			tok = pText + int32(start)
+			siz = int32(end - start)
+		}
+
+		rc := e.Xfts5_xToken(xToken, pCtx, int32(tflags), tok, siz, int32(start), int32(end))
 		return sql3util.CodeToError(rc)
 	})
 
+	e.Free(ptr)
 	return sql3util.ErrorToCode(err)
 }
 

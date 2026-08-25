@@ -10,6 +10,7 @@ import (
 	"github.com/ncruces/go-sqlite3/driver"
 	"github.com/ncruces/go-sqlite3/ext/fts5"
 	_ "github.com/ncruces/go-sqlite3/vfs/memdb"
+	"golang.org/x/text/cases"
 )
 
 func Example() {
@@ -36,7 +37,7 @@ func Example() {
 	}
 
 	var title string
-	err = db.QueryRow("SELECT title FROM docs WHERE docs MATCH 'Go AND routines'").Scan(&title)
+	err = db.QueryRow("SELECT title FROM docs WHERE docs MATCH 'go AND routines'").Scan(&title)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,9 +48,8 @@ func Example() {
 
 type Utf8Tokenizer struct{}
 
-func (Utf8Tokenizer) Tokenize(flags fts5.TokenizeFlag, text, locale string,
-	xToken func(tflags fts5.TokenFlag, token string, start, end int32) error) error {
-
+func (Utf8Tokenizer) Tokenize(flags fts5.TokenizeFlag, text, locale string, token fts5.TokenCallback) error {
+	folder := cases.Fold()
 	isToken := func(r rune) bool {
 		return unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.Is(unicode.Co, r)
 	}
@@ -74,7 +74,7 @@ func (Utf8Tokenizer) Tokenize(flags fts5.TokenizeFlag, text, locale string,
 		}
 
 		if start < end {
-			err := xToken(0, "", int32(start), int32(end))
+			err := token(0, folder.String(text[start:end]), start, end)
 			if err != nil {
 				return err
 			}
