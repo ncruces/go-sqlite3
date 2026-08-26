@@ -107,6 +107,7 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 
 	var ptr ptr_t
 	var buf []byte
+	defer func() { e.Free(ptr) }()
 
 	err := tok.Tokenize(TokenizeFlag(flags), text, locale, func(tflags TokenFlag, token string, start, end int) error {
 		if len(token) > len(buf) {
@@ -129,8 +130,6 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 		rc := e.Xfts5_xToken(xToken, pCtx, int32(tflags), tok, siz, int32(start), int32(end))
 		return sql3util.CodeToError(rc)
 	})
-
-	e.Free(ptr)
 	return sql3util.ErrorToCode(err)
 }
 

@@ -7,6 +7,8 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
+// CodeToError converts a numeric error code to
+// an [sqlite3.ErrorCode] or [sqlite3.ExtendedErrorCode].
 func CodeToError(code int32) error {
 	switch {
 	case code == sqlite3_wrap.OK:
@@ -18,6 +20,8 @@ func CodeToError(code int32) error {
 	}
 }
 
+// ErrorToCode converts an SQLite error to
+// its numeric error code.
 func ErrorToCode(err error) int32 {
 	switch code := err.(type) {
 	case nil:
@@ -30,9 +34,8 @@ func ErrorToCode(err error) int32 {
 		return int32(code.Code())
 	}
 
-	var xcode sqlite3.ExtendedErrorCode
-	if errors.As(err, &xcode) {
-		return int32(xcode)
+	if code, ok := errors.AsType[sqlite3.ExtendedErrorCode](err); ok {
+		return int32(code)
 	}
 	return sqlite3_wrap.ERROR
 }
