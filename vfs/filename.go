@@ -122,6 +122,38 @@ func (n *Filename) URIParameter(key string) string {
 	}
 }
 
+// URIBoolean returns the value of a URI parameter interpreted as a boolean,
+// or def if the parameter is not set or is not a valid boolean.
+//
+// https://sqlite.org/c3ref/uri_boolean.html
+func (n *Filename) URIBoolean(key string, def bool) bool {
+	if n == nil || n.zPath == 0 {
+		return def
+	}
+
+	var b int32
+	if def {
+		b = 1
+	}
+	ptr := n.wrp.NewString(key)
+	defer n.wrp.Free(ptr)
+	return n.wrp.Xsqlite3_uri_boolean(int32(n.zPath), int32(ptr), b) != 0
+}
+
+// URIInt64 returns the value of a URI parameter interpreted as an integer,
+// or def if the parameter is not set or is not a valid integer.
+//
+// https://sqlite.org/c3ref/uri_boolean.html
+func (n *Filename) URIInt64(key string, def int64) int64 {
+	if n == nil || n.zPath == 0 {
+		return def
+	}
+
+	ptr := n.wrp.NewString(key)
+	defer n.wrp.Free(ptr)
+	return n.wrp.Xsqlite3_uri_int64(int32(n.zPath), int32(ptr), def)
+}
+
 // URIParameters obtains values for URI parameters.
 //
 // https://sqlite.org/c3ref/uri_boolean.html
