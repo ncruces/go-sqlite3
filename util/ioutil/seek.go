@@ -13,7 +13,7 @@ type SeekingReaderAt struct {
 	l sync.Mutex
 }
 
-// NewSeekingReaderAt creates a new SeekingReaderAt.
+// NewSeekingReaderAt creates a new [SeekingReaderAt].
 // The SeekingReaderAt takes ownership of r
 // and will modify its seek offset,
 // so callers should not use r after this call.

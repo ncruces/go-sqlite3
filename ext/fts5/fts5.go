@@ -36,7 +36,7 @@ func RegisterCustom(db *sqlite3.Conn, init func(*API) error) error {
 // https://sqlite.org/fts5.html#extending_fts5
 type API struct{ env env }
 
-// CreateTokenizer registers a tokenizer.
+// CreateTokenizer registers a [Tokenizer].
 // If fn returns an [io.Closer], it will be called to free resources.
 //
 // https://sqlite.org/fts5.html#custom_tokenizers
@@ -50,6 +50,22 @@ func (a *API) CreateTokenizer(name string, fn TokenizerConstructor) error {
 	}
 
 	rc := a.env.Xfts5_xCreateTokenizer_v2(int32(ptr), int32(handle))
+	return sql3util.CodeToError(rc)
+}
+
+// CreateFunction registers a [ExtensionFunction].
+//
+// https://sqlite.org/fts5.html#custom_auxiliary_functions
+func (a *API) CreateFunction(name string, fn ExtensionFunction) error {
+	ptr := a.env.NewString(name)
+	defer a.env.Free(ptr)
+
+	var handle ptr_t
+	if fn != nil {
+		handle = a.env.AddHandle(fn)
+	}
+
+	rc := a.env.Xfts5_xCreateFunction(int32(ptr), int32(handle))
 	return sql3util.CodeToError(rc)
 }
 
@@ -73,6 +89,11 @@ type Tokenizer interface {
 //
 // https://sqlite.org/fts5.html#custom_tokenizers
 type TokenCallback func(tflags TokenFlag, token string, start, end int) error
+
+// ExtensionFunction is a custom auxiliary function.
+//
+// https://sqlite.org/fts5.html#custom_auxiliary_functions
+type ExtensionFunction func(fts Context, ctx sqlite3.Context, arg ...sqlite3.Value)
 
 type env struct {
 	*sqlite3.ExtEnv
@@ -133,6 +154,16 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 	return sql3util.ErrorToCode(err)
 }
 
-type ptr_t = sqlite3_wrap.Ptr_t
+func (e *env) Xgo_fts5_function(pApp, pFts, pCtx, nVal, apVal int32) {
+	e.CallWithContextValues(pApp, pCtx, nVal, apVal, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+		fn := e.GetHandle(ptr_t(pApp)).(ExtensionFunction)
+		fn(Context{e, pFts}, ctx, arg...)
+	})
+}
 
-const ptrlen = sqlite3_wrap.PtrLen
+const (
+	ptrlen = sqlite3_wrap.PtrLen
+	intlen = sqlite3_wrap.IntLen
+)
+
+type ptr_t = sqlite3_wrap.Ptr_t

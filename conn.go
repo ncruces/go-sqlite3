@@ -418,9 +418,9 @@ func (e *env) Xgo_busy_handler(pDB, count int32) (retry int32) {
 //
 // https://sqlite.org/c3ref/db_status.html
 func (c *Conn) Status(op DBStatus, reset bool) (current, highwater int64, err error) {
-	defer c.arena.Mark()()
-	hiPtr := c.arena.New(8)
-	curPtr := c.arena.New(8)
+	defer c.wrp.Mark()()
+	hiPtr := c.wrp.Alloca(8)
+	curPtr := c.wrp.Alloca(8)
 
 	var i int32
 	if reset {

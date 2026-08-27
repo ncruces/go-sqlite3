@@ -99,6 +99,13 @@ type ExtEnv struct {
 func (e *ExtEnv) X__memory_base() *int32 { return &e.memoryBase }
 func (e *ExtEnv) X__table_base() *int32  { return &e.tableBase }
 
+func (e *ExtEnv) CallWithContextValues(pApp, pCtx, nArg, pArg int32, fn func(Context, ...Value)) {
+	db := e.DB.(*Conn)
+	args := callbackArgs(db, nArg, ptr_t(pArg))
+	defer returnArgs(args)
+	fn(Context{db, ptr_t(pCtx)}, *args...)
+}
+
 // ExtensionInit loads an SQLite extension library.
 //
 // https://sqlite.org/loadext.html

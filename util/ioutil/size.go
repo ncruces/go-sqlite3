@@ -7,14 +7,14 @@ import (
 	"github.com/ncruces/go-sqlite3"
 )
 
-// A SizeReaderAt is a ReaderAt with a Size method.
+// A SizeReaderAt is an [io.ReaderAt] with a Size method.
 // Use [NewSizeReaderAt] to adapt different Size interfaces.
 type SizeReaderAt interface {
 	Size() (int64, error)
 	io.ReaderAt
 }
 
-// NewSizeReaderAt returns a SizeReaderAt given an io.ReaderAt
+// NewSizeReaderAt returns a [SizeReaderAt] given an [io.ReaderAt]
 // that implements one of:
 //   - Size() (int64, error)
 //   - Size() int64

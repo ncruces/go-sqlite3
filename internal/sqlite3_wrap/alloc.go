@@ -40,6 +40,22 @@ func (w *Wrapper) NewString(s string) Ptr_t {
 	return ptr
 }
 
+func (w *Wrapper) Mark() (reset func()) {
+	ptr := w.X__stack_pointer()
+	old := *ptr
+	return func() { *ptr = old }
+}
+
+func (w *Wrapper) Alloca(size int) Ptr_t {
+	ptr := w.X__stack_pointer()
+	new := *ptr - int32(size)
+	if new <= 0 {
+		panic(errutil.OOMErr)
+	}
+	*ptr = new
+	return Ptr_t(new)
+}
+
 const arenaSize = 4096
 
 func (w *Wrapper) NewArena() Arena {
