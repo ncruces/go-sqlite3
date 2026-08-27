@@ -27,8 +27,8 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 	// The vararg is a pointer to an array containing these arguments:
 	// an int and an int* pointing to that int.
 
-	defer c.wrp.Mark()()
-	argsPtr := c.wrp.Alloca(intlen + ptrlen)
+	defer c.wrp.StackMark()()
+	argsPtr := c.wrp.StackAlloc(intlen + ptrlen)
 
 	var flag int32
 	switch {

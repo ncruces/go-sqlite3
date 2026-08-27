@@ -24,8 +24,8 @@ func (c Context) ColumnCount() int {
 //
 // https://sqlite.org/fts5.html#xRowCount
 func (c Context) RowCount() (int64, error) {
-	defer c.Mark()()
-	ptr := c.Alloca(8)
+	defer c.StackMark()()
+	ptr := c.StackAlloc(8)
 	rc := c.Xfts5_xRowCount(c.pFts, int32(ptr))
 	if rc != 0 {
 		return 0, sql3util.CodeToError(rc)
@@ -37,8 +37,8 @@ func (c Context) RowCount() (int64, error) {
 //
 // https://sqlite.org/fts5.html#xColumnTotalSize
 func (c Context) ColumnTotalSize(col int) (int64, error) {
-	defer c.Mark()()
-	ptr := c.Alloca(8)
+	defer c.StackMark()()
+	ptr := c.StackAlloc(8)
 	rc := c.Xfts5_xColumnTotalSize(c.pFts, int32(col), int32(ptr))
 	if rc != 0 {
 		return 0, sql3util.CodeToError(rc)
@@ -65,8 +65,8 @@ func (c Context) PhraseSize(phrase int) int {
 //
 // https://sqlite.org/fts5.html#xInstCount
 func (c Context) InstCount() (int, error) {
-	defer c.Mark()()
-	ptr := c.Alloca(intlen)
+	defer c.StackMark()()
+	ptr := c.StackAlloc(intlen)
 	rc := c.Xfts5_xInstCount(c.pFts, int32(ptr))
 	if rc != 0 {
 		return 0, sql3util.CodeToError(rc)
@@ -78,10 +78,10 @@ func (c Context) InstCount() (int, error) {
 //
 // https://sqlite.org/fts5.html#xInst
 func (c Context) Inst(idx int) (phrase, col, off int, err error) {
-	defer c.Mark()()
-	pPhrase := c.Alloca(intlen)
-	pCol := c.Alloca(intlen)
-	pOff := c.Alloca(intlen)
+	defer c.StackMark()()
+	pPhrase := c.StackAlloc(intlen)
+	pCol := c.StackAlloc(intlen)
+	pOff := c.StackAlloc(intlen)
 
 	rc := c.Xfts5_xInst(c.pFts, int32(idx), int32(pPhrase), int32(pCol), int32(pOff))
 	if rc != 0 {
@@ -105,9 +105,9 @@ func (c Context) RowID() int64 {
 //
 // https://sqlite.org/fts5.html#xColumnText
 func (c Context) ColumnText(col int) (string, error) {
-	defer c.Mark()()
-	pz := c.Alloca(ptrlen)
-	pn := c.Alloca(intlen)
+	defer c.StackMark()()
+	pz := c.StackAlloc(ptrlen)
+	pn := c.StackAlloc(intlen)
 
 	rc := c.Xfts5_xColumnText(c.pFts, int32(col), int32(pz), int32(pn))
 	if rc != 0 {
@@ -124,8 +124,8 @@ func (c Context) ColumnText(col int) (string, error) {
 //
 // https://sqlite.org/fts5.html#xColumnSize
 func (c Context) ColumnSize(col int) (int, error) {
-	defer c.Mark()()
-	ptr := c.Alloca(intlen)
+	defer c.StackMark()()
+	ptr := c.StackAlloc(intlen)
 	rc := c.Xfts5_xColumnSize(c.pFts, int32(col), int32(ptr))
 	if rc != 0 {
 		return 0, sql3util.CodeToError(rc)
@@ -163,9 +163,9 @@ func (c Context) GetAuxdata(clear bool) any {
 //
 // https://sqlite.org/fts5.html#xQueryToken
 func (c Context) QueryToken(phrase, token int) (string, error) {
-	defer c.Mark()()
-	ppToken := c.Alloca(ptrlen)
-	pnToken := c.Alloca(intlen)
+	defer c.StackMark()()
+	ppToken := c.StackAlloc(ptrlen)
+	pnToken := c.StackAlloc(intlen)
 
 	rc := c.Xfts5_xQueryToken(c.pFts, int32(phrase), int32(token), int32(ppToken), int32(pnToken))
 	if rc != 0 {
@@ -182,9 +182,9 @@ func (c Context) QueryToken(phrase, token int) (string, error) {
 //
 // https://sqlite.org/fts5.html#xInstToken
 func (c Context) InstToken(idx, token int) (string, error) {
-	defer c.Mark()()
-	ppToken := c.Alloca(ptrlen)
-	pnToken := c.Alloca(intlen)
+	defer c.StackMark()()
+	ppToken := c.StackAlloc(ptrlen)
+	pnToken := c.StackAlloc(intlen)
 
 	rc := c.Xfts5_xInstToken(c.pFts, int32(idx), int32(token), int32(ppToken), int32(pnToken))
 	if rc != 0 {
@@ -201,9 +201,9 @@ func (c Context) InstToken(idx, token int) (string, error) {
 //
 // https://sqlite.org/fts5.html#xColumnLocale
 func (c Context) ColumnLocale(col int) (string, error) {
-	defer c.Mark()()
-	pz := c.Alloca(ptrlen)
-	pn := c.Alloca(intlen)
+	defer c.StackMark()()
+	pz := c.StackAlloc(ptrlen)
+	pn := c.StackAlloc(intlen)
 
 	rc := c.Xfts5_xColumnLocale(c.pFts, int32(col), int32(pz), int32(pn))
 	if rc != 0 {
