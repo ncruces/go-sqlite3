@@ -162,6 +162,32 @@ func TestContext(t *testing.T) {
 				if v, err := fts.ColumnLocale(0); err != nil || v != "" {
 					t.Errorf("ColumnLocale(0): got %q err=%v, want ''", v, err)
 				}
+
+				if iter, err := fts.PhraseIter(0); err != nil {
+					t.Errorf("PhraseIter(0): %v", err)
+				} else {
+					var matches []struct{ c, o int }
+					for c, o := range iter {
+						matches = append(matches, struct{ c, o int }{c, o})
+					}
+					wantMatches := []struct{ c, o int }{{0, 0}, {1, 4}}
+					if len(matches) != len(wantMatches) || matches[0] != wantMatches[0] || matches[1] != wantMatches[1] {
+						t.Errorf("PhraseIter(0): got %v, want %v", matches, wantMatches)
+					}
+				}
+
+				if iterCol, err := fts.PhraseIterColumn(0); err != nil {
+					t.Errorf("PhraseIterColumn(0): %v", err)
+				} else {
+					var cols []int
+					for c := range iterCol {
+						cols = append(cols, c)
+					}
+					wantCols := []int{0, 1}
+					if len(cols) != len(wantCols) || cols[0] != wantCols[0] || cols[1] != wantCols[1] {
+						t.Errorf("PhraseIterColumn(0): got %v, want %v", cols, wantCols)
+					}
+				}
 			})
 		})
 	})

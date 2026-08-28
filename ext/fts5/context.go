@@ -1,6 +1,8 @@
 package fts5
 
 import (
+	"iter"
+
 	"github.com/ncruces/go-sqlite3/util/sql3util"
 )
 
@@ -157,6 +159,62 @@ func (c Context) GetAuxdata(clear bool) any {
 		return c.GetHandle(ptr_t(handle))
 	}
 	return nil
+}
+
+// PhraseIter returns a single-use iterator over
+// all instances of a query phrase within the current row.
+//
+// https://sqlite.org/fts5.html#xPhraseFirst
+func (c Context) PhraseIter(phrase int) (iter.Seq2[int, int], error) {
+	pIt := c.New(16)
+	rc := c.Xfts5_xPhraseFirst(c.pFts, int32(phrase), int32(pIt))
+	if rc != 0 {
+		c.Free(pIt)
+		return nil, sql3util.CodeToError(rc)
+	}
+
+	return func(yield func(int, int) bool) {
+		defer func() {
+			c.Free(pIt)
+			pIt = 0
+		}()
+		for pIt != 0 {
+			column := int32(c.Read32(pIt + 8))
+			offset := int32(c.Read32(pIt + 12))
+			if column < 0 || !yield(int(column), int(offset)) {
+				break
+			}
+			c.Xfts5_xPhraseNext(c.pFts, int32(pIt))
+		}
+	}, nil
+}
+
+// PhraseIterColumn returns a single-use iterator over
+// the set of columns in the current row that contain
+// one or more instances of a specified phrase.
+//
+// https://sqlite.org/fts5.html#xPhraseFirstColumn
+func (c Context) PhraseIterColumn(phrase int) (iter.Seq[int], error) {
+	pIt := c.New(16)
+	rc := c.Xfts5_xPhraseFirstColumn(c.pFts, int32(phrase), int32(pIt))
+	if rc != 0 {
+		c.Free(pIt)
+		return nil, sql3util.CodeToError(rc)
+	}
+
+	return func(yield func(int) bool) {
+		defer func() {
+			c.Free(pIt)
+			pIt = 0
+		}()
+		for pIt != 0 {
+			column := int32(c.Read32(pIt + 8))
+			if column < 0 || !yield(int(column)) {
+				break
+			}
+			c.Xfts5_xPhraseNextColumn(c.pFts, int32(pIt))
+		}
+	}, nil
 }
 
 // QueryToken returns a token from the current query.
