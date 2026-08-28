@@ -155,7 +155,7 @@ func (e *env) Xgo_fts5_tokenize(pTok, pCtx, flags, pText, nText, pLocale, nLocal
 }
 
 func (e *env) Xgo_fts5_function(pApp, pFts, pCtx, nVal, apVal int32) {
-	e.CallWithContextValues(pApp, pCtx, nVal, apVal, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
+	e.CallWithContextValues(pCtx, nVal, apVal, func(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		fn := e.GetHandle(ptr_t(pApp)).(ExtensionFunction)
 		fn(Context{e, pFts}, ctx, arg...)
 	})

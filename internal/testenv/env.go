@@ -5,8 +5,6 @@ import (
 	"context"
 	"io/fs"
 	"sync"
-
-	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 type Context interface {
@@ -18,7 +16,7 @@ var (
 	FS     fs.FS
 	TB     Context
 	Exit   func(int32)
-	System func(*sqlite3_wrap.Wrapper, int32) int32
+	System func(string) int32
 
 	buf []byte
 	mtx sync.Mutex

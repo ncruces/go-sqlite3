@@ -20,7 +20,7 @@ func Example() {
 		return fts5.RegisterCustom(c, func(a *fts5.API) error {
 			return errors.Join(
 				a.CreateTokenizer("utf8", func(arg []string) (fts5.Tokenizer, error) {
-					return Utf8Tokenizer{}, nil
+					return utf8Tokenizer{}, nil
 				}),
 				a.CreateFunction("hit_count", func(fts fts5.Context, ctx sqlite3.Context, arg ...sqlite3.Value) {
 					if count, err := fts.InstCount(); err != nil {
@@ -57,9 +57,9 @@ func Example() {
 	// Output: Go Programming: 3 hits
 }
 
-type Utf8Tokenizer struct{}
+type utf8Tokenizer struct{}
 
-func (Utf8Tokenizer) Tokenize(flags fts5.TokenizeFlag, text, locale string, token fts5.TokenCallback) error {
+func (utf8Tokenizer) Tokenize(flags fts5.TokenizeFlag, text, locale string, token fts5.TokenCallback) error {
 	folder := cases.Fold()
 	isToken := func(r rune) bool {
 		return unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.Is(unicode.Co, r)

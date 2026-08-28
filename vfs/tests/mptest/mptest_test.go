@@ -148,18 +148,12 @@ func Test_mptest(t *testing.T) {
 	}
 }
 
-func system(wrp *sqlite3_wrap.Wrapper, ptr int32) int32 {
-	if ptr == 0 {
-		return 0
-	}
-
-	s := wrp.ReadString(ptr_t(ptr), 1e6)
-
+func system(s string) int32 {
 	args := strings.Split(s, " ")
 	for i := range args {
 		args[i] = strings.Trim(args[i], `"`)
 	}
-	if args[0] != "mptest" || args[len(args)-1] != "&" {
+	if len(args) == 0 || args[0] != "mptest" || args[len(args)-1] != "&" {
 		return -1
 	}
 	args = args[:len(args)-1]

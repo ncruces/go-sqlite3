@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
 )
 
 var (
@@ -91,7 +92,7 @@ type ExtensionInfo func() (memorySize, memoryAlignment, tableSize, tableAlignmen
 //
 // ExtEnv exposes undocumented internal APIs that are subject to change without notice.
 type ExtEnv struct {
-	*env
+	*sqlite3_wrap.Wrapper
 	memoryBase int32
 	tableBase  int32
 }
@@ -99,9 +100,10 @@ type ExtEnv struct {
 func (e *ExtEnv) X__memory_base() *int32 { return &e.memoryBase }
 func (e *ExtEnv) X__table_base() *int32  { return &e.tableBase }
 
-func (e *ExtEnv) CallWithContextValues(pApp, pCtx, nArg, pArg int32, fn func(Context, ...Value)) {
+// CallWithContextValues calls fn with a [Context] and [Value] arguments decoded from pointers.
+func (e *ExtEnv) CallWithContextValues(pCtx, nVal, pVal int32, fn func(Context, ...Value)) {
 	db := e.DB.(*Conn)
-	args := callbackArgs(db, nArg, ptr_t(pArg))
+	args := callbackArgs(db, nVal, ptr_t(pVal))
 	defer returnArgs(args)
 	fn(Context{db, ptr_t(pCtx)}, *args...)
 }
@@ -134,7 +136,7 @@ func ExtensionInit[Env any, Mod ExtensionLibrary](db *Conn, init func(env Env) M
 	}
 
 	e := &ExtEnv{
-		env:        &env{db.wrp},
+		Wrapper:    db.wrp,
 		memoryBase: memBase,
 		tableBase:  int32(tableBase),
 	}
