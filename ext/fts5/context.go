@@ -273,3 +273,25 @@ func (c Context) ColumnLocale(col int) (string, error) {
 	}
 	return "", nil
 }
+
+// Tokenize tokenizes text using the tokenizer of the table.
+//
+// https://sqlite.org/fts5.html#xTokenize_v2
+func (c Context) Tokenize(text, locale string, token TokenCallback) error {
+	var handle, pText, pLoc ptr_t
+	defer func() {
+		c.Free(pText)
+		c.Free(pLoc)
+		c.DelHandle(handle)
+	}()
+
+	pText = c.NewString(text)
+	pLoc = c.NewString(locale)
+	handle = c.AddHandle(token)
+
+	rc := c.Xfts5_xTokenize_v2(c.pFts,
+		int32(pText), int32(len(text)),
+		int32(pLoc), int32(len(locale)),
+		int32(handle))
+	return sql3util.CodeToError(rc)
+}

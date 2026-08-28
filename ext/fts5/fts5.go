@@ -161,6 +161,13 @@ func (e *env) Xgo_fts5_function(pApp, pFts, pCtx, nVal, apVal int32) {
 	})
 }
 
+func (e *env) Xgo_fts5_token(pApp, tflags, pToken, nToken, iStart, iEnd int32) int32 {
+	fn := e.GetHandle(ptr_t(pApp)).(TokenCallback)
+	token := string(e.Bytes(ptr_t(pToken), int64(nToken)))
+	err := fn(TokenFlag(tflags), token, int(iStart), int(iEnd))
+	return sql3util.ErrorToCode(err)
+}
+
 const (
 	ptrlen = sqlite3_wrap.PtrLen
 	intlen = sqlite3_wrap.IntLen

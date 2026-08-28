@@ -188,6 +188,18 @@ func TestContext(t *testing.T) {
 						t.Errorf("PhraseIterColumn(0): got %v, want %v", cols, wantCols)
 					}
 				}
+
+				var tokens int
+				err := fts.Tokenize("Hello World", "", func(tflags fts5.TokenFlag, token string, start, end int) error {
+					tokens++
+					return nil
+				})
+				if err != nil {
+					t.Errorf("Tokenize: %v", err)
+				}
+				if tokens != 2 {
+					t.Errorf("Tokenize: got %d invocations, want 2", tokens)
+				}
 			})
 		})
 	})
