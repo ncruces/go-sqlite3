@@ -192,8 +192,8 @@ func (v Value) InNext() (Value, error) {
 }
 
 func (c *Conn) returnValue(fn func(_, _ int32) int32, handle ptr_t) (Value, error) {
-	defer c.arena.Mark()()
-	valPtr := c.arena.New(ptrlen)
+	defer c.wrp.StackMark()()
+	valPtr := c.wrp.StackAlloc(ptrlen)
 	rc := res_t(fn(int32(handle), int32(valPtr)))
 	if err := c.error(rc); err != nil {
 		return Value{}, err
@@ -202,8 +202,8 @@ func (c *Conn) returnValue(fn func(_, _ int32) int32, handle ptr_t) (Value, erro
 }
 
 func (c *Conn) columnValue(fn func(_, _, _ int32) int32, handle ptr_t, column int) (Value, error) {
-	defer c.arena.Mark()()
-	valPtr := c.arena.New(ptrlen)
+	defer c.wrp.StackMark()()
+	valPtr := c.wrp.StackAlloc(ptrlen)
 	rc := res_t(fn(int32(handle), int32(column), int32(valPtr)))
 	if err := c.error(rc); err != nil {
 		return Value{}, err

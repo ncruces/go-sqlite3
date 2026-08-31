@@ -228,7 +228,7 @@ func TestParseTable_upstream(t *testing.T) {
 		// ALTER TABLE with schema-qualified name and ADD COLUMN with all constraints
 		`ALTER TABLE main.foo ADD COLUMN new_col INTEGER NOT NULL DEFAULT 0 REFERENCES Other(id)`,
 
-		// https://www.sqlite.org/lang_altertable.html
+		// https://sqlite.org/lang_altertable.html
 		`ALTER TABLE foo RENAME TO bar`,
 		`ALTER TABLE temp.foo RENAME TO bar`,
 		`ALTER TABLE foo RENAME COLUMN col1 TO col2`,

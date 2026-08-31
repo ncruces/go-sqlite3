@@ -9,7 +9,7 @@ as well as direct access to most of the [C SQLite API](https://sqlite.org/cintro
 
 It wraps a [Wasm](https://webassembly.org/) build of SQLite,
 and uses [wasm2go](https://github.com/ncruces/wasm2go) to translate it to Go.\
-Go and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ direct dependencies.
+Go and [`x/sys`](https://pkg.go.dev/golang.org/x/sys) are the _only_ required dependencies.
 
 ### Getting started
 

@@ -17,7 +17,7 @@ type mode struct {
 	blobs counter[string]
 }
 
-func (m mode) Value(ctx sqlite3.Context) {
+func (m *mode) Value(ctx sqlite3.Context) {
 	var (
 		typ = sqlite3.NULL
 		max uint

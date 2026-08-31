@@ -27,8 +27,8 @@ func (c *Conn) Config(op DBConfig, arg ...bool) (bool, error) {
 	// The vararg is a pointer to an array containing these arguments:
 	// an int and an int* pointing to that int.
 
-	defer c.arena.Mark()()
-	argsPtr := c.arena.New(intlen + ptrlen)
+	defer c.wrp.StackMark()()
+	argsPtr := c.wrp.StackAlloc(intlen + ptrlen)
 
 	var flag int32
 	switch {
@@ -71,7 +71,7 @@ func (c *Conn) ConfigLog(cb func(code ExtendedErrorCode, msg string)) error {
 	return nil
 }
 
-func (e *env) Xgo_log(_, iCode, zMsg int32) {
+func (e env) Xgo_log(_, iCode, zMsg int32) {
 	if c, ok := e.DB.(*Conn); ok && c.log != nil {
 		msg := e.ReadString(ptr_t(zMsg), _MAX_LENGTH)
 		c.log(xErrorCode(iCode), msg)
@@ -212,7 +212,7 @@ func (c *Conn) SetAuthorizer(cb func(action AuthorizerActionCode, name3rd, name4
 	return nil
 }
 
-func (e *env) Xgo_authorizer(pDB, action, zName3rd, zName4th, zSchema, zInner int32) (rc int32) {
+func (e env) Xgo_authorizer(pDB, action, zName3rd, zName4th, zSchema, zInner int32) (rc int32) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.authorizer != nil {
 		var name3rd, name4th, schema, inner string
 		if zName3rd != 0 {
@@ -244,7 +244,7 @@ func (c *Conn) Trace(mask TraceEvent, cb func(evt TraceEvent, arg1, arg2 any) er
 	return nil
 }
 
-func (e *env) Xgo_trace(evt, pDB, pArg1, pArg2 int32) int32 {
+func (e env) Xgo_trace(evt, pDB, pArg1, pArg2 int32) int32 {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.trace != nil {
 		var arg1, arg2 any
 		if TraceEvent(evt) == TRACE_CLOSE {
@@ -311,7 +311,7 @@ func (c *Conn) WALHook(cb func(db *Conn, schema string, pages int) error) {
 	c.wal = cb
 }
 
-func (e *env) Xgo_wal_hook(_, pDB, zSchema, pages int32) int32 {
+func (e env) Xgo_wal_hook(_, pDB, zSchema, pages int32) int32 {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.wal != nil {
 		schema := e.ReadString(ptr_t(zSchema), _MAX_NAME)
 		err := c.wal(c, schema, int(pages))
@@ -333,7 +333,7 @@ func (c *Conn) AutoVacuumPages(cb func(schema string, dbPages, freePages, bytesP
 	return c.error(rc)
 }
 
-func (e *env) Xgo_autovacuum_pages(pApp, zSchema, nDbPage, nFreePage, nBytePerPage int32) int32 {
+func (e env) Xgo_autovacuum_pages(pApp, zSchema, nDbPage, nFreePage, nBytePerPage int32) int32 {
 	fn := e.GetHandle(ptr_t(pApp)).(func(schema string, dbPages, freePages, bytesPerPage uint) uint)
 	schema := e.ReadString(ptr_t(zSchema), _MAX_NAME)
 	return int32(fn(schema, uint(uint32(nDbPage)), uint(uint32(nFreePage)), uint(uint32(nBytePerPage))))

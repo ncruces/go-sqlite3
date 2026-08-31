@@ -348,7 +348,7 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 	return old
 }
 
-func (e *env) Xgo_progress_handler(_ int32) (interrupt int32) {
+func (e env) Xgo_progress_handler(_ int32) (interrupt int32) {
 	if c, ok := e.DB.(*Conn); ok {
 		if c.gosched++; c.gosched%16 == 0 {
 			runtime.Gosched()
@@ -369,7 +369,7 @@ func (c *Conn) BusyTimeout(timeout time.Duration) error {
 	return c.error(rc)
 }
 
-func (e *env) Xgo_busy_timeout(count, tmout int32) (retry int32) {
+func (e env) Xgo_busy_timeout(count, tmout int32) (retry int32) {
 	// https://fractaledmind.github.io/2024/04/15/sqlite-on-rails-the-how-and-why-of-optimal-performance/
 	if c, ok := e.DB.(*Conn); ok && c.interrupt.Err() == nil {
 		switch {
@@ -404,7 +404,7 @@ func (c *Conn) BusyHandler(cb func(ctx context.Context, count int) (retry bool))
 	return nil
 }
 
-func (e *env) Xgo_busy_handler(pDB, count int32) (retry int32) {
+func (e env) Xgo_busy_handler(pDB, count int32) (retry int32) {
 	if c, ok := e.DB.(*Conn); ok && c.handle == ptr_t(pDB) && c.busy != nil {
 		if interrupt := c.interrupt; interrupt.Err() == nil &&
 			c.busy(interrupt, int(count)) {
@@ -418,9 +418,9 @@ func (e *env) Xgo_busy_handler(pDB, count int32) (retry int32) {
 //
 // https://sqlite.org/c3ref/db_status.html
 func (c *Conn) Status(op DBStatus, reset bool) (current, highwater int64, err error) {
-	defer c.arena.Mark()()
-	hiPtr := c.arena.New(8)
-	curPtr := c.arena.New(8)
+	defer c.wrp.StackMark()()
+	hiPtr := c.wrp.StackAlloc(8)
+	curPtr := c.wrp.StackAlloc(8)
 
 	var i int32
 	if reset {
