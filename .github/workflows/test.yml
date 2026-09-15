@@ -78,7 +78,7 @@ jobs:
 
     - name: Collect coverage
       run: |
-        go get -tool github.com/dave/courtney@v0.4.4
+        go get -tool github.com/dave/courtney@v0.5.1
         go tool courtney
       if: |
         github.event_name == 'push' &&
