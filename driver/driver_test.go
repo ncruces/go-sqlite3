@@ -392,6 +392,37 @@ func Test_QueryRow_blob_null(t *testing.T) {
 	}
 }
 
+func Test_bind_blob_null(t *testing.T) {
+	t.Parallel()
+	dsn := memdb.TestDB(t)
+
+	ctx := testcfg.Context(t)
+	db, err := Open(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var typ string
+	var null bool
+	err = db.QueryRowContext(ctx, `SELECT typeof(?1), ?1 IS NULL`, []byte(nil)).Scan(&typ, &null)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if typ != "null" || !null {
+		t.Errorf("nil: got %q, want null", typ)
+	}
+
+	var n int
+	err = db.QueryRowContext(ctx, `SELECT typeof(?1), length(?1)`, []byte{}).Scan(&typ, &n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if typ != "blob" || n != 0 {
+		t.Errorf("empty: got %q of length %d, want blob of length 0", typ, n)
+	}
+}
+
 func Test_time(t *testing.T) {
 	t.Parallel()
 

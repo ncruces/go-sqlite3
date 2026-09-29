@@ -540,7 +540,13 @@ func (s *stmt) setupBindings(args []driver.NamedValue) (err error) {
 			case string:
 				err = s.Stmt.BindText(id, a)
 			case []byte:
-				err = s.Stmt.BindBlob(id, a)
+				// A nil slice is NULL, as for sqlite3_bind_blob
+				// and other database/sql drivers.
+				if a == nil {
+					err = s.Stmt.BindNull(id)
+				} else {
+					err = s.Stmt.BindBlob(id, a)
+				}
 			case sqlite3.ZeroBlob:
 				err = s.Stmt.BindZeroBlob(id, int64(a))
 			case time.Time:
