@@ -3,15 +3,15 @@ set -euo pipefail
 
 cd -P -- "$(dirname -- "$0")"
 
-rm -rf gorm/ tests/
+rm -rf tests/
 go work use -r .
 go test
 
-git clone --branch v1.31.2 --filter=blob:none https://github.com/go-gorm/gorm.git
-mv gorm/tests tests
-rm -rf gorm/
+curl -#L https://github.com/go-gorm/gorm/archive/refs/tags/v1.31.2.tar.gz |\
+  tar -vxz --strip-components=1 gorm-1.31.2/tests/
 
 patch -p1 -N < tests.patch
+exit
 
 cd tests
 go mod edit \
