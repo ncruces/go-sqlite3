@@ -7,7 +7,7 @@ rm -rf tests/
 go work use -r .
 go test
 
-curl -#L https://github.com/go-gorm/gorm/archive/refs/tags/v1.31.2.tar.gz |\
+curl -#fL https://github.com/go-gorm/gorm/archive/refs/tags/v1.31.2.tar.gz |\
   tar -vxz --strip-components=1 gorm-1.31.2/tests/
 
 patch -p1 -N < tests.patch
