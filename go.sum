@@ -6,8 +6,8 @@ github.com/ncruces/go-sqlite3-wasm/v6 v6.3.35304 h1:dBSZlcEFdtBMvNRg34y50mConBPO
 github.com/ncruces/go-sqlite3-wasm/v6 v6.3.35304/go.mod h1:YvoJzbJpX6phd3BGdtiXu2NuD5RX6G8zsUdzt47GgOY=
 github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt7M=
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
-github.com/ncruces/sort v1.0.2 h1:h48wjO7QAAfYAO8HiArUvUjLg+jZCBIy5+smmRSEunk=
-github.com/ncruces/sort v1.0.2/go.mod h1:obJToO4rYr6VWP0Uw5FYymgYGt3Br4RXcs/JdKaXAPk=
+github.com/ncruces/sort v1.0.3 h1:2RpWKWvfftMmb3RbUIJF3yVeV/ksHc2HmiW0M7/PTnY=
+github.com/ncruces/sort v1.0.3/go.mod h1:yD/qToXSDwliVMWAdN02/6+58XrEKBcN0Uyr+KeahFM=
 github.com/ncruces/wbt v1.0.0 h1:8iBE7UPjTLUpzu3/FCRjAmuQjWzgxo10RGBgt3ooLSc=
 github.com/ncruces/wbt v1.0.0/go.mod h1:DtF92amvMxH69EmBFUSFWRDAlo6hOEfoNQnClxj9C/c=
 github.com/psanford/httpreadat v0.1.0 h1:VleW1HS2zO7/4c7c7zNl33fO6oYACSagjJIyMIwZLUE=
