@@ -177,22 +177,28 @@ func (f *vfsFile) WriteAt(p []byte, off int64) (n int, err error) {
 	return osWriteAt(f.File, p, off)
 }
 
+// syncDir flushes a directory's entries with a plain fsync (fdatasync on linux),
+// as SQLite's unixSync does for the directory of a newly created journal or WAL.
+// It is a variable so a test can record the directory Sync hands it.
+var syncDir = func(d *os.File) error { return osSync(d, 0, SYNC_NORMAL) }
+
 func (f *vfsFile) Sync(flags SyncFlag) error {
 	err := osSync(f.File, f.flags, flags)
 	if err != nil {
 		return err
 	}
 	if isUnix && f.flags&_FLAG_SYNC_DIR != 0 {
+		// Flush the directory entry of a newly created journal or WAL, as
+		// SQLite's unixSync does: a directory that will not open counts as
+		// success, the directory's fsync result is ignored, and the flag is
+		// cleared either way.
 		f.flags ^= _FLAG_SYNC_DIR
 		d, err := os.Open(filepath.Dir(f.File.Name()))
 		if err != nil {
 			return nil
 		}
 		defer d.Close()
-		err = osSync(f.File, f.flags, flags)
-		if err != nil {
-			return sysError{err, _IOERR_DIR_FSYNC}
-		}
+		_ = syncDir(d)
 	}
 	return nil
 }
