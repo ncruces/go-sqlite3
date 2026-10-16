@@ -189,7 +189,7 @@ func (f *vfsFile) Sync(flags SyncFlag) error {
 			return nil
 		}
 		defer d.Close()
-		err = osSync(f.File, f.flags, flags)
+		err = osSync(d, f.flags, flags)
 		if err != nil {
 			return sysError{err, _IOERR_DIR_FSYNC}
 		}
