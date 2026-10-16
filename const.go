@@ -310,6 +310,8 @@ const (
 	LIMIT_TRIGGER_DEPTH       LimitCategory = 10
 	LIMIT_WORKER_THREADS      LimitCategory = 11
 	LIMIT_PARSER_DEPTH        LimitCategory = 12
+	LIMIT_SCHEMA              LimitCategory = 13
+	LIMIT_TRIGGER_STEPS       LimitCategory = 14
 )
 
 // AuthorizerActionCode are the integer action codes
