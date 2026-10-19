@@ -30,6 +30,37 @@ func TestConn_Open_dir(t *testing.T) {
 	}
 }
 
+func TestConn_Open_notfound_leak(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("skipping on non-Linux")
+	}
+	// Not parallel: counts the process' memory mappings.
+
+	mappings := func() int {
+		data, err := os.ReadFile("/proc/self/maps")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Count(string(data), "\n")
+	}
+
+	const n = 20
+	before := mappings()
+	for range n {
+		_, err := sqlite3.OpenFlags("test.db", sqlite3.OPEN_READONLY)
+		if err == nil {
+			t.Fatal("want error")
+		}
+	}
+	after := mappings()
+
+	// Each leaked connection adds at least one mapping;
+	// allow some slack for unrelated runtime activity.
+	if after-before >= n {
+		t.Errorf("mappings grew from %d to %d after %d failed opens", before, after, n)
+	}
+}
+
 func TestConn_Open_notfound(t *testing.T) {
 	t.Parallel()
 

@@ -82,7 +82,12 @@ func newConn(ctx context.Context, filename string, flags OpenFlag) (ret *Conn, _
 	}
 	defer func() {
 		if ret == nil {
-			c.Close()
+			if c.handle == 0 {
+				// Close would be a no-op; release the wrapper directly.
+				c.wrp.Close()
+			} else {
+				c.Close()
+			}
 		} else {
 			c.interrupt = context.Background()
 		}
