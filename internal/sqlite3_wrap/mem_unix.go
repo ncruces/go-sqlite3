@@ -79,9 +79,10 @@ func (m *Memory) commit(size uint64) {
 }
 
 func (m *Memory) Close() error {
+	if m == nil {
+		return nil
+	}
 	err := unix.Munmap(m.Buf[:cap(m.Buf)])
-	m.Buf = nil
-	m.regions = nil
-	m.committed = 0
+	*m = Memory{}
 	return err
 }

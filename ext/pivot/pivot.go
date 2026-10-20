@@ -47,7 +47,7 @@ func declare(db *sqlite3.Conn, _, _, _ string, arg ...string) (ret *table, err e
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() { stmt.Close() }()
 	if tail != "" {
 		return nil, errutil.TailErr
 	}

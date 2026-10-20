@@ -162,6 +162,9 @@ func (f *vfsFile) Close() error {
 	if !isUnix && f.flags&OPEN_DELETEONCLOSE != 0 {
 		defer os.Remove(f.Name())
 	}
+	if f.mmap != nil {
+		f.mmap.Close()
+	}
 	if f.shm != nil {
 		f.shm.Close()
 	}

@@ -41,9 +41,7 @@ func (readerVFS) FullPathname(name string) (string, error) {
 
 type readerFile struct{ ioutil.SizeReaderAt }
 
-func (readerFile) Close() error {
-	return nil
-}
+func (readerFile) Close() error { return nil }
 
 func (readerFile) WriteAt(b []byte, off int64) (n int, err error) {
 	// notest // IOCAP_IMMUTABLE

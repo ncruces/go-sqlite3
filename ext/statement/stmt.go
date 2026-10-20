@@ -155,13 +155,16 @@ type cursor struct {
 }
 
 func (c *cursor) Close() error {
-	if c.stmt == c.table.stmt {
-		c.table.inuse = false
-		return errors.Join(
-			c.stmt.Reset(),
-			c.stmt.ClearBindings())
+	if c.stmt != c.table.stmt {
+		return c.stmt.Close()
 	}
-	return c.stmt.Close()
+
+	c.table.inuse = false
+	stmt := c.stmt
+	c.stmt = nil
+	return errors.Join(
+		stmt.Reset(),
+		stmt.ClearBindings())
 }
 
 func (c *cursor) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
