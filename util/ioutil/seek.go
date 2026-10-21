@@ -54,7 +54,6 @@ func (s *SeekingReaderAt) Close() error {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if c, ok := s.r.(io.Closer); ok {
-		s.r = nil
 		return c.Close()
 	}
 	return nil

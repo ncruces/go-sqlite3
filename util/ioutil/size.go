@@ -22,6 +22,9 @@ type SizeReaderAt interface {
 //   - Stat() (fs.FileInfo, error)
 //   - Seek(offset int64, whence int) (int64, error)
 func NewSizeReaderAt(r io.ReaderAt) SizeReaderAt {
+	if s, ok := r.(SizeReaderAt); ok {
+		return s
+	}
 	return sizer{r}
 }
 

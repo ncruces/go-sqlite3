@@ -146,6 +146,7 @@ func (c *reader) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 			return err
 		}
 		r = f
+		c.closer = f
 	}
 	if r == nil {
 		return fmt.Errorf("lines: unsupported argument:%.0w %v", sqlite3.MISMATCH, typ)
@@ -161,7 +162,6 @@ func (c *reader) Filter(idxNum int, idxStr string, arg ...sqlite3.Value) error {
 	}
 
 	c.reader = bufio.NewReader(r)
-	c.closer, _ = r.(io.Closer)
 	c.rowID = 0
 	return c.Next()
 }

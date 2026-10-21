@@ -111,8 +111,13 @@ var (
 )
 
 func (m *memFile) Close() error {
-	m.release()
-	return m.Unlock(vfs.LOCK_NONE)
+	if m.memDB != nil {
+		// Release ownership.
+		m.release()
+		m.Unlock(vfs.LOCK_NONE)
+		m.memDB = nil
+	}
+	return nil
 }
 
 func (m *memFile) ReadAt(b []byte, off int64) (n int, err error) {

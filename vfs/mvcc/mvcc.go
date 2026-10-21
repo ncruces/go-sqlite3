@@ -100,15 +100,18 @@ var (
 )
 
 func (m *mvccFile) Close() error {
-	// Relase ownership, discard changes.
-	m.release()
-	m.data = nil
-	m.lock = vfs.LOCK_NONE
-	m.mtx.Lock()
-	if m.owner == m {
-		m.owner = nil
+	if m.mvccDB != nil {
+		// Release ownership, discard changes.
+		m.release()
+		m.data = nil
+		m.lock = vfs.LOCK_NONE
+		m.mtx.Lock()
+		if m.owner == m {
+			m.owner = nil
+		}
+		m.mtx.Unlock()
+		m.mvccDB = nil
 	}
-	m.mtx.Unlock()
 	return nil
 }
 

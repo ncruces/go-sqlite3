@@ -159,6 +159,9 @@ var (
 )
 
 func (f *vfsFile) Close() error {
+	if f.flags == 0 {
+		return nil
+	}
 	if !isUnix && f.flags&OPEN_DELETEONCLOSE != 0 {
 		defer os.Remove(f.Name())
 	}
@@ -168,6 +171,7 @@ func (f *vfsFile) Close() error {
 	if f.shm != nil {
 		f.shm.Close()
 	}
+	f.flags = 0
 	f.Unlock(LOCK_NONE)
 	return f.File.Close()
 }
