@@ -187,6 +187,9 @@ func (ctx Context) ResultValue(value Value) {
 //
 // https://sqlite.org/c3ref/result_blob.html
 func (ctx Context) ResultError(err error) {
+	if err == nil {
+		return
+	}
 	if errors.Is(err, NOMEM) {
 		ctx.c.wrp.Xsqlite3_result_error_nomem(int32(ctx.handle))
 		return

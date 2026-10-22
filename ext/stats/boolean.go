@@ -26,21 +26,19 @@ func (b *boolean) Value(ctx sqlite3.Context) {
 }
 
 func (b *boolean) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	if a.Bool() {
+	if arg[0].Bool() {
 		b.count++
 	}
-	if a.Type() != sqlite3.NULL {
+	if arg[0].Type() != sqlite3.NULL {
 		b.total++
 	}
 }
 
 func (b *boolean) Inverse(ctx sqlite3.Context, arg ...sqlite3.Value) {
-	a := arg[0]
-	if a.Bool() {
+	if arg[0].Bool() {
 		b.count--
 	}
-	if a.Type() != sqlite3.NULL {
+	if arg[0].Type() != sqlite3.NULL {
 		b.total--
 	}
 }
