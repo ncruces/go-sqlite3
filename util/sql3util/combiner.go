@@ -18,28 +18,31 @@ type WindowCombiner[T sqlite3.AggregateFunction] interface {
 	// the rows aggregated by the receiver, in window order.
 	//
 	// Combine must be associative, but need not be commutative:
-	// a.Combine(b) followed by a.Combine(c) must be equivalent to
-	// b.Combine(c) followed by a.Combine(b).
+	// a.Combine(b); a.Combine(c) must be equivalent to
+	// b.Combine(c); a.Combine(b).
 	//
 	// Both receiver and other may be empty, with no rows aggregated:
-	// empty.Combine(x) and x.Combine(empty) must be equivalent to x.
+	// x.Combine(empty) must be equivalent to x.
 	//
 	// Implementations must not modify or retain other.
 	Combine(other T)
 }
 
 // WindowFromCombiner adapts a [WindowCombiner] constructor into an [sqlite3.AggregateConstructor]
-// that implements [sqlite3.WindowFunction] using the two-stack sliding-window algorithm.
-//
+// that implements [sqlite3.WindowFunction] using the two-stack sliding-window algorithm:
 // https://orlp.net/blog/two-stack-sliding-window-aggregation/
+//
+// The memory efficiency of the algorithm depends on [WindowCombiner]
+// efficiently representing small aggregates,
+// particularly empty or single-row states.
 //
 // If maxWindow > 0 and the window grows larger than maxWindow rows,
 // the function degrades to a standard aggregate and may no longer be used as a sliding window.
 // If T implements [io.Closer], it will be called to free resources.
 //
-// This is intended to help you implement aggregate window functions
-// from primitives that are combinable (aka. mergeable) but not invertible.
-// Some examples are: HyperLogLog, t-digest, KLL, CM and DD sketches, etc.
+// It helps implement aggregate window functions over primitives
+// that are combinable (or mergeable) but not invertible.
+// Typical examples are mergeable sketch algorithms like HyperLogLog.
 func WindowFromCombiner[T WindowCombiner[T]](maxWindow int, fn func() T) sqlite3.AggregateConstructor {
 	if fn == nil {
 		return nil
