@@ -85,6 +85,7 @@ jobs:
         matrix.os == 'ubuntu-latest'
 
     - uses: ncruces/go-coverage-report@v0
+      continue-on-error: true
       with:
         coverage-file: coverage.out
         chart: true

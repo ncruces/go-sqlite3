@@ -14,7 +14,7 @@ import (
 func ExampleWindowFromCombiner() {
 	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
 		return c.CreateWindowFunction("bit_or", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS,
-			sql3util.WindowFromCombiner(100, func() *bitOr { return &bitOr{} }))
+			sql3util.WindowFromCombiner[bitOr](100))
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -65,7 +65,7 @@ func (b *bitOr) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	}
 }
 
-func (b *bitOr) Combine(other *bitOr) {
+func (b *bitOr) Combine(other bitOr) {
 	if other.ok {
 		b.val |= other.val
 		b.ok = true
@@ -84,7 +84,7 @@ func TestWindowFromCombiner_overflow(t *testing.T) {
 	ctx := testcfg.Context(t)
 	db, err := driver.Open(":memory:", func(c *sqlite3.Conn) error {
 		return c.CreateWindowFunction("bit_or", 1, sqlite3.DETERMINISTIC|sqlite3.INNOCUOUS,
-			sql3util.WindowFromCombiner(100, func() *bitOr { return &bitOr{} }))
+			sql3util.WindowFromCombiner[bitOr](100))
 	})
 	if err != nil {
 		t.Fatal(err)
