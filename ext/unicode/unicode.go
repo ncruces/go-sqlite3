@@ -228,7 +228,7 @@ func like(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		b := arg[2].RawText()
 		escape, size = utf8.DecodeRune(b)
 		if size != len(b) {
-			ctx.ResultError(errutil.ErrorString("ESCAPE expression must be a single character"))
+			ctx.ResultError(errutil.ErrorString("unicode: ESCAPE expression must be a single character"))
 			return
 		}
 	}

@@ -29,6 +29,9 @@
 //   - mode: most frequent value
 //   - every: boolean and
 //   - some: boolean or
+//   - bit_and: bitwise and
+//   - bit_or: bitwise or
+//   - bit_xor: bitwise xor
 //
 // These join the [Built-in Aggregate Functions]:
 //   - count: count rows/values
@@ -91,6 +94,9 @@ func Register(db *sqlite3.Conn) error {
 		db.CreateWindowFunction("percentile_disc", 2, order, newPercentile(percentile_disc)),
 		db.CreateWindowFunction("every", 1, flags, newBoolean(every)),
 		db.CreateWindowFunction("some", 1, flags, newBoolean(some)),
+		db.CreateWindowFunction("bit_and", 1, flags, newBitAnd()),
+		db.CreateWindowFunction("bit_or", 1, flags, newBitOr()),
+		db.CreateWindowFunction("bit_xor", 1, flags, newBitXor),
 		db.CreateWindowFunction("mode", 1, order, newMode),
 		db.CreateFunction("cbrt", 1, flags, cbrt),
 		db.CreateFunction("cot", 1, flags, cot))
