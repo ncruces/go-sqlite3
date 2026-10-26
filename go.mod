@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/axiomhq/hyperloglog v0.3.0 // ext/approx
 	github.com/dchest/siphash v1.2.3 // ext/bloom
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
@@ -18,6 +19,11 @@ require (
 	golang.org/x/sync v0.24.0 // test
 	golang.org/x/text v0.43.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
+)
+
+require (
+	github.com/dgryski/go-metro v0.0.0-20250106013310-edb8663e5e33 // indirect
+	github.com/kamstrup/intmap v0.5.2 // indirect
 )
 
 retract (
