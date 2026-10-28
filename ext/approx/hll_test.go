@@ -15,7 +15,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestRegister_count_distinct(t *testing.T) {
+func TestRegister_hll(t *testing.T) {
 	t.Parallel()
 
 	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
@@ -24,105 +24,103 @@ func TestRegister_count_distinct(t *testing.T) {
 	}
 	defer db.Close()
 
-	err = db.Exec(`CREATE TABLE data (x)`)
+	err = db.Exec(`CREATE TABLE data (x, y)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Empty table should return 0 (matching COUNT(DISTINCT x)).
-	stmt, _, err := db.Prepare(`SELECT approx_count_distinct(x), count(DISTINCT x) FROM data`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !stmt.Step() {
-		t.Fatal(stmt.Err())
-	} else if got, want := stmt.ColumnInt64(0), stmt.ColumnInt64(1); got != want {
-		t.Errorf("empty table: got %v, want %v", got, want)
-	}
-	stmt.Close()
-
-	// Mixed types: NULLs ignored, 1 == 1.0, '1' != 1, X'31' != '1', large ints.
-	err = db.Exec(`
-		INSERT INTO data (x) VALUES
-			(NULL), (NULL),
-			(0), (-0.0),
-			(1), (1.0), ('1'), (X'31'),
-			(2.5), (2.5),
-			(9007199254740992), (9007199254740993), (9007199254740992.0)
-	`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stmt, _, err = db.Prepare(`SELECT approx_count_distinct(x), count(DISTINCT x) FROM data`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !stmt.Step() {
-		t.Fatal(stmt.Err())
-	} else if got, want := stmt.ColumnInt64(0), stmt.ColumnInt64(1); got != want {
-		t.Errorf("mixed types: got %v, want %v", got, want)
-	}
-	stmt.Close()
-}
-
-func TestRegister_window(t *testing.T) {
-	t.Parallel()
-
-	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-
-	err = db.Exec(`
-		CREATE TABLE data (x);
-		INSERT INTO data (x) VALUES
-			(NULL),
-			(1),
-			(1.0),
-			(2),
-			('2'),
-			(X'32'),
-			(NULL),
-			(3),
-			(3),
-			(4);
-	`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	// Empty table.
 	stmt, _, err := db.Prepare(`
 		SELECT
-			approx_count_distinct(x) OVER (ROWS BETWEEN 2 PRECEDING AND 1 FOLLOWING)
-		FROM data
+			approx_count_distinct(x),
+			approx_count_distinct_estimate(approx_count_distinct_accumulate(x)),
+			approx_count_distinct_combine(x),
+			approx_count_distinct_estimate(NULL)
+		FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	}
+	if got := stmt.ColumnInt64(0); got != 0 {
+		t.Errorf("got %v, want 0", got)
+	}
+	if got := stmt.ColumnInt64(1); got != 0 {
+		t.Errorf("got %v, want 0", got)
+	}
+	if got := stmt.ColumnType(2); got != sqlite3.NULL {
+		t.Errorf("got %v, want NULL", got)
+	}
+	if got := stmt.ColumnType(3); got != sqlite3.NULL {
+		t.Errorf("got %v, want NULL", got)
+	}
+	stmt.Close()
+
+	// Mixed types: NULLs ignored, 1 == 1.0, '1' != 1, X'31' != '1', large ints, tuples.
+	err = db.Exec(`
+		INSERT INTO data (x, y) VALUES
+			(NULL, 1),
+			(0, NULL),
+			(-0.0, 1),
+			(1, 2),
+			(1.0, 2.0),
+			('1', 2),
+			(X'31', 2),
+			(2.5, 1),
+			(2.5, 1),
+			(9007199254740992, 1),
+			(9007199254740993, 1),
+			(9007199254740992.0, 1)
 	`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stmt.Close()
 
-	// Windows (2 preceding to 1 following):
-	// i=0: [NULL, 1] -> {1} -> 1
-	// i=1: [NULL, 1, 1.0] -> {1} -> 1
-	// i=2: [NULL, 1, 1.0, 2] -> {1, 2} -> 2
-	// i=3: [1, 1.0, 2, '2'] -> {1, 2, '2'} -> 3
-	// i=4: [1.0, 2, '2', X'32'] -> {1, 2, '2', X'32'} -> 4
-	// i=5: [2, '2', X'32', NULL] -> {2, '2', X'32'} -> 3
-	// i=6: ['2', X'32', NULL, 3] -> {'2', X'32', 3} -> 3
-	// i=7: [X'32', NULL, 3, 3] -> {X'32', 3} -> 2
-	// i=8: [NULL, 3, 3, 4] -> {3, 4} -> 2
-	// i=9: [3, 3, 4] -> {3, 4} -> 2
-	want := [...]int64{1, 1, 2, 3, 4, 3, 3, 2, 2, 2}
+	stmt, _, err = db.Prepare(`
+		SELECT
+			count(DISTINCT x),
+			approx_count_distinct(x),
+			approx_count_distinct(x, y),
+			approx_count_distinct()
+		FROM data`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	}
+	if got, want := stmt.ColumnInt64(1), stmt.ColumnInt64(0); got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got := stmt.ColumnInt64(2); got != 7 {
+		t.Errorf("got %v, want 7", got)
+	}
+	if got := stmt.ColumnInt64(3); got != 0 {
+		t.Errorf("got %v, want 0", got)
+	}
+	stmt.Close()
+
+	// Sliding window.
+	stmt, _, err = db.Prepare(`
+		SELECT
+			approx_count_distinct(x) OVER w,
+			approx_count_distinct_estimate(approx_count_distinct_accumulate(x) OVER w)
+		FROM data
+		WINDOW w AS (ROWS BETWEEN 2 PRECEDING AND 1 FOLLOWING)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [...]int64{1, 1, 2, 2, 3, 3, 4, 3, 3, 3, 3, 2}
 	for i := 0; stmt.Step(); i++ {
 		if got := stmt.ColumnInt64(0); got != want[i] {
 			t.Errorf("row %d: got %v, want %v", i, got, want[i])
 		}
+		if got := stmt.ColumnInt64(1); got != want[i] {
+			t.Errorf("row %d: got %v, want %v", i, got, want[i])
+		}
 	}
-	if err := stmt.Err(); err != nil {
-		t.Fatal(err)
-	}
+	stmt.Close()
 }
 
 func TestRegister_large(t *testing.T) {
@@ -134,53 +132,111 @@ func TestRegister_large(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Standard aggregate exceeding maxWindow (1e4) degrades gracefully and transitions HLL from sparse to dense.
-	const n = 50000
+	err = db.Exec(`
+		CREATE TABLE sketches (grp, sketch);
+		INSERT INTO sketches VALUES (0, NULL);
+		INSERT INTO sketches SELECT 1, approx_count_distinct_accumulate(NULL);
+		INSERT INTO sketches
+		SELECT value % 4 + 2, approx_count_distinct_accumulate(value % 25000)
+		FROM generate_series(1, 50000)
+		GROUP BY value % 4;
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	stmt, _, err := db.Prepare(`
 		SELECT
-			approx_count_distinct(value % ?),
-			approx_count_distinct(CAST(value % ? AS TEXT))
-		FROM generate_series(1, ?)
-	`)
+			approx_count_distinct_estimate(approx_count_distinct_combine(sketch) OVER ()),
+			approx_count_distinct_estimate(approx_count_distinct_combine(sketch) OVER (ORDER BY grp ROWS 2 PRECEDING))
+		FROM sketches`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stmt.Close()
-
-	stmt.BindInt(1, n)
-	stmt.BindInt(2, n)
-	stmt.BindInt(3, 2*n)
-
-	if !stmt.Step() {
-		t.Fatal(stmt.Err())
-	}
-	for c := range 2 {
-		got := stmt.ColumnInt64(c)
-		relErr := math.Abs(float64(got-n)) / n
-		if relErr > 0.03 {
-			t.Errorf("col %d: got %d, want ~%d (relErr %.2f%%)", c, got, n, relErr*100)
+	want := [...]float64{0, 0, 6250, 12500, 18750, 18750}
+	for i := 0; stmt.Step(); i++ {
+		if got := stmt.ColumnFloat(0); math.Abs(got-25000)/25000 > 0.05 {
+			t.Errorf("row %d: got %.0f, want ~25000", i, got)
+		}
+		if i == 0 && stmt.ColumnType(1) != sqlite3.NULL {
+			t.Errorf("row 0: got %v, want NULL", stmt.ColumnType(1))
+		}
+		if got := stmt.ColumnFloat(1); math.Abs(got-want[i]) > 0.05*want[i] {
+			t.Errorf("row %d: got %.0f, want ~%.0f", i, got, want[i])
 		}
 	}
+	stmt.Close()
+}
 
-	// Sliding window with medium cardinality per window.
-	stmt2, _, err := db.Prepare(`
-		SELECT approx_count_distinct(value % 50) OVER (ROWS 100 PRECEDING)
-		FROM generate_series(1, 500)
-	`)
+func TestRegister_errors(t *testing.T) {
+	t.Parallel()
+
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stmt2.Close()
+	defer db.Close()
 
-	for i := 1; stmt2.Step(); i++ {
-		got := stmt2.ColumnInt64(0)
-		want := int64(min(i, 50))
-		if math.Abs(float64(got-want)) > 2 {
-			t.Errorf("row %d: got %d, want ~%d", i, got, want)
-		}
+	tests := []string{
+		`SELECT approx_count_distinct_estimate('not a blob')`,
+		`SELECT approx_count_distinct_estimate(X'00')`,
+		`SELECT approx_count_distinct_combine('not a blob')`,
+		`SELECT approx_count_distinct_combine(X'00')`,
+		`SELECT approx_count_distinct_combine(column1) FROM (VALUES (X'118A7F'), (X'118B7F'))`,
+		`SELECT approx_count_distinct_combine(column1) OVER (ROWS 1 PRECEDING) FROM (VALUES (X'118A7F'), (X'118B7F'))`,
 	}
-	if err := stmt2.Err(); err != nil {
-		t.Fatal(err)
+	for _, sql := range tests {
+		if err := db.Exec(sql); err == nil {
+			t.Errorf("expected error for %q", sql)
+		}
 	}
 }
 
+func Benchmark_hll(b *testing.B) {
+	db, err := sqlite3.OpenContext(b.Context(), ":memory:")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer db.Close()
+
+	err = db.Exec(`
+		CREATE TABLE data (grp10 INT, grp2 INT, x INT);
+		INSERT INTO data SELECT value / 10, value / 2, value FROM generate_series(0, 49999);
+		CREATE INDEX idx_grp10 ON data (grp10, x);
+		CREATE INDEX idx_grp2 ON data (grp2, x);
+	`)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	queries := []struct {
+		name, sql string
+	}{
+		{"agg_5k", `SELECT approx_count_distinct(x) FROM data WHERE rowid <= 5000`},
+		{"agg_50k", `SELECT approx_count_distinct(x) FROM data`},
+		{"group_2k_x2", `SELECT approx_count_distinct(x) FROM data WHERE grp2 < 2000 GROUP BY grp2`},
+		{"group_1k_x10", `SELECT approx_count_distinct(x) FROM data WHERE grp10 < 1000 GROUP BY grp10`},
+		{"win_20_explicit", `SELECT approx_count_distinct(x) OVER (ROWS 20 PRECEDING) FROM data WHERE rowid <= 2000`},
+		{"win_250_sparse", `SELECT approx_count_distinct(x) OVER (ROWS 250 PRECEDING) FROM data WHERE rowid <= 2000`},
+		{"win_1000_dense", `SELECT approx_count_distinct(x) OVER (ROWS 1000 PRECEDING) FROM data WHERE rowid <= 2000`},
+	}
+
+	for _, q := range queries {
+		b.Run(q.name, func(b *testing.B) {
+			b.ReportAllocs()
+			stmt, _, err := db.Prepare(q.sql)
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer stmt.Close()
+
+			for b.Loop() {
+				for stmt.Step() {
+				}
+				if err := stmt.Reset(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
