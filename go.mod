@@ -3,7 +3,7 @@ module github.com/ncruces/go-sqlite3
 go 1.26.0
 
 require (
-	github.com/ncruces/go-sqlite3-wasm/v6 v6.3.35401
+	github.com/ncruces/go-sqlite3-wasm/v6 v6.4.35401
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v1.0.3
 	github.com/ncruces/wbt v1.0.0
@@ -22,9 +22,13 @@ require (
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
 
-require github.com/pkg/errors v0.8.0 // indirect
-
 retract (
 	v0.23.2 // tagged from the wrong branch
 	v0.4.0 // tagged from the wrong branch
+)
+
+// Fixes waiting to be upstreamed.
+replace (
+	github.com/segmentio/go-hll => github.com/ncruces/segmentio-hll v1.0.2
+	github.com/twmb/murmur3 => github.com/ncruces/twmb-murmur3 v1.2.2
 )
