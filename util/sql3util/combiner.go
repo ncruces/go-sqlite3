@@ -27,6 +27,9 @@ type WindowCombiner[T any] interface {
 	//
 	// Both receiver and other may be empty (the zero value):
 	// x.Combine(empty) must be equivalent to x.
+	//
+	// Implementations must not modify or retain mutable state
+	// referenced by other.
 	Combine(other T)
 }
 

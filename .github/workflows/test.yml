@@ -103,7 +103,7 @@ jobs:
           - name: netbsd
             version: '11.0'
           - name: openbsd
-            version: '7.9'
+            version: '8.0'
             tflags: '-test.short'
           - name: illumos
             action: omnios
@@ -130,7 +130,7 @@ jobs:
         TESTFLAGS: ${{ matrix.os.tflags }}
       run: .github/workflows/build-test.sh
 
-    - uses: cross-platform-actions/action@v1.6.0
+    - uses: cross-platform-actions/action@v1.7.0
       with:
         operating_system: ${{ matrix.os.action || matrix.os.name }}
         architecture: ${{ matrix.os.arch }}

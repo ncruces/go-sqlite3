@@ -5,6 +5,8 @@ you can load into your database connections.
 
 ### Extensions
 
+- [`github.com/ncruces/go-sqlite3/ext/approx`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/approx)
+  provides approximate aggregate functions.
 - [`github.com/ncruces/go-sqlite3/ext/array`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/array)
   provides the [`array`](https://sqlite.org/carray.html) table-valued function.
 - [`github.com/ncruces/go-sqlite3/ext/blobio`](https://pkg.go.dev/github.com/ncruces/go-sqlite3/ext/blobio)
