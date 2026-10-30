@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0 // ext/uuid
 	github.com/psanford/httpreadat v0.1.0 // example
 	github.com/segmentio/go-hll v1.0.1 // ext/approx
-	github.com/twmb/murmur3 v1.1.8 // ext/approx
+	github.com/twmb/murmur3 v1.2.2 // ext/approx
 	golang.org/x/crypto v0.58.0 // vfs/adiantum vfs/xts
 	golang.org/x/sync v0.24.0 // test
 	golang.org/x/text v0.43.0 // ext/unicode
@@ -28,7 +28,4 @@ retract (
 )
 
 // Fixes waiting to be upstreamed.
-replace (
-	github.com/segmentio/go-hll => github.com/ncruces/segmentio-hll v1.0.2
-	github.com/twmb/murmur3 => github.com/ncruces/twmb-murmur3 v1.2.2
-)
+replace github.com/segmentio/go-hll => github.com/ncruces/segmentio-hll v1.0.2

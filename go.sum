@@ -12,8 +12,6 @@ github.com/ncruces/segmentio-hll v1.0.2 h1:LtirWNYO1tVjMOHoBThO9ltEir6HUUC2oAHZO
 github.com/ncruces/segmentio-hll v1.0.2/go.mod h1:XgyFWcPlvqi4nDmC2lnOuup8WkUQbRNKG8O4K2RzL6M=
 github.com/ncruces/sort v1.0.3 h1:2RpWKWvfftMmb3RbUIJF3yVeV/ksHc2HmiW0M7/PTnY=
 github.com/ncruces/sort v1.0.3/go.mod h1:yD/qToXSDwliVMWAdN02/6+58XrEKBcN0Uyr+KeahFM=
-github.com/ncruces/twmb-murmur3 v1.2.2 h1:Stn71gnZOlCjBzOmiF8IcLRxU9MTGtAM0RjUmEen+jk=
-github.com/ncruces/twmb-murmur3 v1.2.2/go.mod h1:LVqs/avIy0flspVtmBd4VSbogDepFl6Wkj0i0ToccHE=
 github.com/ncruces/wbt v1.0.0 h1:8iBE7UPjTLUpzu3/FCRjAmuQjWzgxo10RGBgt3ooLSc=
 github.com/ncruces/wbt v1.0.0/go.mod h1:DtF92amvMxH69EmBFUSFWRDAlo6hOEfoNQnClxj9C/c=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -22,6 +20,8 @@ github.com/psanford/httpreadat v0.1.0 h1:VleW1HS2zO7/4c7c7zNl33fO6oYACSagjJIyMIw
 github.com/psanford/httpreadat v0.1.0/go.mod h1:Zg7P+TlBm3bYbyHTKv/EdtSJZn3qwbPwpfZ/I9GKCRE=
 github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
+github.com/twmb/murmur3 v1.2.2 h1:XUKzAiw6XPwHy5prnd/jEEV1C7IYinixLa8xOBB/g4k=
+github.com/twmb/murmur3 v1.2.2/go.mod h1:LVqs/avIy0flspVtmBd4VSbogDepFl6Wkj0i0ToccHE=
 golang.org/x/crypto v0.58.0 h1:COkYLr4k7nDI4r6QtMML2AfzeIswWHAJthLS6K/M/54=
 golang.org/x/crypto v0.58.0/go.mod h1:Xh+kl5A+M0gMiWDytH2Hhr5Z7WbNCpv/eB/EFgfSk+w=
 golang.org/x/sync v0.24.0 h1:iqiDrGoDgyuvAKrhLQthUEzU/R378N78gXbBjxed7oA=
