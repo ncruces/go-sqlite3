@@ -59,12 +59,12 @@ func (q *percentile) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		q.pct /= 100
 	}
 	// Check quantile bounds.
-	if q.pct < 0 || q.pct > 1 {
+	if !(0 <= q.pct && q.pct <= 1) {
 		ctx.ResultError(fmt.Errorf("percentile: invalid quantile: %f", q.pct))
 		return
 	}
 	for _, pct := range q.pcts {
-		if pct < 0 || pct > 1 {
+		if !(0 <= pct && pct <= 1) {
 			ctx.ResultError(fmt.Errorf("percentile: invalid quantile: %f", pct))
 			return
 		}
