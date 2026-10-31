@@ -3,7 +3,6 @@ package approx
 import (
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"math/bits"
@@ -16,14 +15,13 @@ import (
 )
 
 const (
-	reqVersion = 1
-	reqInitK   = 40
+	reqVersion    = 1
+	reqInitK      = 40
+	reqMaxLevels  = 53
+	errInvalidREQ = errutil.ErrorString("invalid REQ sketch")
 )
 
-var (
-	unitREQ     req
-	emptyREQBin = []byte{reqVersion, reqInitK}
-)
+var unitREQ req
 
 type reqSketch struct {
 	sketch *req
@@ -33,7 +31,7 @@ type reqSketch struct {
 }
 
 func (b *reqSketch) Value(ctx sqlite3.Context) {
-	b.value(ctx, true)
+	b.evalResult(ctx, true)
 }
 
 func (b *reqSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
@@ -83,74 +81,64 @@ func (b *reqSketch) Combine(other reqSketch) {
 	}
 }
 
-func (b *reqSketch) value(ctx sqlite3.Context, isQuantile bool) {
-	if b.sketch != nil {
-		b.evalResult(ctx, isQuantile)
+func (b *reqSketch) req() req {
+	switch b.sketch {
+	case nil:
+		return req{}
+	case &unitREQ:
+		return req{levels: []reqCompactor{{buf: []float32{b.val}}}}
+	default:
+		return *b.sketch
 	}
 }
 
 func (b *reqSketch) evalResult(ctx sqlite3.Context, isQuantile bool) {
-	if isQuantile {
-		if b.args == nil && !(0 <= b.arg && b.arg <= 1) {
-			ctx.ResultError(fmt.Errorf("approx: invalid quantile: %f", b.arg))
-			return
-		}
-		if b.args != nil {
-			for _, p := range *b.args {
-				if !(0 <= p && p <= 1) {
-					ctx.ResultError(fmt.Errorf("approx: invalid quantile: %f", p))
-					return
-				}
-			}
-		}
-	} else if b.arg != b.arg {
-		ctx.ResultError(errutil.ErrorString("approx: invalid rank"))
+	req := b.req()
+	if len(req.levels) == 0 {
 		return
 	}
-	if b.sketch != &unitREQ {
-		if len(b.sketch.levels) == 0 {
-			return
-		}
-		if isQuantile {
-			b.sketch.sort()
-		}
-	}
-	eval := b.evalQuantile
-	if !isQuantile {
-		eval = b.evalRank
+	check, eval := validRank, req.percentRank
+	if isQuantile {
+		check, eval = validQuantile, req.quantile
+		req.sort()
 	}
 	if b.args == nil {
-		ctx.ResultFloat(eval(b.arg))
+		if err := check(b.arg); err != nil {
+			ctx.ResultError(err)
+		} else {
+			ctx.ResultFloat(eval(b.arg))
+		}
 		return
 	}
 	many := make([]float64, len(*b.args))
 	for i, a := range *b.args {
+		if err := check(a); err != nil {
+			ctx.ResultError(err)
+			return
+		}
 		many[i] = eval(a)
 	}
 	ctx.ResultJSON(many)
 }
 
-func (b *reqSketch) evalQuantile(p float32) float64 {
-	if b.sketch == &unitREQ {
-		return float64(b.val)
+func validRank(v float32) error {
+	if v != v {
+		return errutil.ErrorString("approx: invalid rank")
 	}
-	return b.sketch.quantile(p)
+	return nil
 }
 
-func (b *reqSketch) evalRank(v float32) float64 {
-	if b.sketch == &unitREQ {
-		if v <= b.val {
-			return 0
-		}
-		return 1
+func validQuantile(p float32) error {
+	if !(0 <= p && p <= 1) {
+		return fmt.Errorf("approx: invalid quantile: %f", p)
 	}
-	return b.sketch.percentRank(v)
+	return nil
 }
 
 type reqRank struct{ reqSketch }
 
 func (b *reqRank) Value(ctx sqlite3.Context) {
-	b.value(ctx, false)
+	b.evalResult(ctx, false)
 }
 
 func (b *reqRank) Combine(other reqRank) {
@@ -166,20 +154,9 @@ func (b *reqAccumulate) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func (b *reqAccumulate) Value(ctx sqlite3.Context) {
-	switch b.sketch {
-	case nil:
-		ctx.ResultBlob(emptyREQBin)
-	case &unitREQ:
-		var buf [8]byte
-		buf[0] = reqVersion
-		buf[1] = reqInitK
-		buf[2] = 0 // level 0 state
-		buf[3] = 1 // level 0 count
-		binary.LittleEndian.PutUint32(buf[4:], math.Float32bits(b.val))
-		ctx.ResultBlob(buf[:])
-	default:
-		ctx.ResultBlob(b.sketch.toBytes())
-	}
+	var buf [8]byte // fits empty and single value sketches
+	req := b.req()
+	ctx.ResultBlob(req.appendBytes(buf[:0]))
 }
 
 func (b *reqAccumulate) Combine(other reqAccumulate) {
@@ -321,31 +298,29 @@ func (r *req) add(v float32) {
 
 func (r *req) compact(h int) {
 	for ; h < len(r.levels); h++ {
-		c := &r.levels[h]
-		s, k := reqParams(c.state)
-		if len(c.buf) < 2*s*k {
+		state := r.levels[h].state
+		s, k := reqParams(state)
+		if len(r.levels[h].buf) < 2*s*k {
 			continue
 		}
-		secs := min(bits.TrailingZeros64(^c.state)+1, s)
+		secs := min(bits.TrailingZeros64(^state)+1, s)
 		nonCompact := (2*s - secs) * k
-		compactLen := (len(c.buf) - nonCompact) &^ 1
-		offset := compactOffset(h, c.state)
-		c.state++
+		compactLen := (len(r.levels[h].buf) - nonCompact) &^ 1
+		offset := compactOffset(h, state)
 
-		quick.SortFirst(c.buf, compactLen)
-
-		if h+1 >= len(r.levels) {
+		if h+1 == len(r.levels) {
 			r.levels = append(r.levels, reqCompactor{
 				buf: make([]float32, 0, compactLen/2),
 			})
-			c = &r.levels[h]
 		}
-		next := &r.levels[h+1]
+		c, next := &r.levels[h], &r.levels[h+1]
+		c.state++
+
+		quick.SortFirst(c.buf, compactLen)
 		for i := offset; i < compactLen; i += 2 {
 			next.buf = append(next.buf, c.buf[i])
 		}
-		n := copy(c.buf, c.buf[compactLen:])
-		c.buf = c.buf[:n]
+		c.buf = slices.Delete(c.buf, 0, compactLen)
 	}
 }
 
@@ -391,23 +366,14 @@ func (r *req) count() uint64 {
 }
 
 func (r *req) quantile(p float32) float64 {
-	if len(r.levels) == 1 {
-		buf := r.levels[0].buf
-		i, f := math.Modf(float64(p) * float64(len(buf)-1))
-		if f == 0 {
-			return float64(buf[int(i)])
-		}
-		return util.Lerp(float64(buf[int(i)]), float64(buf[int(i)+1]), f)
-	}
-
 	total := r.count()
 	pos := float64(p) * float64(total-1)
 	target := uint64(pos)
 
 	var (
-		lo, hi     [64]int
-		iLess      [64]int
-		iLessEq    [64]int
+		lo, hi     [reqMaxLevels]int
+		iLess      [reqMaxLevels]int
+		iLessEq    [reqMaxLevels]int
 		baseWeight uint64
 	)
 	for h := range r.levels {
@@ -470,9 +436,6 @@ func (r *req) quantile(p float32) float64 {
 				}
 			}
 			m1 := float64(nextVal)
-			if m0 == m1 {
-				return m0
-			}
 			f := (pos - float64(wLessEq-w0)) / float64(w0)
 			return util.Lerp(m0, m1, f)
 		}
@@ -507,21 +470,25 @@ func (r *req) percentRank(v float32) float64 {
 	if wLess == total {
 		return 1
 	}
-	if v == xHi || xLo == xHi {
+	if v == xHi {
 		return float64(wLess) / float64(total-1)
 	}
-	f := float64(v-xLo) / float64(xHi-xLo)
+	f := (float64(v) - float64(xLo)) / (float64(xHi) - float64(xLo))
 	return (float64(wLess-wLo) + f*float64(wLo)) / float64(total-1)
 }
 
 func (r *req) toBytes() []byte {
+	return r.appendBytes(nil)
+}
+
+func (r *req) appendBytes(out []byte) []byte {
 	r.sort()
 	size := 2
 	for h := range r.levels {
 		c := &r.levels[h]
 		size += 2 + 4*len(c.buf)
 	}
-	out := make([]byte, 0, size)
+	out = slices.Grow(out, size)
 	out = append(out, reqVersion, reqInitK)
 	for h := range r.levels {
 		c := &r.levels[h]
@@ -536,7 +503,7 @@ func (r *req) toBytes() []byte {
 
 func reqFromBytes(data []byte) (*req, error) {
 	if len(data) < 2 {
-		return nil, errors.New("insufficient bytes to deserialize REQ sketch")
+		return nil, errutil.ErrorString("insufficient bytes to deserialize REQ sketch")
 	}
 	if data[0] != reqVersion {
 		return nil, fmt.Errorf("unsupported REQ version: %d", data[0])
@@ -547,30 +514,30 @@ func reqFromBytes(data []byte) (*req, error) {
 	rest := data[2:]
 	var r req
 	for len(rest) > 0 {
-		if len(r.levels) >= 60 {
-			return nil, errors.New("invalid REQ sketch")
+		if len(r.levels) >= reqMaxLevels {
+			return nil, errInvalidREQ
 		}
 		state, n := binary.Uvarint(rest)
 		if n <= 0 {
-			return nil, errors.New("invalid REQ sketch")
+			return nil, errInvalidREQ
 		}
 		rest = rest[n:]
 
 		count, n := binary.Uvarint(rest)
 		if n <= 0 {
-			return nil, errors.New("invalid REQ sketch")
+			return nil, errInvalidREQ
 		}
 		rest = rest[n:]
 
 		s, k := reqParams(state)
-		if count == 0 || count > uint64(2*s*k) || uint64(len(rest))/4 < count {
-			return nil, errors.New("invalid REQ sketch")
+		if count == 0 || count >= uint64(2*s*k) || uint64(len(rest))/4 < count {
+			return nil, errInvalidREQ
 		}
 		buf := make([]float32, count)
 		for i := range buf {
 			v := math.Float32frombits(binary.LittleEndian.Uint32(rest[4*i:]))
 			if math.IsNaN(float64(v)) {
-				return nil, errors.New("invalid REQ sketch")
+				return nil, errInvalidREQ
 			}
 			buf[i] = v
 		}
