@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	reqVersion    = 1
+	reqHeader     = 1<<4 | 5 // HLL version 1, with an unassigned storage type
 	reqInitK      = 40
 	reqMaxLevels  = 53
-	errInvalidREQ = errutil.ErrorString("invalid REQ sketch")
+	errInvalidREQ = errutil.ErrorString("approx: invalid REQ sketch")
 )
 
 var unitREQ req
@@ -180,7 +180,7 @@ func (b *reqCombine) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case sqlite3.BLOB:
 		other, err := reqFromBytes(arg[0].RawBlob())
 		if err != nil {
-			ctx.ResultError(fmt.Errorf("approx: %w", err))
+			ctx.ResultError(err)
 			return
 		}
 		if b.sketch == nil {
@@ -219,7 +219,7 @@ func reqEstimate(ctx sqlite3.Context, arg []sqlite3.Value, isQuantile bool) {
 	case sqlite3.BLOB:
 		sketch, err := reqFromBytes(arg[0].RawBlob())
 		if err != nil {
-			ctx.ResultError(fmt.Errorf("approx: %w", err))
+			ctx.ResultError(err)
 			return
 		}
 		var b reqSketch
@@ -489,7 +489,7 @@ func (r *req) appendBytes(out []byte) []byte {
 		size += 2 + 4*len(c.buf)
 	}
 	out = slices.Grow(out, size)
-	out = append(out, reqVersion, reqInitK)
+	out = append(out, reqHeader, reqInitK)
 	for h := range r.levels {
 		c := &r.levels[h]
 		out = binary.AppendUvarint(out, c.state)
@@ -503,13 +503,13 @@ func (r *req) appendBytes(out []byte) []byte {
 
 func reqFromBytes(data []byte) (*req, error) {
 	if len(data) < 2 {
-		return nil, errutil.ErrorString("insufficient bytes to deserialize REQ sketch")
+		return nil, errutil.ErrorString("approx: insufficient bytes to deserialize REQ sketch")
 	}
-	if data[0] != reqVersion {
-		return nil, fmt.Errorf("unsupported REQ version: %d", data[0])
+	if data[0] != reqHeader {
+		return nil, errutil.ErrorString("approx: not a REQ sketch")
 	}
 	if data[1] != reqInitK {
-		return nil, fmt.Errorf("incompatible REQ k: %d", data[1])
+		return nil, fmt.Errorf("approx: incompatible REQ k: %d", data[1])
 	}
 	rest := data[2:]
 	var r req

@@ -12,16 +12,16 @@
 //   - approx_percentile_estimate(B, P): estimates quantile(s) P in [0, 1] from a REQ sketch BLOB.
 //   - approx_percent_rank_estimate(B, V): estimates relative rank(s) in [0, 1] of V from a REQ sketch BLOB.
 //
-// HyperLogLog sketch BLOBs use the [Aggregate Knowledge HLL Storage Specification],
-// compatible with PostgreSQL's postgresql-hll extension.
+// [HyperLogLog] sketch BLOBs use the [Aggregate Knowledge HLL Storage Specification].
 //
 // [Relative Error Quantiles] (REQ) sketches use high-rank accuracy mode,
 // prioritizing precision at the upper tail (e.g. p95, p99, p99.9).
 // Rank error matches typical KLL sketches at the median,
 // and is at most 2x worse at the lower tail.
 //
-// [Aggregate Knowledge HLL Storage Specification]: https://github.com/aggregateknowledge/hll-storage-spec
+// [HyperLogLog]: https://github.com/segmentio/go-hll
 // [Relative Error Quantiles]: https://arxiv.org/abs/2004.01668
+// [Aggregate Knowledge HLL Storage Specification]: https://github.com/aggregateknowledge/hll-storage-spec
 package approx
 
 import (
