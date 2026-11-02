@@ -8,6 +8,8 @@ import (
 	"math/bits"
 	"slices"
 
+	"github.com/twmb/murmur3"
+
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
@@ -279,13 +281,11 @@ func reqParams(state uint64) (s, k int) {
 }
 
 func compactOffset(level int, state uint64) int {
-	// SplitMix64 on (level, state >> 1) XORed with (state & 1)
-	// for deterministic antithetic (paired) compaction flips.
-	x := uint64(level)*0x9e3779b97f4a7c15 + (state >> 1)
-	x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9
-	x = (x ^ (x >> 27)) * 0x94d049bb133111eb
-	x = x ^ (x >> 31)
-	return int((x ^ state) & 1)
+	// Mix (level, state >> 1) through murmur3's finalizer.
+	// XOR with (state & 1) for antithetic (paired) compaction flips.
+	// Only the randomness matters; this does not affect the serialization format.
+	hash, _ := murmur3.SeedSum128(uint64(level), state>>1, nil)
+	return int((hash ^ state) & 1)
 }
 
 func (r *req) add(v float32) {
@@ -296,31 +296,43 @@ func (r *req) add(v float32) {
 	}
 }
 
+// Compact level h and any higher levels that overflow as a result.
 func (r *req) compact(h int) {
 	for ; h < len(r.levels); h++ {
 		state := r.levels[h].state
 		s, k := reqParams(state)
 		if len(r.levels[h].buf) < 2*s*k {
-			continue
+			continue // compaction not needed
 		}
+
+		// Number of sections to compact.
 		secs := min(bits.TrailingZeros64(^state)+1, s)
+
+		// The largest nonCompact items stay; the rest are compacted in pairs.
+		offset := compactOffset(h, state)
 		nonCompact := (2*s - secs) * k
 		compactLen := (len(r.levels[h].buf) - nonCompact) &^ 1
-		offset := compactOffset(h, state)
 
 		if h+1 == len(r.levels) {
 			r.levels = append(r.levels, reqCompactor{
 				buf: make([]float32, 0, compactLen/2),
 			})
 		}
-		c, next := &r.levels[h], &r.levels[h+1]
-		c.state++
+		curr, next := &r.levels[h], &r.levels[h+1]
+		curr.state++
 
-		quick.SortFirst(c.buf, compactLen)
-		for i := offset; i < compactLen; i += 2 {
-			next.buf = append(next.buf, c.buf[i])
+		// Keep the exact minimum at level 0 (weight 1).
+		var keep int
+		if h == 0 {
+			keep = 1
 		}
-		c.buf = slices.Delete(c.buf, 0, compactLen)
+
+		// Partially sort the smallest items, promote every other one.
+		quick.SortFirst(curr.buf, keep+compactLen)
+		for i := keep + offset; i < keep+compactLen; i += 2 {
+			next.buf = append(next.buf, curr.buf[i])
+		}
+		curr.buf = slices.Delete(curr.buf, keep, keep+compactLen)
 	}
 }
 
@@ -365,11 +377,16 @@ func (r *req) count() uint64 {
 	return total
 }
 
+// quantile returns the item at weighted rank p·(count-1),
+// linearly interpolated like percentile_cont. Levels must be sorted.
 func (r *req) quantile(p float32) float64 {
 	total := r.count()
 	pos := float64(p) * float64(total-1)
 	target := uint64(pos)
 
+	// Weighted selection over sorted levels: repeatedly pick a pivot, binary
+	// search it in every level to split the candidate ranges [lo, hi), and
+	// discard the side without target; baseWeight is the weight discarded on the left.
 	var (
 		lo, hi     [reqMaxLevels]int
 		iLess      [reqMaxLevels]int
@@ -381,6 +398,7 @@ func (r *req) quantile(p float32) float64 {
 	}
 
 	for {
+		// Pick the pivot from the middle of the heaviest remaining range.
 		bestH := -1
 		var maxW uint64
 		for h := range r.levels {
@@ -391,6 +409,8 @@ func (r *req) quantile(p float32) float64 {
 		}
 		pivot := r.levels[bestH].buf[(lo[bestH]+hi[bestH])/2]
 
+		// Weight strictly less than / equal to pivot;
+		// w0 is the weight of its lightest copy (lowest level).
 		wLess := baseWeight
 		var wEq, w0 uint64
 		for h := range r.levels {
@@ -419,11 +439,13 @@ func (r *req) quantile(p float32) float64 {
 		wLessEq := wLess + wEq
 
 		if target < wLess {
-			hi = iLess
+			hi = iLess // recurse left
 		} else if target >= wLessEq {
-			lo = iLessEq
+			lo = iLessEq // recurse right
 			baseWeight = wLessEq
 		} else {
+			// Pivot spans ranks [wLess, wLessEq); interpolate
+			// across its last w0 ranks towards the next larger item.
 			m0 := float64(pivot)
 			if pos <= float64(wLessEq-w0) || wLessEq >= total {
 				return m0
@@ -442,8 +464,12 @@ func (r *req) quantile(p float32) float64 {
 	}
 }
 
+// percentRank is the inverse of quantile:
+// the interpolated weighted rank of v, divided by count-1.
 func (r *req) percentRank(v float32) float64 {
 	total := r.count()
+	// xLo/xHi bracket v: the largest item < v (with its weight wLo),
+	// and the smallest item >= v.
 	var (
 		wLess uint64
 		wLo   uint64
@@ -473,6 +499,7 @@ func (r *req) percentRank(v float32) float64 {
 	if v == xHi {
 		return float64(wLess) / float64(total-1)
 	}
+	// Interpolate across xLo's weight, mirroring quantile.
 	f := (float64(v) - float64(xLo)) / (float64(xHi) - float64(xLo))
 	return (float64(wLess-wLo) + f*float64(wLo)) / float64(total-1)
 }
