@@ -9,6 +9,7 @@ import (
 	"github.com/twmb/murmur3"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/errutil"
 )
 
 var emptyHLL, _ = hll.NewHll(hll.Settings{
@@ -119,7 +120,7 @@ func (b *hllCombine) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case sqlite3.NULL:
 		return
 	case sqlite3.BLOB:
-		other, err := hll.FromBytes(arg[0].RawBlob())
+		other, err := hllFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(fmt.Errorf("approx: %w", err))
 			return
@@ -164,7 +165,7 @@ func hllEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case sqlite3.NULL:
 		return
 	case sqlite3.BLOB:
-		sketch, err := hll.FromBytes(arg[0].RawBlob())
+		sketch, err := hllFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(fmt.Errorf("approx: %w", err))
 			return
@@ -173,6 +174,13 @@ func hllEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	default:
 		ctx.ResultError(fmt.Errorf("approx: invalid type: %v", t))
 	}
+}
+
+func hllFromBytes(data []byte) (hll.Hll, error) {
+	if len(data) > 0 && data[0] == reqHeader {
+		return hll.Hll{}, errutil.ErrorString("not an HLL sketch")
+	}
+	return hll.FromBytes(data)
 }
 
 func hashValue(seed uint64, val sqlite3.Value) uint64 {
