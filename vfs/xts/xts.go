@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/xts"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/blocklock"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
@@ -49,7 +50,8 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 			key = x.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main databases may have their key specified as a PRAGMA.
-			return &xtsFile{File: file, init: x.init}, flags, nil
+			lock := blocklock.New(file, name, flags)
+			return &xtsFile{File: file, init: x.init, lock: lock}, flags, nil
 		}
 		cipher = x.init.XTS(key)
 	}
@@ -58,7 +60,8 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 		file.Close()
 		return nil, flags, sqlite3.IOERR_BADKEY
 	}
-	return &xtsFile{File: file, cipher: cipher, init: x.init}, flags, nil
+	lock := blocklock.New(file, name, flags)
+	return &xtsFile{File: file, cipher: cipher, init: x.init, lock: lock}, flags, nil
 }
 
 // Larger sectors don't seem to significantly improve security,
@@ -83,7 +86,13 @@ type xtsFile struct {
 	vfs.File
 	init   XTSCreator
 	cipher *xts.Cipher
+	lock   *blocklock.Lock
 	sector [sectorSize]byte
+}
+
+func (x *xtsFile) Close() error {
+	x.lock.Close()
+	return x.File.Close()
 }
 
 func (x *xtsFile) Pragma(name, value string) (string, error) {
@@ -121,6 +130,14 @@ func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
+	// Another connection may be rewriting a partial sector.
+	if min != off || max != off+int64(len(p)) {
+		if err := x.lock.RLock(min, max); err != nil {
+			return 0, err
+		}
+		defer x.lock.RUnlock(min, max)
+	}
+
 	// Read one block at a time.
 	for ; min < max; min += sectorSize {
 		m, err := x.File.ReadAt(x.sector[:], min)
@@ -151,6 +168,15 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
+
+	// Rewriting a partial sector changes its ciphertext,
+	// and other connections may be reading the rest of it.
+	if min != off || max != off+int64(len(p)) {
+		if err := x.lock.Lock(min, max); err != nil {
+			return 0, err
+		}
+		defer x.lock.Unlock(min, max)
+	}
 
 	// Write one block at a time.
 	for ; min < max; min += sectorSize {

@@ -8,6 +8,7 @@ import (
 	"lukechampine.com/adiantum/hbsh"
 
 	"github.com/ncruces/go-sqlite3"
+	"github.com/ncruces/go-sqlite3/internal/blocklock"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/util/vfsutil"
@@ -50,7 +51,8 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main databases may have their key specified as a PRAGMA.
-			return &hbshFile{File: file, init: h.init}, flags, nil
+			lock := blocklock.New(file, name, flags)
+			return &hbshFile{File: file, init: h.init, lock: lock}, flags, nil
 		}
 		hbsh = h.init.HBSH(key)
 	}
@@ -59,7 +61,8 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 		file.Close()
 		return nil, flags, sqlite3.IOERR_BADKEY
 	}
-	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
+	lock := blocklock.New(file, name, flags)
+	return &hbshFile{File: file, hbsh: hbsh, init: h.init, lock: lock}, flags, nil
 }
 
 // Larger blocks improve both security (wide-block cipher)
@@ -87,8 +90,14 @@ type hbshFile struct {
 	vfs.File
 	init  HBSHCreator
 	hbsh  *hbsh.HBSH
+	lock  *blocklock.Lock
 	tweak [tweakSize]byte
 	block [blockSize]byte
+}
+
+func (h *hbshFile) Close() error {
+	h.lock.Close()
+	return h.File.Close()
 }
 
 func (h *hbshFile) Pragma(name, value string) (string, error) {
@@ -126,6 +135,14 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
+	// Another connection may be rewriting a partial block.
+	if min != off || max != off+int64(len(p)) {
+		if err := h.lock.RLock(min, max); err != nil {
+			return 0, err
+		}
+		defer h.lock.RUnlock(min, max)
+	}
+
 	// Read one block at a time.
 	for ; min < max; min += blockSize {
 		m, err := h.File.ReadAt(h.block[:], min)
@@ -155,6 +172,15 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
+
+	// Rewriting a partial block changes all of its ciphertext,
+	// and other connections may be reading the rest of it.
+	if min != off || max != off+int64(len(p)) {
+		if err := h.lock.Lock(min, max); err != nil {
+			return 0, err
+		}
+		defer h.lock.Unlock(min, max)
+	}
 
 	// Write one block at a time.
 	for ; min < max; min += blockSize {
