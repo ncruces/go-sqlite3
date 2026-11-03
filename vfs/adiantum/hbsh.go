@@ -135,17 +135,19 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
-	// Another connection may be rewriting a partial block.
-	if min != off || max != off+int64(len(p)) {
-		if err := h.lock.RLock(min, max); err != nil {
-			return 0, err
-		}
-		defer h.lock.RUnlock(min, max)
-	}
-
 	// Read one block at a time.
 	for ; min < max; min += blockSize {
+		// Another connection may be rewriting a partial block.
+		partial := off > min || off+int64(len(p)) < min+blockSize
+		if partial {
+			if err := h.lock.RLock(min, min+blockSize); err != nil {
+				return n, err
+			}
+		}
 		m, err := h.File.ReadAt(h.block[:], min)
+		if partial {
+			h.lock.RUnlock(min, min+blockSize)
+		}
 		if m != blockSize {
 			return n, err
 		}
@@ -173,21 +175,13 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
-	// Rewriting a partial block changes all of its ciphertext,
-	// and other connections may be reading the rest of it.
-	if min != off || max != off+int64(len(p)) {
-		if err := h.lock.Lock(min, max); err != nil {
-			return 0, err
-		}
-		defer h.lock.Unlock(min, max)
-	}
-
 	// Write one block at a time.
 	for ; min < max; min += blockSize {
 		binary.LittleEndian.PutUint64(h.tweak[:], uint64(min))
 		data := h.block[:]
 
-		if off > min || len(p[n:]) < blockSize {
+		partial := off > min || len(p[n:]) < blockSize
+		if partial {
 			// Partial block write: read-update-write.
 			m, err := h.File.ReadAt(h.block[:], min)
 			if m == blockSize {
@@ -211,7 +205,17 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		t := copy(data, p[n:])
 		h.hbsh.Encrypt(h.block[:], h.tweak[:])
 
+		// Rewriting a partial block changes all of its ciphertext,
+		// and other connections may be reading the rest of it.
+		if partial {
+			if err := h.lock.Lock(min, min+blockSize); err != nil {
+				return n, err
+			}
+		}
 		m, err := h.File.WriteAt(h.block[:], min)
+		if partial {
+			h.lock.Unlock(min, min+blockSize)
+		}
 		if m != blockSize {
 			return n, err
 		}

@@ -130,17 +130,19 @@ func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
-	// Another connection may be rewriting a partial sector.
-	if min != off || max != off+int64(len(p)) {
-		if err := x.lock.RLock(min, max); err != nil {
-			return 0, err
-		}
-		defer x.lock.RUnlock(min, max)
-	}
-
 	// Read one block at a time.
 	for ; min < max; min += sectorSize {
+		// Another connection may be rewriting a partial sector.
+		partial := off > min || off+int64(len(p)) < min+sectorSize
+		if partial {
+			if err := x.lock.RLock(min, min+sectorSize); err != nil {
+				return n, err
+			}
+		}
 		m, err := x.File.ReadAt(x.sector[:], min)
+		if partial {
+			x.lock.RUnlock(min, min+sectorSize)
+		}
 		if m != sectorSize {
 			return n, err
 		}
@@ -169,21 +171,13 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 	min := roundDown(off)
 	max := roundUp(off + int64(len(p)))
 
-	// Rewriting a partial sector changes its ciphertext,
-	// and other connections may be reading the rest of it.
-	if min != off || max != off+int64(len(p)) {
-		if err := x.lock.Lock(min, max); err != nil {
-			return 0, err
-		}
-		defer x.lock.Unlock(min, max)
-	}
-
 	// Write one block at a time.
 	for ; min < max; min += sectorSize {
 		data := x.sector[:]
 		sectorNum := uint64(min / sectorSize)
 
-		if off > min || len(p[n:]) < sectorSize {
+		partial := off > min || len(p[n:]) < sectorSize
+		if partial {
 			// Partial block write: read-update-write.
 			m, err := x.File.ReadAt(x.sector[:], min)
 			if m == sectorSize {
@@ -207,7 +201,17 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 		t := copy(data, p[n:])
 		x.cipher.Encrypt(x.sector[:], x.sector[:], sectorNum)
 
+		// Rewriting a partial sector changes its ciphertext,
+		// and other connections may be reading the rest of it.
+		if partial {
+			if err := x.lock.Lock(min, min+sectorSize); err != nil {
+				return n, err
+			}
+		}
 		m, err := x.File.WriteAt(x.sector[:], min)
+		if partial {
+			x.lock.Unlock(min, min+sectorSize)
+		}
 		if m != sectorSize {
 			return n, err
 		}
