@@ -2,7 +2,11 @@
 
 package vfs
 
-import "github.com/ncruces/go-sqlite3/internal/errutil"
+import (
+	"sync"
+
+	"github.com/ncruces/go-sqlite3/internal/errutil"
+)
 
 // +checklocks:s.Mutex
 func (s *vfsShm) shmMemLock(offset, n int32, flags _ShmFlag) error {
@@ -49,4 +53,73 @@ func (s *vfsShm) shmMemLock(offset, n int32, flags _ShmFlag) error {
 		panic(errutil.AssertErr())
 	}
 	return nil
+}
+
+// vfsShmIOLock implements the I/O lock for
+// WAL-indexes shared by all the connections in a process.
+// If the WAL-index is also shared with other processes,
+// the first reader (or the writer) additionally locks the file,
+// and the last one unlocks it; those locks are per process.
+type vfsShmIOLock struct {
+	rw  sync.RWMutex
+	mtx sync.Mutex // held across the file lock calls
+	cnt int
+}
+
+func (s *vfsShm) IOLock(level LockLevel) (err error) {
+	if s.vfsShmParent == nil {
+		// The WAL-index is not open.
+		return nil
+	}
+
+	p := s.vfsShmParent
+	l := &p.ioLock
+
+	switch level {
+	case LOCK_SHARED:
+		l.rw.RLock()
+		l.mtx.Lock()
+		if l.cnt == 0 {
+			err = p.fileIOLock(false)
+		}
+		if err == nil {
+			l.cnt++
+			l.mtx.Unlock()
+		} else {
+			l.mtx.Unlock()
+			l.rw.RUnlock()
+		}
+
+	case LOCK_EXCLUSIVE:
+		l.rw.Lock()
+		err = p.fileIOLock(true)
+		if err == nil {
+			l.cnt = -1
+		} else {
+			l.rw.Unlock()
+		}
+
+	case LOCK_NONE:
+		l.mtx.Lock()
+		switch {
+		case l.cnt < 0:
+			l.cnt = 0
+			err = p.fileIOUnlock()
+			l.mtx.Unlock()
+			l.rw.Unlock()
+		case l.cnt > 0:
+			if l.cnt--; l.cnt == 0 {
+				err = p.fileIOUnlock()
+			}
+			l.mtx.Unlock()
+			l.rw.RUnlock()
+		default:
+			l.mtx.Unlock()
+			panic(errutil.AssertErr())
+		}
+
+	default:
+		panic(errutil.AssertErr())
+	}
+	return err
 }

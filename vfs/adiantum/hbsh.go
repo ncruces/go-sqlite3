@@ -36,9 +36,14 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 	}
 
 	var hbsh *hbsh.HBSH
+	var shm vfs.SharedMemory
 	if f, ok := vfsutil.UnwrapFile[*hbshFile](name.DatabaseFile()); ok {
 		hbsh = f.hbsh
+		shm = f.shm
 	} else {
+		if flags&vfs.OPEN_MAIN_DB != 0 {
+			shm = vfsutil.WrapSharedMemory(file)
+		}
 		var key []byte
 		if params := name.URIParameters(); name == nil {
 			key = h.init.KDF("") // Temporary files get a random key.
@@ -50,7 +55,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 			key = h.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main databases may have their key specified as a PRAGMA.
-			return &hbshFile{File: file, init: h.init}, flags, nil
+			return &hbshFile{File: file, init: h.init, shm: shm}, flags, nil
 		}
 		hbsh = h.init.HBSH(key)
 	}
@@ -59,7 +64,7 @@ func (h *hbshVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs
 		file.Close()
 		return nil, flags, sqlite3.IOERR_BADKEY
 	}
-	return &hbshFile{File: file, hbsh: hbsh, init: h.init}, flags, nil
+	return &hbshFile{File: file, hbsh: hbsh, init: h.init, shm: shm}, flags, nil
 }
 
 // Larger blocks improve both security (wide-block cipher)
@@ -83,10 +88,15 @@ func roundUp[T int | int64](i T) T {
 	return (i + (blockSize - 1)) &^ (blockSize - 1)
 }
 
+func isPartial(block, off int64, len int) bool {
+	return off > block || off+int64(len) < block+blockSize
+}
+
 type hbshFile struct {
 	vfs.File
 	init  HBSHCreator
 	hbsh  *hbsh.HBSH
+	shm   vfs.SharedMemory
 	tweak [tweakSize]byte
 	block [blockSize]byte
 }
@@ -128,7 +138,9 @@ func (h *hbshFile) ReadAt(p []byte, off int64) (n int, err error) {
 
 	// Read one block at a time.
 	for ; min < max; min += blockSize {
-		m, err := h.File.ReadAt(h.block[:], min)
+		// A block only partially covered by this read
+		// may be concurrently rewritten by another connection.
+		m, err := h.readBlock(min, isPartial(min, off, len(p)))
 		if m != blockSize {
 			return n, err
 		}
@@ -161,9 +173,11 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		binary.LittleEndian.PutUint64(h.tweak[:], uint64(min))
 		data := h.block[:]
 
-		if off > min || len(p[n:]) < blockSize {
+		partial := isPartial(min, off, len(p))
+		if partial {
 			// Partial block write: read-update-write.
-			m, err := h.File.ReadAt(h.block[:], min)
+			// We're the single writer, so our read needs no locking.
+			m, err := h.readBlock(min, false)
 			if m == blockSize {
 				data = h.hbsh.Decrypt(h.block[:], h.tweak[:])
 			} else if err != io.EOF {
@@ -185,7 +199,7 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		t := copy(data, p[n:])
 		h.hbsh.Encrypt(h.block[:], h.tweak[:])
 
-		m, err := h.File.WriteAt(h.block[:], min)
+		m, err := h.writeBlock(min, partial)
 		if m != blockSize {
 			return n, err
 		}
@@ -196,6 +210,26 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 		panic(errutil.AssertErr())
 	}
 	return n, nil
+}
+
+func (h *hbshFile) readBlock(off int64, partial bool) (int, error) {
+	if partial && h.shm != nil {
+		if err := h.shm.IOLock(vfs.LOCK_SHARED); err != nil {
+			return 0, err
+		}
+		defer h.shm.IOLock(vfs.LOCK_NONE)
+	}
+	return h.File.ReadAt(h.block[:], off)
+}
+
+func (h *hbshFile) writeBlock(off int64, partial bool) (int, error) {
+	if partial && h.shm != nil {
+		if err := h.shm.IOLock(vfs.LOCK_EXCLUSIVE); err != nil {
+			return 0, err
+		}
+		defer h.shm.IOLock(vfs.LOCK_NONE)
+	}
+	return h.File.WriteAt(h.block[:], off)
 }
 
 func (h *hbshFile) DeviceCharacteristics() vfs.DeviceCharacteristic {

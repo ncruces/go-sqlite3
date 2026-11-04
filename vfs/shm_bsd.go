@@ -25,6 +25,8 @@ type vfsShmParent struct {
 
 	lock [_SHM_NLOCK]int8 // +checklocks:Mutex
 	sync.Mutex
+
+	ioLock vfsShmIOLock
 }
 
 var (
@@ -255,4 +257,18 @@ func (s *vfsShm) shmUnmap(delete bool) {
 func (s *vfsShm) shmBarrier() {
 	var b atomic.Bool
 	b.Swap(true)
+}
+
+// POSIX locks are per process, so these are taken by the first reader
+// (or the writer) in the process, and released by the last.
+
+func (p *vfsShmParent) fileIOLock(exclusive bool) error {
+	if exclusive {
+		return osLockWait(p.File, unix.F_WRLCK, _SHM_IOLK, 1, _IOERR_LOCK)
+	}
+	return osLockWait(p.File, unix.F_RDLCK, _SHM_IOLK, 1, _IOERR_RDLOCK)
+}
+
+func (p *vfsShmParent) fileIOUnlock() error {
+	return osUnlock(p.File, _SHM_IOLK, 1)
 }

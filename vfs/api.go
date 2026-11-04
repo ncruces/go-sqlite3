@@ -199,6 +199,17 @@ type SharedMemory interface {
 	shmUnmap(bool)
 	shmBarrier()
 	io.Closer
+
+	// IOLock is a blocking lock shared by all connections to a database.
+	// SQLite guarantees that concurrent reads and writes to a database
+	// are disjoint, so they can't tear each other.
+	// A VFS that modifies whole sectors may break this guarantee:
+	// a partial sector write rewrites bytes that a concurrent
+	// partial sector read may be reading.
+	// Such a VFS should hold this lock SHARED around partial sector reads,
+	// and EXCLUSIVE around partial sector writes; NONE releases it.
+	// This does nothing unless the WAL-index is in use.
+	IOLock(level LockLevel) error
 }
 
 type blockingSharedMemory interface {
