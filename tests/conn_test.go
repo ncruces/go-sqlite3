@@ -364,7 +364,7 @@ func TestConn_Filename(t *testing.T) {
 	if n.Database() != file {
 		t.Errorf("got %v", n)
 	}
-	if n.DatabaseFile() != nil {
+	if n.DatabaseFile() == nil {
 		t.Errorf("got %v", n)
 	}
 

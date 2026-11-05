@@ -83,7 +83,7 @@ func (n *Filename) DatabaseFile() File {
 	if n == nil || n.zPath == 0 {
 		return nil
 	}
-	if n.flags&(OPEN_MAIN_JOURNAL|OPEN_WAL) == 0 {
+	if n.flags&(OPEN_MAIN_DB|OPEN_MAIN_JOURNAL|OPEN_WAL) == 0 {
 		return nil
 	}
 
