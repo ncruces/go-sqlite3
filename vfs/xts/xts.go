@@ -210,20 +210,20 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 
 func (x *xtsFile) readSector(off int64, partial bool) (int, error) {
 	if partial && x.shm != nil {
-		if err := x.shm.IOLock(vfs.LOCK_SHARED); err != nil {
+		if err := x.shm.IOLock(vfs.LOCK_SHARED, off); err != nil {
 			return 0, err
 		}
-		defer x.shm.IOLock(vfs.LOCK_NONE)
+		defer x.shm.IOLock(vfs.LOCK_NONE, off)
 	}
 	return x.File.ReadAt(x.sector[:], off)
 }
 
 func (x *xtsFile) writeSector(off int64, partial bool) (int, error) {
 	if partial && x.shm != nil {
-		if err := x.shm.IOLock(vfs.LOCK_EXCLUSIVE); err != nil {
+		if err := x.shm.IOLock(vfs.LOCK_EXCLUSIVE, off); err != nil {
 			return 0, err
 		}
-		defer x.shm.IOLock(vfs.LOCK_NONE)
+		defer x.shm.IOLock(vfs.LOCK_NONE, off)
 	}
 	return x.File.WriteAt(x.sector[:], off)
 }

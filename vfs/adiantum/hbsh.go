@@ -214,20 +214,20 @@ func (h *hbshFile) WriteAt(p []byte, off int64) (n int, err error) {
 
 func (h *hbshFile) readBlock(off int64, partial bool) (int, error) {
 	if partial && h.shm != nil {
-		if err := h.shm.IOLock(vfs.LOCK_SHARED); err != nil {
+		if err := h.shm.IOLock(vfs.LOCK_SHARED, off); err != nil {
 			return 0, err
 		}
-		defer h.shm.IOLock(vfs.LOCK_NONE)
+		defer h.shm.IOLock(vfs.LOCK_NONE, off)
 	}
 	return h.File.ReadAt(h.block[:], off)
 }
 
 func (h *hbshFile) writeBlock(off int64, partial bool) (int, error) {
 	if partial && h.shm != nil {
-		if err := h.shm.IOLock(vfs.LOCK_EXCLUSIVE); err != nil {
+		if err := h.shm.IOLock(vfs.LOCK_EXCLUSIVE, off); err != nil {
 			return 0, err
 		}
-		defer h.shm.IOLock(vfs.LOCK_NONE)
+		defer h.shm.IOLock(vfs.LOCK_NONE, off)
 	}
 	return h.File.WriteAt(h.block[:], off)
 }

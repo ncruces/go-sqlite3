@@ -125,19 +125,21 @@ func (s *vfsShm) shmBarrier() {
 	b.Swap(true)
 }
 
-func (s *vfsShm) IOLock(level LockLevel) error {
+func (s *vfsShm) IOLock(level LockLevel, id int64) error {
 	if !s.fileLock {
 		// The WAL-index is not open.
 		return nil
 	}
 
+	off := _SHM_IOLK + uint32(uint64(id)%_SHM_NIOLK)
+
 	switch level {
 	case LOCK_NONE:
-		return osUnlock(s.File, _SHM_IOLK, 1)
+		return osUnlock(s.File, off, 1)
 	case LOCK_SHARED:
-		return osLockWait(s.File, 0, _SHM_IOLK, 1, _IOERR_RDLOCK)
+		return osLockWait(s.File, 0, off, 1, _IOERR_RDLOCK)
 	case LOCK_EXCLUSIVE:
-		return osLockWait(s.File, windows.LOCKFILE_EXCLUSIVE_LOCK, _SHM_IOLK, 1, _IOERR_LOCK)
+		return osLockWait(s.File, windows.LOCKFILE_EXCLUSIVE_LOCK, off, 1, _IOERR_LOCK)
 	default:
 		panic(errutil.AssertErr())
 	}

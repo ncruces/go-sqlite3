@@ -264,11 +264,11 @@ func (s *vfsShm) shmBarrier() {
 
 func (p *vfsShmParent) fileIOLock(exclusive bool) error {
 	if exclusive {
-		return osLockWait(p.File, unix.F_WRLCK, _SHM_IOLK, 1, _IOERR_LOCK)
+		return osLockWait(p.File, unix.F_WRLCK, _SHM_IOLK, _SHM_NIOLK, _IOERR_LOCK)
 	}
-	return osLockWait(p.File, unix.F_RDLCK, _SHM_IOLK, 1, _IOERR_RDLOCK)
+	return osLockWait(p.File, unix.F_RDLCK, _SHM_IOLK, _SHM_NIOLK, _IOERR_RDLOCK)
 }
 
 func (p *vfsShmParent) fileIOUnlock() error {
-	return osUnlock(p.File, _SHM_IOLK, 1)
+	return osUnlock(p.File, _SHM_IOLK, _SHM_NIOLK)
 }

@@ -66,7 +66,7 @@ type vfsShmIOLock struct {
 	cnt int
 }
 
-func (s *vfsShm) IOLock(level LockLevel) (err error) {
+func (s *vfsShm) IOLock(level LockLevel, _ int64) (err error) {
 	if s.vfsShmParent == nil {
 		// The WAL-index is not open.
 		return nil

@@ -253,4 +253,5 @@ const (
 	_SHM_BASE  = (22 + _SHM_NLOCK) * 4
 	_SHM_DMS   = _SHM_BASE + _SHM_NLOCK
 	_SHM_IOLK  = _SHM_DMS + 1
+	_SHM_NIOLK = 7
 )
