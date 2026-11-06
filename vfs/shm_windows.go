@@ -125,7 +125,7 @@ func (s *vfsShm) shmBarrier() {
 	b.Swap(true)
 }
 
-func (s *vfsShm) IOLock(level LockLevel, id int64) error {
+func (s *vfsShm) IOLock(lock LockLevel, id int64) error {
 	if !s.fileLock {
 		// The WAL-index is not open.
 		return nil
@@ -133,7 +133,7 @@ func (s *vfsShm) IOLock(level LockLevel, id int64) error {
 
 	off := _SHM_IOLK + uint32(uint64(id)%_SHM_NIOLK)
 
-	switch level {
+	switch lock {
 	case LOCK_NONE:
 		return osUnlock(s.File, off, 1)
 	case LOCK_SHARED:

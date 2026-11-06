@@ -171,6 +171,4 @@ func (s *vfsShm) shmUnmap(delete bool) {
 
 // The WAL-index is private to this process: no file locks are needed.
 
-func (*vfsShmParent) fileIOLock(exclusive bool) error { return nil }
-
-func (*vfsShmParent) fileIOUnlock() error { return nil }
+func (*vfsShmParent) ioLockFile(LockLevel, int64) error { return nil }

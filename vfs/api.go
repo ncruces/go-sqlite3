@@ -211,7 +211,7 @@ type SharedMemory interface {
 	// Calls for the same sector must use the same id (e.g., the sector offset).
 	// This does nothing unless the WAL-index is in use,
 	// since the WAL-index is required for reader-writer concurrency.
-	IOLock(level LockLevel, id int64) error
+	IOLock(lock LockLevel, id int64) error
 }
 
 type blockingSharedMemory interface {

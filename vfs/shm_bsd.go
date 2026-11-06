@@ -262,13 +262,13 @@ func (s *vfsShm) shmBarrier() {
 // POSIX locks are per process, so these are taken by the first reader
 // (or the writer) in the process, and released by the last.
 
-func (p *vfsShmParent) fileIOLock(exclusive bool) error {
-	if exclusive {
-		return osLockWait(p.File, unix.F_WRLCK, _SHM_IOLK, _SHM_NIOLK, _IOERR_LOCK)
+func (p *vfsShmParent) ioLockFile(lock LockLevel, idx int64) error {
+	switch lock {
+	case LOCK_NONE:
+		return osUnlock(p.File, _SHM_IOLK+idx, 1)
+	case LOCK_SHARED:
+		return osLockWait(p.File, unix.F_RDLCK, _SHM_IOLK+idx, 1, _IOERR_RDLOCK)
+	default:
+		return osLockWait(p.File, unix.F_WRLCK, _SHM_IOLK+idx, 1, _IOERR_LOCK)
 	}
-	return osLockWait(p.File, unix.F_RDLCK, _SHM_IOLK, _SHM_NIOLK, _IOERR_RDLOCK)
-}
-
-func (p *vfsShmParent) fileIOUnlock() error {
-	return osUnlock(p.File, _SHM_IOLK, _SHM_NIOLK)
 }
