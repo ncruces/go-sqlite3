@@ -52,13 +52,13 @@ var RegisterLike = true
 // Register registers Unicode aware functions for a database connection.
 func Register(db *sqlite3.Conn) error {
 	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
-	var lkfn sqlite3.ScalarFunction
+	var err error
 	if RegisterLike {
-		lkfn = like
+		err = errors.Join(
+			db.CreateFunction("like", 2, flags, like),
+			db.CreateFunction("like", 3, flags, like))
 	}
-	return errors.Join(
-		db.CreateFunction("like", 2, flags, lkfn),
-		db.CreateFunction("like", 3, flags, lkfn),
+	return errors.Join(err,
 		db.CreateFunction("upper", 1, flags, upper),
 		db.CreateFunction("upper", 2, flags, upper),
 		db.CreateFunction("lower", 1, flags, lower),

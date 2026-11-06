@@ -9,6 +9,38 @@ import (
 	"github.com/ncruces/go-sqlite3/internal/testcfg"
 )
 
+func TestRegister_withoutLike(t *testing.T) {
+	RegisterLike = false
+	defer func() { RegisterLike = true }()
+
+	db, err := sqlite3.OpenContext(testcfg.Context(t), ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	err = Register(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stmt, _, err := db.Prepare(`SELECT 'Hello' LIKE 'hel%', 'Hello' LIKE 'hel!%' ESCAPE '!'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	if !stmt.Step() {
+		t.Fatal(stmt.Err())
+	}
+	if got := stmt.ColumnInt(0); got != 1 {
+		t.Errorf("LIKE = %d, want 1", got)
+	}
+	if got := stmt.ColumnInt(1); got != 0 {
+		t.Errorf("LIKE ESCAPE = %d, want 0", got)
+	}
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
