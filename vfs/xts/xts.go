@@ -35,9 +35,14 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 	}
 
 	var cipher *xts.Cipher
+	var shm vfs.SharedMemory
 	if f, ok := vfsutil.UnwrapFile[*xtsFile](name.DatabaseFile()); ok {
 		cipher = f.cipher
+		shm = f.shm
 	} else {
+		if flags&vfs.OPEN_MAIN_DB != 0 {
+			shm = vfsutil.WrapSharedMemory(file)
+		}
 		var key []byte
 		if params := name.URIParameters(); name == nil {
 			key = x.init.KDF("") // Temporary files get a random key.
@@ -49,7 +54,7 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 			key = x.init.KDF(t[0])
 		} else if flags&vfs.OPEN_MAIN_DB != 0 {
 			// Main databases may have their key specified as a PRAGMA.
-			return &xtsFile{File: file, init: x.init}, flags, nil
+			return &xtsFile{File: file, init: x.init, shm: shm}, flags, nil
 		}
 		cipher = x.init.XTS(key)
 	}
@@ -58,7 +63,7 @@ func (x *xtsVFS) OpenFilename(name *vfs.Filename, flags vfs.OpenFlag) (file vfs.
 		file.Close()
 		return nil, flags, sqlite3.IOERR_BADKEY
 	}
-	return &xtsFile{File: file, cipher: cipher, init: x.init}, flags, nil
+	return &xtsFile{File: file, cipher: cipher, init: x.init, shm: shm}, flags, nil
 }
 
 // Larger sectors don't seem to significantly improve security,
@@ -79,10 +84,15 @@ func roundUp[T int | int64](i T) T {
 	return (i + (sectorSize - 1)) &^ (sectorSize - 1)
 }
 
+func isPartial(sector, off int64, len int) bool {
+	return off > sector || off+int64(len) < sector+sectorSize
+}
+
 type xtsFile struct {
 	vfs.File
 	init   XTSCreator
 	cipher *xts.Cipher
+	shm    vfs.SharedMemory
 	sector [sectorSize]byte
 }
 
@@ -123,7 +133,9 @@ func (x *xtsFile) ReadAt(p []byte, off int64) (n int, err error) {
 
 	// Read one block at a time.
 	for ; min < max; min += sectorSize {
-		m, err := x.File.ReadAt(x.sector[:], min)
+		// A sector only partially covered by this read
+		// may be concurrently rewritten by another connection.
+		m, err := x.readSector(min, isPartial(min, off, len(p)))
 		if m != sectorSize {
 			return n, err
 		}
@@ -157,9 +169,11 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 		data := x.sector[:]
 		sectorNum := uint64(min / sectorSize)
 
-		if off > min || len(p[n:]) < sectorSize {
+		partial := isPartial(min, off, len(p))
+		if partial {
 			// Partial block write: read-update-write.
-			m, err := x.File.ReadAt(x.sector[:], min)
+			// We're the single writer, so our read needs no locking.
+			m, err := x.readSector(min, false)
 			if m == sectorSize {
 				x.cipher.Decrypt(data, x.sector[:], sectorNum)
 			} else if err != io.EOF {
@@ -181,7 +195,7 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 		t := copy(data, p[n:])
 		x.cipher.Encrypt(x.sector[:], x.sector[:], sectorNum)
 
-		m, err := x.File.WriteAt(x.sector[:], min)
+		m, err := x.writeSector(min, partial)
 		if m != sectorSize {
 			return n, err
 		}
@@ -192,6 +206,26 @@ func (x *xtsFile) WriteAt(p []byte, off int64) (n int, err error) {
 		panic(errutil.AssertErr())
 	}
 	return n, nil
+}
+
+func (x *xtsFile) readSector(off int64, partial bool) (int, error) {
+	if partial && x.shm != nil {
+		if err := x.shm.IOLock(vfs.LOCK_SHARED, off); err != nil {
+			return 0, err
+		}
+		defer x.shm.IOLock(vfs.LOCK_NONE, off)
+	}
+	return x.File.ReadAt(x.sector[:], off)
+}
+
+func (x *xtsFile) writeSector(off int64, partial bool) (int, error) {
+	if partial && x.shm != nil {
+		if err := x.shm.IOLock(vfs.LOCK_EXCLUSIVE, off); err != nil {
+			return 0, err
+		}
+		defer x.shm.IOLock(vfs.LOCK_NONE, off)
+	}
+	return x.File.WriteAt(x.sector[:], off)
 }
 
 func (x *xtsFile) DeviceCharacteristics() vfs.DeviceCharacteristic {

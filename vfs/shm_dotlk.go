@@ -17,6 +17,8 @@ type vfsShmParent struct {
 
 	lock [_SHM_NLOCK]int8 // +checklocks:Mutex
 	sync.Mutex
+
+	ioLock vfsShmIOLock
 }
 
 var (
@@ -166,3 +168,7 @@ func (s *vfsShm) shmUnmap(delete bool) {
 	s.ptrs = nil
 	s.shadow = nil
 }
+
+// The WAL-index is private to this process: no file locks are needed.
+
+func (*vfsShmParent) ioLockFile(LockLevel, int64) error { return nil }
