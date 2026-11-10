@@ -121,6 +121,7 @@ func (b *reqSketch) evalResult(ctx sqlite3.Context, isQuantile bool) {
 		many[i] = eval(a)
 	}
 	ctx.ResultJSON(many)
+	ctx.ResultSubtype('J')
 }
 
 func validRank(v float32) error {

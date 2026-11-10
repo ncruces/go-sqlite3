@@ -390,6 +390,11 @@ func Test_QueryRow_blob_null(t *testing.T) {
 			t.Errorf("got %q, want %q", buf, want[i])
 		}
 	}
+
+	err = rows.Err()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func Test_time(t *testing.T) {

@@ -88,28 +88,39 @@ func (q *percentile) Value(ctx sqlite3.Context) {
 	if q.pcts != nil {
 		q.atMany()
 		ctx.ResultJSON(q.many)
+		ctx.ResultSubtype('J')
 	} else {
-		ctx.ResultFloat(q.at(q.pct))
+		v, _ := q.at(q.pct, -1)
+		ctx.ResultFloat(v)
 	}
 }
 
-func (q *percentile) at(pct float64) float64 {
+func (q *percentile) at(pct float64, prev int) (float64, int) {
 	i, f := math.Modf(pct * float64(len(q.nums)-1))
-	m0 := quick.Select(q.nums, int(i))
+	k := int(i)
 
-	if f == 0 || q.kind == percentile_disc {
-		return m0
+	var m0 float64
+	switch {
+	case k < prev:
+		m0 = quick.Select(q.nums[:prev], k)
+	case k > prev:
+		m0 = quick.Select(q.nums[prev+1:], k-prev-1)
+	default:
+		m0 = q.nums[k]
 	}
-
-	m1 := slices.Min(q.nums[int(i)+1:])
-	return util.Lerp(m0, m1, f)
+	if f == 0 || q.kind == percentile_disc {
+		return m0, k
+	}
+	m1 := slices.Min(q.nums[k+1:])
+	return util.Lerp(m0, m1, f), k
 }
 
 func (q *percentile) atMany() {
 	if len(q.many) < len(q.pcts) {
 		q.many = make([]float64, len(q.pcts))
 	}
+	p := -1
 	for i, pct := range q.pcts {
-		q.many[i] = q.at(pct)
+		q.many[i], p = q.at(pct, p)
 	}
 }

@@ -33,7 +33,10 @@ import (
 
 // Register registers approximate aggregate functions.
 func Register(db *sqlite3.Conn) error {
-	const flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+	const (
+		flags = sqlite3.DETERMINISTIC | sqlite3.INNOCUOUS
+		json  = sqlite3.RESULT_SUBTYPE | flags
+	)
 	return errors.Join(
 		db.CreateWindowFunction("approx_count_distinct", -1, flags,
 			sql3util.WindowFromCombiner[hllSketch](1e4)),
@@ -43,17 +46,17 @@ func Register(db *sqlite3.Conn) error {
 			sql3util.WindowFromCombiner[hllCombine](1e4)),
 		db.CreateFunction("approx_count_distinct_estimate", 1, flags,
 			hllEstimate),
-		db.CreateWindowFunction("approx_percentile", 2, flags,
+		db.CreateWindowFunction("approx_percentile", 2, json,
 			sql3util.WindowFromCombiner[reqSketch](1e4)),
-		db.CreateWindowFunction("approx_percent_rank", 2, flags,
+		db.CreateWindowFunction("approx_percent_rank", 2, json,
 			sql3util.WindowFromCombiner[reqRank](1e4)),
 		db.CreateWindowFunction("approx_percentile_accumulate", 1, flags,
 			sql3util.WindowFromCombiner[reqAccumulate](1e4)),
 		db.CreateWindowFunction("approx_percentile_combine", 1, flags,
 			sql3util.WindowFromCombiner[reqCombine](1e4)),
-		db.CreateFunction("approx_percentile_estimate", 2, flags,
+		db.CreateFunction("approx_percentile_estimate", 2, json,
 			reqPercentileEstimate),
-		db.CreateFunction("approx_percent_rank_estimate", 2, flags,
+		db.CreateFunction("approx_percent_rank_estimate", 2, json,
 			reqRankEstimate),
 	)
 }
