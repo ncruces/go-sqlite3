@@ -17,7 +17,7 @@ require (
 	github.com/segmentio/go-hll v1.0.1 // ext/approx
 	github.com/twmb/murmur3 v1.2.2 // ext/approx
 	golang.org/x/crypto v0.58.0 // vfs/adiantum vfs/xts
-	golang.org/x/sync v0.24.0 // test
+	golang.org/x/sync v0.25.0 // test
 	golang.org/x/text v0.43.0 // ext/unicode
 	lukechampine.com/adiantum v1.1.1 // vfs/adiantum
 )
