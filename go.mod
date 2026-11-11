@@ -7,7 +7,7 @@ require (
 	github.com/ncruces/julianday v1.0.0
 	github.com/ncruces/sort v1.0.3
 	github.com/ncruces/wbt v1.0.0
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 )
 
 require (
