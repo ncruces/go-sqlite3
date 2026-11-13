@@ -52,3 +52,15 @@ func AppendNumber(dst []byte, f float64) []byte {
 	}
 	return dst
 }
+
+func AppendQuote(dst []byte, src string) ([]byte, error) {
+	for i := range len(src) {
+		if c := src[i]; c < 0x20 || c >= 0x7f || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
+			b, err := json.Marshal(src)
+			return append(dst, b...), err
+		}
+	}
+	dst = append(dst, '"')
+	dst = append(dst, src...)
+	return append(dst, '"'), nil
+}

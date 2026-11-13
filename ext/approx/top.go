@@ -8,7 +8,6 @@ import (
 	"math"
 	"slices"
 	"strconv"
-	"unicode/utf8"
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3"
@@ -57,13 +56,16 @@ func (b *topSketch) Value(ctx sqlite3.Context) {
 		b.summary().evalResult(ctx, int(b.summary().k))
 	default:
 		var buf [64]byte
-		out := append(buf[:0], '[')
-		out = appendEntryJSON(out, topEntry{
+		out, err := appendEntryJSON(append(buf[:0], '['), topEntry{
 			str:    b.unitStr(),
 			num:    b.num,
 			weight: b.weight,
 			typ:    b.typ,
 		}, 0)
+		if err != nil {
+			ctx.ResultError(err)
+			return
+		}
 		out = append(out, ']')
 		ctx.ResultRawText(out)
 		ctx.ResultSubtype('J')
@@ -517,14 +519,20 @@ func (s *topSummary) evalResult(ctx sqlite3.Context, k int) {
 		if i > 0 {
 			out = append(out, ',')
 		}
-		out = appendEntryJSON(out, e, offset)
+		var err error
+		out, err = appendEntryJSON(out, e, offset)
+		if err != nil {
+			ctx.ResultError(err)
+			return
+		}
 	}
 	out = append(out, ']')
 	ctx.ResultRawText(out)
 	ctx.ResultSubtype('J')
 }
 
-func appendEntryJSON(dst []byte, e topEntry, offset float64) []byte {
+func appendEntryJSON(dst []byte, e topEntry, offset float64) ([]byte, error) {
+	var err error
 	dst = append(dst, '[')
 	switch sqlite3.Datatype(e.typ) {
 	case sqlite3.INTEGER:
@@ -532,11 +540,11 @@ func appendEntryJSON(dst []byte, e topEntry, offset float64) []byte {
 	case sqlite3.FLOAT:
 		dst = appendJSONFloat(dst, math.Float64frombits(e.num))
 	default:
-		dst = appendJSONString(dst, e.str)
+		dst, err = util.AppendQuote(dst, e.str)
 	}
 	dst = append(dst, ',')
 	dst = appendJSONFloat(dst, e.weight+offset)
-	return append(dst, ']')
+	return append(dst, ']'), err
 }
 
 func appendJSONFloat(dst []byte, f float64) []byte {
@@ -544,51 +552,6 @@ func appendJSONFloat(dst []byte, f float64) []byte {
 		return strconv.AppendInt(dst, i, 10)
 	}
 	return util.AppendNumber(dst, f)
-}
-
-func appendJSONString(dst []byte, s string) []byte {
-	dst = append(dst, '"')
-	start := 0
-	for i := 0; i < len(s); {
-		if c := s[i]; c < utf8.RuneSelf {
-			if c >= 0x20 && c != '"' && c != '\\' {
-				i++
-				continue
-			}
-			dst = append(dst, s[start:i]...)
-			switch c {
-			case '"', '\\':
-				dst = append(dst, '\\', c)
-			case '\b':
-				dst = append(dst, `\b`...)
-			case '\f':
-				dst = append(dst, `\f`...)
-			case '\n':
-				dst = append(dst, `\n`...)
-			case '\r':
-				dst = append(dst, `\r`...)
-			case '\t':
-				dst = append(dst, `\t`...)
-			default:
-				const hex = "0123456789abcdef"
-				dst = append(dst, '\\', 'u', '0', '0', hex[c>>4], hex[c&0xf])
-			}
-			i++
-			start = i
-			continue
-		}
-		r, width := utf8.DecodeRuneInString(s[i:])
-		if r == utf8.RuneError && width == 1 {
-			dst = append(dst, s[start:i]...)
-			dst = append(dst, `\ufffd`...)
-			i++
-			start = i
-			continue
-		}
-		i += width
-	}
-	dst = append(dst, s[start:]...)
-	return append(dst, '"')
 }
 
 const (

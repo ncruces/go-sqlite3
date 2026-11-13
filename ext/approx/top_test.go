@@ -2,10 +2,12 @@ package approx_test
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/testcfg"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 func TestRegister_top(t *testing.T) {
@@ -106,6 +108,11 @@ func TestRegister_top(t *testing.T) {
 	stmt.Close()
 
 	// Single-key unit states (int, float, empty text, repeated text) + JSON subtype.
+	qASCII, _ := util.AppendQuote(nil, "a<b")
+	qUTF8, _ := util.AppendQuote(nil, "a<bπ")
+	if strings.Contains(string(qASCII), "<") != strings.Contains(string(qUTF8), "<") {
+		t.Errorf("inconsistent < escaping: %s vs %s", qASCII, qUTF8)
+	}
 	unitTests := []struct {
 		sql, want string
 	}{
@@ -115,10 +122,9 @@ func TestRegister_top(t *testing.T) {
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(2.5, 1.25, 5))`, `[[2.5,1.25]]`},
 		{`SELECT approx_top_k('', 5)`, `[["",1]]`},
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate('', 5))`, `[["",1]]`},
-		{`SELECT approx_top_k('a<b', 5)`, `[["a<b",1]]`},
-		{`SELECT approx_top_k('a<bπ', 5)`, `[["a<bπ",1]]`},
+		{`SELECT approx_top_k('a<b', 5)`, `[[` + string(qASCII) + `,1]]`},
+		{`SELECT approx_top_k('a<bπ', 5)`, `[[` + string(qUTF8) + `,1]]`},
 		{`SELECT approx_top_k('a"b\c' || char(1, 8, 9, 10, 12, 13) || 'π', 5)`, `[["a\"b\\c\u0001\b\t\n\f\rπ",1]]`},
-		{`SELECT approx_top_k(CAST(X'61ff' AS TEXT), 5)`, `[["a\ufffd",1]]`},
 		{`SELECT approx_top_k(1e999, 5)`, `[[9.0e999,1]]`},
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(1e999, 5))`, `[[9.0e999,1]]`},
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(-1e999, 5))`, `[[-9.0e999,1]]`},
@@ -140,6 +146,18 @@ func TestRegister_top(t *testing.T) {
 			t.Errorf("%q: got %s, want %s", tc.sql, got, tc.want)
 		}
 		stmt.Close()
+	}
+
+	// Invalid UTF-8 TEXT follows Go json v1 (replacement) vs v2 (error).
+	_, wantUTF8Err := util.AppendQuote(nil, "a\xff")
+	for _, sql := range []string{
+		`SELECT approx_top_k(CAST(X'61ff' AS TEXT), 5)`,
+		`SELECT approx_top_k(x, 5) FROM (SELECT 'a' AS x UNION ALL SELECT CAST(X'61ff' AS TEXT))`,
+	} {
+		err := db.Exec(sql)
+		if (err != nil) != (wantUTF8Err != nil) {
+			t.Errorf("%q: got err=%v, want err=%v", sql, err, wantUTF8Err)
+		}
 	}
 
 	// Sliding window over small sequence.
