@@ -3,12 +3,12 @@ package approx
 import (
 	"cmp"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"math"
 	"slices"
 	"strconv"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/ncruces/go-sqlite3"
@@ -92,7 +92,7 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			return
 		}
 		w = arg[1].Float()
-		if !(w > 0) || math.IsInf(w, 1) {
+		if w <= 0 || math.IsInf(w, 1) {
 			if w < 0 || math.IsInf(w, 1) {
 				ctx.ResultError(fmt.Errorf("approx: invalid weight: %g", w))
 			}
@@ -176,62 +176,33 @@ func (b *topSketch) promote() *topSummary {
 	return s
 }
 
-func (b *topSketch) foldK(k int16) {
-	if k == 0 {
-		return
-	}
-	if b.typ == topSummaryTag {
-		s := b.summary()
-		if k < s.k {
-			s.k = k
-			if c := topCap(k); c < s.c {
-				s.c = c
-				if s.len() >= 2*int(s.c) {
-					s.purge()
-				}
-			}
+func (b *topSketch) Combine(other topSketch) {
+	if other.typ == 0 {
+		if b.k == 0 && b.typ != topSummaryTag {
+			b.k = other.k
 		}
 		return
 	}
-	if b.k == 0 || k < b.k {
-		b.k = k
+	if b.k == 0 && b.typ != topSummaryTag {
+		b.k = other.k
 	}
-}
-
-func (b *topSketch) Combine(other topSketch) {
 	switch other.typ {
-	case 0:
-		b.foldK(other.k)
 	case uint8(sqlite3.INTEGER), uint8(sqlite3.FLOAT):
-		b.foldK(other.k)
 		b.insertNum(other.typ, other.num, other.weight)
 	case uint8(sqlite3.TEXT):
-		b.foldK(other.k)
 		b.insertText(other.unitStr(), other.weight)
 	case topSummaryTag:
 		os := other.summary()
 		switch b.typ {
 		case 0:
-			s := os.clone()
-			if b.k > 0 && b.k < s.k {
-				s.k = b.k
-				s.c = min(s.c, topCap(b.k))
-				if s.len() >= 2*int(s.c) {
-					s.purge()
-				}
-			}
 			*b = topSketch{
-				ptr: unsafe.Pointer(s),
+				ptr: unsafe.Pointer(os.clone()),
 				typ: topSummaryTag,
 			}
 		case topSummaryTag:
 			b.summary().merge(os)
 		default:
 			s := os.clone()
-			if b.k < s.k {
-				s.k = b.k
-				s.c = min(s.c, topCap(b.k))
-			}
 			if b.typ == uint8(sqlite3.TEXT) {
 				s.addText(b.unitStr(), b.weight)
 			} else {
@@ -351,44 +322,27 @@ func (s *topSummary) len() int {
 
 func (s *topSummary) addNum(typ uint8, num uint64, w float64) {
 	if typ == uint8(sqlite3.INTEGER) {
-		k := int64(num)
-		if s.ints == nil {
-			s.ints = make(map[int64]float64)
-		} else if cur, ok := s.ints[k]; ok {
-			s.ints[k] = cur + w
-			return
-		}
-		if s.len() >= 2*int(s.c) {
-			s.purge()
-		}
-		s.ints[k] += w
-		return
+		addMap(s, &s.ints, int64(num), w)
+	} else {
+		addMap(s, &s.reals, math.Float64frombits(num), w)
 	}
-
-	k := math.Float64frombits(num)
-	if s.reals == nil {
-		s.reals = make(map[float64]float64)
-	} else if cur, ok := s.reals[k]; ok {
-		s.reals[k] = cur + w
-		return
-	}
-	if s.len() >= 2*int(s.c) {
-		s.purge()
-	}
-	s.reals[k] += w
 }
 
 func (s *topSummary) addText(k string, w float64) {
-	if s.texts == nil {
-		s.texts = make(map[string]float64)
-	} else if cur, ok := s.texts[k]; ok {
-		s.texts[k] = cur + w
+	addMap(s, &s.texts, k, w)
+}
+
+func addMap[K comparable](s *topSummary, m *map[K]float64, k K, w float64) {
+	if *m == nil {
+		*m = make(map[K]float64)
+	} else if cur, ok := (*m)[k]; ok {
+		(*m)[k] = cur + w
 		return
 	}
 	if s.len() >= 2*int(s.c) {
 		s.purge()
 	}
-	s.texts[k] += w
+	(*m)[k] = w
 }
 
 func (s *topSummary) purge() {
@@ -409,28 +363,20 @@ func (s *topSummary) purge() {
 
 	delta := quick.Select(w, len(w)-int(s.c)-1)
 	s.offset += delta
-	for k, v := range s.ints {
-		if v <= delta {
-			delete(s.ints, k)
-		} else {
-			s.ints[k] = v - delta
-		}
-	}
-	for k, v := range s.reals {
-		if v <= delta {
-			delete(s.reals, k)
-		} else {
-			s.reals[k] = v - delta
-		}
-	}
-	for k, v := range s.texts {
-		if v <= delta {
-			delete(s.texts, k)
-		} else {
-			s.texts[k] = v - delta
-		}
-	}
+	purgeMap(s.ints, delta)
+	purgeMap(s.reals, delta)
+	purgeMap(s.texts, delta)
 	s.scratch = w[:0]
+}
+
+func purgeMap[K comparable](m map[K]float64, delta float64) {
+	for k, v := range m {
+		if v <= delta {
+			delete(m, k)
+		} else {
+			m[k] = v - delta
+		}
+	}
 }
 
 func (s *topSummary) clone() *topSummary {
@@ -455,35 +401,24 @@ func (s *topSummary) merge(other *topSummary) {
 	s.k = min(s.k, other.k)
 	s.c = min(s.c, other.c)
 	s.offset += other.offset
-	if len(other.ints) > 0 {
-		if s.ints == nil {
-			s.ints = maps.Clone(other.ints)
-		} else {
-			for k, v := range other.ints {
-				s.ints[k] += v
-			}
-		}
-	}
-	if len(other.reals) > 0 {
-		if s.reals == nil {
-			s.reals = maps.Clone(other.reals)
-		} else {
-			for k, v := range other.reals {
-				s.reals[k] += v
-			}
-		}
-	}
-	if len(other.texts) > 0 {
-		if s.texts == nil {
-			s.texts = maps.Clone(other.texts)
-		} else {
-			for k, v := range other.texts {
-				s.texts[k] += v
-			}
-		}
-	}
+	mergeMap(&s.ints, other.ints)
+	mergeMap(&s.reals, other.reals)
+	mergeMap(&s.texts, other.texts)
 	if s.len() >= 2*int(s.c) {
 		s.purge()
+	}
+}
+
+func mergeMap[K comparable](dst *map[K]float64, src map[K]float64) {
+	if len(src) == 0 {
+		return
+	}
+	if *dst == nil {
+		*dst = maps.Clone(src)
+		return
+	}
+	for k, v := range src {
+		(*dst)[k] += v
 	}
 }
 
@@ -612,14 +547,47 @@ func appendJSONFloat(dst []byte, f float64) []byte {
 }
 
 func appendJSONString(dst []byte, s string) []byte {
-	for i := range len(s) {
-		if c := s[i]; c < 0x20 || c >= 0x7f || c == '"' || c == '\\' {
-			b, _ := json.Marshal(s)
-			return append(dst, b...)
-		}
-	}
 	dst = append(dst, '"')
-	dst = append(dst, s...)
+	start := 0
+	for i := 0; i < len(s); {
+		if c := s[i]; c < utf8.RuneSelf {
+			if c >= 0x20 && c != '"' && c != '\\' {
+				i++
+				continue
+			}
+			dst = append(dst, s[start:i]...)
+			switch c {
+			case '"', '\\':
+				dst = append(dst, '\\', c)
+			case '\b':
+				dst = append(dst, `\b`...)
+			case '\f':
+				dst = append(dst, `\f`...)
+			case '\n':
+				dst = append(dst, `\n`...)
+			case '\r':
+				dst = append(dst, `\r`...)
+			case '\t':
+				dst = append(dst, `\t`...)
+			default:
+				const hex = "0123456789abcdef"
+				dst = append(dst, '\\', 'u', '0', '0', hex[c>>4], hex[c&0xf])
+			}
+			i++
+			start = i
+			continue
+		}
+		r, width := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && width == 1 {
+			dst = append(dst, s[start:i]...)
+			dst = append(dst, `\ufffd`...)
+			i++
+			start = i
+			continue
+		}
+		i += width
+	}
+	dst = append(dst, s[start:]...)
 	return append(dst, '"')
 }
 
@@ -761,7 +729,7 @@ func topFromBytes(data []byte) (*topSummary, error) {
 			return nil, errInvalidTopK
 		}
 		off := math.Float64frombits(binary.LittleEndian.Uint64(rest))
-		if !(off > 0) || math.IsInf(off, 1) {
+		if !(off > 0) {
 			return nil, errInvalidTopK
 		}
 		s.offset = off
@@ -800,7 +768,7 @@ func topFromBytes(data []byte) (*topSummary, error) {
 				return nil, errInvalidTopK
 			}
 			f := math.Float64frombits(binary.LittleEndian.Uint64(rest))
-			if math.IsNaN(f) || math.IsInf(f, 0) {
+			if math.IsNaN(f) {
 				return nil, errInvalidTopK
 			}
 			if _, ok := floatIsInt64(f); ok {
@@ -833,7 +801,7 @@ func topFromBytes(data []byte) (*topSummary, error) {
 				return nil, errInvalidTopK
 			}
 			w := math.Float64frombits(binary.LittleEndian.Uint64(rest))
-			if !(w > 0) || math.IsInf(w, 1) {
+			if !(w > 0) {
 				return nil, errInvalidTopK
 			}
 			weight = w

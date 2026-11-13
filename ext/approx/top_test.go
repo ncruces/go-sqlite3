@@ -115,7 +115,16 @@ func TestRegister_top(t *testing.T) {
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(2.5, 1.25, 5))`, `[[2.5,1.25]]`},
 		{`SELECT approx_top_k('', 5)`, `[["",1]]`},
 		{`SELECT approx_top_k_estimate(approx_top_k_accumulate('', 5))`, `[["",1]]`},
-		{`SELECT approx_top_k('a"b\c' || char(10) || 'π', 5)`, `[["a\"b\\c\nπ",1]]`},
+		{`SELECT approx_top_k('a<b', 5)`, `[["a<b",1]]`},
+		{`SELECT approx_top_k('a<bπ', 5)`, `[["a<bπ",1]]`},
+		{`SELECT approx_top_k('a"b\c' || char(1, 8, 9, 10, 12, 13) || 'π', 5)`, `[["a\"b\\c\u0001\b\t\n\f\rπ",1]]`},
+		{`SELECT approx_top_k(CAST(X'61ff' AS TEXT), 5)`, `[["a\ufffd",1]]`},
+		{`SELECT approx_top_k(1e999, 5)`, `[[9.0e999,1]]`},
+		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(1e999, 5))`, `[[9.0e999,1]]`},
+		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(-1e999, 5))`, `[[-9.0e999,1]]`},
+		{`SELECT approx_top_k(1, 1e308, 5) FROM generate_series(1, 2)`, `[[1,9.0e999]]`},
+		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(1, 1e308, 5)) FROM generate_series(1, 2)`, `[[1,9.0e999]]`},
+		{`SELECT approx_top_k_estimate(approx_top_k_accumulate(value % 256, 1e308, 5)) FROM generate_series(0, 511)`, `[]`},
 		{`SELECT approx_top_k('a', 5) FROM generate_series(1, 3)`, `[["a",3]]`},
 		{`SELECT approx_top_k(value, 5) FROM (SELECT 1.5 AS value UNION ALL SELECT 1.5)`, `[[1.5,2]]`},
 	}
@@ -353,7 +362,7 @@ func TestRegister_top_large(t *testing.T) {
 
 	// Sliding window over >2 distinct items (exercises unit + summary Combine in twoStack.Inverse).
 	stmt, _, err = db.Prepare(`
-		SELECT approx_top_k(CASE WHEN value % 3 = 0 THEN value + 0.5 ELSE value END, value % 5 + 3)
+		SELECT approx_top_k(CASE WHEN value % 3 = 0 THEN value + 0.5 ELSE value END, 5)
 			OVER (ROWS BETWEEN 5 PRECEDING AND 1 FOLLOWING)
 		FROM generate_series(1, 30)`)
 	if err != nil {
