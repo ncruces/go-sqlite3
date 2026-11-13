@@ -54,13 +54,15 @@ func AppendNumber(dst []byte, f float64) []byte {
 }
 
 func AppendQuote(dst []byte, src string) ([]byte, error) {
-	for i := range len(src) {
-		if c := src[i]; c < 0x20 || c >= 0x7f || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
-			b, err := json.Marshal(src)
-			return append(dst, b...), err
-		}
-	}
-	dst = append(dst, '"')
-	dst = append(dst, src...)
-	return append(dst, '"'), nil
+	err := json.NewEncoder(JSONWriter(func(p []byte) error {
+		dst = append(dst, p...)
+		return nil
+	})).Encode(src)
+	return dst, err
+}
+
+type JSONWriter func(p []byte) error
+
+func (fn JSONWriter) Write(p []byte) (int, error) {
+	return len(p), fn(p[:len(p)-1]) // remove the newline
 }

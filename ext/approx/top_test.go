@@ -424,20 +424,20 @@ func TestRegister_top_errors(t *testing.T) {
 		`SELECT approx_top_k_estimate('not a blob', 5)`,
 		`SELECT approx_top_k_estimate(X'00')`,
 		`SELECT approx_top_k_estimate(X'16')`,
-		`SELECT approx_top_k_estimate(X'160001')`,                 // trailing byte after K=0
-		`SELECT approx_top_k_estimate(X'1600', 0)`,                // K=0 on empty sketch
-		`SELECT approx_top_k_estimate(X'1600', 4001)`,             // K>topMaxC on empty sketch
-		`SELECT approx_top_k_estimate(X'16EA07800100')`,           // K=1002 > topMaxK
-		`SELECT approx_top_k_estimate(X'160A0500')`,               // C=5 < K=10
-		`SELECT approx_top_k_estimate(X'1601A11F00')`,             // C=4001 > topMaxC
-		`SELECT approx_top_k_estimate(X'160180018202')`,           // count=129 > C=128
-		`SELECT approx_top_k_estimate(X'1601800101')`,             // hasOffset=1, missing offset
-		`SELECT approx_top_k_estimate(X'16018001010000000000000000')`, // hasOffset=1, offset=0
-		`SELECT approx_top_k_estimate(X'1601800102080001')`,       // reserved tag bit set (0x08)
-		`SELECT approx_top_k_estimate(X'1601800102030001')`,       // invalid keyType=3
-		`SELECT approx_top_k_estimate(X'1601800102000200')`,       // integer weight u=0
+		`SELECT approx_top_k_estimate(X'160001')`,                         // trailing byte after K=0
+		`SELECT approx_top_k_estimate(X'1600', 0)`,                        // K=0 on empty sketch
+		`SELECT approx_top_k_estimate(X'1600', 4001)`,                     // K>topMaxC on empty sketch
+		`SELECT approx_top_k_estimate(X'16EA07800100')`,                   // K=1002 > topMaxK
+		`SELECT approx_top_k_estimate(X'160A0500')`,                       // C=5 < K=10
+		`SELECT approx_top_k_estimate(X'1601A11F00')`,                     // C=4001 > topMaxC
+		`SELECT approx_top_k_estimate(X'160180018202')`,                   // count=129 > C=128
+		`SELECT approx_top_k_estimate(X'1601800101')`,                     // hasOffset=1, missing offset
+		`SELECT approx_top_k_estimate(X'16018001010000000000000000')`,     // hasOffset=1, offset=0
+		`SELECT approx_top_k_estimate(X'1601800102080001')`,               // reserved tag bit set (0x08)
+		`SELECT approx_top_k_estimate(X'1601800102030001')`,               // invalid keyType=3
+		`SELECT approx_top_k_estimate(X'1601800102000200')`,               // integer weight u=0
 		`SELECT approx_top_k_estimate(X'160180010201000000000000F03F01')`, // integral float 1.0 in FLOAT key
-		`SELECT approx_top_k_estimate(X'1601800104000201000201')`, // duplicate int key 1
+		`SELECT approx_top_k_estimate(X'1601800104000201000201')`,         // duplicate int key 1
 		`SELECT approx_top_k_estimate(approx_top_k_accumulate(1, 5), 0)`,
 		`SELECT approx_top_k_estimate(approx_top_k_accumulate(1, 5), 129)`, // > C=128
 		`SELECT approx_top_k_estimate(approx_count_distinct_accumulate(1))`,
