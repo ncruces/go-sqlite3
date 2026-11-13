@@ -177,7 +177,7 @@ func hllEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 }
 
 func hllFromBytes(data []byte) (hll.Hll, error) {
-	if len(data) > 0 && data[0] == reqHeader {
+	if len(data) > 0 && (data[0] == reqHeader || data[0] == topHeader) {
 		return hll.Hll{}, errutil.ErrorString("not an HLL sketch")
 	}
 	return hll.FromBytes(data)
