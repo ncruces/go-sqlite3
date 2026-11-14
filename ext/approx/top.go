@@ -16,12 +16,19 @@ import (
 	"github.com/ncruces/sort/quick"
 )
 
+type topTag uint8
+
 const (
-	topHeader      = 1<<4 | 6 // HLL version 1, with an unassigned storage type
-	topMaxK        = 1000
-	topMinC        = 128
-	topMaxC        = 4 * topMaxK
-	topSummaryTag  = 0xff
+	topHeader = 1<<4 | 6 // HLL version 1, with an unassigned storage type
+	topMaxK   = 1000
+	topMinC   = 128
+	topMaxC   = 4 * topMaxK
+
+	topIntTag     topTag = 1
+	topRealTag    topTag = 2
+	topTextTag    topTag = 3
+	topSummaryTag topTag = 0xff
+
 	errInvalidTopK = errutil.ErrorString("approx: invalid top-K sketch")
 )
 
@@ -30,22 +37,22 @@ func topCap(k int16) int16 {
 }
 
 type topSketch struct {
-	ptr    unsafe.Pointer // nil (empty/num), unsafe.StringData(str) (TEXT), or *topSummary
-	num    uint64         // int64 bits (INTEGER), float64 bits (FLOAT), or len(str) (TEXT)
+	ptr    unsafe.Pointer // nil, unsafe.StringData(str), or *topSummary
+	bits   uint64         // int64, float64, or len(str)
 	weight float64        // inline weight in unit state (> 0)
-	k      int16          // target K in [1, 1000] (0 if Step never ran)
-	typ    uint8          // 0 (empty), INTEGER, FLOAT, TEXT, or topSummaryTag
+	k      int16          // target K, or 0 if Step never ran
+	typ    topTag
 }
 
 func (b *topSketch) summary() *topSummary {
 	return (*topSummary)(b.ptr)
 }
 
-func (b *topSketch) unitStr() string {
-	if b.typ != uint8(sqlite3.TEXT) {
+func (b *topSketch) string() string {
+	if b.typ != topTextTag {
 		return ""
 	}
-	return unsafe.String((*byte)(b.ptr), int(b.num))
+	return unsafe.String((*byte)(b.ptr), int(b.bits))
 }
 
 func (b *topSketch) Value(ctx sqlite3.Context) {
@@ -53,22 +60,16 @@ func (b *topSketch) Value(ctx sqlite3.Context) {
 	case 0:
 		return
 	case topSummaryTag:
-		b.summary().evalResult(ctx, int(b.summary().k))
+		s := b.summary()
+		entries, offset := s.entries()
+		evalEntries(ctx, entries, offset, int(s.k))
 	default:
-		var buf [64]byte
-		out, err := appendEntryJSON(append(buf[:0], '['), topEntry{
-			str:    b.unitStr(),
-			num:    b.num,
+		evalEntries(ctx, []topEntry{{
+			str:    b.string(),
+			num:    b.bits,
 			weight: b.weight,
 			typ:    b.typ,
-		}, 0)
-		if err != nil {
-			ctx.ResultError(err)
-			return
-		}
-		out = append(out, ']')
-		ctx.ResultRawText(out)
-		ctx.ResultSubtype('J')
+		}}, 0, 1)
 	}
 }
 
@@ -106,123 +107,88 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	case sqlite3.NULL:
 		return
 	case sqlite3.INTEGER:
-		b.insertNum(uint8(sqlite3.INTEGER), uint64(arg[0].Int64()), w)
+		b.insert(topIntTag, uint64(arg[0].Int64()), "", w)
 	case sqlite3.FLOAT:
 		f := arg[0].Float()
-		if i, ok := floatIsInt64(f); ok {
-			b.insertNum(uint8(sqlite3.INTEGER), uint64(i), w)
+		if i, ok := floatIsInt(f); ok {
+			b.insert(topIntTag, uint64(i), "", w)
 		} else {
-			b.insertNum(uint8(sqlite3.FLOAT), math.Float64bits(f), w)
+			b.insert(topRealTag, math.Float64bits(f), "", w)
 		}
 	case sqlite3.TEXT:
-		b.insertRawText(arg[0].RawText(), w)
+		raw := arg[0].RawText()
+		if b.typ == topTextTag && string(raw) == b.string() {
+			b.weight += w
+		} else {
+			b.insert(topTextTag, uint64(len(raw)), string(raw), w)
+		}
 	}
 }
 
-func (b *topSketch) insertNum(typ uint8, num uint64, w float64) {
+func (b *topSketch) insert(typ topTag, num uint64, str string, w float64) {
 	switch b.typ {
 	case 0:
 		b.typ = typ
-		b.num = num
+		b.bits = num
+		if typ == topTextTag {
+			b.ptr = unsafe.Pointer(unsafe.StringData(str))
+		}
 		b.weight = w
 	case topSummaryTag:
-		b.summary().addNum(typ, num, w)
+		b.summary().add(typ, num, str, w)
 	default:
-		if b.typ == typ && b.num == num {
+		if b.typ == typ && (typ == topTextTag && str == b.string() || typ != topTextTag && num == b.bits) {
 			b.weight += w
 			return
 		}
-		s := b.promote()
-		s.addNum(typ, num, w)
+		s := &topSummary{k: b.k, c: topCap(b.k)}
+		s.add(b.typ, b.bits, b.string(), b.weight)
+		s.add(typ, num, str, w)
+		*b = topSketch{ptr: unsafe.Pointer(s), typ: topSummaryTag}
 	}
-}
-
-func (b *topSketch) insertRawText(raw []byte, w float64) {
-	if b.typ == uint8(sqlite3.TEXT) && string(raw) == b.unitStr() {
-		b.weight += w
-		return
-	}
-	b.insertText(string(raw), w)
-}
-
-func (b *topSketch) insertText(str string, w float64) {
-	switch b.typ {
-	case 0:
-		b.typ = uint8(sqlite3.TEXT)
-		b.ptr = unsafe.Pointer(unsafe.StringData(str))
-		b.num = uint64(len(str))
-		b.weight = w
-	case topSummaryTag:
-		b.summary().addText(str, w)
-	default:
-		if b.typ == uint8(sqlite3.TEXT) && str == b.unitStr() {
-			b.weight += w
-			return
-		}
-		s := b.promote()
-		s.addText(str, w)
-	}
-}
-
-func (b *topSketch) promote() *topSummary {
-	s := &topSummary{k: b.k, c: topCap(b.k)}
-	if b.typ == uint8(sqlite3.TEXT) {
-		s.addText(b.unitStr(), b.weight)
-	} else {
-		s.addNum(b.typ, b.num, b.weight)
-	}
-	*b = topSketch{
-		ptr: unsafe.Pointer(s),
-		typ: topSummaryTag,
-	}
-	return s
 }
 
 func (b *topSketch) Combine(other topSketch) {
-	if other.typ == 0 {
-		if b.k == 0 && b.typ != topSummaryTag {
-			b.k = other.k
-		}
-		return
-	}
 	if b.k == 0 && b.typ != topSummaryTag {
 		b.k = other.k
 	}
 	switch other.typ {
-	case uint8(sqlite3.INTEGER), uint8(sqlite3.FLOAT):
-		b.insertNum(other.typ, other.num, other.weight)
-	case uint8(sqlite3.TEXT):
-		b.insertText(other.unitStr(), other.weight)
+	case 0:
+		return
 	case topSummaryTag:
 		os := other.summary()
 		switch b.typ {
 		case 0:
-			*b = topSketch{
-				ptr: unsafe.Pointer(os.clone()),
-				typ: topSummaryTag,
-			}
+			*b = topSketch{ptr: unsafe.Pointer(os.clone()), typ: topSummaryTag}
 		case topSummaryTag:
 			b.summary().merge(os)
 		default:
 			s := os.clone()
-			if b.typ == uint8(sqlite3.TEXT) {
-				s.addText(b.unitStr(), b.weight)
-			} else {
-				s.addNum(b.typ, b.num, b.weight)
-			}
-			*b = topSketch{
-				ptr: unsafe.Pointer(s),
-				typ: topSummaryTag,
-			}
+			s.add(b.typ, b.bits, b.string(), b.weight)
+			*b = topSketch{ptr: unsafe.Pointer(s), typ: topSummaryTag}
 		}
+	default:
+		b.insert(other.typ, other.bits, other.string(), other.weight)
 	}
 }
 
 type topAccumulate struct{ topSketch }
 
 func (b *topAccumulate) Value(ctx sqlite3.Context) {
-	var buf [16]byte // fits empty and single-row numeric sketches
-	ctx.ResultBlob(b.appendBytes(buf[:0]))
+	var buf [32]byte // fits empty and single-row numeric sketches
+	switch b.typ {
+	case 0:
+		ctx.ResultBlob(appendSketchBytes(buf[:0], nil, 0, b.k, topCap(b.k)))
+	case topSummaryTag:
+		ctx.ResultBlob(b.summary().appendBytes(buf[:0]))
+	default:
+		ctx.ResultBlob(appendSketchBytes(buf[:0], []topEntry{{
+			str:    b.string(),
+			num:    b.bits,
+			weight: b.weight,
+			typ:    b.typ,
+		}}, 0, b.k, topCap(b.k)))
+	}
 }
 
 func (b *topAccumulate) Combine(other topAccumulate) {
@@ -235,7 +201,7 @@ type topCombine struct {
 
 func (b *topCombine) Value(ctx sqlite3.Context) {
 	if b.sketch != nil {
-		var buf [16]byte
+		var buf [32]byte
 		ctx.ResultBlob(b.sketch.appendBytes(buf[:0]))
 	}
 }
@@ -301,7 +267,8 @@ func topEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 				return
 			}
 		}
-		sketch.evalResult(ctx, k)
+		entries, offset := sketch.entries()
+		evalEntries(ctx, entries, offset, k)
 	default:
 		ctx.ResultError(fmt.Errorf("approx: invalid type: %v", t))
 	}
@@ -322,16 +289,15 @@ func (s *topSummary) len() int {
 	return len(s.ints) + len(s.reals) + len(s.texts)
 }
 
-func (s *topSummary) addNum(typ uint8, num uint64, w float64) {
-	if typ == uint8(sqlite3.INTEGER) {
+func (s *topSummary) add(typ topTag, num uint64, str string, w float64) {
+	switch typ {
+	case topIntTag:
 		addMap(s, &s.ints, int64(num), w)
-	} else {
+	case topRealTag:
 		addMap(s, &s.reals, math.Float64frombits(num), w)
+	default:
+		addMap(s, &s.texts, str, w)
 	}
-}
-
-func (s *topSummary) addText(k string, w float64) {
-	addMap(s, &s.texts, k, w)
 }
 
 func addMap[K comparable](s *topSummary, m *map[K]float64, k K, w float64) {
@@ -352,6 +318,7 @@ func (s *topSummary) purge() {
 	if n <= int(s.c) {
 		return
 	}
+
 	w := slices.Grow(s.scratch[:0], n)
 	for _, v := range s.ints {
 		w = append(w, v)
@@ -362,23 +329,13 @@ func (s *topSummary) purge() {
 	for _, v := range s.texts {
 		w = append(w, v)
 	}
+	s.scratch = w[:0]
 
 	delta := quick.Select(w, len(w)-int(s.c)-1)
-	s.offset += delta
 	purgeMap(s.ints, delta)
 	purgeMap(s.reals, delta)
 	purgeMap(s.texts, delta)
-	s.scratch = w[:0]
-}
-
-func purgeMap[K comparable](m map[K]float64, delta float64) {
-	for k, v := range m {
-		if v <= delta {
-			delete(m, k)
-		} else {
-			m[k] = v - delta
-		}
-	}
+	s.offset += delta
 }
 
 func (s *topSummary) clone() *topSummary {
@@ -411,6 +368,16 @@ func (s *topSummary) merge(other *topSummary) {
 	}
 }
 
+func purgeMap[K comparable](m map[K]float64, delta float64) {
+	for k, v := range m {
+		if v <= delta {
+			delete(m, k)
+		} else {
+			m[k] = v - delta
+		}
+	}
+}
+
 func mergeMap[K comparable](dst *map[K]float64, src map[K]float64) {
 	if len(src) == 0 {
 		return
@@ -428,45 +395,30 @@ type topEntry struct {
 	str    string
 	num    uint64
 	weight float64
-	typ    uint8
+	typ    topTag
 }
 
 func cmpEntry(a, b topEntry) int {
 	if c := cmp.Compare(b.weight, a.weight); c != 0 {
 		return c
 	}
-	aText := a.typ == uint8(sqlite3.TEXT)
-	bText := b.typ == uint8(sqlite3.TEXT)
-	if aText != bText {
-		if aText {
-			return +1
-		}
-		return -1
-	}
-	if aText {
-		return cmp.Compare(a.str, b.str)
-	}
 	if a.typ == b.typ {
-		if a.typ == uint8(sqlite3.INTEGER) {
+		switch a.typ {
+		case topIntTag:
 			return cmp.Compare(int64(a.num), int64(b.num))
+		case topRealTag:
+			return cmp.Compare(math.Float64frombits(a.num), math.Float64frombits(b.num))
+		default:
+			return cmp.Compare(a.str, b.str)
 		}
-		return cmp.Compare(math.Float64frombits(a.num), math.Float64frombits(b.num))
 	}
-	// Mixed INTEGER and non-integral FLOAT.
-	if a.typ == uint8(sqlite3.INTEGER) {
-		fi := float64(int64(a.num))
-		f := math.Float64frombits(b.num)
-		if fi != f {
-			return cmp.Compare(fi, f)
-		}
-		return -1 // f == 2^63 > MaxInt64
+	if a.typ == topTextTag || b.typ == topTextTag {
+		return cmp.Compare(a.typ, b.typ)
 	}
-	fi := float64(int64(b.num))
-	f := math.Float64frombits(a.num)
-	if fi != f {
-		return cmp.Compare(f, fi)
+	if a.typ == topIntTag {
+		return cmpIntFloat(int64(a.num), math.Float64frombits(b.num))
 	}
-	return +1
+	return -cmpIntFloat(int64(b.num), math.Float64frombits(a.num))
 }
 
 func (s *topSummary) entries() ([]topEntry, float64) {
@@ -476,13 +428,13 @@ func (s *topSummary) entries() ([]topEntry, float64) {
 	}
 	out := make([]topEntry, 0, n)
 	for k, v := range s.ints {
-		out = append(out, topEntry{num: uint64(k), weight: v, typ: uint8(sqlite3.INTEGER)})
+		out = append(out, topEntry{num: uint64(k), weight: v, typ: topIntTag})
 	}
 	for k, v := range s.reals {
-		out = append(out, topEntry{num: math.Float64bits(k), weight: v, typ: uint8(sqlite3.FLOAT)})
+		out = append(out, topEntry{num: math.Float64bits(k), weight: v, typ: topRealTag})
 	}
 	for k, v := range s.texts {
-		out = append(out, topEntry{str: k, weight: v, typ: uint8(sqlite3.TEXT)})
+		out = append(out, topEntry{str: k, weight: v, typ: topTextTag})
 	}
 	offset := s.offset
 	if len(out) > int(s.c) {
@@ -507,8 +459,7 @@ func (s *topSummary) entries() ([]topEntry, float64) {
 	return out, offset
 }
 
-func (s *topSummary) evalResult(ctx sqlite3.Context, k int) {
-	entries, offset := s.entries()
+func evalEntries(ctx sqlite3.Context, entries []topEntry, offset float64, k int) {
 	if len(entries) == 0 && offset == 0 {
 		return
 	}
@@ -520,213 +471,114 @@ func (s *topSummary) evalResult(ctx sqlite3.Context, k int) {
 			out = append(out, ',')
 		}
 		var err error
-		out, err = appendEntryJSON(out, e, offset)
-		if err != nil {
-			ctx.ResultError(err)
-			return
+		out = append(out, '[')
+		switch e.typ {
+		case topIntTag:
+			out = strconv.AppendInt(out, int64(e.num), 10)
+		case topRealTag:
+			out = appendJSONFloat(out, math.Float64frombits(e.num))
+		default:
+			out, err = util.AppendQuote(out, e.str)
+			if err != nil {
+				ctx.ResultError(err)
+				return
+			}
 		}
+		out = append(out, ',')
+		out = appendJSONFloat(out, e.weight+offset)
+		out = append(out, ']')
 	}
 	out = append(out, ']')
 	ctx.ResultRawText(out)
 	ctx.ResultSubtype('J')
 }
 
-func appendEntryJSON(dst []byte, e topEntry, offset float64) ([]byte, error) {
-	var err error
-	dst = append(dst, '[')
-	switch sqlite3.Datatype(e.typ) {
-	case sqlite3.INTEGER:
-		dst = strconv.AppendInt(dst, int64(e.num), 10)
-	case sqlite3.FLOAT:
-		dst = appendJSONFloat(dst, math.Float64frombits(e.num))
-	default:
-		dst, err = util.AppendQuote(dst, e.str)
-	}
-	dst = append(dst, ',')
-	dst = appendJSONFloat(dst, e.weight+offset)
-	return append(dst, ']'), err
-}
-
 func appendJSONFloat(dst []byte, f float64) []byte {
-	if i, ok := floatIsInt64(f); ok {
+	if i, ok := floatIsInt(f); ok {
 		return strconv.AppendInt(dst, i, 10)
 	}
 	return util.AppendNumber(dst, f)
 }
 
-const (
-	topKeyInt   = 0
-	topKeyFloat = 1
-	topKeyText  = 2
-	topWeightF  = 1 << 2
-)
-
-func (b *topSketch) appendBytes(out []byte) []byte {
-	switch b.typ {
-	case 0:
-		if b.k == 0 {
-			return append(out, topHeader, 0)
-		}
-		out = append(out, topHeader)
-		out = binary.AppendUvarint(out, uint64(b.k))
-		out = binary.AppendUvarint(out, uint64(topCap(b.k)))
-		return binary.AppendUvarint(out, 0)
-	case topSummaryTag:
-		return b.summary().appendBytes(out)
-	default:
-		out = append(out, topHeader)
-		out = binary.AppendUvarint(out, uint64(b.k))
-		out = binary.AppendUvarint(out, uint64(topCap(b.k)))
-		out = binary.AppendUvarint(out, 1<<1) // count=1, hasOffset=0
-		return appendEntry(out, topEntry{
-			str:    b.unitStr(),
-			num:    b.num,
-			weight: b.weight,
-			typ:    b.typ,
-		})
-	}
-}
-
 func (s *topSummary) appendBytes(out []byte) []byte {
-	if s.k == 0 {
-		return append(out, topHeader, 0)
-	}
 	entries, offset := s.entries()
-	out = slices.Grow(out, 6+12*len(entries))
-	out = append(out, topHeader)
-	out = binary.AppendUvarint(out, uint64(s.k))
-	out = binary.AppendUvarint(out, uint64(s.c))
-	hdr := uint64(len(entries)) << 1
-	if offset > 0 {
-		hdr |= 1
-	}
-	out = binary.AppendUvarint(out, hdr)
-	if offset > 0 {
-		out = binary.LittleEndian.AppendUint64(out, math.Float64bits(offset))
-	}
-	for _, e := range entries {
-		out = appendEntry(out, e)
-	}
-	return out
+	return appendSketchBytes(out, entries, offset, s.k, s.c)
 }
 
-func appendEntry(out []byte, e topEntry) []byte {
-	var tag byte
-	switch sqlite3.Datatype(e.typ) {
-	case sqlite3.INTEGER:
-		tag = topKeyInt
-	case sqlite3.FLOAT:
-		tag = topKeyFloat
-	default:
-		tag = topKeyText
+func appendSketchBytes(out []byte, entries []topEntry, offset float64, k, c int16) []byte {
+	if k == 0 {
+		return append(out, topHeader)
 	}
-	wi, intWeight := floatIsInt64(e.weight)
-	if !intWeight || wi <= 0 {
-		tag |= topWeightF
-	}
-	out = append(out, tag)
-
-	switch sqlite3.Datatype(e.typ) {
-	case sqlite3.INTEGER:
-		out = binary.AppendVarint(out, int64(e.num))
-	case sqlite3.FLOAT:
-		out = binary.LittleEndian.AppendUint64(out, e.num)
-	default:
-		out = binary.AppendUvarint(out, uint64(len(e.str)))
-		out = append(out, e.str...)
-	}
-
-	if tag&topWeightF == 0 {
-		out = binary.AppendUvarint(out, uint64(wi))
-	} else {
+	out = slices.Grow(out, 15+17*len(entries))
+	out = append(out, topHeader)
+	out = binary.LittleEndian.AppendUint16(out, uint16(k))
+	out = binary.LittleEndian.AppendUint16(out, uint16(c))
+	out = binary.LittleEndian.AppendUint16(out, uint16(len(entries)))
+	out = binary.LittleEndian.AppendUint64(out, math.Float64bits(offset))
+	for _, e := range entries {
+		out = append(out, byte(e.typ))
 		out = binary.LittleEndian.AppendUint64(out, math.Float64bits(e.weight))
+		if e.typ == topTextTag {
+			out = binary.AppendUvarint(out, uint64(len(e.str)))
+			out = append(out, e.str...)
+		} else {
+			out = binary.LittleEndian.AppendUint64(out, e.num)
+		}
 	}
 	return out
 }
 
 func topFromBytes(data []byte) (*topSummary, error) {
-	if len(data) < 2 {
+	if len(data) == 0 {
 		return nil, errutil.ErrorString("approx: insufficient bytes to deserialize top-K sketch")
 	}
 	if data[0] != topHeader {
 		return nil, errutil.ErrorString("approx: not a top-K sketch")
 	}
-	rest := data[1:]
-
-	k, n := binary.Uvarint(rest)
-	if n <= 0 {
-		return nil, errInvalidTopK
-	}
-	rest = rest[n:]
-	if k == 0 {
-		if len(rest) != 0 {
-			return nil, errInvalidTopK
-		}
+	if len(data) == 1 {
 		return &topSummary{}, nil
 	}
-	if k > topMaxK {
+	if len(data) < 15 {
 		return nil, errInvalidTopK
 	}
 
-	c, n := binary.Uvarint(rest)
-	if n <= 0 || c < k || c > topMaxC {
+	k := binary.LittleEndian.Uint16(data[1:])
+	c := binary.LittleEndian.Uint16(data[3:])
+	count := binary.LittleEndian.Uint16(data[5:])
+	off := math.Float64frombits(binary.LittleEndian.Uint64(data[7:]))
+	if k == 0 || k > topMaxK || c < k || c > topMaxC || count > c || !(off >= 0) {
 		return nil, errInvalidTopK
 	}
-	rest = rest[n:]
 
-	hdr, n := binary.Uvarint(rest)
-	if n <= 0 {
-		return nil, errInvalidTopK
-	}
-	rest = rest[n:]
-
-	count := hdr >> 1
-	hasOffset := hdr&1 != 0
-	if count > c {
+	rest := data[15:]
+	if len(rest)/10 < int(count) {
 		return nil, errInvalidTopK
 	}
 
 	s := &topSummary{k: int16(k), c: int16(c)}
-	if hasOffset {
-		if len(rest) < 8 {
-			return nil, errInvalidTopK
-		}
-		off := math.Float64frombits(binary.LittleEndian.Uint64(rest))
-		if !(off > 0) {
-			return nil, errInvalidTopK
-		}
+	if off > 0 {
 		s.offset = off
-		rest = rest[8:]
 	}
-	if uint64(len(rest))/3 < count {
-		return nil, errInvalidTopK
-	}
-
 	for range count {
-		if len(rest) == 0 {
+		if len(rest) < 10 {
 			return nil, errInvalidTopK
 		}
-		tag := rest[0]
-		rest = rest[1:]
-		if tag & ^byte(0x07) != 0 {
+		typ := topTag(rest[0])
+		w := math.Float64frombits(binary.LittleEndian.Uint64(rest[1:]))
+		if !(w > 0) {
 			return nil, errInvalidTopK
 		}
+		rest = rest[9:]
 
-		var (
-			iKey int64
-			fKey float64
-			sKey string
-		)
-		keyType := tag & 0x03
-		switch keyType {
-		case topKeyInt:
-			v, n := binary.Varint(rest)
-			if n <= 0 {
+		var ok bool
+		switch typ {
+		case topIntTag:
+			if len(rest) < 8 {
 				return nil, errInvalidTopK
 			}
-			iKey = v
-			rest = rest[n:]
-		case topKeyFloat:
+			ok = putUnique(&s.ints, int64(binary.LittleEndian.Uint64(rest)), w)
+			rest = rest[8:]
+		case topRealTag:
 			if len(rest) < 8 {
 				return nil, errInvalidTopK
 			}
@@ -734,70 +586,38 @@ func topFromBytes(data []byte) (*topSummary, error) {
 			if math.IsNaN(f) {
 				return nil, errInvalidTopK
 			}
-			if _, ok := floatIsInt64(f); ok {
+			if _, isInt := floatIsInt(f); isInt {
 				return nil, errInvalidTopK
 			}
-			fKey = f
+			ok = putUnique(&s.reals, f, w)
 			rest = rest[8:]
-		case topKeyText:
+		case topTextTag:
 			strLen, n := binary.Uvarint(rest)
 			if n <= 0 || uint64(len(rest)-n) < strLen {
 				return nil, errInvalidTopK
 			}
 			rest = rest[n:]
-			sKey = string(rest[:strLen])
+			ok = putUnique(&s.texts, string(rest[:strLen]), w)
 			rest = rest[strLen:]
 		default:
 			return nil, errInvalidTopK
 		}
-
-		var weight float64
-		if tag&topWeightF == 0 {
-			u, n := binary.Uvarint(rest)
-			if n <= 0 || u == 0 {
-				return nil, errInvalidTopK
-			}
-			weight = float64(u)
-			rest = rest[n:]
-		} else {
-			if len(rest) < 8 {
-				return nil, errInvalidTopK
-			}
-			w := math.Float64frombits(binary.LittleEndian.Uint64(rest))
-			if !(w > 0) {
-				return nil, errInvalidTopK
-			}
-			weight = w
-			rest = rest[8:]
-		}
-
-		switch keyType {
-		case topKeyInt:
-			if s.ints == nil {
-				s.ints = make(map[int64]float64)
-			} else if _, dup := s.ints[iKey]; dup {
-				return nil, errInvalidTopK
-			}
-			s.ints[iKey] = weight
-		case topKeyFloat:
-			if s.reals == nil {
-				s.reals = make(map[float64]float64)
-			} else if _, dup := s.reals[fKey]; dup {
-				return nil, errInvalidTopK
-			}
-			s.reals[fKey] = weight
-		case topKeyText:
-			if s.texts == nil {
-				s.texts = make(map[string]float64)
-			} else if _, dup := s.texts[sKey]; dup {
-				return nil, errInvalidTopK
-			}
-			s.texts[sKey] = weight
+		if !ok {
+			return nil, errInvalidTopK
 		}
 	}
-
 	if len(rest) != 0 {
 		return nil, errInvalidTopK
 	}
 	return s, nil
+}
+
+func putUnique[K comparable](m *map[K]float64, k K, w float64) bool {
+	if *m == nil {
+		*m = make(map[K]float64)
+	} else if _, dup := (*m)[k]; dup {
+		return false
+	}
+	(*m)[k] = w
+	return true
 }

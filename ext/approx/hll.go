@@ -197,7 +197,7 @@ func hashValue(seed uint64, val sqlite3.Value) uint64 {
 	case sqlite3.FLOAT:
 		var u uint64
 		f := val.Float()
-		if i, ok := floatIsInt64(f); ok {
+		if i, ok := floatIsInt(f); ok {
 			u = uint64(i)
 		} else {
 			seed ^= 2
@@ -211,11 +211,4 @@ func hashValue(seed uint64, val sqlite3.Value) uint64 {
 		data = val.RawBlob()
 	}
 	return murmur3.SeedSum64(seed, data)
-}
-
-func floatIsInt64(f float64) (int64, bool) {
-	// math.MaxInt64 is not exactly representable as a float64 (it rounds to 2^63),
-	// but int64(2^63) may saturate back to math.MaxInt64.
-	i := int64(f)
-	return i, float64(i) == f && i != math.MaxInt64
 }
