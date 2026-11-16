@@ -92,7 +92,7 @@ func floatIsInt(f float64) (int64, bool) {
 }
 
 func cmpIntFloat(i int64, f float64) int {
-	// Assumes both floatIsInt(f) and IsNan(f) are false.
+	// Assumes both floatIsInt(f) and IsNaN(f) are false.
 	if c := cmp.Compare(float64(i), f); c != 0 {
 		return c
 	}

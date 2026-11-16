@@ -24,6 +24,7 @@ const (
 	topMinC   = 128
 	topMaxC   = 4 * topMaxK
 
+	topEmptyTag   topTag = 0
 	topIntTag     topTag = 1
 	topRealTag    topTag = 2
 	topTextTag    topTag = 3
@@ -39,8 +40,8 @@ func topCap(k int16) int16 {
 type topSketch struct {
 	ptr    unsafe.Pointer // nil, unsafe.StringData(str), or *topSummary
 	bits   uint64         // int64, float64, or len(str)
-	weight float64        // inline weight in unit state (> 0)
-	k      int16          // target K, or 0 if Step never ran
+	weight float64        // inline weight in unit state
+	k      int16          // target K, 0 if Step never ran
 	typ    topTag
 }
 
@@ -57,7 +58,7 @@ func (b *topSketch) string() string {
 
 func (b *topSketch) Value(ctx sqlite3.Context) {
 	switch b.typ {
-	case 0:
+	case topEmptyTag:
 		return
 	case topSummaryTag:
 		s := b.summary()
@@ -78,15 +79,9 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		k := arg[len(arg)-1].Int()
 		if k < 1 || k > topMaxK {
 			ctx.ResultError(fmt.Errorf("approx: invalid k: %d", k))
-			return
+			return // notest
 		}
 		b.k = int16(k)
-	}
-
-	t := arg[0].Type()
-	if t == sqlite3.BLOB {
-		ctx.ResultError(errutil.ErrorString("approx: JSON cannot hold BLOB values"))
-		return
 	}
 
 	w := 1.0
@@ -95,17 +90,16 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			return
 		}
 		w = arg[1].Float()
-		if w <= 0 || math.IsInf(w, 1) {
-			if w < 0 || math.IsInf(w, 1) {
-				ctx.ResultError(fmt.Errorf("approx: invalid weight: %g", w))
-			}
+		if w == 0 {
 			return
+		}
+		if w < 0 || math.IsInf(w, 1) {
+			ctx.ResultError(fmt.Errorf("approx: invalid weight: %g", w))
+			return // notest
 		}
 	}
 
-	switch t {
-	case sqlite3.NULL:
-		return
+	switch arg[0].Type() {
 	case sqlite3.INTEGER:
 		b.insert(topIntTag, uint64(arg[0].Int64()), "", w)
 	case sqlite3.FLOAT:
@@ -122,29 +116,8 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		} else {
 			b.insert(topTextTag, uint64(len(raw)), string(raw), w)
 		}
-	}
-}
-
-func (b *topSketch) insert(typ topTag, num uint64, str string, w float64) {
-	switch b.typ {
-	case 0:
-		b.typ = typ
-		b.bits = num
-		if typ == topTextTag {
-			b.ptr = unsafe.Pointer(unsafe.StringData(str))
-		}
-		b.weight = w
-	case topSummaryTag:
-		b.summary().add(typ, num, str, w)
-	default:
-		if b.typ == typ && (typ == topTextTag && str == b.string() || typ != topTextTag && num == b.bits) {
-			b.weight += w
-			return
-		}
-		s := &topSummary{k: b.k, c: topCap(b.k)}
-		s.add(b.typ, b.bits, b.string(), b.weight)
-		s.add(typ, num, str, w)
-		*b = topSketch{ptr: unsafe.Pointer(s), typ: topSummaryTag}
+	case sqlite3.BLOB:
+		ctx.ResultError(errutil.ErrorString("approx: JSON cannot hold BLOB values"))
 	}
 }
 
@@ -153,22 +126,44 @@ func (b *topSketch) Combine(other topSketch) {
 		b.k = other.k
 	}
 	switch other.typ {
-	case 0:
+	case topEmptyTag:
 		return
 	case topSummaryTag:
 		os := other.summary()
-		switch b.typ {
-		case 0:
-			*b = topSketch{ptr: unsafe.Pointer(os.clone()), typ: topSummaryTag}
-		case topSummaryTag:
+		if b.typ == topSummaryTag {
 			b.summary().merge(os)
-		default:
-			s := os.clone()
-			s.add(b.typ, b.bits, b.string(), b.weight)
-			*b = topSketch{ptr: unsafe.Pointer(s), typ: topSummaryTag}
+			return
 		}
+		os = os.clone()
+		if b.typ != topEmptyTag {
+			os.add(b.typ, b.bits, b.string(), b.weight)
+		}
+		*b = topSketch{ptr: unsafe.Pointer(os), typ: topSummaryTag}
 	default:
 		b.insert(other.typ, other.bits, other.string(), other.weight)
+	}
+}
+
+func (b *topSketch) insert(typ topTag, num uint64, str string, w float64) {
+	switch b.typ {
+	case topSummaryTag:
+		b.summary().add(typ, num, str, w)
+	case topEmptyTag:
+		b.typ = typ
+		b.bits = num
+		b.weight = w
+		if typ == topTextTag {
+			b.ptr = unsafe.Pointer(unsafe.StringData(str))
+		}
+	default:
+		if b.typ == typ && (typ == topTextTag && str == b.string() || typ != topTextTag && num == b.bits) {
+			b.weight += w
+			return
+		}
+		s := topSummary{k: b.k, c: topCap(b.k)}
+		s.add(b.typ, b.bits, b.string(), b.weight)
+		s.add(typ, num, str, w)
+		*b = topSketch{ptr: unsafe.Pointer(&s), typ: topSummaryTag}
 	}
 }
 
@@ -177,7 +172,7 @@ type topAccumulate struct{ topSketch }
 func (b *topAccumulate) Value(ctx sqlite3.Context) {
 	var buf [32]byte // fits empty and single-row numeric sketches
 	switch b.typ {
-	case 0:
+	case topEmptyTag:
 		ctx.ResultBlob(appendSketchBytes(buf[:0], nil, 0, b.k, topCap(b.k)))
 	case topSummaryTag:
 		ctx.ResultBlob(b.summary().appendBytes(buf[:0]))
@@ -214,7 +209,7 @@ func (b *topCombine) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		other, err := topFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		if b.sketch == nil {
 			b.sketch = other
@@ -245,7 +240,7 @@ func topEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		sketch, err := topFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		var k int
 		if len(arg) == 1 {
@@ -261,7 +256,7 @@ func topEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 			}
 			if k < 1 || k > maxK {
 				ctx.ResultError(fmt.Errorf("approx: invalid k: %d", k))
-				return
+				return // notest
 			}
 			if sketch.k == 0 {
 				return
@@ -277,12 +272,11 @@ func topEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 // topSummary implements a weighted mergeable Misra-Gries frequent items summary
 // (Anderson et al., IMC 2017).
 type topSummary struct {
-	ints    map[int64]float64
-	reals   map[float64]float64
-	texts   map[string]float64
-	scratch []float64
-	offset  float64
-	k, c    int16
+	ints   map[int64]float64
+	reals  map[float64]float64
+	texts  map[string]float64
+	offset float64
+	k, c   int16
 }
 
 func (s *topSummary) len() int {
@@ -319,7 +313,9 @@ func (s *topSummary) purge() {
 		return
 	}
 
-	w := slices.Grow(s.scratch[:0], n)
+	p := getFloat64s(n)
+
+	w := (*p)[:0]
 	for _, v := range s.ints {
 		w = append(w, v)
 	}
@@ -329,13 +325,13 @@ func (s *topSummary) purge() {
 	for _, v := range s.texts {
 		w = append(w, v)
 	}
-	s.scratch = w[:0]
 
 	delta := quick.Select(w, len(w)-int(s.c)-1)
 	purgeMap(s.ints, delta)
 	purgeMap(s.reals, delta)
 	purgeMap(s.texts, delta)
 	s.offset += delta
+	returnFloat64s(p)
 }
 
 func (s *topSummary) clone() *topSummary {
@@ -438,12 +434,13 @@ func (s *topSummary) entries() ([]topEntry, float64) {
 	}
 	offset := s.offset
 	if len(out) > int(s.c) {
-		w := slices.Grow(s.scratch[:0], len(out))
+		p := getFloat64s(len(out))
+		w := (*p)[:0]
 		for i := range out {
 			w = append(w, out[i].weight)
 		}
 		delta := quick.Select(w, len(w)-int(s.c)-1)
-		s.scratch = w[:0]
+		returnFloat64s(p)
 		offset += delta
 		kept := 0
 		for _, e := range out {
@@ -476,12 +473,12 @@ func evalEntries(ctx sqlite3.Context, entries []topEntry, offset float64, k int)
 		case topIntTag:
 			out = strconv.AppendInt(out, int64(e.num), 10)
 		case topRealTag:
-			out = appendJSONFloat(out, math.Float64frombits(e.num))
+			out = util.AppendNumber(out, math.Float64frombits(e.num))
 		default:
 			out, err = util.AppendQuote(out, e.str)
 			if err != nil {
 				ctx.ResultError(err)
-				return
+				return // notest
 			}
 		}
 		out = append(out, ',')

@@ -123,7 +123,7 @@ func (b *hllCombine) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		other, err := hllFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(fmt.Errorf("approx: %w", err))
-			return
+			return // notest
 		}
 		if b.sketch == nil {
 			b.sketch = &other
@@ -168,7 +168,7 @@ func hllEstimate(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		sketch, err := hllFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(fmt.Errorf("approx: %w", err))
-			return
+			return // notest
 		}
 		ctx.ResultInt64(int64(sketch.Cardinality()))
 	default:
