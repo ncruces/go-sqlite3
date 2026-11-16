@@ -21,11 +21,11 @@ func (w welford) mean() float64 {
 }
 
 func (w welford) var_pop() float64 {
-	return w.m2.hi / float64(w.n)
+	return max(w.m2.hi, 0) / float64(w.n)
 }
 
 func (w welford) var_samp() float64 {
-	return w.m2.hi / float64(w.n-1) // Bessel's correction
+	return max(w.m2.hi, 0) / float64(w.n-1) // Bessel's correction
 }
 
 func (w welford) stddev_pop() float64 {
@@ -74,7 +74,11 @@ func (w welford2) covar_samp() float64 {
 }
 
 func (w welford2) correlation() float64 {
-	return w.cov.hi / math.Sqrt(w.m2y.hi*w.m2x.hi)
+	m2y := w.m2y.hi
+	if div := m2y * w.m2x.hi; m2y > 0 && div > 0 {
+		return max(-1, min(+1, w.cov.hi/math.Sqrt(div)))
+	}
+	return math.NaN()
 }
 
 func (w welford2) regr_avgy() float64 {
@@ -86,11 +90,11 @@ func (w welford2) regr_avgx() float64 {
 }
 
 func (w welford2) regr_syy() float64 {
-	return w.m2y.hi
+	return max(w.m2y.hi, 0)
 }
 
 func (w welford2) regr_sxx() float64 {
-	return w.m2x.hi
+	return max(w.m2x.hi, 0)
 }
 
 func (w welford2) regr_sxy() float64 {
@@ -102,7 +106,10 @@ func (w welford2) regr_count() int64 {
 }
 
 func (w welford2) regr_slope() float64 {
-	return w.cov.hi / w.m2x.hi
+	if div := w.m2x.hi; div > 0 {
+		return w.cov.hi / div
+	}
+	return math.NaN()
 }
 
 func (w welford2) regr_intercept() float64 {
@@ -113,7 +120,11 @@ func (w welford2) regr_intercept() float64 {
 }
 
 func (w welford2) regr_r2() float64 {
-	return w.cov.hi * w.cov.hi / (w.m2y.hi * w.m2x.hi)
+	m2y := w.m2y.hi
+	if div := m2y * w.m2x.hi; m2y > 0 && div > 0 {
+		return min(1, w.cov.hi*w.cov.hi/div)
+	}
+	return math.NaN()
 }
 
 func (w welford2) regr_json(dst []byte) []byte {

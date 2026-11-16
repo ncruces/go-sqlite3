@@ -52,3 +52,17 @@ func AppendNumber(dst []byte, f float64) []byte {
 	}
 	return dst
 }
+
+func AppendQuote(dst []byte, src string) ([]byte, error) {
+	err := json.NewEncoder(JSONWriter(func(p []byte) error {
+		dst = append(dst, p...)
+		return nil
+	})).Encode(src)
+	return dst, err
+}
+
+type JSONWriter func(p []byte) error
+
+func (fn JSONWriter) Write(p []byte) (int, error) {
+	return len(p), fn(p[:len(p)-1]) // remove the newline
+}

@@ -3,6 +3,7 @@
 package util
 
 import (
+	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"math"
 	"strconv"
@@ -51,4 +52,8 @@ func AppendNumber(dst []byte, f float64) []byte {
 		return strconv.AppendFloat(dst, f, 'g', -1, 64)
 	}
 	return dst
+}
+
+func AppendQuote(dst []byte, src string) ([]byte, error) {
+	return jsontext.AppendQuote(dst, src)
 }

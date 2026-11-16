@@ -116,7 +116,7 @@ func (b *reqSketch) evalResult(ctx sqlite3.Context, isQuantile bool) {
 	for i, a := range *b.args {
 		if err := check(a); err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		many[i] = eval(a)
 	}
@@ -184,7 +184,7 @@ func (b *reqCombine) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		other, err := reqFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		if b.sketch == nil {
 			b.sketch = other
@@ -223,7 +223,7 @@ func reqEstimate(ctx sqlite3.Context, arg []sqlite3.Value, isQuantile bool) {
 		sketch, err := reqFromBytes(arg[0].RawBlob())
 		if err != nil {
 			ctx.ResultError(err)
-			return
+			return // notest
 		}
 		var b reqSketch
 		b.sketch = sketch

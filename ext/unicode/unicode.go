@@ -169,7 +169,6 @@ var unaccentPool = sync.Pool{
 
 func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	unaccent := unaccentPool.Get().(transform.Transformer)
-	defer unaccentPool.Put(unaccent)
 
 	res, _, err := transform.Bytes(unaccent, arg[0].RawText())
 	if err != nil {
@@ -177,6 +176,8 @@ func unaccent(ctx sqlite3.Context, arg ...sqlite3.Value) {
 	} else {
 		ctx.ResultRawText(res)
 	}
+
+	unaccentPool.Put(unaccent)
 }
 
 func normalize(ctx sqlite3.Context, arg ...sqlite3.Value) {
