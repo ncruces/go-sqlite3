@@ -10,6 +10,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
+	"github.com/ncruces/go-sqlite3/internal/util"
 )
 
 var emptyHLL, _ = hll.NewHll(hll.Settings{
@@ -197,7 +198,7 @@ func hashValue(seed uint64, val sqlite3.Value) uint64 {
 	case sqlite3.FLOAT:
 		var u uint64
 		f := val.Float()
-		if i, ok := floatIsInt(f); ok {
+		if i, ok := util.FloatIsInt(f); ok {
 			u = uint64(i)
 		} else {
 			seed ^= 2

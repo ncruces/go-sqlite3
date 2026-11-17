@@ -313,7 +313,6 @@ func TestRegister_top_errors(t *testing.T) {
 		`SELECT approx_top_k(NULL, 0)`,
 		`SELECT approx_top_k(X'01', 5)`,
 		`SELECT approx_top_k(1, -0.5, 5)`,
-		`SELECT approx_top_k(1, 1e999, 5)`,
 		`SELECT approx_top_k_accumulate(1, 0)`,
 		`SELECT approx_top_k_accumulate(X'01', 5)`,
 		`SELECT approx_top_k_estimate('not a blob')`,
@@ -322,17 +321,20 @@ func TestRegister_top_errors(t *testing.T) {
 		`SELECT approx_top_k_estimate(X'1601')`,
 		`SELECT approx_top_k_estimate(X'16', 0)`,
 		`SELECT approx_top_k_estimate(X'16', 4001)`,
-		`SELECT approx_top_k_estimate(X'160000800000000000000000000000')`,                                   // K=0
-		`SELECT approx_top_k_estimate(X'16E903A00F00000000000000000000')`,                                   // K=1001 > topMaxK
-		`SELECT approx_top_k_estimate(X'160A00050000000000000000000000')`,                                   // C=5 < K=10
-		`SELECT approx_top_k_estimate(X'160100800081000000000000000000')`,                                   // count=129 > C=128
-		`SELECT approx_top_k_estimate(X'16010080000000000000000000F0BF')`,                                   // offset=-1
-		`SELECT approx_top_k_estimate(X'160100800001000000000000000000')`,                                   // truncated entry
-		`SELECT approx_top_k_estimate(X'1601008000010000000000000000000100000000000000000100000000000000')`, // weight=0
-		`SELECT approx_top_k_estimate(X'16010080000100000000000000000002000000000000F03F000000000000F87F')`, // NaN float key
-		`SELECT approx_top_k_estimate(X'16010080000100000000000000000002000000000000F03F000000000000F03F')`, // integral float key 1.0
-		`SELECT approx_top_k_estimate(X'16010080000100000000000000000004000000000000F03F0000000000000000')`, // invalid typ=4
-		`SELECT approx_top_k_estimate(X'16010080000200000000000000000001000000000000F03F010000000000000001000000000000F03F0100000000000000')`, // duplicate key
+		`SELECT approx_top_k_estimate(X'1600008000000000000000000000000000000000000000')`,                                   // K=0
+		`SELECT approx_top_k_estimate(X'16E903A00F000000000000000000000000000000000000')`,                                   // K=1001 > topMaxK
+		`SELECT approx_top_k_estimate(X'160A000500000000000000000000000000000000000000')`,                                   // C=5 < K=10
+		`SELECT approx_top_k_estimate(X'16010080008100000000000000F03F0000000000000000')`,                                   // count=129 > C=128
+		`SELECT approx_top_k_estimate(X'16010080000000000000000000F0BF0000000000000000')`,                                   // total=-1
+		`SELECT approx_top_k_estimate(X'16010080000000000000000000F03F000000000000F0BF')`,                                   // offset=-1
+		`SELECT approx_top_k_estimate(X'16010080000000000000000000F03F0000000000000000')`,                                   // total=1 with count=0, offset=0
+		`SELECT approx_top_k_estimate(X'160100800000000000000000000000000000000000F03F')`,                                   // total=0 with offset=1
+		`SELECT approx_top_k_estimate(X'16010080000100000000000000F03F0000000000000000')`,                                   // truncated entry
+		`SELECT approx_top_k_estimate(X'16010080000100000000000000F03F00000000000000000100000000000000000100000000000000')`, // weight=0
+		`SELECT approx_top_k_estimate(X'16010080000100000000000000F03F000000000000000002000000000000F03F000000000000F87F')`, // NaN float key
+		`SELECT approx_top_k_estimate(X'16010080000100000000000000F03F000000000000000002000000000000F03F000000000000F03F')`, // integral float key 1.0
+		`SELECT approx_top_k_estimate(X'16010080000100000000000000F03F000000000000000004000000000000F03F0000000000000000')`, // invalid typ=4
+		`SELECT approx_top_k_estimate(X'160100800002000000000000000040000000000000000001000000000000F03F010000000000000001000000000000F03F0100000000000000')`, // duplicate key
 		`SELECT approx_top_k_estimate(approx_top_k_accumulate(1, 5), 0)`,
 		`SELECT approx_top_k_estimate(approx_top_k_accumulate(1, 5), 129)`,
 		`SELECT approx_top_k_estimate(approx_count_distinct_accumulate(1))`,

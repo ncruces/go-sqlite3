@@ -93,7 +93,7 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		if w == 0 {
 			return
 		}
-		if w < 0 || math.IsInf(w, 1) {
+		if w < 0 {
 			ctx.ResultError(fmt.Errorf("approx: invalid weight: %g", w))
 			return // notest
 		}
@@ -104,7 +104,7 @@ func (b *topSketch) Step(ctx sqlite3.Context, arg ...sqlite3.Value) {
 		b.insert(topIntTag, uint64(arg[0].Int64()), "", w)
 	case sqlite3.FLOAT:
 		f := arg[0].Float()
-		if i, ok := floatIsInt(f); ok {
+		if i, ok := util.FloatIsInt(f); ok {
 			b.insert(topIntTag, uint64(i), "", w)
 		} else {
 			b.insert(topRealTag, math.Float64bits(f), "", w)
@@ -170,10 +170,10 @@ func (b *topSketch) insert(typ topTag, num uint64, str string, w float64) {
 type topAccumulate struct{ topSketch }
 
 func (b *topAccumulate) Value(ctx sqlite3.Context) {
-	var buf [32]byte // fits empty and single-row numeric sketches
+	var buf [40]byte // fits empty and single-row numeric sketches
 	switch b.typ {
 	case topEmptyTag:
-		ctx.ResultBlob(appendSketchBytes(buf[:0], nil, 0, b.k, topCap(b.k)))
+		ctx.ResultBlob(appendSketchBytes(buf[:0], nil, 0, 0, b.k, topCap(b.k)))
 	case topSummaryTag:
 		ctx.ResultBlob(b.summary().appendBytes(buf[:0]))
 	default:
@@ -182,7 +182,7 @@ func (b *topAccumulate) Value(ctx sqlite3.Context) {
 			num:    b.bits,
 			weight: b.weight,
 			typ:    b.typ,
-		}}, 0, b.k, topCap(b.k)))
+		}}, b.weight, 0, b.k, topCap(b.k)))
 	}
 }
 
@@ -196,7 +196,7 @@ type topCombine struct {
 
 func (b *topCombine) Value(ctx sqlite3.Context) {
 	if b.sketch != nil {
-		var buf [32]byte
+		var buf [40]byte
 		ctx.ResultBlob(b.sketch.appendBytes(buf[:0]))
 	}
 }
@@ -275,6 +275,7 @@ type topSummary struct {
 	ints   map[int64]float64
 	reals  map[float64]float64
 	texts  map[string]float64
+	total  float64
 	offset float64
 	k, c   int16
 }
@@ -284,6 +285,7 @@ func (s *topSummary) len() int {
 }
 
 func (s *topSummary) add(typ topTag, num uint64, str string, w float64) {
+	s.total += w
 	switch typ {
 	case topIntTag:
 		addMap(s, &s.ints, int64(num), w)
@@ -339,6 +341,7 @@ func (s *topSummary) clone() *topSummary {
 		ints:   maps.Clone(s.ints),
 		reals:  maps.Clone(s.reals),
 		texts:  maps.Clone(s.texts),
+		total:  s.total,
 		offset: s.offset,
 		k:      s.k,
 		c:      s.c,
@@ -355,6 +358,7 @@ func (s *topSummary) merge(other *topSummary) {
 	}
 	s.k = min(s.k, other.k)
 	s.c = min(s.c, other.c)
+	s.total += other.total
 	s.offset += other.offset
 	mergeMap(&s.ints, other.ints)
 	mergeMap(&s.reals, other.reals)
@@ -412,9 +416,9 @@ func cmpEntry(a, b topEntry) int {
 		return cmp.Compare(a.typ, b.typ)
 	}
 	if a.typ == topIntTag {
-		return cmpIntFloat(int64(a.num), math.Float64frombits(b.num))
+		return util.CmpIntFloat(int64(a.num), math.Float64frombits(b.num))
 	}
-	return -cmpIntFloat(int64(b.num), math.Float64frombits(a.num))
+	return -util.CmpIntFloat(int64(b.num), math.Float64frombits(a.num))
 }
 
 func (s *topSummary) entries() ([]topEntry, float64) {
@@ -473,7 +477,7 @@ func evalEntries(ctx sqlite3.Context, entries []topEntry, offset float64, k int)
 		case topIntTag:
 			out = strconv.AppendInt(out, int64(e.num), 10)
 		case topRealTag:
-			out = util.AppendNumber(out, math.Float64frombits(e.num))
+			out = util.AppendFloat(out, math.Float64frombits(e.num), 64)
 		default:
 			out, err = util.AppendQuote(out, e.str)
 			if err != nil {
@@ -482,7 +486,7 @@ func evalEntries(ctx sqlite3.Context, entries []topEntry, offset float64, k int)
 			}
 		}
 		out = append(out, ',')
-		out = appendJSONFloat(out, e.weight+offset)
+		out = util.AppendNumber(out, e.weight+offset, 64)
 		out = append(out, ']')
 	}
 	out = append(out, ']')
@@ -490,27 +494,21 @@ func evalEntries(ctx sqlite3.Context, entries []topEntry, offset float64, k int)
 	ctx.ResultSubtype('J')
 }
 
-func appendJSONFloat(dst []byte, f float64) []byte {
-	if i, ok := floatIsInt(f); ok {
-		return strconv.AppendInt(dst, i, 10)
-	}
-	return util.AppendNumber(dst, f)
-}
-
 func (s *topSummary) appendBytes(out []byte) []byte {
 	entries, offset := s.entries()
-	return appendSketchBytes(out, entries, offset, s.k, s.c)
+	return appendSketchBytes(out, entries, s.total, offset, s.k, s.c)
 }
 
-func appendSketchBytes(out []byte, entries []topEntry, offset float64, k, c int16) []byte {
+func appendSketchBytes(out []byte, entries []topEntry, total, offset float64, k, c int16) []byte {
 	if k == 0 {
 		return append(out, topHeader)
 	}
-	out = slices.Grow(out, 15+17*len(entries))
+	out = slices.Grow(out, 23+17*len(entries))
 	out = append(out, topHeader)
 	out = binary.LittleEndian.AppendUint16(out, uint16(k))
 	out = binary.LittleEndian.AppendUint16(out, uint16(c))
 	out = binary.LittleEndian.AppendUint16(out, uint16(len(entries)))
+	out = binary.LittleEndian.AppendUint64(out, math.Float64bits(total))
 	out = binary.LittleEndian.AppendUint64(out, math.Float64bits(offset))
 	for _, e := range entries {
 		out = append(out, byte(e.typ))
@@ -535,24 +533,31 @@ func topFromBytes(data []byte) (*topSummary, error) {
 	if len(data) == 1 {
 		return &topSummary{}, nil
 	}
-	if len(data) < 15 {
+	if len(data) < 23 {
 		return nil, errInvalidTopK
 	}
 
 	k := binary.LittleEndian.Uint16(data[1:])
 	c := binary.LittleEndian.Uint16(data[3:])
 	count := binary.LittleEndian.Uint16(data[5:])
-	off := math.Float64frombits(binary.LittleEndian.Uint64(data[7:]))
-	if k == 0 || k > topMaxK || c < k || c > topMaxC || count > c || !(off >= 0) {
+	total := math.Float64frombits(binary.LittleEndian.Uint64(data[7:]))
+	off := math.Float64frombits(binary.LittleEndian.Uint64(data[15:]))
+	if k == 0 || k > topMaxK || c < k || c > topMaxC || count > c || !(total >= 0) || !(off >= 0) {
+		return nil, errInvalidTopK
+	}
+	if (total == 0) != (count == 0 && off == 0) {
 		return nil, errInvalidTopK
 	}
 
-	rest := data[15:]
+	rest := data[23:]
 	if len(rest)/10 < int(count) {
 		return nil, errInvalidTopK
 	}
 
 	s := &topSummary{k: int16(k), c: int16(c)}
+	if total > 0 {
+		s.total = total
+	}
 	if off > 0 {
 		s.offset = off
 	}
@@ -583,7 +588,7 @@ func topFromBytes(data []byte) (*topSummary, error) {
 			if math.IsNaN(f) {
 				return nil, errInvalidTopK
 			}
-			if _, isInt := floatIsInt(f); isInt {
+			if _, isInt := util.FloatIsInt(f); isInt {
 				return nil, errInvalidTopK
 			}
 			ok = putUnique(&s.reals, f, w)

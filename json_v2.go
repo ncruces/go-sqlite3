@@ -71,7 +71,7 @@ func (s *Stmt) ColumnJSON(col int, ptr any) error {
 	case INTEGER:
 		data = strconv.AppendInt(nil, s.ColumnInt64(col), 10)
 	case FLOAT:
-		data = util.AppendNumber(nil, s.ColumnFloat(col))
+		data = util.AppendFloat(nil, s.ColumnFloat(col), 64)
 	default:
 		panic(errutil.AssertErr())
 	}
@@ -92,7 +92,7 @@ func (v Value) JSON(ptr any) error {
 	case INTEGER:
 		data = strconv.AppendInt(nil, v.Int64(), 10)
 	case FLOAT:
-		data = util.AppendNumber(nil, v.Float())
+		data = util.AppendFloat(nil, v.Float(), 64)
 	default:
 		panic(errutil.AssertErr())
 	}

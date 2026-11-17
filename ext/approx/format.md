@@ -112,7 +112,8 @@ byte     header    = 0x16
 u16      k         // target top-K, 1 <= k <= 1000
 u16      c         // capacity, k <= c <= 4000 (writers use max(128, 4*k))
 u16      count     // number of entries, 0 <= count <= c
-f64      offset    // total weight purged by compaction, >= 0 (+Inf allowed)
+f64      total     // total input weight, total >= 0
+f64      offset    // total weight purged by compaction, offset >= 0
 entry[]  entries   // count entries; trailing bytes are invalid
 ```
 
@@ -120,7 +121,7 @@ Each entry:
 
 ```
 byte     type      // 1 = integer, 2 = float, 3 = text
-f64      weight    // > 0 (+Inf allowed)
+f64      weight    // weight > 0
 value              // depends on type
 ```
 
@@ -146,5 +147,5 @@ add `δ` to `offset`. *(In memory, compaction is deferred until inserting a new
 key at `2*c` entries or merging to `>= 2*c` entries.)*
 
 **Merge.** The 1-byte empty sketch is the identity. Otherwise take
-`k = min(k1, k2)`, `c = min(c1, c2)`, sum `offset`s, sum weights of matching
-entries, and compact.
+`k = min(k1, k2)`, `c = min(c1, c2)`, sum `total`s and `offset`s, sum weights of
+matching entries, and compact.

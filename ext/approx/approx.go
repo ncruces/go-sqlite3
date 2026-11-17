@@ -15,6 +15,7 @@
 //   - approx_top_k_accumulate(X, [W,] K): accumulates elements into a FI sketch BLOB for up to K elements.
 //   - approx_top_k_combine(B): merges FI sketch BLOBs into a single sketch BLOB.
 //   - approx_top_k_estimate(B [, K]): estimates the top K elements as JSON from a FI sketch BLOB.
+//   - approx_sketch_info(B): returns summary statistics and error bounds for a sketch BLOB as JSON.
 //
 // [HyperLogLog] sketch BLOBs use the [Aggregate Knowledge HLL Storage Specification].
 //
@@ -32,9 +33,7 @@
 package approx
 
 import (
-	"cmp"
 	"errors"
-	"math"
 
 	"github.com/ncruces/go-sqlite3"
 	"github.com/ncruces/go-sqlite3/util/sql3util"
@@ -81,20 +80,7 @@ func Register(db *sqlite3.Conn) error {
 			topEstimate),
 		db.CreateFunction("approx_top_k_estimate", 2, json,
 			topEstimate),
+		db.CreateFunction("approx_sketch_info", 1, json,
+			sketchInfo),
 	)
-}
-
-func floatIsInt(f float64) (int64, bool) {
-	// math.MaxInt64 is not exactly representable as a float64 (it rounds to 2^63),
-	// but int64(2^63) may saturate back to math.MaxInt64.
-	i := int64(f)
-	return i, float64(i) == f && i != math.MaxInt64
-}
-
-func cmpIntFloat(i int64, f float64) int {
-	// Assumes both floatIsInt(f) and IsNaN(f) are false.
-	if c := cmp.Compare(float64(i), f); c != 0 {
-		return c
-	}
-	return -1 // float64(i) == f means f == 2^63
 }
