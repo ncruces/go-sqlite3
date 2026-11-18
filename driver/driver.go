@@ -362,7 +362,7 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 	txBegin := `BEGIN ` + txLock
 	if opts.ReadOnly && !c.qryOnly {
 		txBegin += ` ; PRAGMA query_only=on`
-		c.txReset = `; PRAGMA query_only=off`
+		c.txReset = `PRAGMA query_only=off ; `
 	}
 
 	if old := c.Conn.SetInterrupt(ctx); old != ctx {
@@ -377,7 +377,7 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 }
 
 func (c *conn) Commit() error {
-	err := c.Conn.Exec(`COMMIT` + c.txReset)
+	err := c.Conn.Exec(c.txReset + `COMMIT`)
 	if err != nil && !c.Conn.GetAutocommit() {
 		c.Rollback()
 	}
@@ -390,7 +390,7 @@ func (c *conn) Rollback() error {
 	if old := c.Conn.SetInterrupt(ctx); old != ctx {
 		defer c.Conn.SetInterrupt(old)
 	}
-	return c.Conn.Exec(`ROLLBACK` + c.txReset)
+	return c.Conn.Exec(c.txReset + `ROLLBACK`)
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {

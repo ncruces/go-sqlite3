@@ -272,6 +272,7 @@ func callbackArgs(db *Conn, nArg int32, pArg ptr_t) *[]Value {
 }
 
 func returnArgs(p *[]Value) {
+	clear(*p)
 	valueArgsPool.Put(p)
 }
 

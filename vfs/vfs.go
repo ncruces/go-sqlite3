@@ -97,11 +97,14 @@ func vfsRead(wrp *sqlite3_wrap.Wrapper, pFile, zBuf ptr_t, iAmt int32, iOfst int
 	if n == int(iAmt) {
 		return _OK
 	}
-	if err != io.EOF {
-		return vfsErrorCode(wrp, err, _IOERR_READ)
+	if err == io.EOF {
+		clear(buf[n:])
+		return _IOERR_SHORT_READ
 	}
-	clear(buf[n:])
-	return _IOERR_SHORT_READ
+	if err == nil {
+		err = io.ErrUnexpectedEOF // notest
+	}
+	return vfsErrorCode(wrp, err, _IOERR_READ)
 }
 
 //go:linkname vfsWrite
@@ -109,7 +112,10 @@ func vfsWrite(wrp *sqlite3_wrap.Wrapper, pFile, zBuf ptr_t, iAmt int32, iOfst in
 	file := vfsFileGet(wrp, pFile).(File)
 	buf := wrp.Bytes(zBuf, int64(iAmt))
 
-	_, err := file.WriteAt(buf, iOfst)
+	n, err := file.WriteAt(buf, iOfst)
+	if err == nil && n != int(iAmt) {
+		err = io.ErrShortWrite // notest
+	}
 	return vfsErrorCode(wrp, err, _IOERR_WRITE)
 }
 
