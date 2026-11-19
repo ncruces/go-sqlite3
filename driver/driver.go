@@ -330,11 +330,16 @@ type conn struct {
 var (
 	// Ensure these interfaces are implemented:
 	_ Conn                 = &conn{}
+	_ driver.Validator     = &conn{}
 	_ driver.ExecerContext = &conn{}
 )
 
 func (c *conn) Raw() *sqlite3.Conn {
 	return c.Conn
+}
+
+func (c *conn) IsValid() bool {
+	return !connBad(c.Conn)
 }
 
 // Deprecated: use BeginTx instead.
@@ -377,6 +382,9 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 }
 
 func (c *conn) Commit() error {
+	if connBad(c.Conn) {
+		return driver.ErrBadConn
+	}
 	err := c.Conn.Exec(c.txReset + `COMMIT`)
 	if err != nil && !c.Conn.GetAutocommit() {
 		c.Rollback()
@@ -385,6 +393,9 @@ func (c *conn) Commit() error {
 }
 
 func (c *conn) Rollback() error {
+	if connBad(c.Conn) {
+		return driver.ErrBadConn
+	}
 	// ROLLBACK even if interrupted.
 	ctx := context.Background()
 	if old := c.Conn.SetInterrupt(ctx); old != ctx {
@@ -458,6 +469,13 @@ var (
 	_ driver.StmtQueryContext  = &stmt{}
 	_ driver.NamedValueChecker = &stmt{}
 )
+
+func (s *stmt) Close() error {
+	if connBad(s.Stmt.Conn()) {
+		return driver.ErrBadConn
+	}
+	return s.Stmt.Close()
+}
 
 func (s *stmt) NumInput() int {
 	if s.inputs >= -1 {
@@ -667,6 +685,9 @@ var (
 )
 
 func (r *rows) Close() error {
+	if connBad(r.Stmt.Conn()) {
+		return driver.ErrBadConn
+	}
 	return errors.Join(
 		r.Stmt.Reset(),
 		r.Stmt.ClearBindings())
@@ -847,3 +868,6 @@ func (r *rows) convert(i int, val driver.Value) driver.Value {
 	}
 	return val
 }
+
+//go:linkname connBad github.com/ncruces/go-sqlite3.connBad
+func connBad(*sqlite3.Conn) bool

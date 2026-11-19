@@ -4,6 +4,7 @@ package sqlite3
 import (
 	"context"
 	"math/bits"
+	_ "unsafe"
 
 	sqlite3_wasm "github.com/ncruces/go-sqlite3-wasm/v6"
 	"github.com/ncruces/go-sqlite3/internal/errutil"
@@ -45,4 +46,9 @@ func (e env) Xgo_vfs_find(zVfsName int32) int32 {
 		return 1
 	}
 	return 0
+}
+
+//go:linkname connBad
+func connBad(c *Conn) bool {
+	return c.wrp.Module == nil || c.stack != *c.wrp.X__stack_pointer()
 }
