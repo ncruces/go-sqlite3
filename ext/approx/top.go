@@ -608,7 +608,7 @@ func topFromBytes(data []byte) (*topSummary, error) {
 			return nil, errInvalidTopK
 		}
 	}
-	if len(rest) != 0 {
+	if len(rest) > 0 {
 		return nil, errInvalidTopK
 	}
 	return s, nil

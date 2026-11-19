@@ -426,7 +426,7 @@ func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, e
 }
 
 func (c *conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	if len(args) != 0 {
+	if len(args) > 0 {
 		// Slow path.
 		return nil, driver.ErrSkip
 	}
