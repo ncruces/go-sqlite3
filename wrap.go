@@ -23,8 +23,7 @@ func WithMaxMemory(ctx context.Context, max int64) context.Context {
 	return context.WithValue(ctx, configKey{}, max/65536)
 }
 
-type env struct{ *sqlite3_wrap.Wrapper }
-
+//go:linkname createWrapper
 func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error) {
 	mem := &sqlite3_wrap.Memory{Max: 4096} // 256MB
 	if bits.UintSize < 64 {
@@ -41,14 +40,16 @@ func createWrapper(ctx context.Context) (*sqlite3_wrap.Wrapper, error) {
 	return env.Wrapper, nil
 }
 
+//go:linkname connBad
+func connBad(c *Conn) bool {
+	return c.wrp.Module == nil || c.stack != *c.wrp.X__stack_pointer()
+}
+
+type env struct{ *sqlite3_wrap.Wrapper }
+
 func (e env) Xgo_vfs_find(zVfsName int32) int32 {
 	if vfs.Find(e.ReadString(ptr_t(zVfsName), _MAX_NAME)) != nil {
 		return 1
 	}
 	return 0
-}
-
-//go:linkname connBad
-func connBad(c *Conn) bool {
-	return c.wrp.Module == nil || c.stack != *c.wrp.X__stack_pointer()
 }

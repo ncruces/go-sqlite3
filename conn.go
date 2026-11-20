@@ -13,6 +13,7 @@ import (
 
 	"github.com/ncruces/go-sqlite3/internal/errutil"
 	"github.com/ncruces/go-sqlite3/internal/sqlite3_wrap"
+	"github.com/ncruces/go-sqlite3/internal/util"
 	"github.com/ncruces/go-sqlite3/vfs"
 )
 
@@ -133,28 +134,32 @@ func (c *Conn) openDB(filename string, flags OpenFlag) (ptr_t, error) {
 	}
 
 	c.wrp.Xsqlite3_progress_handler_go(int32(handle), 1000)
-	if len(pragmas) > 0 {
-		tmp := Conn{
-			wrp:       c.wrp,
-			arena:     c.arena,
-			interrupt: c.interrupt,
-			handle:    handle,
+	tmp := Conn{
+		wrp:       c.wrp,
+		arena:     c.arena,
+		interrupt: c.interrupt,
+		handle:    handle,
+	}
+	if _, ok := c.interrupt.(util.DriverCtx); ok {
+		if err := tmp.BusyTimeout(time.Minute); err != nil {
+			c.closeDB(handle)
+			return 0, err
 		}
-		for _, p := range pragmas {
-			s, tail, err := tmp.Prepare("PRAGMA " + p)
-			if err == nil && tail != "" {
-				err = errutil.TailErr
-			}
-			if err == nil {
-				err = s.Exec()
-			}
-			if e := s.Close(); err == nil {
-				err = e
-			}
-			if err != nil {
-				c.closeDB(handle)
-				return 0, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
-			}
+	}
+	for _, p := range pragmas {
+		s, tail, err := tmp.Prepare("PRAGMA " + p)
+		if err == nil && tail != "" {
+			err = errutil.TailErr
+		}
+		if err == nil {
+			err = s.Exec()
+		}
+		if e := s.Close(); err == nil {
+			err = e
+		}
+		if err != nil {
+			c.closeDB(handle)
+			return 0, fmt.Errorf("sqlite3: invalid _pragma: %w", err)
 		}
 	}
 	return handle, nil

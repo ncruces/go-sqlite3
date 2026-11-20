@@ -78,7 +78,7 @@
 //
 //	sql.Open("sqlite3", "file:demo.db?_pragma=busy_timeout(10000)")
 //
-// If no PRAGMAs are specified, a busy timeout of 1 minute is set.
+// A default busy timeout of 1 minute is set before any PRAGMAs are executed.
 //
 // Order matters:
 // encryption keys, busy timeout and locking mode should be the first PRAGMAs set,
@@ -232,7 +232,7 @@ func (n *connector) Connect(ctx context.Context) (ret driver.Conn, err error) {
 		tmWrite: n.tmWrite,
 	}
 
-	c.Conn, err = sqlite3.OpenContext(ctx, n.name)
+	c.Conn, err = sqlite3.OpenContext(util.DriverCtx{Context: ctx}, n.name)
 	if err != nil {
 		return nil, err
 	}
@@ -246,12 +246,6 @@ func (n *connector) Connect(ctx context.Context) (ret driver.Conn, err error) {
 		defer c.Conn.SetInterrupt(old)
 	}
 
-	if !n.pragmas {
-		err = c.Conn.BusyTimeout(time.Minute)
-		if err != nil {
-			return nil, err
-		}
-	}
 	if n.init != nil {
 		err = n.init(c.Conn)
 		if err != nil {
