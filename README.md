@@ -85,6 +85,7 @@ Every commit is tested on:
   * OpenBSD: amd64
 * illumos: amd64
 * Solaris: amd64
+* Plan 9: amd64
 
 Certain operating system and CPU combinations have some limitations.
 See the [support matrix](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) for a complete overview.

@@ -154,8 +154,15 @@ jobs:
             action: 'vmactions/solaris-vm@v1'
             bflags: '-tags sqlite3_dotlk'
             tflags: '-test.short'
+            shell:  '/bin/sh'
+            workdir: '.'
+          - name: plan9
+            action: 'vmactions/plan9-vm@v1'
+            bflags: '-tags sqlite3_dotlk'
+            tflags: '-test.short -test.skip=Example_http'
+            shell:  '/bin/ape/sh'
+            workdir: '/usr/glenda/work/*/*'
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
     - uses: actions/checkout@v7
@@ -166,6 +173,8 @@ jobs:
         BUILDFLAGS: ${{ matrix.os.bflags }}
         TESTFLAGS:  ${{ matrix.os.tflags }}
         VMACTIONS:  ${{ matrix.os.action }}
+        VMSHELL:    ${{ matrix.os.shell }}
+        VMWORKDIR:  ${{ matrix.os.workdir }}
       run: .github/workflows/build-test.sh
 
     - name: Test

@@ -2,6 +2,9 @@
 set -euo pipefail
 
 echo 'set -eux' > test.sh
+if [[ -v VMACTIONS ]]; then
+  echo 'cd "${0%/*}"' >> test.sh
+fi
 
 for p in $(go list ./...); do
   dir=".${p#github.com/ncruces/go-sqlite3}"
