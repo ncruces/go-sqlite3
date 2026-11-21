@@ -152,8 +152,14 @@ jobs:
         os:
           - name: solaris
             action: 'vmactions/solaris-vm@v1'
-            bflags: '-tags sqlite3_dotlk'
             tflags: '-test.short'
+            shell:  '/bin/sh'
+            wrkdir: '.'
+          - name: plan9
+            action: 'vmactions/plan9-vm@v1'
+            tflags: '-test.short -test.skip=Example'
+            shell:  '/bin/ape/sh'
+            wrkdir: '/usr/glenda/work/*/*'
     runs-on: ubuntu-latest
     needs: test
 
@@ -166,6 +172,8 @@ jobs:
         BUILDFLAGS: ${{ matrix.os.bflags }}
         TESTFLAGS:  ${{ matrix.os.tflags }}
         VMACTIONS:  ${{ matrix.os.action }}
+        VMSHELL:    ${{ matrix.os.shell }}
+        VMWORKDIR:  ${{ matrix.os.wrkdir }}
       run: .github/workflows/build-test.sh
 
     - name: Test
@@ -190,7 +198,7 @@ jobs:
         GOARCH: wasm
         GOWASIRUNTIME: wasmtime
         GOWASIRUNTIMEARGS: '--env CI=true --optimize opt-level=0'
-      run: go test -short -tags sqlite3_dotlk -skip Example ./...
+      run: go test -short -skip Example -tags sqlite3_dotlk ./...
 
   test-qemu:
     runs-on: ubuntu-latest
