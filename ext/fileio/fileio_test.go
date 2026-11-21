@@ -69,6 +69,7 @@ func Test_readfile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer rows.Close()
 
 			if rows.Next() {
 				var data sql.RawBytes
@@ -77,6 +78,9 @@ func Test_readfile(t *testing.T) {
 				if !bytes.HasPrefix(data, []byte("package fileio_test")) {
 					t.Errorf("got %s", data[:min(64, len(data))])
 				}
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

@@ -36,6 +36,7 @@ func Test_fsdir(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer rows.Close()
 
 			for rows.Next() {
 				var name string
@@ -61,6 +62,9 @@ func Test_fsdir(t *testing.T) {
 				if level > 2 {
 					t.Errorf("got: %v", level)
 				}
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

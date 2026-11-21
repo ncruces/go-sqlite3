@@ -94,6 +94,9 @@ func Test_lines(t *testing.T) {
 			t.Errorf("got %q, want %q", line, want)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func Test_lines_error(t *testing.T) {
@@ -153,6 +156,9 @@ func Test_lines_read(t *testing.T) {
 			t.Errorf("got %q, want %q", line, want)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func Test_lines_test(t *testing.T) {
@@ -182,5 +188,8 @@ func Test_lines_test(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -41,6 +41,9 @@ func Example() {
 		}
 		fmt.Printf("%s %s\n", id, name)
 	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
 	// Output:
 	// 0 go
 	// 1 zig

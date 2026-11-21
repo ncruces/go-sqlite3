@@ -113,6 +113,11 @@ func TestDriver(t *testing.T) {
 		t.Errorf("got %d, want %d", row, len(ids))
 	}
 
+	err = rows.Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = rows.Close()
 	if err != nil {
 		t.Fatal(err)

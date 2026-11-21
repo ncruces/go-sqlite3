@@ -76,4 +76,7 @@ func TestJSON(t *testing.T) {
 		}
 		want = want[1:]
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 }

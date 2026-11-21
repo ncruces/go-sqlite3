@@ -48,6 +48,9 @@ func Example_http() {
 		}
 		fmt.Printf("%s: %d %s %s\n", period, value, magname[mag], units)
 	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
 	// Output:
 	// 2010.03: 17463 million Dollars
 	// 2010.06: 17260 million Dollars
@@ -87,6 +90,9 @@ func Example_embed() {
 			log.Fatal(err)
 		}
 		fmt.Printf("%s %s\n", id, name)
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
 	}
 	// Output:
 	// 0 go

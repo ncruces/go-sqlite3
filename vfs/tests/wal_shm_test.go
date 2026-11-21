@@ -399,4 +399,7 @@ func checkIntegrity(t *testing.T, dsn string) {
 			t.Errorf("integrity_check: %s", msg)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 }

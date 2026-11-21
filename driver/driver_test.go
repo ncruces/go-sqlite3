@@ -45,8 +45,9 @@ func Test_Open_dir(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error")
 	}
-	if runtime.GOOS == "js" {
-		t.Skip("skipping on JS")
+	switch runtime.GOOS {
+	case "js", "plan9":
+		t.Skip("skipping on " + runtime.GOOS)
 	}
 	if !errors.Is(err, sqlite3.CANTOPEN_ISDIR) {
 		t.Errorf("got %v, want sqlite3.CANTOPEN_ISDIR", err)

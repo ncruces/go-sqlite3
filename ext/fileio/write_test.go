@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"io/fs"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -38,7 +39,7 @@ func Test_writefile(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(ctx, `SELECT writefile(?, ?, ?)`, link, "test.txt", fs.ModeSymlink)
-	if err != nil {
+	if err != nil && runtime.GOOS != "plan9" {
 		t.Fatal(err)
 	}
 
@@ -51,6 +52,7 @@ func Test_writefile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var name string
@@ -71,6 +73,9 @@ func Test_writefile(t *testing.T) {
 		if mode&fs.ModeSymlink != 0 && data.String != "test.txt" {
 			t.Errorf("got: %v", data)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
 
 	_, err = db.ExecContext(ctx, `SELECT writefile(?, 'Hello world!')`, nest)
