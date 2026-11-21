@@ -6,6 +6,5 @@ runs:
   steps:
     - uses: ${VMACTIONS}
       with:
-        usesh: true
         copyback: false
-        run: . ./test.sh
+        run: ${VMSHELL} ${VMWORKDIR}/test.sh
