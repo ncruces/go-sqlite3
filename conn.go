@@ -373,9 +373,14 @@ func (c *Conn) SetInterrupt(ctx context.Context) (old context.Context) {
 }
 
 func (e env) Xgo_progress_handler(_ int32) (interrupt int32) {
+	// go.dev/src/runtime/proc.go
+	const haveSysmon = runtime.GOARCH != "wasm"
+
 	if c, ok := e.DB.(*Conn); ok {
-		if c.gosched++; c.gosched%16 == 0 {
-			runtime.Gosched()
+		if !haveSysmon {
+			if c.gosched++; c.gosched%16 == 0 {
+				runtime.Gosched()
+			}
 		}
 		if c.interrupt.Err() != nil {
 			interrupt = 1

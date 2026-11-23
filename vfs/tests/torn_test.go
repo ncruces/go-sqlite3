@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -163,6 +164,7 @@ func testTornReads(t *testing.T, vfsName string, pageSize int, checkpoint bool) 
 					t.Error(err)
 					return
 				}
+				runtime.Gosched()
 			}
 		})
 	}
@@ -236,6 +238,7 @@ func tornReader(t *testing.T, uri string, last, reads, fails *atomic.Int64, done
 				break
 			}
 			st.Reset()
+			runtime.Gosched()
 		}
 		st.Close()
 		db.Close()
