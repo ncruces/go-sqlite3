@@ -75,8 +75,8 @@ This project aims for [high test coverage](https://github.com/ncruces/go-sqlite3
 It also benefits greatly from [SQLite's](https://sqlite.org/testing.html) thorough testing.
 
 Every commit is tested on:
-* Linux: amd64, arm64, 386, arm, riscv64, ppc64le, loong64, s390x
-* macOS: amd64, arm64
+* Linux: amd64, arm64, 386, arm, riscv64, loong64, ppc64le, s390x
+* macOS: arm64, amd64
 * Windows: amd64, arm64
 * BSD:
   * FreeBSD: amd64, arm64
@@ -86,6 +86,7 @@ Every commit is tested on:
 * illumos: amd64
 * Solaris: amd64
 * Plan 9: amd64
+* WASI, browser: wasm
 
 Certain operating system and CPU combinations have some limitations.
 See the [support matrix](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) for a complete overview.

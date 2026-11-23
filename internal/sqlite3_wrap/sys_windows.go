@@ -1,6 +1,10 @@
 package sqlite3_wrap
 
-import "golang.org/x/sys/windows"
+import (
+	"math/bits"
+
+	"golang.org/x/sys/windows"
+)
 
 // https://devblogs.microsoft.com/oldnewthing/?p=42223
 const allocationGranularity = 64 * 1024
@@ -38,11 +42,19 @@ func virtualAlloc2(address, size uintptr, alloctype, protect uint32) (addr uintp
 }
 
 func mapViewOfFile3(handle windows.Handle, address uintptr, offset uint64, size uintptr, alloctype, protect uint32) (addr uintptr, err error) {
-	addr, _, err = procMapViewOfFile3.Call(
+	var buf [10]uintptr
+	args := append(buf[:0],
 		uintptr(handle),
 		^uintptr(0), // current process pseudo handle
-		address, uintptr(offset), size, uintptr(alloctype), uintptr(protect),
+		address, uintptr(offset))
+	if bits.UintSize < 64 {
+		// offset needs two stack slots on 32-bit
+		args = append(args, uintptr(offset>>32))
+	}
+	args = append(args,
+		size, uintptr(alloctype), uintptr(protect),
 		0, 0) // no extended parameters
+	addr, _, err = procMapViewOfFile3.Call(args...)
 	if addr == 0 {
 		return 0, err
 	}
