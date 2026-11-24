@@ -5,6 +5,7 @@ package vfs
 import (
 	"errors"
 	"os"
+	"runtime"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -137,16 +138,19 @@ func osWriteLock(file *os.File, start, len uint32, timeout time.Duration) error 
 func osLock(file *os.File, flags, start, len uint32, timeout time.Duration, def _ErrorCode) error {
 	var err error
 	switch {
-	default:
+	case timeout == 0:
 		err = osLockEx(file, flags|windows.LOCKFILE_FAIL_IMMEDIATELY, start, len)
 	case timeout < 0:
 		err = osLockEx(file, flags, start, len)
+	default:
+		ms := min((timeout+time.Millisecond-1)/time.Millisecond, windows.INFINITE-1)
+		err = osLockExTimeout(file, flags, start, len, uint32(ms))
 	}
 	return osLockErrorCode(err, def)
 }
 
 func osLockWait(file *os.File, flags, start, len uint32, def _ErrorCode) error {
-	if err := osLockEx(file, flags, start, len); err != nil {
+	if err := osLockExTimeout(file, flags, start, len, windows.INFINITE); err != nil {
 		return sysError{err, def}
 	}
 	return nil
@@ -169,6 +173,45 @@ func osLockEx(file *os.File, flags, start, len uint32) error {
 		0, len, 0, &windows.Overlapped{Offset: start})
 }
 
+func osLockExTimeout(file *os.File, flags, start, len, timeout uint32) error {
+	err := osLockEx(file, flags|windows.LOCKFILE_FAIL_IMMEDIATELY, start, len)
+	if err != windows.ERROR_LOCK_VIOLATION {
+		return err
+	}
+
+	event, err := windows.CreateEvent(nil, 1, 0, nil)
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(event)
+
+	// Set the low-order bit of HEvent to suppress IOCP completion packets.
+	ov := &windows.Overlapped{
+		Offset: start,
+		HEvent: event | 1,
+	}
+
+	var pin runtime.Pinner
+	pin.Pin(ov)
+	defer pin.Unpin()
+
+	fd := windows.Handle(file.Fd())
+
+	err = windows.LockFileEx(fd, flags, 0, len, 0, ov)
+	if err != windows.ERROR_IO_PENDING {
+		return err
+	}
+
+	rc, _ := windows.WaitForSingleObject(event, timeout)
+	if rc != windows.WAIT_OBJECT_0 {
+		windows.CancelIoEx(fd, ov)
+		windows.WaitForSingleObject(event, windows.INFINITE)
+	}
+
+	var done uint32
+	return windows.GetOverlappedResult(fd, ov, &done, false)
+}
+
 func osLockErrorCode(err error, def _ErrorCode) error {
 	if err == nil {
 		return nil
@@ -178,9 +221,7 @@ func osLockErrorCode(err error, def _ErrorCode) error {
 		switch errno {
 		case
 			windows.ERROR_LOCK_VIOLATION,
-			windows.ERROR_OPERATION_ABORTED,
-			windows.ERROR_IO_PENDING,
-			windows.WAIT_TIMEOUT:
+			windows.ERROR_OPERATION_ABORTED:
 			return _BUSY
 		}
 	}

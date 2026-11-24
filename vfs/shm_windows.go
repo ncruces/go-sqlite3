@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/sys/windows"
 
@@ -20,14 +21,18 @@ type vfsShm struct {
 	path     string
 	regions  []*sqlite3_wrap.MappedRegion
 	fileLock bool
+	blocking bool
 }
+
+var _ blockingSharedMemory = &vfsShm{}
 
 func (s *vfsShm) shmOpen() error {
 	if s.fileLock {
 		return nil
 	}
 	if s.File == nil {
-		f, err := os.OpenFile(s.path, os.O_RDWR|os.O_CREATE, 0666)
+		f, err := os.OpenFile(s.path,
+			os.O_RDWR|os.O_CREATE|windows.O_FILE_FLAG_OVERLAPPED, 0666)
 		if err != nil {
 			return sysError{err, _CANTOPEN}
 		}
@@ -43,7 +48,7 @@ func (s *vfsShm) shmOpen() error {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
-	err := osReadLock(s.File, _SHM_DMS, 1, 0)
+	err := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
 	s.fileLock = err == nil
 	return err
 }
@@ -83,18 +88,23 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 	return r.Ptr, nil
 }
 
-func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) (err error) {
+func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 	if s.File == nil {
 		return _IOERR_SHMLOCK
+	}
+
+	var timeout time.Duration
+	if s.blocking {
+		timeout = time.Millisecond
 	}
 
 	switch {
 	case flags&_SHM_UNLOCK != 0:
 		return osUnlock(s.File, _SHM_BASE+uint32(offset), uint32(n))
 	case flags&_SHM_SHARED != 0:
-		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
+		return osReadLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
 	case flags&_SHM_EXCLUSIVE != 0:
-		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), 0)
+		return osWriteLock(s.File, _SHM_BASE+uint32(offset), uint32(n), timeout)
 	default:
 		panic(errutil.AssertErr())
 	}
@@ -123,6 +133,10 @@ func (s *vfsShm) shmUnmap(delete bool) {
 func (s *vfsShm) shmBarrier() {
 	var b atomic.Bool
 	b.Swap(true)
+}
+
+func (s *vfsShm) shmEnableBlocking(block bool) {
+	s.blocking = block
 }
 
 func (s *vfsShm) IOLock(lock LockLevel, id int64) error {
