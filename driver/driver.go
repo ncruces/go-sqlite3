@@ -319,13 +319,17 @@ type conn struct {
 	tmRead  sqlite3.TimeFormat
 	tmWrite sqlite3.TimeFormat
 	qryOnly bool
+	abort   bool
+	inTx    bool
+	bad     bool
 }
 
 var (
 	// Ensure these interfaces are implemented:
-	_ Conn                 = &conn{}
-	_ driver.Validator     = &conn{}
-	_ driver.ExecerContext = &conn{}
+	_ Conn                   = &conn{}
+	_ driver.Validator       = &conn{}
+	_ driver.SessionResetter = &conn{}
+	_ driver.ExecerContext   = &conn{}
 )
 
 func (c *conn) Raw() *sqlite3.Conn {
@@ -333,7 +337,20 @@ func (c *conn) Raw() *sqlite3.Conn {
 }
 
 func (c *conn) IsValid() bool {
-	return !connBad(c.Conn)
+	return !c.bad && !connBad(c.Conn)
+}
+
+func (c *conn) ResetSession(ctx context.Context) error {
+	if c.IsValid() {
+		return nil
+	}
+	return driver.ErrBadConn
+}
+
+func (c *conn) checkAbort() {
+	if c.inTx && c.Conn.GetAutocommit() {
+		c.abort = true
+	}
 }
 
 // Deprecated: use BeginTx instead.
@@ -370,8 +387,12 @@ func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, e
 
 	err := c.Conn.Exec(txBegin)
 	if err != nil {
+		if !c.Conn.GetAutocommit() {
+			c.Rollback()
+		}
 		return nil, err
 	}
+	c.inTx = true
 	return c, nil
 }
 
@@ -379,6 +400,7 @@ func (c *conn) Commit() error {
 	if connBad(c.Conn) {
 		return driver.ErrBadConn
 	}
+	c.abort, c.inTx = false, false
 	err := c.Conn.Exec(c.txReset + `COMMIT`)
 	if err != nil && !c.Conn.GetAutocommit() {
 		c.Rollback()
@@ -395,7 +417,18 @@ func (c *conn) Rollback() error {
 	if old := c.Conn.SetInterrupt(ctx); old != ctx {
 		defer c.Conn.SetInterrupt(old)
 	}
-	return c.Conn.Exec(c.txReset + `ROLLBACK`)
+	txRollback := c.txReset
+	c.inTx, c.abort = false, false
+	if !c.Conn.GetAutocommit() {
+		txRollback += `ROLLBACK`
+	} else if txRollback == `` {
+		return nil
+	}
+	err := c.Conn.Exec(txRollback)
+	if err != nil {
+		c.bad = true
+	}
+	return err
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
@@ -404,25 +437,32 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+	if c.abort {
+		return nil, sqlite3.ABORT_ROLLBACK
+	}
 	if old := c.Conn.SetInterrupt(ctx); old != ctx {
 		defer c.Conn.SetInterrupt(old)
 	}
 
 	s, tail, err := c.Conn.Prepare(query)
 	if err != nil {
+		c.checkAbort()
 		return nil, err
 	}
 	if notWhitespace(tail) {
 		s.Close()
 		return nil, errutil.TailErr
 	}
-	return &stmt{Stmt: s, tmRead: c.tmRead, tmWrite: c.tmWrite, inputs: -2}, nil
+	return &stmt{Stmt: s, conn: c, tmRead: c.tmRead, tmWrite: c.tmWrite, inputs: -2}, nil
 }
 
 func (c *conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	if len(args) > 0 {
 		// Slow path.
 		return nil, driver.ErrSkip
+	}
+	if c.abort {
+		return nil, sqlite3.ABORT_ROLLBACK
 	}
 
 	if savept, ok := ctx.(*saveptCtx); ok {
@@ -438,6 +478,7 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 
 	err := c.Conn.Exec(query)
 	if err != nil {
+		c.checkAbort()
 		return nil, err
 	}
 
@@ -451,6 +492,7 @@ func (c *conn) CheckNamedValue(arg *driver.NamedValue) error {
 }
 
 type stmt struct {
+	*conn
 	*sqlite3.Stmt
 	tmWrite sqlite3.TimeFormat
 	tmRead  sqlite3.TimeFormat
@@ -499,6 +541,9 @@ func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	if s.abort {
+		return nil, sqlite3.ABORT_ROLLBACK
+	}
 	err := s.setupBindings(args)
 	if err != nil {
 		return nil, err
@@ -514,6 +559,7 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 		s.Stmt.Exec(),
 		s.Stmt.ClearBindings())
 	if err != nil {
+		s.checkAbort()
 		return nil, err
 	}
 
@@ -521,6 +567,9 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 }
 
 func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	if s.abort {
+		return nil, sqlite3.ABORT_ROLLBACK
+	}
 	err := s.setupBindings(args)
 	if err != nil {
 		return nil, err
@@ -682,9 +731,13 @@ func (r *rows) Close() error {
 	if connBad(r.Stmt.Conn()) {
 		return driver.ErrBadConn
 	}
-	return errors.Join(
+	err := errors.Join(
 		r.Stmt.Reset(),
 		r.Stmt.ClearBindings())
+	if err != nil {
+		r.checkAbort()
+	}
+	return err
 }
 
 func (r *rows) Columns() []string {
