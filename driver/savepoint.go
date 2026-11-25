@@ -9,7 +9,7 @@ import (
 
 // Savepoint establishes a new transaction savepoint.
 //
-// https://sqlite.org/lang_savepoint.html
+// Deprecated: execute SAVEPOINT statements on tx instead.
 func Savepoint(tx *sql.Tx) sqlite3.Savepoint {
 	var ctx saveptCtx
 	tx.ExecContext(&ctx, "")

@@ -178,6 +178,9 @@ func (s Savepoint) Release(errp *error) {
 	if recovered != nil {
 		defer panic(recovered)
 	}
+	if s.c == nil { // There is no savepoint.
+		return
+	}
 
 	if *errp == nil && recovered == nil {
 		// Success path.
@@ -208,6 +211,9 @@ func (s Savepoint) Release(errp *error) {
 //
 // https://sqlite.org/lang_transaction.html
 func (s Savepoint) Rollback() error {
+	if s.c == nil { // There is no savepoint.
+		return nil
+	}
 	// ROLLBACK even if interrupted.
 	return s.c.exec(`ROLLBACK TO ` + s.name)
 }
