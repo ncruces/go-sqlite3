@@ -11,6 +11,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+const lockTimeout = 2 * time.Millisecond
+
 func osReadAt(file *os.File, p []byte, off int64) (int, error) {
 	return file.ReadAt(p, off)
 }

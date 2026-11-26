@@ -78,7 +78,7 @@ to check if your build supports shared memory.
 
 ### Blocking Locks
 
-On macOS, this package implements
+On macOS and Windows, this package implements
 [Wal-mode blocking locks](https://sqlite.org/src/doc/tip/doc/wal-lock.md).
 
 ### Batch-Atomic Write

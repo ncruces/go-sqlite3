@@ -49,8 +49,16 @@ https://sqlite.org/windowfunctions.html#builtins
 - [X] `EVERY(boolean)`
 - [X] `SOME(boolean)`
 
+## Bitwise aggregates
+
+- [X] `bit_and(boolean)`
+- [X] `bit_or(boolean)`
+- [X] `bit_xor(boolean)`
+
 ## Additional aggregates
 
+- [X] `MODE(expression)`
 - [X] `MEDIAN(expression)`
+- [X] `PERCENTILE(expression, percent)`
 - [X] `PERCENTILE_CONT(expression, fraction)`
 - [X] `PERCENTILE_DISC(expression, fraction)`

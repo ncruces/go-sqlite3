@@ -9,6 +9,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const lockTimeout = 2 * time.Millisecond
+
 func osGetSharedLock(file *os.File) error {
 	// Test the PENDING lock before acquiring a new SHARED lock.
 	if lock, _ := osTestLock(file, _PENDING_BYTE, 1, _IOERR); lock == unix.F_WRLCK {
@@ -24,15 +26,19 @@ func osGetReservedLock(file *os.File) error {
 }
 
 func osGetExclusiveLock(file *os.File, state *LockLevel) error {
+	var timeout time.Duration
 	if *state == LOCK_RESERVED {
 		// A PENDING lock is needed before acquiring an EXCLUSIVE lock.
+		// As we were RESERVED, we can block indefinitely.
 		if err := osWriteLock(file, _PENDING_BYTE, 1, -1); err != nil {
 			return err
 		}
+		// We can also block for a bit for EXCLUSIVE.
+		timeout = lockTimeout
 		*state = LOCK_PENDING
 	}
 	// Acquire the EXCLUSIVE lock.
-	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, time.Millisecond)
+	return osWriteLock(file, _SHARED_FIRST, _SHARED_SIZE, timeout)
 }
 
 func osDowngradeLock(file *os.File, state LockLevel) error {

@@ -20,6 +20,7 @@ type vfsShm struct {
 	*os.File
 	path     string
 	regions  []*sqlite3_wrap.MappedRegion
+	readOnly bool
 	fileLock bool
 	blocking bool
 }
@@ -34,6 +35,11 @@ func (s *vfsShm) shmOpen() error {
 		f, err := os.OpenFile(s.path,
 			os.O_RDWR|os.O_CREATE|windows.O_FILE_FLAG_OVERLAPPED, 0666)
 		if err != nil {
+			f, err = os.OpenFile(s.path,
+				os.O_RDONLY|_O_NOFOLLOW|windows.O_FILE_FLAG_OVERLAPPED, 0666)
+			s.readOnly = err == nil
+		}
+		if err != nil {
 			return sysError{err, _CANTOPEN}
 		}
 		s.fileLock = false
@@ -41,14 +47,27 @@ func (s *vfsShm) shmOpen() error {
 	}
 
 	// Dead man's switch.
-	if osWriteLock(s.File, _SHM_DMS, 1, 0) == nil {
+	err := osWriteLock(s.File, _SHM_DMS, 1, 0)
+	switch {
+	case err == nil:
+		if s.readOnly {
+			osUnlock(s.File, _SHM_DMS, 1)
+			return _READONLY_CANTINIT
+		}
 		err := s.Truncate(0)
+		if err != nil {
+			var header [8]byte
+			_, err = s.File.WriteAt(header[:], 0)
+		}
 		osUnlock(s.File, _SHM_DMS, 1)
 		if err != nil {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
+	case err != _BUSY:
+		return err
 	}
-	err := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+
+	err = osReadLock(s.File, _SHM_DMS, 1, lockTimeout)
 	s.fileLock = err == nil
 	return err
 }
@@ -72,12 +91,15 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 		if !extend {
 			return 0, nil
 		}
+		if s.readOnly {
+			return 0, _IOERR_SHMSIZE
+		}
 		if err := osAllocate(s.File, n); err != nil {
 			return 0, sysError{err, _IOERR_SHMSIZE}
 		}
 	}
 
-	r, err := wrp.MapRegion(s.File, int64(id)*int64(size), size, false)
+	r, err := wrp.MapRegion(s.File, int64(id)*int64(size), size, s.readOnly)
 	if err != nil {
 		return 0, err
 	}
@@ -85,6 +107,9 @@ func (s *vfsShm) shmMap(wrp *sqlite3_wrap.Wrapper, id, size int32, extend bool) 
 		return 0, _IOERR_NOMEM
 	}
 	s.regions = append(s.regions, r)
+	if s.readOnly {
+		return r.Ptr, _READONLY
+	}
 	return r.Ptr, nil
 }
 
@@ -95,7 +120,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 
 	var timeout time.Duration
 	if s.blocking {
-		timeout = time.Millisecond
+		timeout = lockTimeout
 	}
 
 	switch {

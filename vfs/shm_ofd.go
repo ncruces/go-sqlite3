@@ -34,8 +34,8 @@ func (s *vfsShm) shmOpen() error {
 			os.O_RDWR|os.O_CREATE|_O_NOFOLLOW, 0666)
 		if err != nil {
 			f, err = os.OpenFile(s.path,
-				os.O_RDONLY|os.O_CREATE|_O_NOFOLLOW, 0666)
-			s.readOnly = true
+				os.O_RDONLY|_O_NOFOLLOW, 0666)
+			s.readOnly = err == nil
 		}
 		if err != nil {
 			return sysError{err, _CANTOPEN}
@@ -67,7 +67,7 @@ func (s *vfsShm) shmOpen() error {
 			return sysError{err, _IOERR_SHMOPEN}
 		}
 	}
-	err := osReadLock(s.File, _SHM_DMS, 1, time.Millisecond)
+	err := osReadLock(s.File, _SHM_DMS, 1, lockTimeout)
 	s.fileLock = err == nil
 	return err
 }
@@ -140,7 +140,7 @@ func (s *vfsShm) shmLock(offset, n int32, flags _ShmFlag) error {
 
 	var timeout time.Duration
 	if s.blocking {
-		timeout = time.Millisecond
+		timeout = lockTimeout
 	}
 
 	switch {
